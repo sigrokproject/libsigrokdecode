@@ -24,6 +24,27 @@
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdint.h>
 
+/*
+ * Status/error codes returned by libsigrokdecode functions.
+ *
+ * All possible return codes of libsigrokdecode functions must be listed here.
+ * Functions should never return hardcoded numbers as status, but rather
+ * use these #defines instead. All error codes are negative numbers.
+ *
+ * The error codes are globally unique in libsigrokdecode, i.e. if one of the
+ * libsigrokdecode functions returns a "malloc error" it must be exactly the
+ * same return value as used by all other functions to indicate "malloc error".
+ * There must be no functions which indicate two different errors via the
+ * same return code.
+ *
+ * Also, for compatibility reasons, no defined return codes are ever removed
+ * or reused for different #defines later. You can only add new #defines and
+ * return codes, but never remove or redefine existing ones.
+ */
+#define SIGROKDECODE_OK			 0 /* No error */
+#define SIGROKDECODE_ERR		-1 /* Generic/unspecified error */
+#define SIGROKDECODE_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
+
 int sigrokdecode_init(void);
 int sigrokdecode_load_decoder_file(const char *name);
 int sigrokdecode_run_decoder(const char *decodername, uint8_t *inbuf,
