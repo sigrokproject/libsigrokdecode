@@ -32,7 +32,7 @@ int sigrokdecode_init(void)
 	Py_Initialize();
 
 	/* FIXME */
-	PySys_SetPath("decode/scripts");
+	PySys_SetPath("libsigrokdecode/scripts");
 
 	return 0;
 }
