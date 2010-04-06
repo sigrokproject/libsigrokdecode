@@ -32,7 +32,12 @@ int sigrokdecode_init(void)
 	Py_Initialize();
 
 	/* FIXME */
+	/* Allows for ./gui/sigrok-gui in the top-level directory. */
 	PySys_SetPath("libsigrokdecode/scripts");
+	/* Allows for ./sigrok-gui in the gui/ directory. */
+	PySys_SetPath("../libsigrokdecode/scripts");
+	/* Allows for sigrok-gui from anywhere given sigrok is installed. */
+	PySys_SetPath("/usr/local/share/sigrok");
 
 	return 0;
 }
