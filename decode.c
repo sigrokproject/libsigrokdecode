@@ -50,6 +50,9 @@ int sigrokdecode_init(void)
  */
 int sigrokdecode_load_decoder_file(const char *name)
 {
+	/* QUICK HACK */
+	name = name;
+
 	/* TODO */
 	return 0;
 }
