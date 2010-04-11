@@ -18,20 +18,55 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# FIXME: So far this is just a simple test for the Python embedding code.
 def sigrokdecode_count_transitions(inbuf):
 	"""Counts the low->high and high->low transitions in the specified
 	   channel(s) of the signal."""
 
-	outbuf = 'AB' # FIXME
+	outbuf = ''
+
+	# TODO: Don't hardcode the number of channels.
+	channels = 8
+
+	oldbit = [0] * channels
+	transitions = [0] * channels
+	rising = [0] * channels
+	falling = [0] * channels
 
 	# print len(inbuf)
 	# print type(inbuf)
 
-	# print inbuf
-	# print str(inbuf[0])
-	# print str(inbuf[1])
+	# Presets...
+	s = ord(inbuf[0])
+	for i in xrange(channels):
+		curbit = (s & (1 << i) != 0)
+		oldbit[i] = curbit
 
-	# return inbuf
+	# Loop over all samples.
+	# TODO: Handle LAs with more/less than 8 channels.
+	for s in inbuf:
+		s = ord(s) # FIXME
+		for i in xrange(channels):
+			curbit = (s & (1 << i) != 0)
+			if (oldbit[i] == 0 and curbit == 1):
+				rising[i] += 1
+			elif (oldbit[i] == 1 and curbit == 0):
+				falling[i] += 1
+			oldbit[i] = curbit
+
+	# Total number of transitions is the sum of rising and falling edges.
+	for i in xrange(channels):
+		transitions[i] = rising[i] + falling[i]
+
+	outbuf += "Rising edges:  "
+	for i in xrange(channels):
+		outbuf += str(rising[i]) + " "
+	outbuf += "\nFalling edges: "
+	for i in xrange(channels):
+		outbuf += str(falling[i]) + " "
+	outbuf += "\nTransitions:   "
+	for i in xrange(channels):
+		outbuf += str(transitions[i]) + " "
+	outbuf += "\n"
+
 	return outbuf
 
