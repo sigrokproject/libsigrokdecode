@@ -70,3 +70,10 @@ def sigrokdecode_count_transitions(inbuf):
 
 	return outbuf
 
+# Use psyco (if available) as it results in huge performance improvements.
+try:
+	import psyco
+	psyco.bind(sigrokdecode_count_transitions)
+except ImportError:
+	pass
+

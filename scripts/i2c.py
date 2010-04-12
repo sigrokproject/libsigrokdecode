@@ -162,3 +162,10 @@ def sigrokdecode_register_i2c():
 	}
 	return metadata
 
+# Use psyco (if available) as it results in huge performance improvements.
+try:
+	import psyco
+	psyco.bind(sigrokdecode_i2c)
+except ImportError:
+	pass
+
