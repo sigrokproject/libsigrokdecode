@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef LIBSIGROKDECODE_SIGROKDECODE_H
-#define LIBSIGROKDECODE_SIGROKDECODE_H
+#ifndef SIGROKDECODE_SIGROKDECODE_H
+#define SIGROKDECODE_SIGROKDECODE_H
 
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdint.h>
