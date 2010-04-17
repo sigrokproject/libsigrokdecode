@@ -24,6 +24,9 @@ def sigrokdecode_count_transitions(inbuf):
 
 	outbuf = ''
 
+	# FIXME: Get the data in the correct format in the first place.
+	inbuf = [ord(x) for x in inbuf]
+
 	# TODO: Don't hardcode the number of channels.
 	channels = 8
 
@@ -36,18 +39,22 @@ def sigrokdecode_count_transitions(inbuf):
 	# print type(inbuf)
 
 	# Presets...
-	s = ord(inbuf[0])
+	oldbyte = inbuf[0]
 	for i in xrange(channels):
-		curbit = (s & (1 << i) != 0)
-		oldbit[i] = curbit
+		oldbit[i] = (oldbyte & (1 << i)) != 0
 
 	# Loop over all samples.
 	# TODO: Handle LAs with more/less than 8 channels.
 	for s in inbuf:
-		s = ord(s) # FIXME
+		# Optimization: Skip identical bytes (no transitions).
+		if oldbyte == s:
+			continue
 		for i in xrange(channels):
 			curbit = (s & (1 << i) != 0)
-			if (oldbit[i] == 0 and curbit == 1):
+			# Optimization: Skip identical bits (no transitions).
+			if oldbit[i] == curbit:
+				continue
+			elif (oldbit[i] == 0 and curbit == 1):
 				rising[i] += 1
 			elif (oldbit[i] == 1 and curbit == 0):
 				falling[i] += 1
