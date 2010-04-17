@@ -31,13 +31,14 @@ int sigrokdecode_init(void)
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
-	/* FIXME */
-	/* Allows for ./gui/sigrok-gui in the top-level directory. */
-	PySys_SetPath("libsigrokdecode/scripts");
-	/* Allows for ./sigrok-gui in the gui/ directory. */
-	// PySys_SetPath("../libsigrokdecode/scripts");
-	/* Allows for sigrok-gui from anywhere given sigrok is installed. */
-	// PySys_SetPath("/usr/local/share/sigrok");
+	/* Add some more search directories for convenience. */
+	/* FIXME: Check error code. */
+	PyRun_SimpleString(
+		"import sys;"
+		"sys.path.append('libsigrokdecode/scripts');"
+		"sys.path.append('../libsigrokdecode/scripts');"
+		"sys.path.append('/usr/local/share/sigrok');"
+		);
 
 	return 0;
 }
@@ -71,8 +72,8 @@ int sigrokdecode_run_decoder(const char *decodername, uint8_t *inbuf,
 			     uint64_t inbuflen, uint8_t **outbuf,
 			     uint64_t *outbuflen)
 {
-	// const char *decoder_filename = "transitioncounter"; /* FIXME */
-	const char *decoder_filename = "i2c"; /* FIXME */
+	const char *decoder_filename = "transitioncounter"; /* FIXME */
+	// const char *decoder_filename = "i2c"; /* FIXME */
 	PyObject *py_name, *py_module, *py_func, *py_args;
 	PyObject *py_value, *py_result;
 	int ret;
