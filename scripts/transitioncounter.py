@@ -40,7 +40,7 @@ def sigrokdecode_count_transitions(inbuf):
 
 	# Presets...
 	oldbyte = inbuf[0]
-	for i in xrange(channels):
+	for i in range(channels):
 		oldbit[i] = (oldbyte & (1 << i)) != 0
 
 	# Loop over all samples.
@@ -49,7 +49,7 @@ def sigrokdecode_count_transitions(inbuf):
 		# Optimization: Skip identical bytes (no transitions).
 		if oldbyte == s:
 			continue
-		for i in xrange(channels):
+		for i in range(channels):
 			curbit = (s & (1 << i) != 0)
 			# Optimization: Skip identical bits (no transitions).
 			if oldbit[i] == curbit:
@@ -61,17 +61,17 @@ def sigrokdecode_count_transitions(inbuf):
 			oldbit[i] = curbit
 
 	# Total number of transitions is the sum of rising and falling edges.
-	for i in xrange(channels):
+	for i in range(channels):
 		transitions[i] = rising[i] + falling[i]
 
 	outbuf += "Rising edges:  "
-	for i in xrange(channels):
+	for i in range(channels):
 		outbuf += str(rising[i]) + " "
 	outbuf += "\nFalling edges: "
-	for i in xrange(channels):
+	for i in range(channels):
 		outbuf += str(falling[i]) + " "
 	outbuf += "\nTransitions:   "
-	for i in xrange(channels):
+	for i in range(channels):
 		outbuf += str(transitions[i]) + " "
 	outbuf += "\n"
 
