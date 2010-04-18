@@ -41,7 +41,7 @@ def sigrokdecode_count_transitions(inbuf):
 	# Presets...
 	oldbyte = inbuf[0]
 	for i in range(channels):
-		oldbit[i] = (oldbyte & (1 << i)) != 0
+		oldbit[i] = (oldbyte & (1 << i)) >> i
 
 	# Loop over all samples.
 	# TODO: Handle LAs with more/less than 8 channels.
@@ -50,7 +50,7 @@ def sigrokdecode_count_transitions(inbuf):
 		if oldbyte == s:
 			continue
 		for i in range(channels):
-			curbit = (s & (1 << i) != 0)
+			curbit = (s & (1 << i)) >> i
 			# Optimization: Skip identical bits (no transitions).
 			if oldbit[i] == curbit:
 				continue

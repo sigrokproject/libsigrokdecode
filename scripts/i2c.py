@@ -84,8 +84,8 @@ def sigrokdecode_i2c(inbuf):
 
 	# Get SCL/SDA bit values (0/1 for low/high) of the first sample.
 	s = ord(inbuf[0])
-	oldscl = (s & (1 << scl_bit)) != 0
-	oldsda = (s & (1 << sda_bit)) != 0
+	oldscl = (s & (1 << scl_bit)) >> scl_bit
+	oldsda = (s & (1 << sda_bit)) >> sda_bit
 
 	# Loop over all samples.
 	# TODO: Handle LAs with more/less than 8 channels.
@@ -94,8 +94,8 @@ def sigrokdecode_i2c(inbuf):
 		s = ord(s) # FIXME
 
 		# Get SCL/SDA bit values (0/1 for low/high).
-		scl = (s & (1 << scl_bit)) != 0
-		sda = (s & (1 << sda_bit)) != 0
+		scl = (s & (1 << scl_bit)) >> scl_bit
+		sda = (s & (1 << sda_bit)) >> sda_bit
 
 		# TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
