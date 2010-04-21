@@ -41,13 +41,13 @@
 # Repeated START condition (Sr): same as S
 # STOP condition (P): SDA = rising, SCL = high
 #
-# All data bytes on SDA are extactly 8 bits long (transmitted MSB-first).
+# All data bytes on SDA are exactly 8 bits long (transmitted MSB-first).
 # Each byte has to be followed by a 9th ACK/NACK bit. If that bit is low,
 # that indicates an ACK, if it's high that indicates a NACK.
 #
 # After the first START condition, a master sends the device address of the
 # slave it wants to talk to. Slave addresses are 7 bits long (MSB-first).
-# After those 7 bits a data direction bit is sent. If the bit is low that
+# After those 7 bits, a data direction bit is sent. If the bit is low that
 # indicates a WRITE operation, if it's high that indicates a READ operation.
 #
 # Later an optional 10bit slave addressing scheme was added.
@@ -77,7 +77,8 @@ def sigrokdecode_i2c(inbuf):
 
 	o = wr = ack = d = ''
 	bitcount = data = 0
-	state = 'IDLE'
+	IDLE, START, ADDRESS, DATA = range(4)
+	state = IDLE
 
 	# Get the bit number (and thus probe index) of the SCL/SDA signals.
 	scl_bit, sda_bit = signals
@@ -102,7 +103,7 @@ def sigrokdecode_i2c(inbuf):
 		# START condition (S): SDA = falling, SCL = high
 		if (oldsda == 1 and sda == 0) and scl == 1:
 			o += "%d\t\tSTART\n" % samplenum
-			state = 'ADDRESS'
+			state = ADDRESS
 			bitcount = data = 0
 
 		# Data latching by transmitter: SCL = low
@@ -125,20 +126,21 @@ def sigrokdecode_i2c(inbuf):
 
 			# We received 8 address/data bits and the ACK/NACK bit.
 			data >>= 1 # Shift out unwanted ACK/NACK bit here.
-			o += "%d\t\t%s: " % (samplenum, state)
+			# o += "%d\t\t%s: " % (samplenum, state)
+			o += "%d\t\tTODO:STATE: " % samplenum
 			ack = (sda == 1) and 'NACK' or 'ACK'
-			d = (state == 'ADDRESS') and (data & 0xfe) or data
+			d = (state == ADDRESS) and (data & 0xfe) or data
 			wr = ''
-			if state == 'ADDRESS':
+			if state == ADDRESS:
 				wr = (data & 1) and ' (W)' or ' (R)'
-				state = 'DATA'
+				state = DATA
 			o += "0x%02x%s (%s)\n" % (d, wr, ack)
 			bitcount = data = 0
 
 		# STOP condition (P): SDA = rising, SCL = high
 		elif (oldsda == 0 and sda == 1) and scl == 1:
 			o += "%d\t\tSTOP\n" % samplenum
-			state = 'IDLE'
+			state = IDLE
 
 		# Save current SDA/SCL values for the next round.
 		oldscl = scl
