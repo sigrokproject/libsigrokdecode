@@ -149,8 +149,8 @@ def sigrokdecode_i2c(inbuf):
 	return o
 
 # This is just a draft.
-def sigrokdecode_register_i2c():
-	metadata = {
+def register():
+	return {
 		'id': 'i2c',
 		'name': 'I2C',
 		'description': 'Inter-Integrated Circuit (I2C) bus',
@@ -162,7 +162,6 @@ def sigrokdecode_register_i2c():
 				},
 		'ouputformats': ['i2c', 'ascii'],
 	}
-	return metadata
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:
