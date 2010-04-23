@@ -65,11 +65,11 @@
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
 
-# TODO: Return two buffers, one with structured data for the GUI to parse
-#       and display, and one with human-readable ASCII output.
-
 def decode(inbuf):
 	"""I2C protocol decoder"""
+
+	# FIXME: Get the data in the correct format in the first place.
+	inbuf = [ord(x) for x in inbuf]
 
 	# FIXME: This should be passed in as metadata, not hardcoded here.
 	signals = (2, 5)
@@ -84,16 +84,13 @@ def decode(inbuf):
 	scl_bit, sda_bit = signals
 
 	# Get SCL/SDA bit values (0/1 for low/high) of the first sample.
-	s = ord(inbuf[0])
+	s = inbuf[0]
 	oldscl = (s & (1 << scl_bit)) >> scl_bit
 	oldsda = (s & (1 << sda_bit)) >> sda_bit
 
 	# Loop over all samples.
 	# TODO: Handle LAs with more/less than 8 channels.
 	for samplenum, s in enumerate(inbuf[1:]): # We skip the first byte...
- 
-		s = ord(s) # FIXME
-
 		# Get SCL/SDA bit values (0/1 for low/high).
 		scl = (s & (1 << scl_bit)) >> scl_bit
 		sda = (s & (1 << sda_bit)) >> sda_bit
@@ -148,19 +145,17 @@ def decode(inbuf):
 
 	return o
 
-# This is just a draft.
 def register():
 	return {
 		'id': 'i2c',
 		'name': 'I2C',
 		'desc': 'Inter-Integrated Circuit (I2C) bus',
-		'func': 'decode',
 		'inputformats': ['raw'],
 		'signalnames':  {
 				'SCL': 'Serial clock line',
 				'SDA': 'Serial data line',
 				},
-		'outputformats': ['i2c', 'ascii'],
+		'outputformats': ['i2c'],
 	}
 
 # Use psyco (if available) as it results in huge performance improvements.

@@ -35,10 +35,7 @@ def decode(inbuf):
 	rising = [0] * channels
 	falling = [0] * channels
 
-	# print len(inbuf)
-	# print type(inbuf)
-
-	# Presets...
+	# Initial values.
 	oldbyte = inbuf[0]
 	for i in range(channels):
 		oldbit[i] = (oldbyte & (1 << i)) >> i
@@ -59,6 +56,7 @@ def decode(inbuf):
 			elif (oldbit[i] == 1 and curbit == 0):
 				falling[i] += 1
 			oldbit[i] = curbit
+		oldbyte = s
 
 	# Total number of transitions is the sum of rising and falling edges.
 	for i in range(channels):
@@ -81,8 +79,7 @@ def register():
 	return {
 		'id': 'transitioncounter',
 		'name': 'Transition counter',
-		'desc': 'TODO',
-		'func': 'decode',
+		'desc': 'Count rising/falling edges',
 		'inputformats': ['raw'],
 		'signalnames': {}, # FIXME
 		'outputformats': ['transitioncounts'],
