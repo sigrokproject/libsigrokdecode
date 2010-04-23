@@ -77,6 +77,17 @@ def sigrokdecode_count_transitions(inbuf):
 
 	return outbuf
 
+def register():
+	return {
+		'id': 'transitioncounter',
+		'name': 'Transition counter',
+		'description': 'TODO',
+		'function': 'sigrokdecode_count_transitions',
+		'inputformats': ['raw'],
+		'signalnames': {}, # FIXME
+		'outputformats': ['transitioncounts'],
+	}
+
 # Use psyco (if available) as it results in huge performance improvements.
 try:
 	import psyco
