@@ -18,5 +18,5 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-dist_pkgdata_SCRIPTS = transitioncounter.py
+dist_pkgdata_SCRIPTS = i2c.py transitioncounter.py
 
