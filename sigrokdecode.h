@@ -45,6 +45,16 @@
 #define SIGROKDECODE_ERR		-1 /* Generic/unspecified error */
 #define SIGROKDECODE_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
 
+/* TODO: Documentation. */
+struct sigrokdecode_decoder_info {
+	char *id;
+	char *name;
+	char *description;
+	char *function;
+	char *inputformats; /* FIXME: Should be a list. */
+	char *outputformats; /* FIXME: Should be a list. */
+};
+
 int sigrokdecode_init(void);
 int sigrokdecode_load_decoder_file(const char *name);
 int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
