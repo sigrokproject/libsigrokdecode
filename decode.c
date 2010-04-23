@@ -68,12 +68,10 @@ int sigrokdecode_load_decoder_file(const char *name)
  * @param outbuflen TODO
  * @return 0 upon success, non-zero otherwise.
  */
-int sigrokdecode_run_decoder(const char *decodername, uint8_t *inbuf,
-			     uint64_t inbuflen, uint8_t **outbuf,
-			     uint64_t *outbuflen)
+int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
+			     uint8_t *inbuf, uint64_t inbuflen,
+			     uint8_t **outbuf, uint64_t *outbuflen)
 {
-	const char *decoder_filename = "transitioncounter"; /* FIXME */
-	// const char *decoder_filename = "i2c"; /* FIXME */
 	PyObject *py_name, *py_module, *py_func, *py_args;
 	PyObject *py_value, *py_result;
 	int ret;
@@ -93,7 +91,7 @@ int sigrokdecode_run_decoder(const char *decodername, uint8_t *inbuf,
 		return -5;
 
 	/* Get the name of the decoder module/file as Python string. */
-	if (!(py_name = PyString_FromString(decoder_filename))) {
+	if (!(py_name = PyString_FromString(modulename))) {
 		PyErr_Print();
 		return -6;
 	}
