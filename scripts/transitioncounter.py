@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-def sigrokdecode_count_transitions(inbuf):
+def decode(inbuf):
 	"""Counts the low->high and high->low transitions in the specified
 	   channel(s) of the signal."""
 
@@ -81,8 +81,8 @@ def register():
 	return {
 		'id': 'transitioncounter',
 		'name': 'Transition counter',
-		'description': 'TODO',
-		'function': 'sigrokdecode_count_transitions',
+		'desc': 'TODO',
+		'func': 'decode',
 		'inputformats': ['raw'],
 		'signalnames': {}, # FIXME
 		'outputformats': ['transitioncounts'],
@@ -91,7 +91,7 @@ def register():
 # Use psyco (if available) as it results in huge performance improvements.
 try:
 	import psyco
-	psyco.bind(sigrokdecode_count_transitions)
+	psyco.bind(decode)
 except ImportError:
 	pass
 

@@ -23,6 +23,7 @@
 
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdint.h>
+#include <glib.h>
 
 /*
  * Status/error codes returned by libsigrokdecode functions.
@@ -44,20 +45,25 @@
 #define SIGROKDECODE_OK			 0 /* No error */
 #define SIGROKDECODE_ERR		-1 /* Generic/unspecified error */
 #define SIGROKDECODE_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
+#define SIGROKDECODE_ERR_ARGS		-3 /* Function argument error */
+#define SIGROKDECODE_ERR_PYTHON		-4 /* Python C API error */
 
 /* TODO: Documentation. */
-struct sigrokdecode_decoder_info {
+struct sigrokdecode_decoder {
 	char *id;
 	char *name;
-	char *description;
-	char *function;
-	char *inputformats; /* FIXME: Should be a list. */
-	char *outputformats; /* FIXME: Should be a list. */
+	char *desc;
+	char *func;
+	GSList *inputformats;
+	GSList *outputformats;
+
+	PyObject *py_mod;
+	PyObject *py_func;
 };
 
 int sigrokdecode_init(void);
-int sigrokdecode_load_decoder_file(const char *name);
-int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
+int sigrokdecode_load_decoder(const char *name, struct sigrokdecode_decoder **dec);
+int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen);
 int sigrokdecode_shutdown(void);

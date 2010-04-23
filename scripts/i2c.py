@@ -68,7 +68,7 @@
 # TODO: Return two buffers, one with structured data for the GUI to parse
 #       and display, and one with human-readable ASCII output.
 
-def sigrokdecode_i2c(inbuf):
+def decode(inbuf):
 	"""I2C protocol decoder"""
 
 	# FIXME: This should be passed in as metadata, not hardcoded here.
@@ -153,20 +153,20 @@ def register():
 	return {
 		'id': 'i2c',
 		'name': 'I2C',
-		'description': 'Inter-Integrated Circuit (I2C) bus',
-		'function': 'sigrokdecode_i2c',
+		'desc': 'Inter-Integrated Circuit (I2C) bus',
+		'func': 'decode',
 		'inputformats': ['raw'],
 		'signalnames':  {
 				'SCL': 'Serial clock line',
 				'SDA': 'Serial data line',
 				},
-		'ouputformats': ['i2c', 'ascii'],
+		'outputformats': ['i2c', 'ascii'],
 	}
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:
 	import psyco
-	psyco.bind(sigrokdecode_i2c)
+	psyco.bind(decode)
 except ImportError:
 	pass
 

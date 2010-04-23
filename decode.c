@@ -20,6 +20,7 @@
 
 #include <sigrokdecode.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdio.h>
+#include <string.h>
 
 /**
  * Initialize libsigrokdecode.
@@ -44,81 +45,173 @@ int sigrokdecode_init(void)
 }
 
 /**
+ * Helper function to handle Python strings.
+ *
+ * TODO: @param entries.
+ *
+ * @return 0 upon success, non-zero otherwise. The 'outstr' argument will
+ *         point to a malloc()ed string upon success.
+ */
+static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
+		 const char *key, char **outstr)
+{
+	PyObject *py_str;
+	char *str;
+
+	py_str = PyMapping_GetItemString(py_res, (char *)key);
+	if (!py_str || !PyString_Check(py_str)) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		Py_DECREF(py_func);
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	if (!(str = PyString_AsString(py_str))) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		Py_DECREF(py_str);
+		Py_DECREF(py_func);
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	if (!(*outstr = strdup(str))) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		Py_DECREF(py_str);
+		Py_DECREF(py_func);
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_MALLOC;
+	}
+
+	Py_DECREF(py_str);
+
+	return 0;
+}
+
+/**
  * TODO
  *
  * @param name TODO
  * @return 0 upon success, non-zero otherwise.
  */
-int sigrokdecode_load_decoder_file(const char *name)
+int sigrokdecode_load_decoder(const char *name,
+			      struct sigrokdecode_decoder **dec)
 {
-	/* QUICK HACK */
-	name = name;
+	struct sigrokdecode_decoder *d;
+	PyObject *py_name, *py_mod, *py_func, *py_res /* , *py_tuple */;
+	int r;
 
-	/* TODO */
+	/* Get the name of the decoder module as Python string. */
+	if (!(py_name = PyString_FromString(name))) {
+		PyErr_Print();
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	/* "Import" the Python module. */
+	if (!(py_mod = PyImport_Import(py_name))) {
+		PyErr_Print();
+		Py_DECREF(py_name);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+	Py_DECREF(py_name);
+
+	/* Get the 'register' function name as Python callable object. */
+	py_func = PyObject_GetAttrString(py_mod, "register");
+	if (!py_func || !PyCallable_Check(py_func)) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	/* Call the 'register' function without arguments, get the result. */
+	if (!(py_res = PyObject_CallFunction(py_func, NULL))) {
+		PyErr_Print();
+		Py_DECREF(py_func);
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	if (!(d = malloc(sizeof(struct sigrokdecode_decoder))))
+		return SIGROKDECODE_ERR_MALLOC;
+
+	if ((r = h_str(py_res, py_func, py_mod, "id", &(d->id))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "name", &(d->name))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "desc", &(d->desc))) < 0)
+		return r;
+
+	d->py_mod = py_mod;
+
+	Py_DECREF(py_res);
+	Py_DECREF(py_func);
+
+	/* Get the 'decode' function name as Python callable object. */
+	py_func = PyObject_GetAttrString(py_mod, "decode");
+	if (!py_func || !PyCallable_Check(py_func)) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	d->py_func = py_func;
+
+	/* TODO: Handle inputformats, outputformats. */
+
+	*dec = d;
+
 	return 0;
 }
 
 /**
  * Run the specified decoder function.
  *
- * @param decodername TODO
+ * @param dec TODO
  * @param inbuf TODO
  * @param inbuflen TODO
  * @param outbuf TODO
  * @param outbuflen TODO
  * @return 0 upon success, non-zero otherwise.
  */
-int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
+int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
-	PyObject *py_name, *py_module, *py_func, *py_args;
-	PyObject *py_value, *py_result;
+	PyObject *py_mod, *py_func, *py_args, *py_value, *py_res;
 	int ret;
 
 	/* TODO: Use #defines for the return codes. */
 
 	/* Return an error upon unusable input. */
-	if (decodername == NULL)
-		return -1;
+	if (dec == NULL)
+		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
 	if (inbuf == NULL)
-		return -2;
+		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
 	if (inbuflen == 0) /* No point in working on empty buffers. */
-		return -3;
+		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuf == NULL)
-		return -4;
+		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuflen == NULL)
-		return -5;
+		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
 
-	/* Get the name of the decoder module/file as Python string. */
-	if (!(py_name = PyString_FromString(modulename))) {
-		PyErr_Print();
-		return -6;
-	}
+	/* TODO: Error handling. */
+	py_mod = dec->py_mod;
+	py_func = dec->py_func;
 
-	/* "Import" the python file/module. */
-	if (!(py_module = PyImport_Import(py_name))) {
-		PyErr_Print();
-		Py_DECREF(py_name);
-		return -7;
-	}
-	Py_DECREF(py_name);
-
-	/* Get the decoder/function name as Python callable object. */
-	py_func = PyObject_GetAttrString(py_module, decodername);
-	if (!py_func || !PyCallable_Check(py_func)) {
-		if (PyErr_Occurred())
-			PyErr_Print();
-		Py_DECREF(py_module);
-		return -8;
-	}
+	/* TODO: Really run Py_DECREF on py_mod/py_func? */
 
 	/* Create a Python tuple of size 1. */
 	if (!(py_args = PyTuple_New(1))) {
 		PyErr_Print();
 		Py_DECREF(py_func);
-		Py_DECREF(py_module);
-		return -9;
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	/* Get the input buffer as Python "string" (byte array). */
@@ -127,8 +220,8 @@ int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
 		PyErr_Print();
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
-		Py_DECREF(py_module);
-		return -10;
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	if (PyTuple_SetItem(py_args, 0, py_value) != 0) {
@@ -136,35 +229,35 @@ int sigrokdecode_run_decoder(const char *modulename, const char *decodername,
 		Py_DECREF(py_value);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
-		Py_DECREF(py_module);
-		return -11;
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	if (!(py_result = PyObject_CallObject(py_func, py_args))) {
+	if (!(py_res = PyObject_CallObject(py_func, py_args))) {
 		PyErr_Print();
 		Py_DECREF(py_value);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
-		Py_DECREF(py_module);
-		return -12;
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	if ((ret = PyObject_AsCharBuffer(py_result, (const char **)outbuf,
+	if ((ret = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
 					 (Py_ssize_t *)outbuflen))) {
 		PyErr_Print();
-		Py_DECREF(py_result);
+		Py_DECREF(py_res);
 		Py_DECREF(py_value);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
-		Py_DECREF(py_module);
-		return -13;
+		Py_DECREF(py_mod);
+		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	Py_DECREF(py_result);
+	Py_DECREF(py_res);
 	// Py_DECREF(py_value);
 	Py_DECREF(py_args);
 	Py_DECREF(py_func);
-	Py_DECREF(py_module);
+	Py_DECREF(py_mod);
 
 	return 0;
 }
