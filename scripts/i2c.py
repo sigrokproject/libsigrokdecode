@@ -65,6 +65,66 @@
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
 
+#
+# I2C output format:
+#
+# The output consists of a (Python) list of I2C "packets", each of which
+# has an (implicit) index number (its index in the list).
+# Each packet consists of a Python dict with certain key/value pairs.
+#
+# TODO: Make this a list later instead of a dict?
+#
+# 'type': (string)
+#   - 'S' (START condition)
+#   - 'Sr' (Repeated START)
+#   - 'AR' (Address, read)
+#   - 'AW' (Address, write)
+#   - 'DR' (Data, read)
+#   - 'DW' (Data, write)
+#   - 'P' (STOP condition)
+# 'range': (tuple of 2 integers, the min/max samplenumber of this range)
+#   - (min, max)
+#   - min/max can also be identical.
+# 'data': (actual data as integer ???) TODO: This can be very variable...
+# 'ann': (string; additional annotations / comments)
+#
+# Example output:
+# [{'type': 'S',  'range': (150, 160), 'data': None, 'ann': 'Foobar'},
+#  {'type': 'AW', 'range': (200, 300), 'data': 0x50, 'ann': 'Slave 4'},
+#  {'type': 'DW', 'range': (310, 370), 'data': 0x00, 'ann': 'Init cmd'},
+#  {'type': 'AR', 'range': (500, 560), 'data': 0x50, 'ann': 'Get stat'},
+#  {'type': 'DR', 'range': (580, 640), 'data': 0xfe, 'ann': 'OK'},
+#  {'type': 'P',  'range': (650, 660), 'data': None, 'ann': None}]
+#
+# Possible other events:
+#   - Error event in case protocol looks broken:
+#     [{'type': 'ERROR', 'range': (min, max),
+#	'data': TODO, 'ann': 'This is not a Microchip 24XX64 EEPROM'},
+#     [{'type': 'ERROR', 'range': (min, max),
+#	'data': TODO, 'ann': 'TODO'},
+#   - TODO: Make list of possible errors accessible as metadata?
+#
+# TODO: I2C address of slaves.
+# TODO: Handle multiple different I2C devices on same bus
+#       -> we need to decode multiple protocols at the same time.
+# TODO: range: Always contiguous? Splitted ranges? Multiple per event?
+#
+
+#
+# I2C input format:
+#
+# signals:
+# [[id, channel, description], ...] # TODO
+#
+# Example:
+# {'id': 'SCL', 'ch': 5, 'desc': 'Serial clock line'}
+# {'id': 'SDA', 'ch': 7, 'desc': 'Serial data line'}
+# ...
+#
+# {'inbuf': [...],
+#  'signals': [{'SCL': }]}
+#
+
 def decode(inbuf):
 	"""I2C protocol decoder"""
 
@@ -72,16 +132,22 @@ def decode(inbuf):
 	inbuf = [ord(x) for x in inbuf]
 
 	# FIXME: This should be passed in as metadata, not hardcoded here.
-	signals = (2, 5)
-	channels = 8
+	metadata = {
+	  'numchannels': 8,
+	  'signals': {
+	      'scl': {'ch': 5, 'name': 'SCL', 'desc': 'Serial clock line'},
+	      'sda': {'ch': 7, 'name': 'SDA' 'desc': 'Serial data line'},
+	    },
+	}
 
 	o = wr = ack = d = ''
 	bitcount = data = 0
 	IDLE, START, ADDRESS, DATA = range(4)
 	state = IDLE
 
-	# Get the bit number (and thus probe index) of the SCL/SDA signals.
-	scl_bit, sda_bit = signals
+	# Get the channel/probe number of the SCL/SDA signals.
+	scl_bit = metadata['signals']['scl']['ch']
+	sda_bit = metadata['signals']['sda']['ch']
 
 	# Get SCL/SDA bit values (0/1 for low/high) of the first sample.
 	s = inbuf[0]
