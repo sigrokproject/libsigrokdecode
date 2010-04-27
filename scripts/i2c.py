@@ -136,7 +136,7 @@ def decode(inbuf):
 	  'numchannels': 8,
 	  'signals': {
 	      'scl': {'ch': 5, 'name': 'SCL', 'desc': 'Serial clock line'},
-	      'sda': {'ch': 7, 'name': 'SDA' 'desc': 'Serial data line'},
+	      'sda': {'ch': 7, 'name': 'SDA', 'desc': 'Serial data line'},
 	    },
 	}
 
