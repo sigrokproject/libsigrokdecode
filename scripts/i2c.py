@@ -140,8 +140,10 @@ def decode(inbuf):
 	    },
 	}
 
-	o = wr = ack = d = ''
+	out = []
+	o = ack = d = ''
 	bitcount = data = 0
+	wr = startsample = -1
 	IDLE, START, ADDRESS, DATA = range(4)
 	state = IDLE
 
@@ -165,7 +167,9 @@ def decode(inbuf):
 
 		# START condition (S): SDA = falling, SCL = high
 		if (oldsda == 1 and sda == 0) and scl == 1:
-			o += "%d\t\tSTART\n" % samplenum
+			o = {'type': 'S', 'range': (samplenum, samplenum),
+			     'data': None, 'ann': None},
+			out.append(o)
 			state = ADDRESS
 			bitcount = data = 0
 
@@ -175,10 +179,12 @@ def decode(inbuf):
 
 		# Data sampling of receiver: SCL = rising
 		elif (oldscl == 0 and scl == 1):
+			if startsample == -1:
+				startsample = samplenum
 			bitcount += 1
 
-			# o += "%d\t\tRECEIVED BIT %d:  %d\n" % \
-			# 	(samplenum, 8 - bitcount, sda)
+			# out.append("%d\t\tRECEIVED BIT %d:  %d\n" % \
+			# 	(samplenum, 8 - bitcount, sda))
 
 			# Address and data are transmitted MSB-first.
 			data <<= 1
@@ -189,27 +195,43 @@ def decode(inbuf):
 
 			# We received 8 address/data bits and the ACK/NACK bit.
 			data >>= 1 # Shift out unwanted ACK/NACK bit here.
-			# o += "%d\t\t%s: " % (samplenum, state)
-			o += "%d\t\tTODO:STATE: " % samplenum
-			ack = (sda == 1) and 'NACK' or 'ACK'
+			ack = (sda == 1) and 'N' or 'A'
 			d = (state == ADDRESS) and (data & 0xfe) or data
-			wr = ''
 			if state == ADDRESS:
-				wr = (data & 1) and ' (W)' or ' (R)'
+				wr = (data & 1) and 1 or 0
 				state = DATA
-			o += "0x%02x%s (%s)\n" % (d, wr, ack)
-			bitcount = data = 0
+			o = {'type': state,
+			     'range': (startsample, samplenum - 1),
+			     'data': d, 'ann': None}
+			if state == ADDRESS and wr == 1:
+				o['type'] = 'AW'
+			elif state == ADDRESS and wr == 0:
+				o['type'] = 'AR'
+			elif state == DATA and wr == 1:
+				o['type'] = 'DW'
+			elif state == DATA and wr == 0:
+				o['type'] = 'DR'
+			out.append(o)
+			o = {'type': ack, 'range': (samplenum, samplenum),
+			     'data': None, 'ann': None}
+			out.append(o)
+			bitcount = data = startsample = 0
+			startsample = -1
 
 		# STOP condition (P): SDA = rising, SCL = high
 		elif (oldsda == 0 and sda == 1) and scl == 1:
-			o += "%d\t\tSTOP\n" % samplenum
+			o = {'type': 'P', 'range': (samplenum, samplenum),
+			     'data': None, 'ann': None},
+			out.append(o)
 			state = IDLE
+			wr = -1
 
 		# Save current SDA/SCL values for the next round.
 		oldscl = scl
 		oldsda = sda
 
-	return o
+	# FIXME: Just for testing...
+	return str(out)
 
 def register():
 	return {
