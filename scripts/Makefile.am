@@ -20,3 +20,6 @@
 
 dist_pkgdata_SCRIPTS = i2c.py nunchuk.py transitioncounter.py
 
+clean-local:
+	rm -f *.pyc
+
