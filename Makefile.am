@@ -29,3 +29,6 @@ libsigrokdecode_la_LDFLAGS = $(LDFLAGS_PYTHON)
 
 include_HEADERS = sigrokdecode.h
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libsigrokdecode.pc
+

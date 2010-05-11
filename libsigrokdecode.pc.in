@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libsigrokdecode
+Description: Protocol decoder library of the sigrok logic analyzer software
+URL: http://www.sigrok.org
+Requires:
+Version: @VERSION@
+Libs: -L${libdir} -lsigrokdecode
+Cflags: -I${includedir}
+
