@@ -25,7 +25,7 @@
 /**
  * Initialize libsigrokdecode.
  *
- * @return 0 upon success, non-zero otherwise.
+ * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_init(void)
 {
@@ -34,6 +34,7 @@ int sigrokdecode_init(void)
 
 	/* Add some more search directories for convenience. */
 	/* FIXME: Check error code. */
+	/* FIXME: What happens if this function is called multiple times? */
 	PyRun_SimpleString(
 		"import sys;"
 		"sys.path.append('libsigrokdecode/scripts');"
@@ -41,7 +42,7 @@ int sigrokdecode_init(void)
 		"sys.path.append('/usr/local/share/sigrok');"
 		);
 
-	return 0;
+	return SIGROKDECODE_OK;
 }
 
 /**
@@ -49,8 +50,8 @@ int sigrokdecode_init(void)
  *
  * TODO: @param entries.
  *
- * @return 0 upon success, non-zero otherwise. The 'outstr' argument will
- *         point to a malloc()ed string upon success.
+ * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a malloc()ed string upon success.
  */
 static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 		 const char *key, char **outstr)
@@ -87,14 +88,15 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 
 	Py_DECREF(py_str);
 
-	return 0;
+	return SIGROKDECODE_OK;
 }
 
 /**
  * TODO
  *
  * @param name TODO
- * @return 0 upon success, non-zero otherwise.
+ *
+ * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_load_decoder(const char *name,
 			      struct sigrokdecode_decoder **dec)
@@ -166,7 +168,7 @@ int sigrokdecode_load_decoder(const char *name,
 
 	*dec = d;
 
-	return 0;
+	return SIGROKDECODE_OK;
 }
 
 /**
@@ -177,7 +179,8 @@ int sigrokdecode_load_decoder(const char *name,
  * @param inbuflen TODO
  * @param outbuf TODO
  * @param outbuflen TODO
- * @return 0 upon success, non-zero otherwise.
+ *
+ * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
@@ -259,18 +262,18 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	Py_DECREF(py_func);
 	Py_DECREF(py_mod);
 
-	return 0;
+	return SIGROKDECODE_OK;
 }
 
 /**
  * Shutdown libsigrokdecode.
  *
- * @return 0 upon success, non-zero otherwise.
+ * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_shutdown(void)
 {
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
 
-	return 0;
+	return SIGROKDECODE_OK;
 }
