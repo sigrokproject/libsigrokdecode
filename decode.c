@@ -22,6 +22,13 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Re-define some string functions for Python >= 3.0. */
+#if PY_VERSION_HEX >= 0x03000000
+#define PyString_AsString PyBytes_AsString
+#define PyString_FromString PyBytes_FromString
+#define PyString_Check PyBytes_Check
+#endif
+
 /**
  * Initialize libsigrokdecode.
  *
