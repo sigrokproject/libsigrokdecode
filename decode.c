@@ -44,8 +44,8 @@ int sigrokdecode_init(void)
 	/* FIXME: What happens if this function is called multiple times? */
 	PyRun_SimpleString(
 		"import sys;"
-		"sys.path.append('libsigrokdecode/scripts');"
-		"sys.path.append('../libsigrokdecode/scripts');"
+		"sys.path.append('libsigrokdecode/decoders');"
+		"sys.path.append('../libsigrokdecode/decoders');"
 		"sys.path.append('/usr/local/share/sigrok');"
 		);
 
