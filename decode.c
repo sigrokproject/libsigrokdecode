@@ -47,14 +47,11 @@ int sigrokdecode_init(void)
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
-	/* Add some more search directories for convenience. */
+	/* Add search directory for the protocol decoders. */
 	/* FIXME: Check error code. */
 	/* FIXME: What happens if this function is called multiple times? */
-	PyRun_SimpleString(
-		"import sys;"
-		"sys.path.append('libsigrokdecode/decoders');"
-		"sys.path.append('" DECODERS_DIR "');"
-		);
+	PyRun_SimpleString("import sys;"
+			   "sys.path.append('" DECODERS_DIR "');");
 
 	if (!(dir = opendir(DECODERS_DIR)))
 		return SIGROKDECODE_ERR_DECODERS_DIR;
