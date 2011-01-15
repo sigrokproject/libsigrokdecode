@@ -51,7 +51,7 @@ int sigrokdecode_init(void)
 	/* FIXME: Check error code. */
 	/* FIXME: What happens if this function is called multiple times? */
 	PyRun_SimpleString("import sys;"
-			   "sys.path.append('" DECODERS_DIR "');");
+			   "sys.path.append(r'" DECODERS_DIR "');");
 
 	if (!(dir = opendir(DECODERS_DIR)))
 		return SIGROKDECODE_ERR_DECODERS_DIR;
