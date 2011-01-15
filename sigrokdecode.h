@@ -47,6 +47,10 @@
 #define SIGROKDECODE_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
 #define SIGROKDECODE_ERR_ARGS		-3 /* Function argument error */
 #define SIGROKDECODE_ERR_PYTHON		-4 /* Python C API error */
+#define SIGROKDECODE_ERR_DECODERS_DIR	-5 /* Protocol decoder path invalid */
+
+/* The list of loaded protocol decoders. */
+GSList *list_pds;
 
 /* TODO: Documentation. */
 struct sigrokdecode_decoder {

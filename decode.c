@@ -21,6 +21,7 @@
 #include <sigrokdecode.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 
 /* Re-define some string functions for Python >= 3.0. */
 #if PY_VERSION_HEX >= 0x03000000
@@ -29,6 +30,9 @@
 #define PyString_Check PyBytes_Check
 #endif
 
+/* The list of protocol decoders. */
+GSList *list_pds;
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -36,6 +40,10 @@
  */
 int sigrokdecode_init(void)
 {
+	DIR *dir;
+	struct dirent *dp;
+	char *tmp;
+
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
@@ -45,9 +53,19 @@ int sigrokdecode_init(void)
 	PyRun_SimpleString(
 		"import sys;"
 		"sys.path.append('libsigrokdecode/decoders');"
-		"sys.path.append('../libsigrokdecode/decoders');"
-		"sys.path.append('/usr/local/share/sigrok');"
+		"sys.path.append('" DECODERS_DIR "');"
 		);
+
+	if (!(dir = opendir(DECODERS_DIR)))
+		return SIGROKDECODE_ERR_DECODERS_DIR;
+
+	while ((dp = readdir(dir)) != NULL) {
+		if (!strstr(dp->d_name, ".py"))
+			continue;
+		if ((tmp = strdup(dp->d_name)))
+			list_pds = g_slist_append(list_pds, tmp);
+	}
+	closedir(dir);
 
 	return SIGROKDECODE_OK;
 }
