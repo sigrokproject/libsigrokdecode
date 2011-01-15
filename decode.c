@@ -60,7 +60,7 @@ int sigrokdecode_init(void)
 		return SIGROKDECODE_ERR_DECODERS_DIR;
 
 	while ((dp = readdir(dir)) != NULL) {
-		if (!strstr(dp->d_name, ".py"))
+		if (!g_str_has_suffix(dp->d_name, ".py"))
 			continue;
 		if ((tmp = strdup(dp->d_name)))
 			list_pds = g_slist_append(list_pds, tmp);
