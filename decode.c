@@ -62,7 +62,8 @@ int sigrokdecode_init(void)
 	while ((dp = readdir(dir)) != NULL) {
 		if (!g_str_has_suffix(dp->d_name, ".py"))
 			continue;
-		if ((tmp = strdup(dp->d_name)))
+		/* For now use the filename (without .py) as decoder name. */
+		if ((tmp = g_strndup(dp->d_name, strlen(dp->d_name) - 3)))
 			list_pds = g_slist_append(list_pds, tmp);
 	}
 	closedir(dir);
