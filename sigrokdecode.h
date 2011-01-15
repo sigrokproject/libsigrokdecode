@@ -49,9 +49,6 @@
 #define SIGROKDECODE_ERR_PYTHON		-4 /* Python C API error */
 #define SIGROKDECODE_ERR_DECODERS_DIR	-5 /* Protocol decoder path invalid */
 
-/* The list of loaded protocol decoders. */
-GSList *list_pds;
-
 /* TODO: Documentation. */
 struct sigrokdecode_decoder {
 	char *id;
@@ -66,6 +63,7 @@ struct sigrokdecode_decoder {
 };
 
 int sigrokdecode_init(void);
+GSList *sigrokdecode_list_decoders(void);
 int sigrokdecode_load_decoder(const char *name, struct sigrokdecode_decoder **dec);
 int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,

@@ -31,7 +31,7 @@
 #endif
 
 /* The list of protocol decoders. */
-GSList *list_pds;
+GSList *list_pds = NULL;
 
 /**
  * Initialize libsigrokdecode.
@@ -68,6 +68,18 @@ int sigrokdecode_init(void)
 	closedir(dir);
 
 	return SIGROKDECODE_OK;
+}
+
+/**
+ * Returns the list of supported/loaded protocol decoders.
+ *
+ * This is a GSList containing the names of the decoders as strings.
+ *
+ * @return List of decoders, NULL if none are supported or loaded.
+ */
+GSList *sigrokdecode_list_decoders(void)
+{
+	return list_pds;
 }
 
 /**
