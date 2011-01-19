@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-SUBDIRS = decoders
+# SUBDIRS = decoders
 
 # lib_LTLIBRARIES = libsigrokdecode.la
 noinst_LTLIBRARIES = libsigrokdecode.la
