@@ -25,6 +25,10 @@
 #include <stdint.h>
 #include <glib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Status/error codes returned by libsigrokdecode functions.
  *
@@ -69,5 +73,9 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen);
 int sigrokdecode_shutdown(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
