@@ -26,7 +26,8 @@ libsigrokdecode_la_SOURCES = decode.c
 
 libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 			      -DDECODERS_DIR='"$(DECODERS_DIR)"'
-libsigrokdecode_la_LDFLAGS = $(LDFLAGS_PYTHON)
+libsigrokdecode_la_LDFLAGS = $(SIGROKDECODE_LT_LDFLAGS) \
+			     $(LDFLAGS_PYTHON)
 
 include_HEADERS = sigrokdecode.h
 
