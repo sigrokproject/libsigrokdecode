@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <config.h>
 
 /* Re-define some string functions for Python >= 3.0. */
 #if PY_VERSION_HEX >= 0x03000000
