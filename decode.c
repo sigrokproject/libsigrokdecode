@@ -99,7 +99,7 @@ GSList *sigrokdecode_list_decoders(void)
  *
  * TODO: @param entries.
  *
- * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
 static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
@@ -145,7 +145,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
  *
  * @param name TODO
  *
- * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_load_decoder(const char *name,
 			      struct sigrokdecode_decoder **dec)
@@ -229,7 +229,7 @@ int sigrokdecode_load_decoder(const char *name,
  * @param outbuf TODO
  * @param outbuflen TODO
  *
- * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
@@ -319,7 +319,7 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 /**
  * Shutdown libsigrokdecode.
  *
- * @return LIBSIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_shutdown(void)
 {
