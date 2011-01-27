@@ -107,14 +107,12 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 {
 	PyObject *py_str;
 	char *str;
+	int ret;
 
 	py_str = PyMapping_GetItemString(py_res, (char *)key);
 	if (!py_str || !PyString_Check(py_str)) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_func);
-		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_h_decref_func;
 	}
 
 	/*
@@ -123,26 +121,30 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 	 * must not be free()'d.
 	 */
 	if (!(str = PyString_AsString(py_str))) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_str);
-		Py_XDECREF(py_func);
-		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_h_decref_str;
 	}
 
 	if (!(*outstr = strdup(str))) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_str);
-		Py_XDECREF(py_func);
-		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_MALLOC;
+		ret = SIGROKDECODE_ERR_MALLOC;
+		goto err_h_decref_str;
 	}
 
 	Py_XDECREF(py_str);
 
 	return SIGROKDECODE_OK;
+
+err_h_decref_str:
+	Py_XDECREF(py_str);
+err_h_decref_func:
+	Py_XDECREF(py_func);
+err_h_decref_mod:
+	Py_XDECREF(py_mod);
+
+	if (PyErr_Occurred())
+		PyErr_Print(); /* Returns void. */
+
+	return ret;
 }
 
 /**
