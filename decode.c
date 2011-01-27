@@ -159,7 +159,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 		goto err_h_decref_str;
 	}
 
-	if (!(*outstr = strdup(str))) {
+	if (!(*outstr = g_strdup(str))) {
 		ret = SIGROKDECODE_ERR_MALLOC;
 		goto err_h_decref_str;
 	}
@@ -245,7 +245,11 @@ static int sigrokdecode_load_decoder(const char *name,
 
 	d->py_func = py_func;
 
-	/* TODO: Handle inputformats, outputformats. */
+	/* TODO: Handle func, inputformats, outputformats. */
+	/* Note: They must at least be set to NULL, will segfault otherwise. */
+	d->func = NULL;
+	d->inputformats = NULL;
+	d->outputformats = NULL;
 
 	*dec = d;
 
@@ -343,12 +347,57 @@ err_run_decref_func:
 }
 
 /**
+ * TODO
+ */
+static int sigrokdecode_unload_decoder(struct sigrokdecode_decoder *dec)
+{
+	g_free(dec->id);
+	g_free(dec->name);
+	g_free(dec->desc);
+	g_free(dec->func);
+
+	/* TODO: Free everything in inputformats and outputformats. */
+
+	if (dec->inputformats != NULL)
+		g_slist_free(dec->inputformats);
+	if (dec->outputformats != NULL)
+		g_slist_free(dec->outputformats);
+
+	Py_XDECREF(dec->py_func);
+	Py_XDECREF(dec->py_mod);
+
+	return SIGROKDECODE_OK;
+}
+
+/**
+ * TODO
+ */
+static int sigrokdecode_unload_all_decoders(void)
+{
+	GSList *l;
+	struct sigrokdecode_decoder *dec;
+
+	for (l = sigrokdecode_list_decoders(); l; l = l->next) {
+		dec = l->data;
+		/* TODO: Error handling. */
+		sigrokdecode_unload_decoder(dec);
+	}
+
+	return SIGROKDECODE_OK;
+}
+
+/**
  * Shutdown libsigrokdecode.
  *
  * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
 int sigrokdecode_shutdown(void)
 {
+	/* Unload/free all decoders, and then the list of decoders itself. */
+	/* TODO: Error handling. */
+	sigrokdecode_unload_all_decoders();
+	g_slist_free(list_pds);
+
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
 
