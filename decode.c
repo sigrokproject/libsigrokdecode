@@ -259,9 +259,9 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	/* TODO: Error handling. */
 	py_mod = dec->py_mod;
+	Py_INCREF(py_mod);
 	py_func = dec->py_func;
-
-	/* TODO: Really run Py_DECREF on py_mod/py_func? */
+	Py_INCREF(py_func);
 
 	/* Create a Python tuple of size 1. */
 	if (!(py_args = PyTuple_New(1))) { /* NEWREF */
