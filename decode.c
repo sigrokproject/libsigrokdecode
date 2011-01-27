@@ -34,6 +34,19 @@
 /* The list of protocol decoders. */
 GSList *list_pds = NULL;
 
+/*
+ * Here's a quick overview of Python/C API reference counting.
+ *
+ * Check the Python/C API docs for what type of reference a function returns.
+ *
+ *  - If it returns a "new reference", you're responsible to Py_DECREF() it.
+ *
+ *  - If it returns a "borrowed reference", you MUST NOT Py_DECREF() it.
+ *
+ *  - If a function "steals" a reference, you no longer are responsible for
+ *    Py_DECREF()ing it (someone else will do it for you at some point).
+ */
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -263,9 +276,14 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
+	/*
+	 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
+	 * That means we are no longer responsible for Py_DECREF()'ing it.
+	 * It will automatically be free'd when the 'py_args' tuple is free'd.
+	 */
 	if (PyTuple_SetItem(py_args, 0, py_value) != 0) {
 		PyErr_Print();
-		Py_DECREF(py_value);
+		Py_DECREF(py_value); /* TODO: Ref. stolen upon error? */
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -274,7 +292,6 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	if (!(py_res = PyObject_CallObject(py_func, py_args))) {
 		PyErr_Print();
-		Py_DECREF(py_value);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -285,7 +302,6 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 					 (Py_ssize_t *)outbuflen))) {
 		PyErr_Print();
 		Py_DECREF(py_res);
-		Py_DECREF(py_value);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -293,7 +309,6 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	}
 
 	Py_DECREF(py_res);
-	// Py_DECREF(py_value);
 	Py_DECREF(py_args);
 	Py_DECREF(py_func);
 	Py_DECREF(py_mod);
