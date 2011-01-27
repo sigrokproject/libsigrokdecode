@@ -138,7 +138,6 @@ err_h_decref_str:
 	Py_XDECREF(py_str);
 err_h_decref_func:
 	Py_XDECREF(py_func);
-err_h_decref_mod:
 	Py_XDECREF(py_mod);
 
 	if (PyErr_Occurred())
@@ -301,7 +300,6 @@ err_run_decref_args:
 	Py_XDECREF(py_args);
 err_run_decref_func:
 	Py_XDECREF(py_func);
-err_run_decref_mod:
 	Py_XDECREF(py_mod);
 
 	if (PyErr_Occurred())
