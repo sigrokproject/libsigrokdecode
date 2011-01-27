@@ -241,7 +241,7 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
 	PyObject *py_mod, *py_func, *py_args, *py_value, *py_res;
-	int ret;
+	int r, ret;
 
 	/* TODO: Use #defines for the return codes. */
 
@@ -265,20 +265,15 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	/* Create a Python tuple of size 1. */
 	if (!(py_args = PyTuple_New(1))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		Py_DECREF(py_func);
-		Py_DECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_func;
 	}
 
 	/* Get the input buffer as Python "string" (byte array). */
 	/* TODO: int vs. uint64_t for 'inbuflen'? */
 	if (!(py_value = Py_BuildValue("s#", inbuf, inbuflen))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		Py_DECREF(py_args);
-		Py_DECREF(py_func);
-		Py_DECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_args;
 	}
 
 	/*
@@ -287,38 +282,38 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	 * It will automatically be free'd when the 'py_args' tuple is free'd.
 	 */
 	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-		PyErr_Print(); /* Returns void. */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 		Py_DECREF(py_value); /* TODO: Ref. stolen upon error? */
-		Py_DECREF(py_args);
-		Py_DECREF(py_func);
-		Py_DECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_args;
 	}
 
 	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		Py_DECREF(py_args);
-		Py_DECREF(py_func);
-		Py_DECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_args;
 	}
 
-	if ((ret = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
-					 (Py_ssize_t *)outbuflen))) {
-		PyErr_Print(); /* Returns void. */
+	if ((r = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
+				      (Py_ssize_t *)outbuflen))) {
+		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 		Py_DECREF(py_res);
-		Py_DECREF(py_args);
-		Py_DECREF(py_func);
-		Py_DECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_args;
 	}
+
+	ret = SIGROKDECODE_OK;
 
 	Py_DECREF(py_res);
+
+err_run_decref_args:
 	Py_DECREF(py_args);
+err_run_decref_func:
 	Py_DECREF(py_func);
+err_run_decref_mod:
 	Py_DECREF(py_mod);
 
-	return SIGROKDECODE_OK;
+	if (PyErr_Occurred())
+		PyErr_Print(); /* Returns void. */
+
+	return ret;
 }
 
 /**
