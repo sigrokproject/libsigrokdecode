@@ -111,15 +111,20 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 	py_str = PyMapping_GetItemString(py_res, (char *)key);
 	if (!py_str || !PyString_Check(py_str)) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
+	/*
+	 * PyString_AsString()'s returned string refers to an internal buffer
+	 * (not a copy), i.e. the data must not be modified, and the memory
+	 * must not be free()'d.
+	 */
 	if (!(str = PyString_AsString(py_str))) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_str);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -128,7 +133,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 
 	if (!(*outstr = strdup(str))) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_str);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -155,31 +160,31 @@ int sigrokdecode_load_decoder(const char *name,
 	int r;
 
 	/* Get the name of the decoder module as Python string. */
-	if (!(py_name = PyString_FromString(name))) {
-		PyErr_Print();
+	if (!(py_name = PyString_FromString(name))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	/* "Import" the Python module. */
-	if (!(py_mod = PyImport_Import(py_name))) {
-		PyErr_Print();
+	if (!(py_mod = PyImport_Import(py_name))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_name);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 	Py_DECREF(py_name);
 
 	/* Get the 'register' function name as Python callable object. */
-	py_func = PyObject_GetAttrString(py_mod, "register");
+	py_func = PyObject_GetAttrString(py_mod, "register"); /* NEWREF */
 	if (!py_func || !PyCallable_Check(py_func)) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_mod);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	/* Call the 'register' function without arguments, get the result. */
-	if (!(py_res = PyObject_CallFunction(py_func, NULL))) {
-		PyErr_Print();
+	if (!(py_res = PyObject_CallFunction(py_func, NULL))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
@@ -203,10 +208,10 @@ int sigrokdecode_load_decoder(const char *name,
 	Py_DECREF(py_func);
 
 	/* Get the 'decode' function name as Python callable object. */
-	py_func = PyObject_GetAttrString(py_mod, "decode");
+	py_func = PyObject_GetAttrString(py_mod, "decode"); /* NEWREF */
 	if (!py_func || !PyCallable_Check(py_func)) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_mod);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
@@ -259,8 +264,8 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	/* TODO: Really run Py_DECREF on py_mod/py_func? */
 
 	/* Create a Python tuple of size 1. */
-	if (!(py_args = PyTuple_New(1))) {
-		PyErr_Print();
+	if (!(py_args = PyTuple_New(1))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
@@ -268,8 +273,8 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	/* Get the input buffer as Python "string" (byte array). */
 	/* TODO: int vs. uint64_t for 'inbuflen'? */
-	if (!(py_value = Py_BuildValue("s#", inbuf, inbuflen))) {
-		PyErr_Print();
+	if (!(py_value = Py_BuildValue("s#", inbuf, inbuflen))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -281,8 +286,8 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	 * That means we are no longer responsible for Py_DECREF()'ing it.
 	 * It will automatically be free'd when the 'py_args' tuple is free'd.
 	 */
-	if (PyTuple_SetItem(py_args, 0, py_value) != 0) {
-		PyErr_Print();
+	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_value); /* TODO: Ref. stolen upon error? */
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
@@ -290,8 +295,8 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	if (!(py_res = PyObject_CallObject(py_func, py_args))) {
-		PyErr_Print();
+	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
 		Py_DECREF(py_mod);
@@ -300,7 +305,7 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	if ((ret = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
 					 (Py_ssize_t *)outbuflen))) {
-		PyErr_Print();
+		PyErr_Print(); /* Returns void. */
 		Py_DECREF(py_res);
 		Py_DECREF(py_args);
 		Py_DECREF(py_func);
