@@ -158,22 +158,14 @@ int sigrokdecode_load_decoder(const char *name,
 			      struct sigrokdecode_decoder **dec)
 {
 	struct sigrokdecode_decoder *d;
-	PyObject *py_name, *py_mod, *py_func, *py_res /* , *py_tuple */;
+	PyObject *py_mod, *py_func, *py_res /* , *py_tuple */;
 	int r;
 
-	/* Get the name of the decoder module as Python string. */
-	if (!(py_name = PyString_FromString(name))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
-	}
-
 	/* "Import" the Python module. */
-	if (!(py_mod = PyImport_Import(py_name))) { /* NEWREF */
+	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
 		PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_name);
 		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
 	}
-	Py_XDECREF(py_name);
 
 	/* Get the 'register' function name as Python callable object. */
 	py_func = PyObject_GetAttrString(py_mod, "register"); /* NEWREF */
