@@ -68,7 +68,7 @@ struct sigrokdecode_decoder {
 
 int sigrokdecode_init(void);
 GSList *sigrokdecode_list_decoders(void);
-int sigrokdecode_load_decoder(const char *name, struct sigrokdecode_decoder **dec);
+struct sigrokdecode_decoder *sigrokdecode_get_decoder_by_id(const char *id);
 int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen);

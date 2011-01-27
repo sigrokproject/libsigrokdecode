@@ -47,6 +47,9 @@ GSList *list_pds = NULL;
  *    Py_XDECREF()ing it (someone else will do it for you at some point).
  */
 
+static int sigrokdecode_load_decoder(const char *name,
+				     struct sigrokdecode_decoder **dec);
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -56,7 +59,9 @@ int sigrokdecode_init(void)
 {
 	DIR *dir;
 	struct dirent *dp;
-	char *tmp;
+	char *decodername;
+	struct sigrokdecode_decoder *dec;
+	int ret;
 
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
@@ -73,9 +78,18 @@ int sigrokdecode_init(void)
 	while ((dp = readdir(dir)) != NULL) {
 		if (!g_str_has_suffix(dp->d_name, ".py"))
 			continue;
-		/* For now use the filename (without .py) as decoder name. */
-		if ((tmp = g_strndup(dp->d_name, strlen(dp->d_name) - 3)))
-			list_pds = g_slist_append(list_pds, tmp);
+
+		/* Decoder name == filename (without .py suffix). */
+		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
+
+		/* TODO: Error handling. */
+		dec = malloc(sizeof(struct sigrokdecode_decoder));
+
+		/* Load the decoder. */
+		ret = sigrokdecode_load_decoder(decodername, &dec);
+
+		/* Append it to the list of supported/loaded decoders. */
+		list_pds = g_slist_append(list_pds, dec);
 	}
 	closedir(dir);
 
@@ -92,6 +106,26 @@ int sigrokdecode_init(void)
 GSList *sigrokdecode_list_decoders(void)
 {
 	return list_pds;
+}
+
+/**
+ * Get the decoder with the specified ID.
+ *
+ * @param id The ID string of the decoder to return.
+ * @return The decoder with the specified ID, or NULL if not found.
+ */
+struct sigrokdecode_decoder *sigrokdecode_get_decoder_by_id(const char *id)
+{
+	GSList *l;
+	struct sigrokdecode_decoder *dec;
+
+	for (l = sigrokdecode_list_decoders(); l; l = l->next) {
+		dec = l->data;
+		if (!strcmp(dec->id, id))
+			return dec;
+	}
+
+	return NULL;
 }
 
 /**
@@ -153,7 +187,7 @@ err_h_decref_func:
  *
  * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
  */
-int sigrokdecode_load_decoder(const char *name,
+static int sigrokdecode_load_decoder(const char *name,
 			      struct sigrokdecode_decoder **dec)
 {
 	struct sigrokdecode_decoder *d;
