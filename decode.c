@@ -47,20 +47,19 @@ GSList *list_pds = NULL;
  *    Py_XDECREF()ing it (someone else will do it for you at some point).
  */
 
-static int sigrokdecode_load_decoder(const char *name,
-				     struct sigrokdecode_decoder **dec);
+static int srd_load_decoder(const char *name, struct srd_decoder **dec);
 
 /**
  * Initialize libsigrokdecode.
  *
- * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int sigrokdecode_init(void)
+int srd_init(void)
 {
 	DIR *dir;
 	struct dirent *dp;
 	char *decodername;
-	struct sigrokdecode_decoder *dec;
+	struct srd_decoder *dec;
 	int ret;
 
 	/* Py_Initialize() returns void and usually cannot fail. */
@@ -73,7 +72,7 @@ int sigrokdecode_init(void)
 			   "sys.path.append(r'" DECODERS_DIR "');");
 
 	if (!(dir = opendir(DECODERS_DIR)))
-		return SIGROKDECODE_ERR_DECODERS_DIR;
+		return SRD_ERR_DECODERS_DIR;
 
 	while ((dp = readdir(dir)) != NULL) {
 		if (!g_str_has_suffix(dp->d_name, ".py"))
@@ -83,17 +82,17 @@ int sigrokdecode_init(void)
 		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
 
 		/* TODO: Error handling. */
-		dec = malloc(sizeof(struct sigrokdecode_decoder));
+		dec = malloc(sizeof(struct srd_decoder));
 
 		/* Load the decoder. */
-		ret = sigrokdecode_load_decoder(decodername, &dec);
+		ret = srd_load_decoder(decodername, &dec);
 
 		/* Append it to the list of supported/loaded decoders. */
 		list_pds = g_slist_append(list_pds, dec);
 	}
 	closedir(dir);
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 }
 
 /**
@@ -103,7 +102,7 @@ int sigrokdecode_init(void)
  *
  * @return List of decoders, NULL if none are supported or loaded.
  */
-GSList *sigrokdecode_list_decoders(void)
+GSList *srd_list_decoders(void)
 {
 	return list_pds;
 }
@@ -114,12 +113,12 @@ GSList *sigrokdecode_list_decoders(void)
  * @param id The ID string of the decoder to return.
  * @return The decoder with the specified ID, or NULL if not found.
  */
-struct sigrokdecode_decoder *sigrokdecode_get_decoder_by_id(const char *id)
+struct srd_decoder *srd_get_decoder_by_id(const char *id)
 {
 	GSList *l;
-	struct sigrokdecode_decoder *dec;
+	struct srd_decoder *dec;
 
-	for (l = sigrokdecode_list_decoders(); l; l = l->next) {
+	for (l = srd_list_decoders(); l; l = l->next) {
 		dec = l->data;
 		if (!strcmp(dec->id, id))
 			return dec;
@@ -133,7 +132,7 @@ struct sigrokdecode_decoder *sigrokdecode_get_decoder_by_id(const char *id)
  *
  * TODO: @param entries.
  *
- * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
 static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
@@ -145,7 +144,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 
 	py_str = PyMapping_GetItemString(py_res, (char *)key);
 	if (!py_str || !PyString_Check(py_str)) {
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_h_decref_func;
 	}
 
@@ -155,18 +154,18 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 	 * must not be free()'d.
 	 */
 	if (!(str = PyString_AsString(py_str))) {
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_h_decref_str;
 	}
 
 	if (!(*outstr = g_strdup(str))) {
-		ret = SIGROKDECODE_ERR_MALLOC;
+		ret = SRD_ERR_MALLOC;
 		goto err_h_decref_str;
 	}
 
 	Py_XDECREF(py_str);
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 
 err_h_decref_str:
 	Py_XDECREF(py_str);
@@ -185,19 +184,19 @@ err_h_decref_func:
  *
  * @param name TODO
  *
- * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-static int sigrokdecode_load_decoder(const char *name,
-			      struct sigrokdecode_decoder **dec)
+static int srd_load_decoder(const char *name,
+			      struct srd_decoder **dec)
 {
-	struct sigrokdecode_decoder *d;
+	struct srd_decoder *d;
 	PyObject *py_mod, *py_func, *py_res /* , *py_tuple */;
 	int r;
 
 	/* "Import" the Python module. */
 	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
 		PyErr_Print(); /* Returns void. */
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	/* Get the 'register' function name as Python callable object. */
@@ -206,7 +205,7 @@ static int sigrokdecode_load_decoder(const char *name,
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	/* Call the 'register' function without arguments, get the result. */
@@ -214,11 +213,11 @@ static int sigrokdecode_load_decoder(const char *name,
 		PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_func);
 		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	if (!(d = malloc(sizeof(struct sigrokdecode_decoder))))
-		return SIGROKDECODE_ERR_MALLOC;
+	if (!(d = malloc(sizeof(struct srd_decoder))))
+		return SRD_ERR_MALLOC;
 
 	if ((r = h_str(py_res, py_func, py_mod, "id", &(d->id))) < 0)
 		return r;
@@ -240,7 +239,7 @@ static int sigrokdecode_load_decoder(const char *name,
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_mod);
-		return SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	d->py_func = py_func;
@@ -253,7 +252,7 @@ static int sigrokdecode_load_decoder(const char *name,
 
 	*dec = d;
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 }
 
 /**
@@ -265,9 +264,9 @@ static int sigrokdecode_load_decoder(const char *name,
  * @param outbuf TODO
  * @param outbuflen TODO
  *
- * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
+int srd_run_decoder(struct srd_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
@@ -278,15 +277,15 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	/* Return an error upon unusable input. */
 	if (dec == NULL)
-		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (inbuf == NULL)
-		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (inbuflen == 0) /* No point in working on empty buffers. */
-		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuf == NULL)
-		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuflen == NULL)
-		return SIGROKDECODE_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARGS; /* TODO: More specific error? */
 
 	/* TODO: Error handling. */
 	py_mod = dec->py_mod;
@@ -296,14 +295,14 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 
 	/* Create a Python tuple of size 1. */
 	if (!(py_args = PyTuple_New(1))) { /* NEWREF */
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_run_decref_func;
 	}
 
 	/* Get the input buffer as Python "string" (byte array). */
 	/* TODO: int vs. uint64_t for 'inbuflen'? */
 	if (!(py_value = Py_BuildValue("s#", inbuf, inbuflen))) { /* NEWREF */
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_run_decref_args;
 	}
 
@@ -313,24 +312,24 @@ int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
 	 * It will automatically be free'd when the 'py_args' tuple is free'd.
 	 */
 	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
 		goto err_run_decref_args;
 	}
 
 	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_run_decref_args;
 	}
 
 	if ((r = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
 				      (Py_ssize_t *)outbuflen))) {
-		ret = SIGROKDECODE_ERR_PYTHON; /* TODO: More specific error? */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		Py_XDECREF(py_res);
 		goto err_run_decref_args;
 	}
 
-	ret = SIGROKDECODE_OK;
+	ret = SRD_OK;
 
 	Py_XDECREF(py_res);
 
@@ -349,7 +348,7 @@ err_run_decref_func:
 /**
  * TODO
  */
-static int sigrokdecode_unload_decoder(struct sigrokdecode_decoder *dec)
+static int srd_unload_decoder(struct srd_decoder *dec)
 {
 	g_free(dec->id);
 	g_free(dec->name);
@@ -366,40 +365,40 @@ static int sigrokdecode_unload_decoder(struct sigrokdecode_decoder *dec)
 	Py_XDECREF(dec->py_func);
 	Py_XDECREF(dec->py_mod);
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 }
 
 /**
  * TODO
  */
-static int sigrokdecode_unload_all_decoders(void)
+static int srd_unload_all_decoders(void)
 {
 	GSList *l;
-	struct sigrokdecode_decoder *dec;
+	struct srd_decoder *dec;
 
-	for (l = sigrokdecode_list_decoders(); l; l = l->next) {
+	for (l = srd_list_decoders(); l; l = l->next) {
 		dec = l->data;
 		/* TODO: Error handling. */
-		sigrokdecode_unload_decoder(dec);
+		srd_unload_decoder(dec);
 	}
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 }
 
 /**
  * Shutdown libsigrokdecode.
  *
- * @return SIGROKDECODE_OK upon success, a (negative) error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int sigrokdecode_shutdown(void)
+int srd_shutdown(void)
 {
 	/* Unload/free all decoders, and then the list of decoders itself. */
 	/* TODO: Error handling. */
-	sigrokdecode_unload_all_decoders();
+	srd_unload_all_decoders();
 	g_slist_free(list_pds);
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
 
-	return SIGROKDECODE_OK;
+	return SRD_OK;
 }

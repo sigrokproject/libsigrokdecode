@@ -46,15 +46,15 @@ extern "C" {
  * or reused for different #defines later. You can only add new #defines and
  * return codes, but never remove or redefine existing ones.
  */
-#define SIGROKDECODE_OK			 0 /* No error */
-#define SIGROKDECODE_ERR		-1 /* Generic/unspecified error */
-#define SIGROKDECODE_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
-#define SIGROKDECODE_ERR_ARGS		-3 /* Function argument error */
-#define SIGROKDECODE_ERR_PYTHON		-4 /* Python C API error */
-#define SIGROKDECODE_ERR_DECODERS_DIR	-5 /* Protocol decoder path invalid */
+#define SRD_OK			 0 /* No error */
+#define SRD_ERR			-1 /* Generic/unspecified error */
+#define SRD_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
+#define SRD_ERR_ARGS		-3 /* Function argument error */
+#define SRD_ERR_PYTHON		-4 /* Python C API error */
+#define SRD_ERR_DECODERS_DIR	-5 /* Protocol decoder path invalid */
 
 /* TODO: Documentation. */
-struct sigrokdecode_decoder {
+struct srd_decoder {
 	char *id;
 	char *name;
 	char *desc;
@@ -66,13 +66,12 @@ struct sigrokdecode_decoder {
 	PyObject *py_func;
 };
 
-int sigrokdecode_init(void);
-GSList *sigrokdecode_list_decoders(void);
-struct sigrokdecode_decoder *sigrokdecode_get_decoder_by_id(const char *id);
-int sigrokdecode_run_decoder(struct sigrokdecode_decoder *dec,
-			     uint8_t *inbuf, uint64_t inbuflen,
-			     uint8_t **outbuf, uint64_t *outbuflen);
-int sigrokdecode_shutdown(void);
+int srd_init(void);
+GSList *srd_list_decoders(void);
+struct srd_decoder *srd_get_decoder_by_id(const char *id);
+int srd_run_decoder(struct srd_decoder *dec, uint8_t *inbuf, uint64_t inbuflen,
+		    uint8_t **outbuf, uint64_t *outbuflen);
+int srd_shutdown(void);
 
 #ifdef __cplusplus
 }
