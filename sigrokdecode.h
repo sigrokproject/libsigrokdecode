@@ -71,7 +71,7 @@ GSList *srd_list_decoders(void);
 struct srd_decoder *srd_get_decoder_by_id(const char *id);
 int srd_run_decoder(struct srd_decoder *dec, uint8_t *inbuf, uint64_t inbuflen,
 		    uint8_t **outbuf, uint64_t *outbuflen);
-int srd_shutdown(void);
+int srd_exit(void);
 
 #ifdef __cplusplus
 }

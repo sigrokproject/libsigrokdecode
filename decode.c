@@ -390,7 +390,7 @@ static int srd_unload_all_decoders(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_shutdown(void)
+int srd_exit(void)
 {
 	/* Unload/free all decoders, and then the list of decoders itself. */
 	/* TODO: Error handling. */
