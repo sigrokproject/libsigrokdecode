@@ -18,11 +18,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+#include "config.h"
 #include <sigrokdecode.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
-#include <config.h>
 
 /* Re-define some string functions for Python >= 3.0. */
 #if PY_VERSION_HEX >= 0x03000000
