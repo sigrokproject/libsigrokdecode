@@ -143,9 +143,22 @@ def register():
 	return {
 		'id': 'nunchuk',
 		'name': 'Nunchuk',
-		'desc': 'Nintendo Wii Nunchuk decoder',
-		'inputformats': ['i2c'],
-		'ouputformats': ['nunchuk'],
+		'longname': 'Nintendo Wii Nunchuk decoder',
+		'desc': 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.',
+		'longdesc': '...',
+		'author': 'Uwe Hermann',
+		'email': 'uwe@hermann-uwe.de',
+		'license': 'gplv2+',
+		'in': ['i2c'],
+		'out': ['nunchuck'],
+		'probes': [
+			# TODO
+		],
+		'options': {
+			# TODO
+		},
+		# 'start': start,
+		# 'report': report,
 	}
 
 # Use psyco (if available) as it results in huge performance improvements.

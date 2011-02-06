@@ -237,13 +237,23 @@ def register():
 	return {
 		'id': 'i2c',
 		'name': 'I2C',
-		'desc': 'Inter-Integrated Circuit (I2C) bus',
-		'inputformats': ['raw'],
-		'signalnames':  {
-				'SCL': 'Serial clock line',
-				'SDA': 'Serial data line',
-				},
-		'outputformats': ['i2c'],
+		'longname': 'Inter-Integrated Circuit (I2C) bus',
+		'desc': 'I2C is a two-wire, multi-master, serial bus.',
+		'longdesc': '...',
+		'author': 'Uwe Hermann',
+		'email': 'uwe@hermann-uwe.de',
+		'license': 'gplv2+',
+		'in': ['logic'],
+		'out': ['i2c'],
+		'probes': [
+			['scl', 'Serial clock line'],
+			['sda', 'Serial data line'],
+		],
+		'options': {
+			'address-space': ['Address space (in bits)', 7],
+		},
+		# 'start': start,
+		# 'report': report,
 	}
 
 # Use psyco (if available) as it results in huge performance improvements.

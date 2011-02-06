@@ -79,10 +79,22 @@ def register():
 	return {
 		'id': 'transitioncounter',
 		'name': 'Transition counter',
-		'desc': 'Count rising/falling edges',
-		'inputformats': ['raw'],
-		'signalnames': {}, # FIXME
-		'outputformats': ['transitioncounts'],
+		'longname': '...',
+		'desc': 'Counts rising/falling edges in the signal.',
+		'longdesc': '...',
+		'author': 'Uwe Hermann',
+		'email': 'uwe@hermann-uwe.de',
+		'license': 'gplv2+',
+		'in': ['logic'],
+		'out': ['transitioncounts'],
+		'probes': [
+			# All probes.
+		],
+		'options': {
+			# No options so far.
+		},
+		# 'start': start,
+		# 'report': report,
 	}
 
 # Use psyco (if available) as it results in huge performance improvements.
