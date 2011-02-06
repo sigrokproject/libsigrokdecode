@@ -225,7 +225,24 @@ static int srd_load_decoder(const char *name,
 	if ((r = h_str(py_res, py_func, py_mod, "name", &(d->name))) < 0)
 		return r;
 
+	if ((r = h_str(py_res, py_func, py_mod, "longname",
+		       &(d->longname))) < 0)
+		return r;
+
 	if ((r = h_str(py_res, py_func, py_mod, "desc", &(d->desc))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "longdesc",
+		       &(d->longdesc))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "author", &(d->author))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "email", &(d->email))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, py_func, py_mod, "license", &(d->license))) < 0)
 		return r;
 
 	d->py_mod = py_mod;

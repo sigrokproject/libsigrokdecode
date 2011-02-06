@@ -57,8 +57,15 @@ extern "C" {
 struct srd_decoder {
 	char *id;
 	char *name;
+	char *longname;
 	char *desc;
+	char *longdesc;
+	char *author;
+	char *email;
+	char *license;
+
 	char *func;
+
 	GSList *inputformats;
 	GSList *outputformats;
 
