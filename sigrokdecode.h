@@ -46,30 +46,52 @@ extern "C" {
  * or reused for different #defines later. You can only add new #defines and
  * return codes, but never remove or redefine existing ones.
  */
-#define SRD_OK			 0 /* No error */
-#define SRD_ERR			-1 /* Generic/unspecified error */
-#define SRD_ERR_MALLOC		-2 /* Malloc/calloc/realloc error */
-#define SRD_ERR_ARGS		-3 /* Function argument error */
-#define SRD_ERR_PYTHON		-4 /* Python C API error */
-#define SRD_ERR_DECODERS_DIR	-5 /* Protocol decoder path invalid */
+#define SRD_OK			 0 /**< No error */
+#define SRD_ERR			-1 /**< Generic/unspecified error */
+#define SRD_ERR_MALLOC		-2 /**< Malloc/calloc/realloc error */
+#define SRD_ERR_ARGS		-3 /**< Function argument error */
+#define SRD_ERR_PYTHON		-4 /**< Python C API error */
+#define SRD_ERR_DECODERS_DIR	-5 /**< Protocol decoder path invalid */
 
 /* TODO: Documentation. */
 struct srd_decoder {
+	/** The decoder ID. Must be non-NULL and unique for all decoders. */
 	char *id;
+
+	/** The (short) decoder name. */
 	char *name;
+
+	/** The (long) decoder name. May be NULL. */
 	char *longname;
+
+	/** A (short, one-line) description of the decoder. */
 	char *desc;
+
+	/** A (long, multi-line) description of the decoder. May be NULL. */
 	char *longdesc;
+
+	/** The author of the decoder. May be NULL. */
 	char *author;
+
+	/** An email address of the decoder's author. May be NULL. */
 	char *email;
+
+	/** The license of the decoder. Valid values: "gplv2+", "gplv3+". */
 	char *license;
 
+	/** TODO */
 	char *func;
 
+	/** TODO */
 	GSList *inputformats;
+
+	/** TODO */
 	GSList *outputformats;
 
+	/** TODO */
 	PyObject *py_mod;
+
+	/** TODO */
 	PyObject *py_func;
 };
 
