@@ -32,7 +32,7 @@
 #endif
 
 /* The list of protocol decoders. */
-GSList *list_pds = NULL;
+static GSList *list_pds = NULL;
 
 /*
  * Here's a quick overview of Python/C API reference counting.
