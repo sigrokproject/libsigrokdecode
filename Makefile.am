@@ -18,10 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# SUBDIRS = decoders
+SUBDIRS = decoders
 
-# lib_LTLIBRARIES = libsigrokdecode.la
-noinst_LTLIBRARIES = libsigrokdecode.la
+lib_LTLIBRARIES = libsigrokdecode.la
 
 libsigrokdecode_la_SOURCES = decode.c
 
@@ -30,9 +29,8 @@ libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 libsigrokdecode_la_LDFLAGS = $(SIGROKDECODE_LT_LDFLAGS) \
 			     $(LDFLAGS_PYTHON)
 
-# include_HEADERS = sigrokdecode.h
-noinst_HEADERS = sigrokdecode.h
+include_HEADERS = sigrokdecode.h
 
-# pkgconfigdir = $(libdir)/pkgconfig
-# pkgconfig_DATA = libsigrokdecode.pc
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libsigrokdecode.pc
 
