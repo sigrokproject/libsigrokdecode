@@ -19,41 +19,39 @@
 ##
 import sigrok
 
-def decode(l):
+lastsample = None
+oldbit = None
+transitions = None
+rising = None
+falling = None
+
+
+def decode(sampledata):
 	"""Counts the low->high and high->low transitions in the specified
 	   channel(s) of the signal."""
-
-	print(l)
-	sigrok.put(l)
-
-def decode2(inbuf):
-	"""Counts the low->high and high->low transitions in the specified
-	   channel(s) of the signal."""
-
-	outbuf = ''
-
-	# FIXME: Get the data in the correct format in the first place.
-	inbuf = [ord(x) for x in inbuf]
+	global lastsample
+	global oldbit, transitions, rising, falling
 
 	# TODO: Don't hardcode the number of channels.
-	channels = 8
+	channels = 8	
 
-	oldbit = [0] * channels
-	transitions = [0] * channels
-	rising = [0] * channels
-	falling = [0] * channels
+	# FIXME: Get the data in the correct format in the first place.
+	s = ord(sampledata['data'])
 
-	# Initial values.
-	oldbyte = inbuf[0]
-	for i in range(channels):
-		oldbit[i] = (oldbyte & (1 << i)) >> i
+	if lastsample == None:
+		oldbit = [0] * channels
+		transitions = [0] * channels
+		rising = [0] * channels
+		falling = [0] * channels
 
-	# Loop over all samples.
+		# Initial values.
+		lastsample = s
+		for i in range(channels):
+			oldbit[i] = (lastsample & (1 << i)) >> i
+		
 	# TODO: Handle LAs with more/less than 8 channels.
-	for s in inbuf:
-		# Optimization: Skip identical bytes (no transitions).
-		if oldbyte == s:
-			continue
+	# Optimization: Skip identical bytes (no transitions).
+	if lastsample != s:
 		for i in range(channels):
 			curbit = (s & (1 << i)) >> i
 			# Optimization: Skip identical bits (no transitions).
@@ -64,24 +62,15 @@ def decode2(inbuf):
 			elif (oldbit[i] == 1 and curbit == 0):
 				falling[i] += 1
 			oldbit[i] = curbit
-		oldbyte = s
 
-	# Total number of transitions is the sum of rising and falling edges.
-	for i in range(channels):
-		transitions[i] = rising[i] + falling[i]
+		# Total number of transitions is the sum of rising and falling edges.
+		for i in range(channels):
+			transitions[i] = rising[i] + falling[i]
+		
+		lastsample = s
+		print(transitions)
 
-	outbuf += "Rising edges:  "
-	for i in range(channels):
-		outbuf += str(rising[i]) + " "
-	outbuf += "\nFalling edges: "
-	for i in range(channels):
-		outbuf += str(falling[i]) + " "
-	outbuf += "\nTransitions:   "
-	for i in range(channels):
-		outbuf += str(transitions[i]) + " "
-	outbuf += "\n"
-
-	return outbuf
+	sigrok.put(sampledata)
 
 register = {
 	'id': 'transitioncounter',
