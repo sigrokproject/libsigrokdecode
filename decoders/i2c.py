@@ -125,7 +125,13 @@
 #  'signals': [{'SCL': }]}
 #
 
-def decode(inbuf):
+def decode(l):
+	print(l)
+	sigrok.put(l)
+
+
+
+def decode2(inbuf):
 	"""I2C protocol decoder"""
 
 	# FIXME: Get the data in the correct format in the first place.
@@ -233,28 +239,27 @@ def decode(inbuf):
 	# FIXME: Just for testing...
 	return str(out)
 
-def register():
-	return {
-		'id': 'i2c',
-		'name': 'I2C',
-		'longname': 'Inter-Integrated Circuit (I2C) bus',
-		'desc': 'I2C is a two-wire, multi-master, serial bus.',
-		'longdesc': '...',
-		'author': 'Uwe Hermann',
-		'email': 'uwe@hermann-uwe.de',
-		'license': 'gplv2+',
-		'in': ['logic'],
-		'out': ['i2c'],
-		'probes': [
-			['scl', 'Serial clock line'],
-			['sda', 'Serial data line'],
-		],
-		'options': {
-			'address-space': ['Address space (in bits)', 7],
-		},
-		# 'start': start,
-		# 'report': report,
-	}
+register = {
+	'id': 'i2c',
+	'name': 'I2C',
+	'longname': 'Inter-Integrated Circuit (I2C) bus',
+	'desc': 'I2C is a two-wire, multi-master, serial bus.',
+	'longdesc': '...',
+	'author': 'Uwe Hermann',
+	'email': 'uwe@hermann-uwe.de',
+	'license': 'gplv2+',
+	'in': ['logic'],
+	'out': ['i2c'],
+	'probes': [
+		['scl', 'Serial clock line'],
+		['sda', 'Serial data line'],
+	],
+	'options': {
+		'address-space': ['Address space (in bits)', 7],
+	},
+	# 'start': start,
+	# 'report': report,
+}
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:

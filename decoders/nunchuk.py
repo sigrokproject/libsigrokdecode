@@ -47,7 +47,12 @@ example_packets = [
 	{'type': 'P',  'range': (32, 33), 'data': None, 'ann': ''},
 ]
 
-def decode(inbuf):
+def decode(l):
+	print(l)
+	sigrok.put(l)
+
+
+def decode2(inbuf):
 	"""Nintendo Wii Nunchuk decoder"""
 
 	# FIXME: Get the data in the correct format in the first place.
@@ -139,27 +144,26 @@ def decode(inbuf):
 	# FIXME
 	return ''
 
-def register():
-	return {
-		'id': 'nunchuk',
-		'name': 'Nunchuk',
-		'longname': 'Nintendo Wii Nunchuk decoder',
-		'desc': 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.',
-		'longdesc': '...',
-		'author': 'Uwe Hermann',
-		'email': 'uwe@hermann-uwe.de',
-		'license': 'gplv2+',
-		'in': ['i2c'],
-		'out': ['nunchuck'],
-		'probes': [
-			# TODO
-		],
-		'options': {
-			# TODO
-		},
-		# 'start': start,
-		# 'report': report,
-	}
+register = {
+	'id': 'nunchuk',
+	'name': 'Nunchuk',
+	'longname': 'Nintendo Wii Nunchuk decoder',
+	'desc': 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.',
+	'longdesc': '...',
+	'author': 'Uwe Hermann',
+	'email': 'uwe@hermann-uwe.de',
+	'license': 'gplv2+',
+	'in': ['i2c'],
+	'out': ['nunchuck'],
+	'probes': [
+		# TODO
+	],
+	'options': {
+		# TODO
+	},
+	# 'start': start,
+	# 'report': report,
+}
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:

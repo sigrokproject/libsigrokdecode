@@ -49,6 +49,65 @@ static GSList *list_pds = NULL;
 
 static int srd_load_decoder(const char *name, struct srd_decoder **dec);
 
+static int _unitsize = 1;
+
+static PyObject*
+emb_getmeta(PyObject *self, PyObject *args)
+{
+	if (!PyArg_ParseTuple(args, ":get"))
+		return NULL;
+
+	return Py_BuildValue("{sssisd}", 
+						 "driver", "demo",
+						 "unitsize", _unitsize,
+						 "starttime", 129318231823.0 //TODO: Fill with something reasonable.
+						 );
+}
+
+#if 0
+static PyObject*
+emb_get(PyObject *self, PyObject *args)
+{
+	PyObject *r;
+	if (!PyArg_ParseTuple(args, ":get"))
+		return NULL;
+
+	fprintf(stderr, "get called, returns %d\n", _bufoffset);
+	if ((_bufoffset + _unitsize) <= _buflen) {
+		r = Py_BuildValue("{sisiss#}", 
+							 "time", _bufoffset / _unitsize,
+							 "duration", 10,
+							 "data", &_buf[_bufoffset], _unitsize
+							 );
+		_bufoffset += _unitsize;
+		return r;
+	}
+	Py_RETURN_NONE;
+}
+#endif
+
+static PyObject*
+emb_put(PyObject *self, PyObject *args)
+{
+	PyObject *arg;
+	
+	if (!PyArg_ParseTuple(args, "O:put", &arg))
+		return NULL;
+
+	fprintf(stderr, "put called, got passed %d\n", arg);
+	Py_RETURN_NONE;
+}
+
+static PyMethodDef EmbMethods[] = {
+	{"get_meta", emb_getmeta, METH_VARARGS,
+		"Returns information about the stream."},
+	/*{"get", emb_get, METH_VARARGS,
+		"Returns a dictionary with the following keys: time, duration, data"},*/
+	{"put", emb_put, METH_VARARGS,
+		"Accepts a dictionary with the following keys: time, duration, data"},
+	{NULL, NULL, 0, NULL}
+};
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -64,6 +123,8 @@ int srd_init(void)
 
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
+
+	Py_InitModule("sigrok", EmbMethods);
 
 	/* Add search directory for the protocol decoders. */
 	/* FIXME: Check error code. */
@@ -135,7 +196,7 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
+static int h_str(PyObject *py_res, PyObject *py_mod,
 		 const char *key, char **outstr)
 {
 	PyObject *py_str;
@@ -145,7 +206,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 	py_str = PyMapping_GetItemString(py_res, (char *)key);
 	if (!py_str || !PyString_Check(py_str)) {
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_h_decref_func;
+		goto err_h_decref_mod;
 	}
 
 	/*
@@ -169,8 +230,7 @@ static int h_str(PyObject *py_res, PyObject *py_func, PyObject *py_mod,
 
 err_h_decref_str:
 	Py_XDECREF(py_str);
-err_h_decref_func:
-	Py_XDECREF(py_func);
+err_h_decref_mod:
 	Py_XDECREF(py_mod);
 
 	if (PyErr_Occurred())
@@ -199,56 +259,50 @@ static int srd_load_decoder(const char *name,
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	/* Get the 'register' function name as Python callable object. */
-	py_func = PyObject_GetAttrString(py_mod, "register"); /* NEWREF */
-	if (!py_func || !PyCallable_Check(py_func)) {
+	/* Get the 'register' dictionary as Python object. */
+	py_res = PyObject_GetAttrString(py_mod, "register"); /* NEWREF */
+	if (!py_res || PyCallable_Check(py_res)) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_mod);
+		fprintf(stderr, "register dictionary was not found or is declared a function.\n");
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	/* Call the 'register' function without arguments, get the result. */
-	if (!(py_res = PyObject_CallFunction(py_func, NULL))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_func);
-		Py_XDECREF(py_mod);
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
-	}
 
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	if ((r = h_str(py_res, py_func, py_mod, "id", &(d->id))) < 0)
+	if ((r = h_str(py_res, py_mod, "id", &(d->id))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "name", &(d->name))) < 0)
+	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "longname",
+	if ((r = h_str(py_res, py_mod, "longname",
 		       &(d->longname))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "desc", &(d->desc))) < 0)
+	if ((r = h_str(py_res, py_mod, "desc", &(d->desc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "longdesc",
+	if ((r = h_str(py_res, py_mod, "longdesc",
 		       &(d->longdesc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "author", &(d->author))) < 0)
+	if ((r = h_str(py_res, py_mod, "author", &(d->author))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "email", &(d->email))) < 0)
+	if ((r = h_str(py_res, py_mod, "email", &(d->email))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_func, py_mod, "license", &(d->license))) < 0)
+	if ((r = h_str(py_res, py_mod, "license", &(d->license))) < 0)
 		return r;
 
 	d->py_mod = py_mod;
 
 	Py_XDECREF(py_res);
-	Py_XDECREF(py_func);
+
 
 	/* Get the 'decode' function name as Python callable object. */
 	py_func = PyObject_GetAttrString(py_mod, "decode"); /* NEWREF */
@@ -259,7 +313,7 @@ static int srd_load_decoder(const char *name,
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	d->py_func = py_func;
+	d->py_decodefunc = py_func;
 
 	/* TODO: Handle func, inputformats, outputformats. */
 	/* Note: They must at least be set to NULL, will segfault otherwise. */
@@ -288,6 +342,7 @@ int srd_run_decoder(struct srd_decoder *dec,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
 	PyObject *py_mod, *py_func, *py_args, *py_value, *py_res;
+	uint64_t inbuf_pos = 0;
 	int r, ret;
 
 	/* TODO: Use #defines for the return codes. */
@@ -303,11 +358,11 @@ int srd_run_decoder(struct srd_decoder *dec,
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuflen == NULL)
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
-
+	
 	/* TODO: Error handling. */
 	py_mod = dec->py_mod;
 	Py_XINCREF(py_mod);
-	py_func = dec->py_func;
+	py_func = dec->py_decodefunc;
 	Py_XINCREF(py_func);
 
 	/* Create a Python tuple of size 1. */
@@ -316,34 +371,32 @@ int srd_run_decoder(struct srd_decoder *dec,
 		goto err_run_decref_func;
 	}
 
-	/* Get the input buffer as Python "string" (byte array). */
-	/* TODO: int vs. uint64_t for 'inbuflen'? */
-	if (!(py_value = Py_BuildValue("s#", inbuf, inbuflen))) { /* NEWREF */
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_run_decref_args;
-	}
+	while (inbuf_pos < inbuflen) {
+		/* Get the input buffer as Python "string" (byte array). */
+		/* TODO: int vs. uint64_t for 'inbuflen'? */
 
-	/*
-	 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
-	 * That means we are no longer responsible for Py_XDECREF()'ing it.
-	 * It will automatically be free'd when the 'py_args' tuple is free'd.
-	 */
-	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
-		goto err_run_decref_args;
-	}
-
-	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_run_decref_args;
-	}
-
-	if ((r = PyObject_AsCharBuffer(py_res, (const char **)outbuf,
-				      (Py_ssize_t *)outbuflen))) {
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		Py_XDECREF(py_res);
-		goto err_run_decref_args;
+		py_value = Py_BuildValue("{sisiss#}", 
+						  "time", inbuf_pos / _unitsize,
+						  "duration", 10,
+						  "data", &inbuf[inbuf_pos], _unitsize
+						  );
+		
+		/*
+		 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
+		 * That means we are no longer responsible for Py_XDECREF()'ing it.
+		 * It will automatically be free'd when the 'py_args' tuple is free'd.
+		 */
+		if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
+			ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
+			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
+			goto err_run_decref_args;
+		}
+		
+		if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
+			ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
+			goto err_run_decref_args;
+		}
+		inbuf_pos++;
 	}
 
 	ret = SRD_OK;
@@ -379,7 +432,7 @@ static int srd_unload_decoder(struct srd_decoder *dec)
 	if (dec->outputformats != NULL)
 		g_slist_free(dec->outputformats);
 
-	Py_XDECREF(dec->py_func);
+	Py_XDECREF(dec->py_decodefunc);
 	Py_XDECREF(dec->py_mod);
 
 	return SRD_OK;

@@ -17,8 +17,16 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
+import sigrok
 
-def decode(inbuf):
+def decode(l):
+	"""Counts the low->high and high->low transitions in the specified
+	   channel(s) of the signal."""
+
+	print(l)
+	sigrok.put(l)
+
+def decode2(inbuf):
 	"""Counts the low->high and high->low transitions in the specified
 	   channel(s) of the signal."""
 
@@ -75,27 +83,26 @@ def decode(inbuf):
 
 	return outbuf
 
-def register():
-	return {
-		'id': 'transitioncounter',
-		'name': 'Transition counter',
-		'longname': '...',
-		'desc': 'Counts rising/falling edges in the signal.',
-		'longdesc': '...',
-		'author': 'Uwe Hermann',
-		'email': 'uwe@hermann-uwe.de',
-		'license': 'gplv2+',
-		'in': ['logic'],
-		'out': ['transitioncounts'],
-		'probes': [
-			# All probes.
-		],
-		'options': {
-			# No options so far.
-		},
-		# 'start': start,
-		# 'report': report,
-	}
+register = {
+	'id': 'transitioncounter',
+	'name': 'Transition counter',
+	'longname': '...',
+	'desc': 'Counts rising/falling edges in the signal.',
+	'longdesc': '...',
+	'author': 'Uwe Hermann',
+	'email': 'uwe@hermann-uwe.de',
+	'license': 'gplv2+',
+	'in': ['logic'],
+	'out': ['transitioncounts'],
+	'probes': [
+		# All probes.
+	],
+	'options': {
+		# No options so far.
+	},
+	# 'start': start,
+	# 'report': report,
+}
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:
