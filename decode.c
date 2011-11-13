@@ -342,8 +342,11 @@ int srd_run_decoder(struct srd_decoder *dec,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
 	PyObject *py_mod, *py_func, *py_args, *py_value, *py_res;
-	uint64_t inbuf_pos = 0;
 	int r, ret;
+	
+	/* FIXME: Don't have a timebase available here. Make one up. */
+	static int _timehack = 0;
+	_timehack += inbuflen;
 
 	/* TODO: Use #defines for the return codes. */
 
@@ -371,33 +374,31 @@ int srd_run_decoder(struct srd_decoder *dec,
 		goto err_run_decref_func;
 	}
 
-	while (inbuf_pos < inbuflen) {
-		/* Get the input buffer as Python "string" (byte array). */
-		/* TODO: int vs. uint64_t for 'inbuflen'? */
+	/* Get the input buffer as Python "string" (byte array). */
+	/* TODO: int vs. uint64_t for 'inbuflen'? */
 
-		py_value = Py_BuildValue("{sisiss#}", 
-						  "time", inbuf_pos / _unitsize,
-						  "duration", 10,
-						  "data", &inbuf[inbuf_pos], _unitsize
-						  );
-		
-		/*
-		 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
-		 * That means we are no longer responsible for Py_XDECREF()'ing it.
-		 * It will automatically be free'd when the 'py_args' tuple is free'd.
-		 */
-		if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-			ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
-			goto err_run_decref_args;
-		}
-		
-		if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
-			ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-			goto err_run_decref_args;
-		}
-		inbuf_pos++;
+	py_value = Py_BuildValue("{sisiss#}", 
+					  "time", _timehack,
+					  "duration", 10,
+					  "data", inbuf, inbuflen / _unitsize
+					  );
+	
+	/*
+	 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
+	 * That means we are no longer responsible for Py_XDECREF()'ing it.
+	 * It will automatically be free'd when the 'py_args' tuple is free'd.
+	 */
+	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
+		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
+		goto err_run_decref_args;
 	}
+	
+	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_run_decref_args;
+	}
+
 
 	ret = SRD_OK;
 

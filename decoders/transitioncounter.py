@@ -36,7 +36,7 @@ def decode(sampledata):
 	channels = 8	
 
 	# FIXME: Get the data in the correct format in the first place.
-	s = ord(sampledata['data'])
+	inbuf = [ord(x) for x in sampledata['data']]
 
 	if lastsample == None:
 		oldbit = [0] * channels
@@ -45,30 +45,31 @@ def decode(sampledata):
 		falling = [0] * channels
 
 		# Initial values.
-		lastsample = s
+		lastsample = inbuf[0]
 		for i in range(channels):
 			oldbit[i] = (lastsample & (1 << i)) >> i
 		
 	# TODO: Handle LAs with more/less than 8 channels.
-	# Optimization: Skip identical bytes (no transitions).
-	if lastsample != s:
-		for i in range(channels):
-			curbit = (s & (1 << i)) >> i
-			# Optimization: Skip identical bits (no transitions).
-			if oldbit[i] == curbit:
-				continue
-			elif (oldbit[i] == 0 and curbit == 1):
-				rising[i] += 1
-			elif (oldbit[i] == 1 and curbit == 0):
-				falling[i] += 1
-			oldbit[i] = curbit
+	for s in inbuf:
+		# Optimization: Skip identical bytes (no transitions).
+		if lastsample != s:
+			for i in range(channels):
+				curbit = (s & (1 << i)) >> i
+				# Optimization: Skip identical bits (no transitions).
+				if oldbit[i] == curbit:
+					continue
+				elif (oldbit[i] == 0 and curbit == 1):
+					rising[i] += 1
+				elif (oldbit[i] == 1 and curbit == 0):
+					falling[i] += 1
+				oldbit[i] = curbit
 
-		# Total number of transitions is the sum of rising and falling edges.
-		for i in range(channels):
-			transitions[i] = rising[i] + falling[i]
+			# Total number of transitions is the sum of rising and falling edges.
+			for i in range(channels):
+				transitions[i] = rising[i] + falling[i]
 		
-		lastsample = s
-		print(transitions)
+			lastsample = s
+			print(transitions)
 
 	sigrok.put(sampledata)
 
