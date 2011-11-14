@@ -52,41 +52,6 @@ static int srd_load_decoder(const char *name, struct srd_decoder **dec);
 static int _unitsize = 1;
 
 static PyObject*
-emb_getmeta(PyObject *self, PyObject *args)
-{
-	if (!PyArg_ParseTuple(args, ":get"))
-		return NULL;
-
-	return Py_BuildValue("{sssisd}", 
-						 "driver", "demo",
-						 "unitsize", _unitsize,
-						 "starttime", 129318231823.0 //TODO: Fill with something reasonable.
-						 );
-}
-
-#if 0
-static PyObject*
-emb_get(PyObject *self, PyObject *args)
-{
-	PyObject *r;
-	if (!PyArg_ParseTuple(args, ":get"))
-		return NULL;
-
-	fprintf(stderr, "get called, returns %d\n", _bufoffset);
-	if ((_bufoffset + _unitsize) <= _buflen) {
-		r = Py_BuildValue("{sisiss#}", 
-							 "time", _bufoffset / _unitsize,
-							 "duration", 10,
-							 "data", &_buf[_bufoffset], _unitsize
-							 );
-		_bufoffset += _unitsize;
-		return r;
-	}
-	Py_RETURN_NONE;
-}
-#endif
-
-static PyObject*
 emb_put(PyObject *self, PyObject *args)
 {
 	PyObject *arg;
@@ -94,15 +59,13 @@ emb_put(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
 		return NULL;
 
-	fprintf(stderr, "put called, got passed %d\n", arg);
+	fprintf(stderr, "sigrok.put() called by decoder:\n", arg);
+	PyObject_Print(arg, stdout, Py_PRINT_RAW);
+
 	Py_RETURN_NONE;
 }
 
 static PyMethodDef EmbMethods[] = {
-	{"get_meta", emb_getmeta, METH_VARARGS,
-		"Returns information about the stream."},
-	/*{"get", emb_get, METH_VARARGS,
-		"Returns a dictionary with the following keys: time, duration, data"},*/
 	{"put", emb_put, METH_VARARGS,
 		"Accepts a dictionary with the following keys: time, duration, data"},
 	{NULL, NULL, 0, NULL}
@@ -147,9 +110,11 @@ int srd_init(void)
 
 		/* Load the decoder. */
 		ret = srd_load_decoder(decodername, &dec);
-
-		/* Append it to the list of supported/loaded decoders. */
-		list_pds = g_slist_append(list_pds, dec);
+		if (!ret)
+		{
+			/* Append it to the list of supported/loaded decoders. */
+			list_pds = g_slist_append(list_pds, dec);
+		}
 	}
 	closedir(dir);
 
@@ -250,8 +215,9 @@ static int srd_load_decoder(const char *name,
 			      struct srd_decoder **dec)
 {
 	struct srd_decoder *d;
-	PyObject *py_mod, *py_func, *py_res /* , *py_tuple */;
+	PyObject *py_mod, *py_func, *py_res, *py_instance = NULL, *py_args, *py_value/* , *py_tuple */;
 	int r;
+	fprintf(stdout, "\n%s\n", name);
 
 	/* "Import" the Python module. */
 	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
@@ -302,15 +268,82 @@ static int srd_load_decoder(const char *name,
 	d->py_mod = py_mod;
 
 	Py_XDECREF(py_res);
-
-
-	/* Get the 'decode' function name as Python callable object. */
-	py_func = PyObject_GetAttrString(py_mod, "decode"); /* NEWREF */
-	if (!py_func || !PyCallable_Check(py_func)) {
+	
+	
+	/* Get the 'Decoder' class as Python object. */
+	py_res = PyObject_GetAttrString(py_mod, "Decoder"); /* NEWREF */
+	if (!py_res) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_mod);
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		//Py_XDECREF(py_mod);
+		fprintf(stderr, "Decoder class not found in PD module %s\n", name);
+		//return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		
+		
+		/* Get the 'decode' function name as Python callable object. */
+		py_func = PyObject_GetAttrString(py_mod, "decode"); /* NEWREF */
+		if (!py_func || !PyCallable_Check(py_func)) {
+			if (PyErr_Occurred())
+				PyErr_Print(); /* Returns void. */
+			Py_XDECREF(py_mod);
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		}
+	} else {
+		PyObject_Print(py_res, stdout, Py_PRINT_RAW);
+		fprintf(stdout, "\n");
+		
+		/* Create a Python tuple of size 1. */
+		if (!(py_args = PyTuple_New(1))) { /* NEWREF */
+			if (PyErr_Occurred())
+				PyErr_Print(); /* Returns void. */
+			
+			Py_XDECREF(py_res);
+			Py_XDECREF(py_mod);
+			
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		}
+		
+		py_value = Py_BuildValue("{sssisd}", 
+					  "driver", "demo",
+					  "unitsize", _unitsize, //FIXME: Pass in a unitsize that matches the selected LA
+					  "starttime", 129318231823.0 //TODO: Fill with something reasonable.
+					  );
+		/*
+		 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
+		 * That means we are no longer responsible for Py_XDECREF()'ing it.
+		 * It will automatically be free'd when the 'py_args' tuple is free'd.
+		 */
+		if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
+			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
+			Py_XDECREF(py_res);
+			Py_XDECREF(py_mod);
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		}
+		
+		/* Create an instance of the Decoder class */
+		py_instance = PyObject_CallObject(py_res, py_args);
+		if (!py_instance) {
+			if (PyErr_Occurred())
+				PyErr_Print(); /* Returns void. */
+			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
+			Py_XDECREF(py_res);
+			Py_XDECREF(py_mod);
+			fprintf(stderr, "Unable to create instance of Decoder class in PD module %s\n", name);
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		} else {
+			/* OK, we have successfully created an instance of the Decoder object */
+			
+			/* Get the 'decode' function name as Python callable object. */
+			py_func = PyObject_GetAttrString(py_instance, "decode"); /* NEWREF */
+			if (!py_func || !PyCallable_Check(py_func)) {
+				if (PyErr_Occurred())
+					PyErr_Print(); /* Returns void. */
+				fprintf(stderr, "Unable to find decode function in instance of Decoder class in PD module %s\n", name);
+				Py_XDECREF(py_instance);
+				Py_XDECREF(py_mod);
+				return SRD_ERR_PYTHON; /* TODO: More specific error? */
+			}
+		}
 	}
 
 	d->py_decodefunc = py_func;
