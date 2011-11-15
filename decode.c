@@ -59,7 +59,7 @@ emb_put(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
 		return NULL;
 
-	fprintf(stderr, "sigrok.put() called by decoder:\n", arg);
+	fprintf(stderr, "sigrok.put() called by decoder:\n");
 	PyObject_Print(arg, stdout, Py_PRINT_RAW);
 
 	Py_RETURN_NONE;
@@ -293,7 +293,7 @@ static int srd_load_decoder(const char *name,
 		fprintf(stdout, "\n");
 		
 		/* Create a Python tuple of size 1. */
-		if (!(py_args = PyTuple_New(1))) { /* NEWREF */
+		if (!(py_args = PyTuple_New(0))) { /* NEWREF */
 			if (PyErr_Occurred())
 				PyErr_Print(); /* Returns void. */
 			
@@ -308,20 +308,8 @@ static int srd_load_decoder(const char *name,
 					  "unitsize", _unitsize, //FIXME: Pass in a unitsize that matches the selected LA
 					  "starttime", 129318231823.0 //TODO: Fill with something reasonable.
 					  );
-		/*
-		 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
-		 * That means we are no longer responsible for Py_XDECREF()'ing it.
-		 * It will automatically be free'd when the 'py_args' tuple is free'd.
-		 */
-		if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
-			Py_XDECREF(py_res);
-			Py_XDECREF(py_mod);
-			return SRD_ERR_PYTHON; /* TODO: More specific error? */
-		}
-		
 		/* Create an instance of the Decoder class */
-		py_instance = PyObject_CallObject(py_res, py_args);
+		py_instance = PyObject_Call(py_res, py_args, py_value);
 		if (!py_instance) {
 			if (PyErr_Occurred())
 				PyErr_Print(); /* Returns void. */
@@ -330,23 +318,10 @@ static int srd_load_decoder(const char *name,
 			Py_XDECREF(py_mod);
 			fprintf(stderr, "Unable to create instance of Decoder class in PD module %s\n", name);
 			return SRD_ERR_PYTHON; /* TODO: More specific error? */
-		} else {
-			/* OK, we have successfully created an instance of the Decoder object */
-			
-			/* Get the 'decode' function name as Python callable object. */
-			py_func = PyObject_GetAttrString(py_instance, "decode"); /* NEWREF */
-			if (!py_func || !PyCallable_Check(py_func)) {
-				if (PyErr_Occurred())
-					PyErr_Print(); /* Returns void. */
-				fprintf(stderr, "Unable to find decode function in instance of Decoder class in PD module %s\n", name);
-				Py_XDECREF(py_instance);
-				Py_XDECREF(py_mod);
-				return SRD_ERR_PYTHON; /* TODO: More specific error? */
-			}
-		}
+		} 
 	}
 
-	d->py_decodefunc = py_func;
+	d->py_instance = py_instance;
 
 	/* TODO: Handle func, inputformats, outputformats. */
 	/* Note: They must at least be set to NULL, will segfault otherwise. */
@@ -374,7 +349,7 @@ int srd_run_decoder(struct srd_decoder *dec,
 			     uint8_t *inbuf, uint64_t inbuflen,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
-	PyObject *py_mod, *py_func, *py_args, *py_value, *py_res;
+	PyObject *py_mod, *py_instance, *py_args, *py_value, *py_res;
 	int r, ret;
 	
 	/* FIXME: Don't have a timebase available here. Make one up. */
@@ -398,8 +373,8 @@ int srd_run_decoder(struct srd_decoder *dec,
 	/* TODO: Error handling. */
 	py_mod = dec->py_mod;
 	Py_XINCREF(py_mod);
-	py_func = dec->py_decodefunc;
-	Py_XINCREF(py_func);
+	py_instance = dec->py_instance;
+	Py_XINCREF(py_instance);
 
 	/* Create a Python tuple of size 1. */
 	if (!(py_args = PyTuple_New(1))) { /* NEWREF */
@@ -416,18 +391,8 @@ int srd_run_decoder(struct srd_decoder *dec,
 					  "data", inbuf, inbuflen / _unitsize
 					  );
 	
-	/*
-	 * IMPORTANT: PyTuple_SetItem() "steals" a reference to py_value!
-	 * That means we are no longer responsible for Py_XDECREF()'ing it.
-	 * It will automatically be free'd when the 'py_args' tuple is free'd.
-	 */
-	if (PyTuple_SetItem(py_args, 0, py_value) != 0) { /* STEAL */
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
-		goto err_run_decref_args;
-	}
-	
-	if (!(py_res = PyObject_CallObject(py_func, py_args))) { /* NEWREF */
+	if (!(py_res = PyObject_CallMethod(py_instance, "decode", 
+					"O", py_value))) { /* NEWREF */
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_run_decref_args;
 	}
@@ -440,7 +405,7 @@ int srd_run_decoder(struct srd_decoder *dec,
 err_run_decref_args:
 	Py_XDECREF(py_args);
 err_run_decref_func:
-	Py_XDECREF(py_func);
+	Py_XDECREF(py_instance);
 	Py_XDECREF(py_mod);
 
 	if (PyErr_Occurred())
@@ -466,7 +431,7 @@ static int srd_unload_decoder(struct srd_decoder *dec)
 	if (dec->outputformats != NULL)
 		g_slist_free(dec->outputformats);
 
-	Py_XDECREF(dec->py_decodefunc);
+	Py_XDECREF(dec->py_instance);
 	Py_XDECREF(dec->py_mod);
 
 	return SRD_OK;

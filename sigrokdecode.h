@@ -92,7 +92,7 @@ struct srd_decoder {
 	PyObject *py_mod;
 
 	/** Python function that performs the decoding */
-	PyObject *py_decodefunc;
+	PyObject *py_instance;
 };
 
 int srd_init(void);

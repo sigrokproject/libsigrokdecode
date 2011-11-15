@@ -13,10 +13,10 @@ class Decoder():
 	# Probe names with a set of defaults
 	probes = {'sdata':0, 'sck':1}
 
-	def __init__(self, metadata, **kwargs):
+	def __init__(self, unitsize, **kwargs):
 		# Metadata comes in here, we don't care for now
 		#print kwargs
-		self.unitsize = metadata['unitsize']
+		self.unitsize = unitsize
 
 		self.probes = Decoder.probes
 		self.oldsck = True
