@@ -7,7 +7,9 @@ Name: libsigrokdecode
 Description: Protocol decoder library of the sigrok logic analyzer software
 URL: http://www.sigrok.org
 Requires:
+Requires.private: glib-2.0
 Version: @VERSION@
 Libs: -L${libdir} -lsigrokdecode
+Libs.private: @LDFLAGS_PYTHON@
 Cflags: -I${includedir}
 
