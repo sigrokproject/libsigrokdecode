@@ -56,6 +56,8 @@ emb_put(PyObject *self, PyObject *args)
 {
 	PyObject *arg;
 	
+	(void)self;
+
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
 		return NULL;
 
@@ -168,7 +170,7 @@ static int h_str(PyObject *py_res, PyObject *py_mod,
 	char *str;
 	int ret;
 
-	py_str = PyMapping_GetItemString(py_res, (char *)key);
+	py_str = PyObject_GetAttrString(py_res, (char *)key); /* NEWREF */
 	if (!py_str || !PyString_Check(py_str)) {
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_h_decref_mod;
@@ -215,9 +217,10 @@ static int srd_load_decoder(const char *name,
 			      struct srd_decoder **dec)
 {
 	struct srd_decoder *d;
-	PyObject *py_mod, *py_func, *py_res, *py_instance = NULL, *py_args, *py_value/* , *py_tuple */;
+	PyObject *py_mod, *py_res;
+	PyObject *py_args, *py_value, *py_instance;
 	int r;
-	fprintf(stdout, "\n%s\n", name);
+	fprintf(stdout, "%s: %s\n", __func__, name);
 
 	/* "Import" the Python module. */
 	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
@@ -225,22 +228,21 @@ static int srd_load_decoder(const char *name,
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	/* Get the 'register' dictionary as Python object. */
-	py_res = PyObject_GetAttrString(py_mod, "register"); /* NEWREF */
-	if (!py_res || PyCallable_Check(py_res)) {
+	/* Get the 'Decoder' class as Python object. */
+	py_res = PyObject_GetAttrString(py_mod, "Decoder"); /* NEWREF */
+	if (!py_res) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_mod);
-		fprintf(stderr, "register dictionary was not found or is declared a function.\n");
+		fprintf(stderr, "Decoder class not found in PD module %s\n", name);
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
-
 
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	if ((r = h_str(py_res, py_mod, "id", &(d->id))) < 0)
-		return r;
+	/* We'll just use the name of the module for the id */
+	d->id = strdup(name);
 
 	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
 		return r;
@@ -266,61 +268,35 @@ static int srd_load_decoder(const char *name,
 		return r;
 
 	d->py_mod = py_mod;
+	d->py_decobj = py_res;
 
-	Py_XDECREF(py_res);
-	
-	
-	/* Get the 'Decoder' class as Python object. */
-	py_res = PyObject_GetAttrString(py_mod, "Decoder"); /* NEWREF */
-	if (!py_res) {
+	/* Create a Python tuple of size 1. */
+	if (!(py_args = PyTuple_New(0))) { /* NEWREF */
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
-		//Py_XDECREF(py_mod);
-		fprintf(stderr, "Decoder class not found in PD module %s\n", name);
-		//return SRD_ERR_PYTHON; /* TODO: More specific error? */
 		
+		Py_XDECREF(py_res);
+		Py_XDECREF(py_mod);
 		
-		/* Get the 'decode' function name as Python callable object. */
-		py_func = PyObject_GetAttrString(py_mod, "decode"); /* NEWREF */
-		if (!py_func || !PyCallable_Check(py_func)) {
-			if (PyErr_Occurred())
-				PyErr_Print(); /* Returns void. */
-			Py_XDECREF(py_mod);
-			return SRD_ERR_PYTHON; /* TODO: More specific error? */
-		}
-	} else {
-		PyObject_Print(py_res, stdout, Py_PRINT_RAW);
-		fprintf(stdout, "\n");
-		
-		/* Create a Python tuple of size 1. */
-		if (!(py_args = PyTuple_New(0))) { /* NEWREF */
-			if (PyErr_Occurred())
-				PyErr_Print(); /* Returns void. */
-			
-			Py_XDECREF(py_res);
-			Py_XDECREF(py_mod);
-			
-			return SRD_ERR_PYTHON; /* TODO: More specific error? */
-		}
-		
-		py_value = Py_BuildValue("{sssisd}", 
-					  "driver", "demo",
-					  "unitsize", _unitsize, //FIXME: Pass in a unitsize that matches the selected LA
-					  "starttime", 129318231823.0 //TODO: Fill with something reasonable.
-					  );
-		/* Create an instance of the Decoder class */
-		py_instance = PyObject_Call(py_res, py_args, py_value);
-		if (!py_instance) {
-			if (PyErr_Occurred())
-				PyErr_Print(); /* Returns void. */
-			Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
-			Py_XDECREF(py_res);
-			Py_XDECREF(py_mod);
-			fprintf(stderr, "Unable to create instance of Decoder class in PD module %s\n", name);
-			return SRD_ERR_PYTHON; /* TODO: More specific error? */
-		} 
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
-
+	
+	py_value = Py_BuildValue("{sssisd}", 
+				  "driver", "demo",
+				  "unitsize", _unitsize, //FIXME: Pass in a unitsize that matches the selected LA
+				  "starttime", 129318231823.0 //TODO: Fill with something reasonable.
+				  );
+	/* Create an instance of the Decoder class */
+	py_instance = PyObject_Call(py_res, py_args, py_value);
+	if (!py_instance) {
+		if (PyErr_Occurred())
+			PyErr_Print(); /* Returns void. */
+		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
+		Py_XDECREF(py_res);
+		Py_XDECREF(py_mod);
+		fprintf(stderr, "Unable to create instance of Decoder class in PD module %s\n", name);
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	} 
 	d->py_instance = py_instance;
 
 	/* TODO: Handle func, inputformats, outputformats. */

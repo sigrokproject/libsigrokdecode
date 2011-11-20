@@ -91,7 +91,8 @@ struct srd_decoder {
 	/** TODO */
 	PyObject *py_mod;
 
-	/** Python function that performs the decoding */
+	/** Python object that performs the decoding */
+	PyObject *py_decobj;
 	PyObject *py_instance;
 };
 
