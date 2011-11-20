@@ -86,7 +86,6 @@ class Decoder():
                 "display":("%02X" % self.rxdata),
                 "type":"spi",
             }
-            print outdata
             sigrok.put(outdata)
             # Reset decoder state
             self.rxdata = 0
