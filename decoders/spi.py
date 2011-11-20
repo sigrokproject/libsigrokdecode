@@ -47,7 +47,7 @@ class Decoder():
         #print kwargs
         self.unitsize = unitsize
 
-        self.probes = Decoder.probes
+        self.probes = Decoder.probes.copy()
         self.oldsck = True
         self.rxcount = 0
         self.rxdata = 0

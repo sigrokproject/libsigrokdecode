@@ -106,6 +106,8 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 		    uint8_t *inbuf, uint64_t inbuflen,
 		    uint8_t **outbuf, uint64_t *outbuflen);
 struct srd_decoder_instance *srd_instance_new(const char *id);
+int srd_instance_set_probe(struct srd_decoder_instance *di,
+				const char *probename, int num);
 int srd_exit(void);
 
 #ifdef __cplusplus

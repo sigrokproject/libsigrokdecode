@@ -284,6 +284,8 @@ static int srd_load_decoder(const char *name,
 struct srd_decoder_instance *srd_instance_new(const char *id)
 {
 	struct srd_decoder *dec = srd_get_decoder_by_id(id);
+	if (!dec) 
+		return NULL;
 	struct srd_decoder_instance *di = g_malloc(sizeof(*di));
 	PyObject *py_args, *py_value;
 
@@ -317,6 +319,26 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 	return di;
 }
 
+int srd_instance_set_probe(struct srd_decoder_instance *di,
+				const char *probename, int num)
+{
+	PyObject *probedict, *probenum;
+	probedict = PyObject_GetAttrString(di->py_instance, "probes"); /* NEWREF */
+	if (!probedict) {
+		if (PyErr_Occurred())
+			PyErr_Print(); /* Returns void. */
+		
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	}
+
+	probenum = PyInt_FromLong(num);
+	PyMapping_SetItemString(probedict, (char*)probename, probenum);
+
+	Py_XDECREF(probenum);
+	Py_XDECREF(probedict);
+	return SRD_OK;
+}
+
 /**
  * Run the specified decoder function.
  *
@@ -333,7 +355,7 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 			     uint8_t **outbuf, uint64_t *outbuflen)
 {
 	PyObject *py_instance, *py_value, *py_res;
-	int r, ret;
+	int ret;
 	
 	/* FIXME: Don't have a timebase available here. Make one up. */
 	static int _timehack = 0;
