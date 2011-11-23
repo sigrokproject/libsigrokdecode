@@ -18,81 +18,95 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sigrok
+class Sample():
+    def __init__(self, data):
+        self.data = data
+    def probe(self, probe):
+        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        return True if s else False
 
-lastsample = None
-oldbit = None
-transitions = None
-rising = None
-falling = None
+def sampleiter(data, unitsize):
+    for i in range(0, len(data), unitsize):
+        yield(Sample(data[i:i+unitsize]))
 
-def decode(sampledata):
-    """Counts the low->high and high->low transitions in the specified
-       channel(s) of the signal."""
-    global lastsample
-    global oldbit, transitions, rising, falling
+class Decoder():
+    name = 'Transition counter'
+    longname = '...'
+    desc = 'Counts rising/falling edges in the signal.'
+    longdesc = '...'
+    author = 'Uwe Hermann'
+    email = 'uwe@hermann-uwe.de'
+    license = 'gplv2+'
+    inputs = ['logic']
+    outputs = ['transitioncounts']
+    probes = {}
+    options = {}
 
-    # TODO: Don't hardcode the number of channels.
-    channels = 8
+    def __init__(self, unitsize, **kwargs):
+        # Metadata comes in here, we don't care for now.
+        # print kwargs
+        self.unitsize = unitsize
 
-    # FIXME: Get the data in the correct format in the first place.
-    inbuf = [ord(x) for x in sampledata['data']]
+        self.probes = Decoder.probes.copy()
 
-    if lastsample == None:
-        oldbit = [0] * channels
-        transitions = [0] * channels
-        rising = [0] * channels
-        falling = [0] * channels
+        # TODO: Don't hardcode the number of channels.
+        self.channels = 8
 
-        # Initial values.
-        lastsample = inbuf[0]
-        for i in range(channels):
-            oldbit[i] = (lastsample & (1 << i)) >> i
+        self.lastsample = None
+        self.oldbit = [0] * self.channels
+        self.transitions = [0] * self.channels
+        self.rising = [0] * self.channels
+        self.falling = [0] * self.channels
 
-    # TODO: Handle LAs with more/less than 8 channels.
-    for s in inbuf:
-        # Optimization: Skip identical bytes (no transitions).
-        if lastsample != s:
-            for i in range(channels):
+    def report(self):
+        pass
+
+    def decode(self, data):
+        """Counts the low->high and high->low transitions in the specified
+           channel(s) of the signal."""
+
+        # We should accept a list of samples and iterate...
+        for sample in sampleiter(data["data"], self.unitsize):
+
+            # TODO: Eliminate the need for ord().
+            s = ord(sample.data)
+
+            # Optimization: Skip identical samples (no transitions).
+            if self.lastsample == s:
+                continue
+
+            # Upon the first sample, store the initial values.
+            if self.lastsample == None:
+                self.lastsample = s
+                for i in range(self.channels):
+                    self.oldbit[i] = (self.lastsample & (1 << i)) >> i
+
+            # Iterate over all channels/probes in this sample.
+            # Count rising and falling edges for each channel.
+            for i in range(self.channels):
                 curbit = (s & (1 << i)) >> i
                 # Optimization: Skip identical bits (no transitions).
-                if oldbit[i] == curbit:
+                if self.oldbit[i] == curbit:
                     continue
-                elif (oldbit[i] == 0 and curbit == 1):
-                    rising[i] += 1
-                elif (oldbit[i] == 1 and curbit == 0):
-                    falling[i] += 1
-                oldbit[i] = curbit
+                elif (self.oldbit[i] == 0 and curbit == 1):
+                    self.rising[i] += 1
+                elif (self.oldbit[i] == 1 and curbit == 0):
+                    self.falling[i] += 1
+                self.oldbit[i] = curbit
 
-            # Total number of transitions is the sum of rising and falling edges.
-            for i in range(channels):
-                transitions[i] = rising[i] + falling[i]
+            # Save the current sample as 'lastsample' for the next round.
+            self.lastsample = s
 
-            lastsample = s
-            print(transitions)
+        # Total number of transitions = rising + falling edges.
+        for i in range(self.channels):
+            self.transitions[i] = self.rising[i] + self.falling[i]
 
-    sigrok.put(sampledata)
-
-register = {
-    'id': 'transitioncounter',
-    'name': 'Transition counter',
-    'longname': '...',
-    'desc': 'Counts rising/falling edges in the signal.',
-    'longdesc': '...',
-    'author': 'Uwe Hermann',
-    'email': 'uwe@hermann-uwe.de',
-    'license': 'gplv2+',
-    'in': ['logic'],
-    'out': ['transitioncounts'],
-    'probes': [
-        # All probes.
-    ],
-    'options': {
-        # No options so far.
-    },
-    # 'start': start,
-    # 'report': report,
-}
+        # TODO: Which output format?
+        # TODO: How to only output something after the last chunk of data?
+        outdata = []
+        for i in range(self.channels):
+            outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
+        sigrok.put(outdata)
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:
@@ -100,4 +114,6 @@ try:
     psyco.bind(decode)
 except ImportError:
     pass
+
+import sigrok
 
