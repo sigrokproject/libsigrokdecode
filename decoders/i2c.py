@@ -99,9 +99,9 @@
 # Possible other events:
 #   - Error event in case protocol looks broken:
 #     [{'type': 'ERROR', 'range': (min, max),
-#	'data': TODO, 'ann': 'This is not a Microchip 24XX64 EEPROM'},
+#      'data': TODO, 'ann': 'This is not a Microchip 24XX64 EEPROM'},
 #     [{'type': 'ERROR', 'range': (min, max),
-#	'data': TODO, 'ann': 'TODO'},
+#      'data': TODO, 'ann': 'TODO'},
 #   - TODO: Make list of possible errors accessible as metadata?
 #
 # TODO: I2C address of slaves.
@@ -126,145 +126,143 @@
 #
 
 def decode(l):
-	print(l)
-	sigrok.put(l)
-
-
+    print(l)
+    sigrok.put(l)
 
 def decode2(inbuf):
-	"""I2C protocol decoder"""
+    """I2C protocol decoder"""
 
-	# FIXME: Get the data in the correct format in the first place.
-	inbuf = [ord(x) for x in inbuf]
+    # FIXME: Get the data in the correct format in the first place.
+    inbuf = [ord(x) for x in inbuf]
 
-	# FIXME: This should be passed in as metadata, not hardcoded here.
-	metadata = {
-	  'numchannels': 8,
-	  'signals': {
-	      'scl': {'ch': 5, 'name': 'SCL', 'desc': 'Serial clock line'},
-	      'sda': {'ch': 7, 'name': 'SDA', 'desc': 'Serial data line'},
-	    },
-	}
+    # FIXME: This should be passed in as metadata, not hardcoded here.
+    metadata = {
+      'numchannels': 8,
+      'signals': {
+          'scl': {'ch': 5, 'name': 'SCL', 'desc': 'Serial clock line'},
+          'sda': {'ch': 7, 'name': 'SDA', 'desc': 'Serial data line'},
+        },
+    }
 
-	out = []
-	o = ack = d = ''
-	bitcount = data = 0
-	wr = startsample = -1
-	IDLE, START, ADDRESS, DATA = range(4)
-	state = IDLE
+    out = []
+    o = ack = d = ''
+    bitcount = data = 0
+    wr = startsample = -1
+    IDLE, START, ADDRESS, DATA = range(4)
+    state = IDLE
 
-	# Get the channel/probe number of the SCL/SDA signals.
-	scl_bit = metadata['signals']['scl']['ch']
-	sda_bit = metadata['signals']['sda']['ch']
+    # Get the channel/probe number of the SCL/SDA signals.
+    scl_bit = metadata['signals']['scl']['ch']
+    sda_bit = metadata['signals']['sda']['ch']
 
-	# Get SCL/SDA bit values (0/1 for low/high) of the first sample.
-	s = inbuf[0]
-	oldscl = (s & (1 << scl_bit)) >> scl_bit
-	oldsda = (s & (1 << sda_bit)) >> sda_bit
+    # Get SCL/SDA bit values (0/1 for low/high) of the first sample.
+    s = inbuf[0]
+    oldscl = (s & (1 << scl_bit)) >> scl_bit
+    oldsda = (s & (1 << sda_bit)) >> sda_bit
 
-	# Loop over all samples.
-	# TODO: Handle LAs with more/less than 8 channels.
-	for samplenum, s in enumerate(inbuf[1:]): # We skip the first byte...
-		# Get SCL/SDA bit values (0/1 for low/high).
-		scl = (s & (1 << scl_bit)) >> scl_bit
-		sda = (s & (1 << sda_bit)) >> sda_bit
+    # Loop over all samples.
+    # TODO: Handle LAs with more/less than 8 channels.
+    for samplenum, s in enumerate(inbuf[1:]): # We skip the first byte...
+        # Get SCL/SDA bit values (0/1 for low/high).
+        scl = (s & (1 << scl_bit)) >> scl_bit
+        sda = (s & (1 << sda_bit)) >> sda_bit
 
-		# TODO: Wait until the bus is idle (SDA = SCL = 1) first?
+        # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
-		# START condition (S): SDA = falling, SCL = high
-		if (oldsda == 1 and sda == 0) and scl == 1:
-			o = {'type': 'S', 'range': (samplenum, samplenum),
-			     'data': None, 'ann': None},
-			out.append(o)
-			state = ADDRESS
-			bitcount = data = 0
+        # START condition (S): SDA = falling, SCL = high
+        if (oldsda == 1 and sda == 0) and scl == 1:
+            o = {'type': 'S', 'range': (samplenum, samplenum),
+                 'data': None, 'ann': None},
+            out.append(o)
+            state = ADDRESS
+            bitcount = data = 0
 
-		# Data latching by transmitter: SCL = low
-		elif (scl == 0):
-			pass # TODO
+        # Data latching by transmitter: SCL = low
+        elif (scl == 0):
+            pass # TODO
 
-		# Data sampling of receiver: SCL = rising
-		elif (oldscl == 0 and scl == 1):
-			if startsample == -1:
-				startsample = samplenum
-			bitcount += 1
+        # Data sampling of receiver: SCL = rising
+        elif (oldscl == 0 and scl == 1):
+            if startsample == -1:
+                startsample = samplenum
+            bitcount += 1
 
-			# out.append("%d\t\tRECEIVED BIT %d:  %d\n" % \
-			# 	(samplenum, 8 - bitcount, sda))
+            # out.append("%d\t\tRECEIVED BIT %d:  %d\n" % \
+            #     (samplenum, 8 - bitcount, sda))
 
-			# Address and data are transmitted MSB-first.
-			data <<= 1
-			data |= sda
+            # Address and data are transmitted MSB-first.
+            data <<= 1
+            data |= sda
 
-			if bitcount != 9:
-				continue
+            if bitcount != 9:
+                continue
 
-			# We received 8 address/data bits and the ACK/NACK bit.
-			data >>= 1 # Shift out unwanted ACK/NACK bit here.
-			ack = (sda == 1) and 'N' or 'A'
-			d = (state == ADDRESS) and (data & 0xfe) or data
-			if state == ADDRESS:
-				wr = (data & 1) and 1 or 0
-				state = DATA
-			o = {'type': state,
-			     'range': (startsample, samplenum - 1),
-			     'data': d, 'ann': None}
-			if state == ADDRESS and wr == 1:
-				o['type'] = 'AW'
-			elif state == ADDRESS and wr == 0:
-				o['type'] = 'AR'
-			elif state == DATA and wr == 1:
-				o['type'] = 'DW'
-			elif state == DATA and wr == 0:
-				o['type'] = 'DR'
-			out.append(o)
-			o = {'type': ack, 'range': (samplenum, samplenum),
-			     'data': None, 'ann': None}
-			out.append(o)
-			bitcount = data = startsample = 0
-			startsample = -1
+            # We received 8 address/data bits and the ACK/NACK bit.
+            data >>= 1 # Shift out unwanted ACK/NACK bit here.
+            ack = (sda == 1) and 'N' or 'A'
+            d = (state == ADDRESS) and (data & 0xfe) or data
+            if state == ADDRESS:
+                wr = (data & 1) and 1 or 0
+                state = DATA
+            o = {'type': state,
+                 'range': (startsample, samplenum - 1),
+                 'data': d, 'ann': None}
+            if state == ADDRESS and wr == 1:
+                o['type'] = 'AW'
+            elif state == ADDRESS and wr == 0:
+                o['type'] = 'AR'
+            elif state == DATA and wr == 1:
+                o['type'] = 'DW'
+            elif state == DATA and wr == 0:
+                o['type'] = 'DR'
+            out.append(o)
+            o = {'type': ack, 'range': (samplenum, samplenum),
+                 'data': None, 'ann': None}
+            out.append(o)
+            bitcount = data = startsample = 0
+            startsample = -1
 
-		# STOP condition (P): SDA = rising, SCL = high
-		elif (oldsda == 0 and sda == 1) and scl == 1:
-			o = {'type': 'P', 'range': (samplenum, samplenum),
-			     'data': None, 'ann': None},
-			out.append(o)
-			state = IDLE
-			wr = -1
+        # STOP condition (P): SDA = rising, SCL = high
+        elif (oldsda == 0 and sda == 1) and scl == 1:
+            o = {'type': 'P', 'range': (samplenum, samplenum),
+                 'data': None, 'ann': None},
+            out.append(o)
+            state = IDLE
+            wr = -1
 
-		# Save current SDA/SCL values for the next round.
-		oldscl = scl
-		oldsda = sda
+        # Save current SDA/SCL values for the next round.
+        oldscl = scl
+        oldsda = sda
 
-	# FIXME: Just for testing...
-	return str(out)
+    # FIXME: Just for testing...
+    return str(out)
 
 register = {
-	'id': 'i2c',
-	'name': 'I2C',
-	'longname': 'Inter-Integrated Circuit (I2C) bus',
-	'desc': 'I2C is a two-wire, multi-master, serial bus.',
-	'longdesc': '...',
-	'author': 'Uwe Hermann',
-	'email': 'uwe@hermann-uwe.de',
-	'license': 'gplv2+',
-	'in': ['logic'],
-	'out': ['i2c'],
-	'probes': [
-		['scl', 'Serial clock line'],
-		['sda', 'Serial data line'],
-	],
-	'options': {
-		'address-space': ['Address space (in bits)', 7],
-	},
-	# 'start': start,
-	# 'report': report,
+    'id': 'i2c',
+    'name': 'I2C',
+    'longname': 'Inter-Integrated Circuit (I2C) bus',
+    'desc': 'I2C is a two-wire, multi-master, serial bus.',
+    'longdesc': '...',
+    'author': 'Uwe Hermann',
+    'email': 'uwe@hermann-uwe.de',
+    'license': 'gplv2+',
+    'in': ['logic'],
+    'out': ['i2c'],
+    'probes': [
+        ['scl', 'Serial clock line'],
+        ['sda', 'Serial data line'],
+    ],
+    'options': {
+        'address-space': ['Address space (in bits)', 7],
+    },
+    # 'start': start,
+    # 'report': report,
 }
 
 # Use psyco (if available) as it results in huge performance improvements.
 try:
-	import psyco
-	psyco.bind(decode)
+    import psyco
+    psyco.bind(decode)
 except ImportError:
-	pass
+    pass
 

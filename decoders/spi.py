@@ -17,6 +17,7 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
+
 class Sample():
     def __init__(self, data):
         self.data = data
@@ -65,8 +66,8 @@ class Decoder():
             if sck == self.oldsck:
                 continue
             self.oldsck = sck
-            if not sck: 
-                continue    
+            if not sck:
+                continue
 
             # If this is first bit, save timestamp
             if self.rxcount == 0:
@@ -92,7 +93,7 @@ class Decoder():
             self.rxcount = 0
             # Keep stats for summary
             self.bytesreceived += 1
-            
+
 if __name__ == "__main__":
     data = open("spi_dump.bin").read()
 
@@ -111,5 +112,4 @@ else:
 
 #Tested with:
 #  sigrok-cli -d 0:samplerate=1000000:rle=on --time=1s -p 1,2 -a spidec
-
 
