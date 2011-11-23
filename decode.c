@@ -77,7 +77,24 @@ static PyMethodDef EmbMethods[] = {
 /**
  * Initialize libsigrokdecode.
  *
+ * This initializes the Python interpreter, and creates and initializes
+ * a "sigrok" Python module with a single put() method.
+ *
+ * Then, it searches for sigrok protocol decoder files (*.py) in the
+ * "decoders" subdirectory of the the sigrok installation directory.
+ * All decoders that are found are loaded into memory and added to an
+ * internal list of decoders, which can be queried via srd_list_decoders().
+ *
+ * The caller is responsible for calling the clean-up function srd_exit(),
+ * which will properly shut down libsigrokdecode and free its allocated memory.
+ *
+ * Multiple calls to srd_init(), without calling srd_exit() inbetween,
+ * are not allowed.
+ *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         Upon Python errors, return SRD_ERR_PYTHON. If the sigrok decoders
+ *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
+ *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
  */
 int srd_init(void)
 {
@@ -449,6 +466,13 @@ static int srd_unload_all_decoders(void)
 
 /**
  * Shutdown libsigrokdecode.
+ *
+ * This frees all the memory allocated for protocol decoders and shuts down
+ * the Python interpreter.
+ *
+ * This function should only be called if there was a (successful!) invocation
+ * of srd_init() before. Calling this function multiple times in a row, without
+ * any successful srd_init() calls inbetween, is not allowed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
