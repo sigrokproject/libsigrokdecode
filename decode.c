@@ -51,11 +51,10 @@ static int srd_load_decoder(const char *name, struct srd_decoder **dec);
 
 static int _unitsize = 1;
 
-static PyObject*
-emb_put(PyObject *self, PyObject *args)
+static PyObject *emb_put(PyObject *self, PyObject *args)
 {
 	PyObject *arg;
-	
+
 	(void)self;
 
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
@@ -70,7 +69,7 @@ emb_put(PyObject *self, PyObject *args)
 
 static PyMethodDef EmbMethods[] = {
 	{"put", emb_put, METH_VARARGS,
-		"Accepts a dictionary with the following keys: time, duration, data"},
+	 "Accepts a dictionary with the following keys: time, duration, data"},
 	{NULL, NULL, 0, NULL}
 };
 
@@ -119,19 +118,19 @@ int srd_init(void)
 		return SRD_ERR_DECODERS_DIR;
 
 	while ((dp = readdir(dir)) != NULL) {
+		/* Ignore filenames which don't end with ".py". */
 		if (!g_str_has_suffix(dp->d_name, ".py"))
 			continue;
 
 		/* Decoder name == filename (without .py suffix). */
 		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
 
-		/* TODO: Error handling. */
+		/* TODO: Error handling. Use g_try_malloc(). */
 		dec = malloc(sizeof(struct srd_decoder));
 
 		/* Load the decoder. */
 		ret = srd_load_decoder(decodername, &dec);
-		if (!ret)
-		{
+		if (!ret) {
 			/* Append it to the list of supported/loaded decoders. */
 			list_pds = g_slist_append(list_pds, dec);
 		}
@@ -231,12 +230,12 @@ err_h_decref_mod:
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-static int srd_load_decoder(const char *name,
-			      struct srd_decoder **dec)
+static int srd_load_decoder(const char *name, struct srd_decoder **dec)
 {
 	struct srd_decoder *d;
 	PyObject *py_mod, *py_res;
 	int r;
+
 	fprintf(stdout, "%s: %s\n", __func__, name);
 
 	/* "Import" the Python module. */
@@ -258,7 +257,7 @@ static int srd_load_decoder(const char *name,
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	/* We'll just use the name of the module for the id */
+	/* We'll just use the name of the module for the ID. */
 	d->id = strdup(name);
 
 	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
@@ -300,27 +299,34 @@ static int srd_load_decoder(const char *name,
 
 struct srd_decoder_instance *srd_instance_new(const char *id)
 {
-	struct srd_decoder *dec = srd_get_decoder_by_id(id);
-	if (!dec) 
-		return NULL;
-	struct srd_decoder_instance *di = g_malloc(sizeof(*di));
+	struct srd_decoder *dec;
+	struct srd_decoder_instance *di;
 	PyObject *py_args, *py_value;
 
-	/* Create a Python tuple of size 1. */
+	if (!(dec = srd_get_decoder_by_id(id)))
+		return NULL;
+
+	/* TODO: Error handling. Use g_try_malloc(). */
+	di = g_malloc(sizeof(*di));
+
+	/* Create an empty Python tuple. */
 	if (!(py_args = PyTuple_New(0))) { /* NEWREF */
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
-		
+
 		return NULL; /* TODO: More specific error? */
 	}
-	
-	py_value = Py_BuildValue("{sssisd}", 
-				  "driver", "demo",
-				  "unitsize", _unitsize, //FIXME: Pass in a unitsize that matches the selected LA
-				  "starttime", 129318231823.0 //TODO: Fill with something reasonable.
-				  );
 
-	/* Create an instance of the Decoder class */
+	/*
+	 * FIXME: Pass in a unitsize that matches the selected LA.
+	 * FIXME: Fill 'starttime' with something reasonable.
+	 */
+	py_value = Py_BuildValue("{sssisd}",
+				 "driver", "demo",
+				 "unitsize", _unitsize,
+				 "starttime", 129318231823.0);
+
+	/* Create an instance of the 'Decoder' class. */
 	di->py_instance = PyObject_Call(dec->py_decobj, py_args, py_value);
 	if (!di->py_instance) {
 		if (PyErr_Occurred())
@@ -328,7 +334,7 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 		Py_XDECREF(py_args);
 		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
 		return NULL; /* TODO: More specific error? */
-	} 
+	}
 
 	Py_XDECREF(py_args);
 	Py_XDECREF(py_value);
@@ -337,22 +343,24 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 }
 
 int srd_instance_set_probe(struct srd_decoder_instance *di,
-				const char *probename, int num)
+			   const char *probename, int num)
 {
 	PyObject *probedict, *probenum;
+
 	probedict = PyObject_GetAttrString(di->py_instance, "probes"); /* NEWREF */
 	if (!probedict) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
-		
+
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
 	probenum = PyInt_FromLong(num);
-	PyMapping_SetItemString(probedict, (char*)probename, probenum);
+	PyMapping_SetItemString(probedict, (char *)probename, probenum);
 
 	Py_XDECREF(probenum);
 	Py_XDECREF(probedict);
+
 	return SRD_OK;
 }
 
@@ -368,14 +376,14 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_run_decoder(struct srd_decoder_instance *dec,
-			     uint8_t *inbuf, uint64_t inbuflen,
-			     uint8_t **outbuf, uint64_t *outbuflen)
+		    uint8_t *inbuf, uint64_t inbuflen,
+		    uint8_t **outbuf, uint64_t *outbuflen)
 {
 	PyObject *py_instance, *py_value, *py_res;
 	int ret;
-	
 	/* FIXME: Don't have a timebase available here. Make one up. */
 	static int _timehack = 0;
+
 	_timehack += inbuflen;
 
 	/* TODO: Use #defines for the return codes. */
@@ -391,7 +399,7 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (outbuflen == NULL)
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
-	
+
 	/* TODO: Error handling. */
 	py_instance = dec->py_instance;
 	Py_XINCREF(py_instance);
@@ -399,18 +407,16 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 	/* Get the input buffer as Python "string" (byte array). */
 	/* TODO: int vs. uint64_t for 'inbuflen'? */
 
-	py_value = Py_BuildValue("{sisiss#}", 
-					  "time", _timehack,
-					  "duration", 10,
-					  "data", inbuf, inbuflen / _unitsize
-					  );
+	py_value = Py_BuildValue("{sisiss#}",
+				 "time", _timehack,
+				 "duration", 10,
+				 "data", inbuf, inbuflen / _unitsize);
 	
-	if (!(py_res = PyObject_CallMethod(py_instance, "decode", 
-					"O", py_value))) { /* NEWREF */
+	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
+					   "O", py_value))) { /* NEWREF */
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_run_decref_args;
 	}
-
 
 	ret = SRD_OK;
 
