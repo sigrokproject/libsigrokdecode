@@ -106,16 +106,25 @@ int srd_init(void)
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
-	Py_InitModule("sigrok", EmbMethods);
+	/* TODO: Use Py_InitModule3() to add a docstring? */
+	if (!Py_InitModule("sigrok", EmbMethods)) {
+		Py_Finalize(); /* Returns void. */
+		return SRD_ERR_PYTHON;
+	}
 
 	/* Add search directory for the protocol decoders. */
-	/* FIXME: Check error code. */
 	/* FIXME: What happens if this function is called multiple times? */
-	PyRun_SimpleString("import sys;"
-			   "sys.path.append(r'" DECODERS_DIR "');");
+	ret = PyRun_SimpleString("import sys;"
+				 "sys.path.append(r'" DECODERS_DIR "');");
+	if (ret != 0) {
+		Py_Finalize(); /* Returns void. */
+		return SRD_ERR_PYTHON;
+	}
 
-	if (!(dir = opendir(DECODERS_DIR)))
+	if (!(dir = opendir(DECODERS_DIR))) {
+		Py_Finalize(); /* Returns void. */
 		return SRD_ERR_DECODERS_DIR;
+	}
 
 	while ((dp = readdir(dir)) != NULL) {
 		/* Ignore filenames which don't end with ".py". */
@@ -126,9 +135,13 @@ int srd_init(void)
 		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
 
 		/* TODO: Error handling. Use g_try_malloc(). */
-		dec = malloc(sizeof(struct srd_decoder));
+		if (!(dec = malloc(sizeof(struct srd_decoder)))) {
+			Py_Finalize(); /* Returns void. */
+			return SRD_ERR_MALLOC;
+		}
 
 		/* Load the decoder. */
+		/* TODO: Warning if loading fails for a decoder. */
 		ret = srd_load_decoder(decodername, &dec);
 		if (!ret) {
 			/* Append it to the list of supported/loaded decoders. */
@@ -449,6 +462,8 @@ static int srd_unload_decoder(struct srd_decoder *dec)
 
 	Py_XDECREF(dec->py_decobj);
 	Py_XDECREF(dec->py_mod);
+
+	/* TODO: (g_)free dec itself? */
 
 	return SRD_OK;
 }
