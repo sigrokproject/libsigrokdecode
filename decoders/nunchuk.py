@@ -109,7 +109,7 @@ def decode2(inbuf):
                 az |= (p['data'] & (3 << 6)) >> 6
                 # del o
                 o = {'type': 'D', 'range': (0, 0), 'data': []}
-                 o['data'] = [sx, sy, ax, ay, az, bz, bc]
+                o['data'] = [sx, sy, ax, ay, az, bz, bc]
                 # sx = sy = ax = ay = az = bz = bc = 0
             else:
                 pass # TODO
