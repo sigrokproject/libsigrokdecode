@@ -60,7 +60,7 @@ static PyObject *emb_put(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
 		return NULL;
 
-	fprintf(stdout, "sigrok.put() called by decoder:\n");
+	// fprintf(stdout, "sigrok.put() called by decoder:\n");
 	PyObject_Print(arg, stdout, Py_PRINT_RAW);
 	puts("");
 
