@@ -345,12 +345,5 @@ class Decoder():
         if out != []:
             sigrok.put(out)
 
-# Use psyco (if available) as it results in huge performance improvements.
-try:
-    import psyco
-    psyco.bind(decode)
-except ImportError:
-    pass
-
 import sigrok
 

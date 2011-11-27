@@ -107,12 +107,5 @@ class Decoder():
             outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
         sigrok.put(outdata)
 
-# Use psyco (if available) as it results in huge performance improvements.
-try:
-    import psyco
-    psyco.bind(decode)
-except ImportError:
-    pass
-
 import sigrok
 

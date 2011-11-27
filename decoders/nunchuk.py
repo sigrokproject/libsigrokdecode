@@ -165,10 +165,3 @@ register = {
     # 'report': report,
 }
 
-# Use psyco (if available) as it results in huge performance improvements.
-try:
-    import psyco
-    psyco.bind(decode)
-except ImportError:
-    pass
-
