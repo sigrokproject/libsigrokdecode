@@ -185,19 +185,19 @@ class Decoder():
         pass
 
     def is_start_condition(self, scl, sda):
-        '''START condition (S): SDA = falling, SCL = high'''
+        """START condition (S): SDA = falling, SCL = high"""
         if (self.oldsda == 1 and sda == 0) and scl == 1:
             return True
         return False
 
     def is_data_bit(self, scl, sda):
-        '''Data sampling of receiver: SCL = rising'''
+        """Data sampling of receiver: SCL = rising"""
         if self.oldscl == 0 and scl == 1:
             return True
         return False
 
     def is_stop_condition(self, scl, sda):
-        '''STOP condition (P): SDA = rising, SCL = high'''
+        """STOP condition (P): SDA = rising, SCL = high"""
         if (self.oldsda == 0 and sda == 1) and scl == 1:
             return True
         return False
@@ -215,7 +215,7 @@ class Decoder():
         return out
 
     def find_address_or_data(self, scl, sda):
-        '''Gather 8 bits of data plus the ACK/NACK bit.'''
+        """Gather 8 bits of data plus the ACK/NACK bit."""
         out = o = []
 
         if self.startsample == -1:
