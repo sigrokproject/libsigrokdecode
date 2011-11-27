@@ -51,16 +51,16 @@ class Decoder():
         self.bytesreceived = 0
 
     def start(self, metadata):
-        self.unitsize = metadata["unitsize"]
+        self.unitsize = metadata['unitsize']
 
     def report(self):
-        return "SPI: %d bytes received" % self.bytesreceived
+        return 'SPI: %d bytes received' % self.bytesreceived
 
     def decode(self, data):
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data["data"], self.unitsize):
+        for sample in sampleiter(data['data'], self.unitsize):
 
-            sck = sample.probe(self.probes["sck"])
+            sck = sample.probe(self.probes['sck'])
             # Sample SDATA on rising SCK
             if sck == self.oldsck:
                 continue
@@ -70,9 +70,9 @@ class Decoder():
 
             # If this is first bit, save timestamp
             if self.rxcount == 0:
-                self.time = data["time"]
+                self.time = data['time']
             # Receive bit into our shift register
-            sdata = sample.probe(self.probes["sdata"])
+            sdata = sample.probe(self.probes['sdata'])
             if sdata:
                 self.rxdata |= 1 << (7 - self.rxcount)
             self.rxcount += 1
@@ -80,11 +80,11 @@ class Decoder():
             if self.rxcount != 8:
                 continue
             # Received a byte, pass up to sigrok
-            outdata = {"time":self.time,
-                "duration":data["time"] + data["duration"] - self.time,
-                "data":self.rxdata,
-                "display":("%02X" % self.rxdata),
-                "type":"spi",
+            outdata = {'time':self.time,
+                'duration':data['time'] + data['duration'] - self.time,
+                'data':self.rxdata,
+                'display':('%02X' % self.rxdata),
+                'type':'spi',
             }
             sigrok.put(outdata)
             # Reset decoder state
@@ -93,8 +93,8 @@ class Decoder():
             # Keep stats for summary
             self.bytesreceived += 1
 
-if __name__ == "__main__":
-    data = open("spi_dump.bin").read()
+if __name__ == '__main__':
+    data = open('spi_dump.bin').read()
 
     # dummy class to keep Decoder happy for test
     class Sigrok():
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     sigrok = Sigrok()
 
     dec = Decoder(driver='ols', unitsize=1, starttime=0)
-    dec.decode({"time":0, "duration":len(data), "data":data, "type":"logic"})
+    dec.decode({'time':0, 'duration':len(data), 'data':data, 'type':'logic'})
 
     print dec.summary()
 else:

@@ -55,7 +55,7 @@ class Decoder():
         self.falling = [0] * self.channels
 
     def start(self, metadata):
-        self.unitsize = metadata["unitsize"]
+        self.unitsize = metadata['unitsize']
 
     def report(self):
         pass
@@ -65,7 +65,7 @@ class Decoder():
            channel(s) of the signal."""
 
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data["data"], self.unitsize):
+        for sample in sampleiter(data['data'], self.unitsize):
 
             # TODO: Eliminate the need for ord().
             s = ord(sample.data)

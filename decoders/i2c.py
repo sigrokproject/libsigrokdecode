@@ -249,7 +249,7 @@ class Decoder():
         #      'range': (self.startsample, self.samplenum - 1),
         #      'data': d, 'ann': None}
 
-        o = {'data': "0x%02x" % d}
+        o = {'data': '0x%02x' % d}
 
         # TODO: Simplify.
         if self.state == self.FIND_ADDRESS and self.wr == 1:
@@ -299,7 +299,7 @@ class Decoder():
         o = ack = d = ''
 
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data["data"], self.unitsize):
+        for sample in sampleiter(data['data'], self.unitsize):
 
             # TODO: Eliminate the need for ord().
             s = ord(sample.data)
