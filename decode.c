@@ -49,8 +49,6 @@ static GSList *list_pds = NULL;
 
 static int srd_load_decoder(const char *name, struct srd_decoder **dec);
 
-static int _unitsize = 1;
-
 static PyObject *emb_put(PyObject *self, PyObject *args)
 {
 	PyObject *arg;
@@ -314,7 +312,7 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 {
 	struct srd_decoder *dec;
 	struct srd_decoder_instance *di;
-	PyObject *py_args, *py_value;
+	PyObject *py_args;
 
 	if (!(dec = srd_get_decoder_by_id(id)))
 		return NULL;
@@ -330,27 +328,16 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 		return NULL; /* TODO: More specific error? */
 	}
 
-	/*
-	 * FIXME: Pass in a unitsize that matches the selected LA.
-	 * FIXME: Fill 'starttime' with something reasonable.
-	 */
-	py_value = Py_BuildValue("{sssisd}",
-				 "driver", "demo",
-				 "unitsize", _unitsize,
-				 "starttime", 129318231823.0);
-
 	/* Create an instance of the 'Decoder' class. */
-	di->py_instance = PyObject_Call(dec->py_decobj, py_args, py_value);
+	di->py_instance = PyObject_Call(dec->py_decobj, py_args, NULL);
 	if (!di->py_instance) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_args);
-		Py_XDECREF(py_value); /* TODO: Ref. stolen upon error? */
 		return NULL; /* TODO: More specific error? */
 	}
 
 	Py_XDECREF(py_args);
-	Py_XDECREF(py_value);
 
 	return di;
 }
@@ -377,6 +364,25 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 	return SRD_OK;
 }
 
+int srd_instance_start(struct srd_decoder_instance *di,
+			const char *driver, int unitsize, uint64_t starttime)
+{
+	PyObject *py_res;
+
+	if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
+					 "{s:s,s:i,s:d}", 
+					 "driver", driver,
+					 "unitsize", unitsize,
+					 "starttime", starttime))) {
+		if (PyErr_Occurred())
+			PyErr_Print(); /* Returns void. */
+
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	}
+	Py_XDECREF(py_res);
+	return SRD_OK;
+}
+
 /**
  * Run the specified decoder function.
  *
@@ -392,8 +398,7 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 		    uint8_t *inbuf, uint64_t inbuflen,
 		    uint8_t **outbuf, uint64_t *outbuflen)
 {
-	PyObject *py_instance, *py_value, *py_res;
-	int ret;
+	PyObject *py_instance, *py_res;
 	/* FIXME: Don't have a timebase available here. Make one up. */
 	static int _timehack = 0;
 
@@ -417,30 +422,19 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 	py_instance = dec->py_instance;
 	Py_XINCREF(py_instance);
 
-	/* Get the input buffer as Python "string" (byte array). */
-	/* TODO: int vs. uint64_t for 'inbuflen'? */
-
-	py_value = Py_BuildValue("{sisiss#}",
-				 "time", _timehack,
-				 "duration", 10,
-				 "data", inbuf, inbuflen / _unitsize);
-	
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
-					   "O", py_value))) { /* NEWREF */
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_run_decref_args;
-	}
+					   "{s:i,s:i,s:s#}", 
+					   "time", _timehack,
+					   "duration", 10,
+					   "data", inbuf, inbuflen))) { /* NEWREF */
+		if (PyErr_Occurred())
+			PyErr_Print(); /* Returns void. */
 
-	ret = SRD_OK;
+		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	} 
 
 	Py_XDECREF(py_res);
-err_run_decref_args:
-	Py_XDECREF(py_value);
-
-	if (PyErr_Occurred())
-		PyErr_Print(); /* Returns void. */
-
-	return ret;
+	return SRD_OK;
 }
 
 /**

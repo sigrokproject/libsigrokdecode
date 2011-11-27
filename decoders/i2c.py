@@ -154,11 +154,7 @@ class Decoder():
         'address-space': ['Address space (in bits)', 7],
     }
 
-    def __init__(self, unitsize, **kwargs):
-        # Metadata comes in here, we don't care for now.
-        # print kwargs
-        self.unitsize = unitsize
-
+    def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
 
         # TODO: Don't hardcode the number of channels.
@@ -179,6 +175,10 @@ class Decoder():
 
         self.oldscl = None
         self.oldsda = None
+
+    def start(self, metadata):
+        self.unitsize = metadata["unitsize"]
+
 
     def report(self):
         pass

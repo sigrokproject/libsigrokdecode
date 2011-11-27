@@ -43,16 +43,15 @@ class Decoder():
     probes = {'sdata':0, 'sck':1}
     options = {}
 
-    def __init__(self, unitsize, **kwargs):
-        # Metadata comes in here, we don't care for now
-        #print kwargs
-        self.unitsize = unitsize
-
+    def __init__(self):
         self.probes = Decoder.probes.copy()
         self.oldsck = True
         self.rxcount = 0
         self.rxdata = 0
         self.bytesreceived = 0
+
+    def start(self, metadata):
+        self.unitsize = metadata["unitsize"]
 
     def report(self):
         return "SPI: %d bytes received" % self.bytesreceived

@@ -42,11 +42,7 @@ class Decoder():
     probes = {}
     options = {}
 
-    def __init__(self, unitsize, **kwargs):
-        # Metadata comes in here, we don't care for now.
-        # print kwargs
-        self.unitsize = unitsize
-
+    def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
 
         # TODO: Don't hardcode the number of channels.
@@ -57,6 +53,9 @@ class Decoder():
         self.transitions = [0] * self.channels
         self.rising = [0] * self.channels
         self.falling = [0] * self.channels
+
+    def start(self, metadata):
+        self.unitsize = metadata["unitsize"]
 
     def report(self):
         pass
