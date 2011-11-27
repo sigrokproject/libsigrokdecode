@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2010-2011 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@
 #
 # START condition (S): SDA = falling, SCL = high
 # Repeated START condition (Sr): same as S
+# Data bit sampling: SCL = rising
 # STOP condition (P): SDA = rising, SCL = high
 #
 # All data bytes on SDA are exactly 8 bits long (transmitted MSB-first).
@@ -161,13 +162,13 @@ class Decoder():
         self.channels = 8
 
         self.samplenum = 0
-
         self.bitcount = 0
         self.databyte = 0
         self.wr = -1
         self.startsample = -1
-        self.IDLE, self.START, self.ADDRESS, self.DATA = range(4)
-        self.state = self.IDLE
+
+        self.FIND_START, self.FIND_ADDRESS, self.FIND_DATA = range(3)
+        self.state = self.FIND_START
 
         # Get the channel/probe number of the SCL/SDA signals.
         self.scl_bit = self.probes['scl']['ch']
@@ -179,9 +180,114 @@ class Decoder():
     def start(self, metadata):
         self.unitsize = metadata["unitsize"]
 
-
     def report(self):
         pass
+
+    def is_start_condition(self, scl, sda):
+        '''START condition (S): SDA = falling, SCL = high'''
+        if (self.oldsda == 1 and sda == 0) and scl == 1:
+            return True
+        return False
+
+    def is_data_bit(self, scl, sda):
+        '''Data sampling of receiver: SCL = rising'''
+        if self.oldscl == 0 and scl == 1:
+            return True
+        return False
+
+    def is_stop_condition(self, scl, sda):
+        '''STOP condition (P): SDA = rising, SCL = high'''
+        if (self.oldsda == 0 and sda == 1) and scl == 1:
+            return True
+        return False
+
+    def find_start(self, scl, sda):
+        out = []
+        # o = {'type': 'S', 'range': (self.samplenum, self.samplenum),
+        #      'data': None, 'ann': None},
+        o = 'S'
+        out.append(o)
+        self.state = self.FIND_ADDRESS
+        self.bitcount = self.databyte = 0
+        self.wr = -1
+        return out
+
+    def find_address_or_data(self, scl, sda):
+        '''Gather 8 bits of data plus the ACK/NACK bit.'''
+        out = o = []
+
+        if self.startsample == -1:
+            self.startsample = self.samplenum
+        self.bitcount += 1
+
+        # Address and data are transmitted MSB-first.
+        self.databyte <<= 1
+        self.databyte |= sda
+
+        # Return if we haven't collected all 8 + 1 bits, yet.
+        if self.bitcount != 9:
+            return []
+
+        # We received 8 address/data bits and the ACK/NACK bit.
+        self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
+
+        ack = (sda == 1) and 'N' or 'A'
+
+        if self.state == self.FIND_ADDRESS:
+            d = self.databyte & 0xfe
+            # The READ/WRITE bit is only in address bytes, not data bytes.
+            self.wr = (self.databyte & 1) and 1 or 0
+        elif self.state == self.FIND_DATA:
+            d = self.databyte
+        else:
+            # TODO: Error?
+            pass
+
+        # o = {'type': self.state,
+        #      'range': (self.startsample, self.samplenum - 1),
+        #      'data': d, 'ann': None}
+
+        o = {'data': "0x%02x" % d}
+
+        # TODO: Simplify.
+        if self.state == self.FIND_ADDRESS and self.wr == 1:
+            o['type'] = 'AW'
+        elif self.state == self.FIND_ADDRESS and self.wr == 0:
+            o['type'] = 'AR'
+        elif self.state == self.FIND_DATA and self.wr == 1:
+            o['type'] = 'DW'
+        elif self.state == self.FIND_DATA and self.wr == 0:
+            o['type'] = 'DR'
+
+        out.append(o)
+
+        # o = {'type': ack, 'range': (self.samplenum, self.samplenum),
+        #      'data': None, 'ann': None}
+        o = ack
+        out.append(o)
+        self.bitcount = self.databyte = 0
+        self.startsample = -1
+
+        if self.state == self.FIND_ADDRESS:
+            self.state = self.FIND_DATA
+        elif self.state == self.FIND_DATA:
+            # There could be multiple data bytes in a row.
+            # So, either find a STOP condition or another data byte next.
+            pass
+
+        return out
+
+    def find_stop(self, scl, sda):
+        out = o = []
+
+        # o = {'type': 'P', 'range': (self.samplenum, self.samplenum),
+        #      'data': None, 'ann': None},
+        o = 'P'
+        out.append(o)
+        self.state = self.FIND_START
+        self.wr = -1
+
+        return out
 
     def decode(self, data):
         """I2C protocol decoder"""
@@ -211,73 +317,28 @@ class Decoder():
 
             # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
-            # START condition (S): SDA = falling, SCL = high
-            if (self.oldsda == 1 and sda == 0) and scl == 1:
-                o = {'type': 'S', 'range': (self.samplenum, self.samplenum),
-                     'data': None, 'ann': None},
-                out.append(o)
-                self.state = self.ADDRESS
-                self.bitcount = self.databyte = 0
-
-            # Data latching by transmitter: SCL = low
-            elif (scl == 0):
-                pass # TODO
-
-            # Data sampling of receiver: SCL = rising
-            elif (self.oldscl == 0 and scl == 1):
-                if self.startsample == -1:
-                    self.startsample = self.samplenum
-                self.bitcount += 1
-
-                # out.append("%d\t\tRECEIVED BIT %d:  %d\n" % \
-                #     (self.samplenum, 8 - bitcount, sda))
-
-                # Address and data are transmitted MSB-first.
-                self.databyte <<= 1
-                self.databyte |= sda
-
-                if self.bitcount != 9:
-                    continue
-
-                # We received 8 address/data bits and the ACK/NACK bit.
-                self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
-                ack = (sda == 1) and 'N' or 'A'
-                d = (self.state == self.ADDRESS) and (self.databyte & 0xfe) or self.databyte
-                if self.state == self.ADDRESS:
-                    self.wr = (self.databyte & 1) and 1 or 0
-                    self.state = self.DATA
-                o = {'type': self.state,
-                     'range': (self.startsample, self.samplenum - 1),
-                     'data': d, 'ann': None}
-                if self.state == self.ADDRESS and self.wr == 1:
-                    o['type'] = 'AW'
-                elif self.state == self.ADDRESS and self.wr == 0:
-                    o['type'] = 'AR'
-                elif self.state == self.DATA and self.wr == 1:
-                    o['type'] = 'DW'
-                elif self.state == self.DATA and self.wr == 0:
-                    o['type'] = 'DR'
-                out.append(o)
-                o = {'type': ack, 'range': (self.samplenum, self.samplenum),
-                     'data': None, 'ann': None}
-                out.append(o)
-                self.bitcount = self.databyte = self.startsample = 0
-                self.startsample = -1
-
-            # STOP condition (P): SDA = rising, SCL = high
-            elif (self.oldsda == 0 and sda == 1) and scl == 1:
-                o = {'type': 'P', 'range': (self.samplenum, self.samplenum),
-                     'data': None, 'ann': None},
-                out.append(o)
-                self.state = self.IDLE
-                self.wr = -1
+            # State machine.
+            if self.state == self.FIND_START:
+                if self.is_start_condition(scl, sda):
+                    out += self.find_start(scl, sda)
+            elif self.state == self.FIND_ADDRESS:
+                if self.is_data_bit(scl, sda):
+                    out += self.find_address_or_data(scl, sda)
+            elif self.state == self.FIND_DATA:
+                if self.is_data_bit(scl, sda):
+                    out += self.find_address_or_data(scl, sda)
+                elif self.is_start_condition(scl, sda):
+                    out += self.find_start(scl, sda)
+                elif self.is_stop_condition(scl, sda):
+                    out += self.find_stop(scl, sda)
+            else:
+                # TODO: Error?
+                pass
 
             # Save current SDA/SCL values for the next round.
             self.oldscl = scl
             self.oldsda = sda
 
-        # TODO: Which output format?
-        # TODO: How to only output something after the last chunk of data?
         if out != []:
             sigrok.put(out)
 
