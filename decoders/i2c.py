@@ -166,6 +166,7 @@ class Decoder():
         self.databyte = 0
         self.wr = -1
         self.startsample = -1
+        self.is_repeat_start = 0
 
         self.FIND_START, self.FIND_ADDRESS, self.FIND_DATA = range(3)
         self.state = self.FIND_START
@@ -205,10 +206,11 @@ class Decoder():
         out = []
         # o = {'type': 'S', 'range': (self.samplenum, self.samplenum),
         #      'data': None, 'ann': None},
-        o = 'S'
+        o = (self.is_repeat_start == 1) and 'Sr' or 'S'
         out.append(o)
         self.state = self.FIND_ADDRESS
         self.bitcount = self.databyte = 0
+        self.is_repeat_start = 1
         self.wr = -1
         return out
 
@@ -285,6 +287,7 @@ class Decoder():
         o = 'P'
         out.append(o)
         self.state = self.FIND_START
+        self.is_repeat_start = 0
         self.wr = -1
 
         return out
