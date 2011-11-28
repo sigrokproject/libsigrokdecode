@@ -33,6 +33,8 @@
 
 /* The list of protocol decoders. */
 static GSList *list_pds = NULL;
+/* The list of protocol decoder instances: struct srd_decoder_instance */
+static GSList *decoders;
 
 /*
  * Here's a quick overview of Python/C API reference counting.
@@ -308,6 +310,7 @@ static int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	return SRD_OK;
 }
 
+/** Create a new decoder instance and add to session. */
 struct srd_decoder_instance *srd_instance_new(const char *id)
 {
 	struct srd_decoder *dec;
@@ -337,6 +340,9 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 		return NULL; /* TODO: More specific error? */
 	}
 
+	/* Append to list of PD instances */
+	decoders = g_slist_append(decoders, di);
+
 	Py_XDECREF(py_args);
 
 	return di;
@@ -364,24 +370,29 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 	return SRD_OK;
 }
 
-int srd_instance_start(struct srd_decoder_instance *di,
-			const char *driver, int unitsize, uint64_t starttime,
+/** Start decoding session.  Feed metadata to decoder instances. */
+int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 			uint64_t samplerate)
 {
 	PyObject *py_res;
+	GSList *d;
+	for (d = decoders; d; d = d->next) {
+		struct srd_decoder_instance *di = d->data;
+		/* TODO: Error handling. */
+		if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
+					"{s:s,s:l,s:l,s:l}", 
+					"driver", driver,
+					"unitsize", (long)unitsize,
+					"starttime", (long)starttime,
+					"samplerate", (long)samplerate))) {
+			if (PyErr_Occurred())
+				PyErr_Print(); /* Returns void. */
 
-	if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
-					 "{s:s,s:l,s:l,s:l}", 
-					 "driver", driver,
-					 "unitsize", (long)unitsize,
-					 "starttime", (long)starttime,
-					 "samplerate", (long)samplerate))) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		}
+		Py_XDECREF(py_res);
 	}
-	Py_XDECREF(py_res);
+
 	return SRD_OK;
 }
 
@@ -396,9 +407,8 @@ int srd_instance_start(struct srd_decoder_instance *di,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_run_decoder(struct srd_decoder_instance *dec,
-		    uint8_t *inbuf, uint64_t inbuflen,
-		    uint8_t **outbuf, uint64_t *outbuflen)
+static int srd_run_decoder(struct srd_decoder_instance *dec,
+		    uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_instance, *py_res;
 	/* FIXME: Don't have a timebase available here. Make one up. */
@@ -414,10 +424,6 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 	if (inbuf == NULL)
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
 	if (inbuflen == 0) /* No point in working on empty buffers. */
-		return SRD_ERR_ARGS; /* TODO: More specific error? */
-	if (outbuf == NULL)
-		return SRD_ERR_ARGS; /* TODO: More specific error? */
-	if (outbuflen == NULL)
 		return SRD_ERR_ARGS; /* TODO: More specific error? */
 
 	/* TODO: Error handling. */
@@ -437,6 +443,22 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 
 	Py_XDECREF(py_res);
 	return SRD_OK;
+}
+
+/* Feed logic samples to decoder session. */
+int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
+{
+	GSList *d;
+	for (d = decoders; d; d = d->next) {
+		/* TODO: Error handling. */
+		
+		int ret = srd_run_decoder(d->data, inbuf, inbuflen);
+
+		if (ret != SRD_OK) {
+			fprintf(stderr, "Decoder runtime error (%d)\n", ret);
+			exit(1);
+		}
+	}
 }
 
 /**
