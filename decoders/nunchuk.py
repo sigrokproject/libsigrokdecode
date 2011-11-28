@@ -47,121 +47,133 @@ example_packets = [
     {'type': 'P',  'range': (32, 33), 'data': None, 'ann': ''},
 ]
 
-def decode(l):
-    print(l)
-    sigrok.put(l)
+class Sample():
+    def __init__(self, data):
+        self.data = data
+    def probe(self, probe):
+        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        return True if s else False
 
+def sampleiter(data, unitsize):
+    for i in range(0, len(data), unitsize):
+        yield(Sample(data[i:i+unitsize]))
 
-def decode2(inbuf):
-    """Nintendo Wii Nunchuk decoder"""
+class Decoder():
+    name = 'Nunchuk'
+    longname = 'Nintendo Wii Nunchuk decoder'
+    desc = 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.'
+    longdesc = '...'
+    author = 'Uwe Hermann'
+    email = 'uwe@hermann-uwe.de'
+    license = 'gplv2+'
+    inputs = ['i2c']
+    outputs = ['nunchuck']
+    probes = {}
+    options = {}
 
-    # FIXME: Get the data in the correct format in the first place.
-    inbuf = [ord(x) for x in inbuf]
-    out = []
-    o = {}
+    def __init__(self, **kwargs):
+        self.probes = Decoder.probes.copy()
 
-    # TODO: Pass in metadata.
+        # TODO: Don't hardcode the number of channels.
+        self.channels = 8
 
-    # States
-    IDLE, START, NUNCHUK_SLAVE, INIT, INITIALIZED = range(5)
-    state = IDLE # TODO: Can we assume a certain initial state?
+        self.IDLE, self.START, self.NUNCHUK_SLAVE, self.INIT, \
+        self.INITIALIZED = range(5)
 
-    sx = sy = ax = ay = az = bz = bc = 0
+        self.state = self.IDLE # TODO: Can we assume a certain initial state?
 
-    databytecount = 0
+        self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
 
-    # Loop over all I2C packets.
-    for p in example_packets:
-        if p['type'] == 'S': # TODO: Handle 'Sr' here, too?
-            state = START
+        self.databytecount = 0
 
-        elif p['type'] == 'Sr':
-            pass # FIXME
+    def start(self, metadata):
+        self.unitsize = metadata['unitsize']
 
-        elif p['type'] == 'AR':
-            # TODO: Error/Warning, not supported, I think.
-            pass
+    def report(self):
+        pass
 
-        elif p['type'] == 'AW':
-            # The Wii Nunchuk always has slave address 0x54.
-            # TODO: Handle this stuff more correctly.
-            if p['data'] == 0x54:
-                pass # TODO
-            else:
-                pass # TODO: What to do here? Ignore? Error?
+    def decode(self, data):
+        """Nintendo Wii Nunchuk decoder"""
 
-        elif p['type'] == 'DR' and state == INITIALIZED:
-            if databytecount == 0:
-                sx = p['data']
-            elif databytecount == 1:
-                sy = p['data']
-            elif databytecount == 2:
-                ax = p['data'] << 2
-            elif databytecount == 3:
-                ay = p['data'] << 2
-            elif databytecount == 4:
-                az = p['data'] << 2
-            elif databytecount == 5:
-                bz =  (p['data'] & (1 << 0)) >> 0
-                bc =  (p['data'] & (1 << 1)) >> 1
-                ax |= (p['data'] & (3 << 2)) >> 2
-                ay |= (p['data'] & (3 << 4)) >> 4
-                az |= (p['data'] & (3 << 6)) >> 6
-                # del o
-                o = {'type': 'D', 'range': (0, 0), 'data': []}
-                o['data'] = [sx, sy, ax, ay, az, bz, bc]
-                # sx = sy = ax = ay = az = bz = bc = 0
-            else:
-                pass # TODO
+        out = []
+        o = {}
 
-            if 0 <= databytecount <= 5:
-                databytecount += 1
+        # We should accept a list of samples and iterate...
+        # for sample in sampleiter(data['data'], self.unitsize):
+        for p in example_packets:
 
-            # TODO: If 6 bytes read -> save and reset
+            # TODO: Eliminate the need for ord().
+            # s = ord(sample.data)
 
-        # TODO
-        elif p['type'] == 'DR' and state != INITIALIZED:
-            pass
+            if p['type'] == 'S': # TODO: Handle 'Sr' here, too?
+                self.state = self.START
 
-        elif p['type'] == 'DW':
-            if p['data'] == 0x40 and state == START:
-                state = INIT
-            elif p['data'] == 0x00 and state == INIT:
-                o = {'type': 'I', 'range': (0, 0), 'data': []}
-                o['data'] = [0x40, 0x00]
+            elif p['type'] == 'Sr':
+                pass # FIXME
+
+            elif p['type'] == 'AR':
+                # TODO: Error/Warning, not supported, I think.
+                pass
+
+            elif p['type'] == 'AW':
+                # The Wii Nunchuk always has slave address 0x54.
+                # TODO: Handle this stuff more correctly.
+                if p['data'] == 0x54:
+                    pass # TODO
+                else:
+                    pass # TODO: What to do here? Ignore? Error?
+
+            elif p['type'] == 'DR' and self.state == self.INITIALIZED:
+                if self.databytecount == 0:
+                    self.sx = p['data']
+                elif self.databytecount == 1:
+                    self.sy = p['data']
+                elif self.databytecount == 2:
+                    self.ax = p['data'] << 2
+                elif self.databytecount == 3:
+                    self.ay = p['data'] << 2
+                elif self.databytecount == 4:
+                    self.az = p['data'] << 2
+                elif self.databytecount == 5:
+                    self.bz =  (p['data'] & (1 << 0)) >> 0
+                    self.bc =  (p['data'] & (1 << 1)) >> 1
+                    self.ax |= (p['data'] & (3 << 2)) >> 2
+                    self.ay |= (p['data'] & (3 << 4)) >> 4
+                    self.az |= (p['data'] & (3 << 6)) >> 6
+                    # del o
+                    o = {'type': 'D', 'range': (0, 0), 'data': []}
+                    o['data'] = [self.sx, self.sy, self.ax, self.ay, \
+                                 self.az, self.bz, self.bc]
+                    # sx = sy = ax = ay = az = bz = bc = 0
+                else:
+                    pass # TODO
+
+                if 0 <= self.databytecount <= 5:
+                    self.databytecount += 1
+
+                # TODO: If 6 bytes read -> save and reset
+
+            # TODO
+            elif p['type'] == 'DR' and self.state != self.INITIALIZED:
+                pass
+
+            elif p['type'] == 'DW':
+                if p['data'] == 0x40 and self.state == self.START:
+                    self.state = self.INIT
+                elif p['data'] == 0x00 and self.state == self.INIT:
+                    o = {'type': 'I', 'range': (0, 0), 'data': []}
+                    o['data'] = [0x40, 0x00]
+                    out.append(o)
+                    self.state = self.INITIALIZED
+                else:
+                    pass # TODO
+
+            elif p['type'] == 'P':
                 out.append(o)
-                state = INITIALIZED
-            else:
-                pass # TODO
+                self.state = self.INITIALIZED
+                self.databytecount = 0
 
-        elif p['type'] == 'P':
-            out.append(o)
-            state = INITIALIZED
-            databytecount = 0
+        sigrok.put(out)
 
-    print out
-
-    # FIXME
-    return ''
-
-register = {
-    'id': 'nunchuk',
-    'name': 'Nunchuk',
-    'longname': 'Nintendo Wii Nunchuk decoder',
-    'desc': 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.',
-    'longdesc': '...',
-    'author': 'Uwe Hermann',
-    'email': 'uwe@hermann-uwe.de',
-    'license': 'gplv2+',
-    'in': ['i2c'],
-    'out': ['nunchuck'],
-    'probes': [
-        # TODO
-    ],
-    'options': {
-        # TODO
-    },
-    # 'start': start,
-    # 'report': report,
-}
+import sigrok
 
