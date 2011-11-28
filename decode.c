@@ -365,15 +365,17 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 }
 
 int srd_instance_start(struct srd_decoder_instance *di,
-			const char *driver, int unitsize, uint64_t starttime)
+			const char *driver, int unitsize, uint64_t starttime,
+			uint64_t samplerate)
 {
 	PyObject *py_res;
 
 	if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
-					 "{s:s,s:i,s:d}", 
+					 "{s:s,s:l,s:l,s:l}", 
 					 "driver", driver,
-					 "unitsize", unitsize,
-					 "starttime", starttime))) {
+					 "unitsize", (long)unitsize,
+					 "starttime", (long)starttime,
+					 "samplerate", (long)samplerate))) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 

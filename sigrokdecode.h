@@ -109,7 +109,8 @@ struct srd_decoder_instance *srd_instance_new(const char *id);
 int srd_instance_set_probe(struct srd_decoder_instance *di,
 				const char *probename, int num);
 int srd_instance_start(struct srd_decoder_instance *di,
-			const char *driver, int unitsize, uint64_t starttime);
+			const char *driver, int unitsize, uint64_t starttime,
+			uint64_t samplerate);
 int srd_exit(void);
 
 #ifdef __cplusplus
