@@ -22,7 +22,13 @@
 # Nintendo Wii Nunchuk decoder
 #
 
+#
 # TODO: Description
+#
+# http://wiibrew.org/wiki/Wiimote/Extension_Controllers/Nunchuck
+# http://todbot.com/blog/2008/02/18/wiichuck-wii-nunchuck-adapter-available/
+# https://www.sparkfun.com/products/9281
+#
 
 # FIXME: This is just some example input for testing purposes...
 example_packets = [
