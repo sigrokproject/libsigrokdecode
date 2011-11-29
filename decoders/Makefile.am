@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)
 
-dist_pkgdata_DATA = i2c.py nunchuk.py transitioncounter.py spi.py
+dist_pkgdata_DATA = i2c.py nunchuk.py transitioncounter.py spi.py srd_usb.py
 
 CLEANFILES = *.pyc
 
