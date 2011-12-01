@@ -33,9 +33,9 @@ def sampleiter(data, unitsize):
 
 class Decoder():
     id = 'spi'
-    name = 'SPI Decoder'
+    name = 'SPI'
     desc = '...desc...'
-    longname = '...longname...'
+    longname = 'Serial Peripheral Interface (SPI) bus'
     longdesc = '...longdesc...'
     author = 'Gareth McMullin'
     email = 'gareth@blacksphere.co.nz'

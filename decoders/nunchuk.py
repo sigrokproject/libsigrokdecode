@@ -65,6 +65,7 @@ def sampleiter(data, unitsize):
         yield(Sample(data[i:i+unitsize]))
 
 class Decoder():
+    id = 'nunchuk'
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk decoder'
     desc = 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.'
@@ -182,4 +183,6 @@ class Decoder():
         sigrok.put(out)
 
 import sigrok
+
+sigrok.register(Decoder)
 

@@ -30,6 +30,7 @@ def sampleiter(data, unitsize):
         yield(Sample(data[i:i+unitsize]))
 
 class Decoder():
+    id = 'transitioncounter'
     name = 'Transition counter'
     longname = '...'
     desc = 'Counts rising/falling edges in the signal.'
@@ -108,4 +109,6 @@ class Decoder():
         sigrok.put(outdata)
 
 import sigrok
+
+sigrok.register(Decoder)
 
