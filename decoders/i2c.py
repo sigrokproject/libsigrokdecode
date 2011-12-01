@@ -143,6 +143,7 @@ def sampleiter(data, unitsize):
         yield(Sample(data[i:i+unitsize]))
 
 class Decoder():
+    id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit (I2C) bus'
     desc = 'I2C is a two-wire, multi-master, serial bus.'
@@ -350,4 +351,6 @@ class Decoder():
             sigrok.put(out)
 
 import sigrok
+
+sigrok.register(Decoder)
 

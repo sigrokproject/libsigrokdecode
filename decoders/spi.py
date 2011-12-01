@@ -18,6 +18,8 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+import sigrok
+
 class Sample():
     def __init__(self, data):
         self.data = data
@@ -30,6 +32,7 @@ def sampleiter(data, unitsize):
         yield(Sample(data[i:i+unitsize]))
 
 class Decoder():
+    id = 'spi'
     name = 'SPI Decoder'
     desc = '...desc...'
     longname = '...longname...'
@@ -93,22 +96,5 @@ class Decoder():
             # Keep stats for summary
             self.bytesreceived += 1
 
-if __name__ == '__main__':
-    data = open('spi_dump.bin').read()
-
-    # dummy class to keep Decoder happy for test
-    class Sigrok():
-        def put(self, data):
-            print "\t", data
-    sigrok = Sigrok()
-
-    dec = Decoder(driver='ols', unitsize=1, starttime=0)
-    dec.decode({'time':0, 'duration':len(data), 'data':data, 'type':'logic'})
-
-    print dec.summary()
-else:
-    import sigrok
-
-#Tested with:
-#  sigrok-cli -d 0:samplerate=1000000:rle=on --time=1s -p 1,2 -a spidec
+sigrok.register(Decoder)
 

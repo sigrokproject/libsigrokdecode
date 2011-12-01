@@ -88,9 +88,6 @@ struct srd_decoder {
 	/** TODO */
 	GSList *outputformats;
 
-	/** TODO */
-	PyObject *py_mod;
-
 	/** Python object that performs the decoding */
 	PyObject *py_decobj;
 };

@@ -49,7 +49,21 @@ static GSList *decoders;
  *    Py_XDECREF()ing it (someone else will do it for you at some point).
  */
 
-static int srd_load_decoder(const char *name, struct srd_decoder **dec);
+static int srd_load_decoder(PyObject *py_res);
+
+static PyObject *emb_register(PyObject *self, PyObject *args)
+{
+	PyObject *arg;
+
+	(void)self;
+
+	if (!PyArg_ParseTuple(args, "O:decoder", &arg))
+		return NULL;
+
+	srd_load_decoder(arg);
+
+	Py_RETURN_NONE;
+}
 
 static PyObject *emb_put(PyObject *self, PyObject *args)
 {
@@ -60,7 +74,6 @@ static PyObject *emb_put(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:put", &arg))
 		return NULL;
 
-	// fprintf(stdout, "sigrok.put() called by decoder:\n");
 	PyObject_Print(arg, stdout, Py_PRINT_RAW);
 	puts("");
 
@@ -68,6 +81,8 @@ static PyObject *emb_put(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef EmbMethods[] = {
+	{"register", emb_register, METH_VARARGS,
+	 "Register a protocol decoder object with libsigrokdecode."},
 	{"put", emb_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: time, duration, data"},
 	{NULL, NULL, 0, NULL}
@@ -141,12 +156,15 @@ int srd_init(void)
 		}
 
 		/* Load the decoder. */
-		/* TODO: Warning if loading fails for a decoder. */
-		ret = srd_load_decoder(decodername, &dec);
-		if (!ret) {
-			/* Append it to the list of supported/loaded decoders. */
-			list_pds = g_slist_append(list_pds, dec);
+		/* "Import" the Python module. */
+		PyObject *py_mod;
+		if (!(py_mod = PyImport_ImportModule(decodername))) { /* NEWREF */
+			PyErr_Print(); /* Returns void. */
+			return SRD_ERR_PYTHON; /* TODO: More specific error? */
 		}
+		/* We release here.  If any decoders were registered they
+		 * will hold references. */
+		Py_XDECREF(py_mod);
 	}
 	closedir(dir);
 
@@ -193,8 +211,7 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-static int h_str(PyObject *py_res, PyObject *py_mod,
-		 const char *key, char **outstr)
+static int h_str(PyObject *py_res, const char *key, char **outstr)
 {
 	PyObject *py_str;
 	char *str;
@@ -228,7 +245,6 @@ static int h_str(PyObject *py_res, PyObject *py_mod,
 err_h_decref_str:
 	Py_XDECREF(py_str);
 err_h_decref_mod:
-	Py_XDECREF(py_mod);
 
 	if (PyErr_Occurred())
 		PyErr_Print(); /* Returns void. */
@@ -243,60 +259,40 @@ err_h_decref_mod:
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-static int srd_load_decoder(const char *name, struct srd_decoder **dec)
+static int srd_load_decoder(PyObject *py_res)
 {
 	struct srd_decoder *d;
-	PyObject *py_mod, *py_res;
 	int r;
-
-	fprintf(stdout, "%s: %s\n", __func__, name);
-
-	/* "Import" the Python module. */
-	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
-	}
-
-	/* Get the 'Decoder' class as Python object. */
-	py_res = PyObject_GetAttrString(py_mod, "Decoder"); /* NEWREF */
-	if (!py_res) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_mod);
-		fprintf(stderr, "Decoder class not found in PD module %s\n", name);
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
-	}
 
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	/* We'll just use the name of the module for the ID. */
-	d->id = strdup(name);
-
-	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
+	if ((r = h_str(py_res, "id", &(d->id))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "longname",
+	if ((r = h_str(py_res, "name", &(d->name))) < 0)
+		return r;
+
+	if ((r = h_str(py_res, "longname",
 		       &(d->longname))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "desc", &(d->desc))) < 0)
+	if ((r = h_str(py_res, "desc", &(d->desc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "longdesc",
+	if ((r = h_str(py_res, "longdesc",
 		       &(d->longdesc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "author", &(d->author))) < 0)
+	if ((r = h_str(py_res, "author", &(d->author))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "email", &(d->email))) < 0)
+	if ((r = h_str(py_res, "email", &(d->email))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "license", &(d->license))) < 0)
+	if ((r = h_str(py_res, "license", &(d->license))) < 0)
 		return r;
 
-	d->py_mod = py_mod;
 	d->py_decobj = py_res;
 
 	/* TODO: Handle func, inputformats, outputformats. */
@@ -305,7 +301,9 @@ static int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	d->inputformats = NULL;
 	d->outputformats = NULL;
 
-	*dec = d;
+	Py_INCREF(py_res);
+	fprintf(stderr, "srd: registered '%s'\n", d->id);
+	list_pds = g_slist_append(list_pds, d);
 
 	return SRD_OK;
 }
@@ -455,10 +453,12 @@ int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
 		int ret = srd_run_decoder(d->data, inbuf, inbuflen);
 
 		if (ret != SRD_OK) {
+			/* This probably shouldn't fail catastrophically. */
 			fprintf(stderr, "Decoder runtime error (%d)\n", ret);
 			exit(1);
 		}
 	}
+	return SRD_OK;
 }
 
 /**
@@ -479,7 +479,6 @@ static int srd_unload_decoder(struct srd_decoder *dec)
 		g_slist_free(dec->outputformats);
 
 	Py_XDECREF(dec->py_decobj);
-	Py_XDECREF(dec->py_mod);
 
 	/* TODO: (g_)free dec itself? */
 

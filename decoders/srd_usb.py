@@ -111,6 +111,7 @@ def packet_decode(packet):
     return pid + ' ' + data
 
 class Decoder():
+    id = 'usb'
     name = 'USB'
     desc = 'Universal Serial Bus'
     longname = '...longname...'
@@ -183,4 +184,6 @@ class Decoder():
 
             self.scount = 0
             self.sym = sym
+
+sigrok.register(Decoder)
 
