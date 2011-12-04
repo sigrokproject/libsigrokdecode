@@ -110,7 +110,7 @@ def packet_decode(packet):
 
     return pid + ' ' + data
 
-class Decoder():
+class Decoder(sigrok.Decoder):
     id = 'usb'
     name = 'USB'
     desc = 'Universal Serial Bus'
@@ -164,11 +164,11 @@ class Decoder():
             if self.sym == SE0:
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
-                    sigrok.put({"type":"usb", "data":self.packet,
-                                "display":packet_decode(self.packet)})
+                    self.put({"type":"usb", "data":self.packet,
+                              "display":packet_decode(self.packet)})
                 else:
                     # Longer than EOP, assume reset.
-                    sigrok.put({"type":"usb", "display":"RESET"})
+                    self.put({"type":"usb", "display":"RESET"})
                 self.scount = 0
                 self.sym = sym
                 self.packet = ''
@@ -180,10 +180,8 @@ class Decoder():
             if bitcount < 6 and sym != SE0:
                 self.packet += '0'
             elif bitcount > 6:
-                sigrok.put({"type":"usb", "display":"BIT STUFF ERROR"})
+                self.put({"type":"usb", "display":"BIT STUFF ERROR"})
 
             self.scount = 0
             self.sym = sym
-
-sigrok.register(Decoder)
 

@@ -30,6 +30,8 @@
 # https://www.sparkfun.com/products/9281
 #
 
+import sigrok
+
 # FIXME: This is just some example input for testing purposes...
 example_packets = [
     # START condition.
@@ -64,7 +66,7 @@ def sampleiter(data, unitsize):
     for i in range(0, len(data), unitsize):
         yield(Sample(data[i:i+unitsize]))
 
-class Decoder():
+class Decoder(sigrok.Decoder):
     id = 'nunchuk'
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk decoder'
@@ -180,9 +182,5 @@ class Decoder():
                 self.state = self.INITIALIZED
                 self.databytecount = 0
 
-        sigrok.put(out)
-
-import sigrok
-
-sigrok.register(Decoder)
+        self.put(out)
 

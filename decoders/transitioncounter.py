@@ -18,6 +18,8 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+import sigrok
+
 class Sample():
     def __init__(self, data):
         self.data = data
@@ -29,7 +31,7 @@ def sampleiter(data, unitsize):
     for i in range(0, len(data), unitsize):
         yield(Sample(data[i:i+unitsize]))
 
-class Decoder():
+class Decoder(sigrok.Decoder):
     id = 'transitioncounter'
     name = 'Transition counter'
     longname = '...'
@@ -106,9 +108,5 @@ class Decoder():
         outdata = []
         for i in range(self.channels):
             outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
-        sigrok.put(outdata)
-
-import sigrok
-
-sigrok.register(Decoder)
+        self.put(outdata)
 

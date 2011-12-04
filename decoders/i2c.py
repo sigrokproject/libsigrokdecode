@@ -352,4 +352,3 @@ class Decoder(sigrok.Decoder):
         if out != []:
             self.put(out)
 
-

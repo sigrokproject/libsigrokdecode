@@ -31,7 +31,7 @@ def sampleiter(data, unitsize):
     for i in range(0, len(data), unitsize):
         yield(Sample(data[i:i+unitsize]))
 
-class Decoder():
+class Decoder(sigrok.Decoder):
     id = 'spi'
     name = 'SPI'
     desc = '...desc...'
@@ -89,12 +89,10 @@ class Decoder():
                 'display':('%02X' % self.rxdata),
                 'type':'spi',
             }
-            sigrok.put(outdata)
+            self.put(outdata)
             # Reset decoder state
             self.rxdata = 0
             self.rxcount = 0
             # Keep stats for summary
             self.bytesreceived += 1
-
-sigrok.register(Decoder)
 
