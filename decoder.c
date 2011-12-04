@@ -96,8 +96,8 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	/* We'll just use the name of the module for the ID. */
-	d->id = strdup(name);
+	if ((r = h_str(py_res, py_mod, "id", &(d->id))) < 0)
+		return r;
 
 	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
 		return r;
