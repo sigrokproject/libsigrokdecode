@@ -126,6 +126,8 @@
 #  'signals': [{'SCL': }]}
 #
 
+import sigrok
+
 # States
 FIND_START = 0
 FIND_ADDRESS = 1
@@ -142,7 +144,7 @@ def sampleiter(data, unitsize):
     for i in range(0, len(data), unitsize):
         yield(Sample(data[i:i+unitsize]))
 
-class Decoder():
+class Decoder(sigrok.Decoder):
     id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit (I2C) bus'
@@ -348,9 +350,6 @@ class Decoder():
             self.oldsda = sda
 
         if out != []:
-            sigrok.put(out)
+            self.put(out)
 
-import sigrok
-
-sigrok.register(Decoder)
 
