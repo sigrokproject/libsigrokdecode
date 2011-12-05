@@ -86,34 +86,11 @@ typedef struct {
 
 static PyTypeObject sigrok_Decoder_type = {
 	PyObject_HEAD_INIT(NULL)
-	0,
-	"sigrok.Decoder",
-	sizeof(sigrok_Decoder_object),
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	"Sigrok Decoder object",
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	Decoder_methods,
+	.tp_name = "sigrok.Decoder",
+	.tp_basicsize = sizeof(sigrok_Decoder_object),
+	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_doc = "Sigrok Decoder object",
+	.tp_methods = Decoder_methods,
 };
 
 PyMODINIT_FUNC init_sigrok_Decoder(void)
@@ -293,10 +270,11 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 	for (d = decoders; d; d = d->next) {
 		di = d->data;
 		if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
-						 "{s:s,s:i,s:d}",
-						 "driver", driver,
-						 "unitsize", unitsize,
-						 "starttime", starttime))) {
+					"{s:s,s:l,s:l,s:l}",
+					"driver", driver,
+					"unitsize", (long)unitsize,
+					"starttime", (long)starttime,
+					"samplerate", (long)samplerate))) {
 			if (PyErr_Occurred())
 				PyErr_Print(); /* Returns void. */
 
