@@ -370,9 +370,7 @@ class Decoder(sigrok.Decoder):
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, signal):
         # Skip samples until we're in the middle of the stop bit(s).
-        skip_parity = 0
-        if self.parity != PARITY_NONE:
-            skip_parity = 1
+        skip_parity = 0 if self.parity == PARITY_NONE else 1
         if not self.reached_bit(self.num_data_bits + 1 + skip_parity):
             return []
 
