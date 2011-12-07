@@ -61,6 +61,12 @@ extern "C" {
 #define SRD_LOG_DBG	4 /**< Output debug messages. */
 #define SRD_LOG_SPEW	5 /**< Output very noisy debug messages. */
 
+enum {
+	SRD_OUTPUT_LOGIC = 1,
+	SRD_OUTPUT_ANNOTATION,
+	SRD_OUTPUT_PROTOCOL,
+};
+
 /* TODO: Documentation. */
 struct srd_decoder {
 	/** The decoder ID. Must be non-NULL and unique for all decoders. */
@@ -109,6 +115,13 @@ struct srd_decoder_instance {
 	GSList *pd_output;
 };
 
+struct srd_pd_output {
+	int pdo_id;
+	int output_type;
+	char *protocol_id;
+	char *description;
+};
+
 /*--- controller.c ----------------------------------------------------------*/
 
 int srd_init(void);
@@ -122,6 +135,8 @@ int srd_instance_start(struct srd_decoder_instance *di,
 int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 		uint64_t samplerate);
 int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen);
+int pd_output_new(struct srd_decoder_instance *di, int output_type,
+		char *output_id, char *description);
 
 /*--- decoder.c -------------------------------------------------------------*/
 

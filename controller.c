@@ -31,11 +31,13 @@
 #endif
 
 
+/* TODO
 static GSList *pipelines = NULL;
+*/
 
 /* lives in decoder.c */
-extern GSList *list_pds;
-extern GSList *decoders;
+extern GSList *pd_list;
+extern GSList *di_list;
 
 struct srd_pipeline {
 	int id;
@@ -53,21 +55,64 @@ static PyObject *Decoder_init(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
-	PyObject *arg;
+	GSList *l;
+	PyObject *data;
+	struct srd_decoder_instance *di;
+	struct srd_pd_output *pdo;
+	int output_id;
 
-//	printf("put object %x\n", self);
-
-	if (!PyArg_ParseTuple(args, "O:put", &arg))
+	if (!(di = get_di_by_decobject(self)))
 		return NULL;
 
-	// fprintf(stdout, "sigrok.put() called by decoder:\n");
-	PyObject_Print(arg, stdout, Py_PRINT_RAW);
+	printf("put: %s instance %x: ", di->decoder->name, (unsigned int) di);
+
+	if (!PyArg_ParseTuple(args, "iO", &output_id, &data))
+		return NULL;
+
+	if (!(l = g_slist_nth(di->pd_output, output_id)))
+		/* PD supplied invalid output id */
+		/* TODO: better error message */
+		return NULL;
+	pdo = l->data;
+
+	printf("output type %d: ", pdo->output_type);
+	PyObject_Print(data, stdout, Py_PRINT_RAW);
 	puts("");
 
 	Py_RETURN_NONE;
+}
+
+
+static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
+{
+	PyObject *ret;
+	struct srd_decoder_instance *di;
+	char *protocol_id, *description;
+	int output_type, pdo_id;
+
+	if (!(di = get_di_by_decobject(self)))
+		return NULL;
+
+	printf("output_new di %s\n", di->decoder->name);
+
+//	if (!PyArg_ParseTuple(args, "i:output_type,s:protocol_id,s:description",
+//			&output_type, &protocol_id, &description))
+	if (!PyArg_ParseTuple(py_output_type, "i:output_type", &output_type))
+		return NULL;
+
+	protocol_id = "i2c";
+	description = "blah";
+	pdo_id = pd_output_new(di, output_type, protocol_id, description);
+	if (pdo_id < 0)
+		Py_RETURN_NONE;
+	else
+		ret = Py_BuildValue("i", pdo_id);
+
+	return ret;
 }
 
 static PyMethodDef no_methods[] = { {NULL, NULL, 0, NULL} };
@@ -75,11 +120,12 @@ static PyMethodDef Decoder_methods[] = {
 	{"__init__", Decoder_init, METH_VARARGS, ""},
 	{"put", Decoder_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: time, duration, data"},
+	{"output_new", Decoder_output_new, METH_VARARGS,
+	 "Create a new output stream"},
 	{NULL, NULL, 0, NULL}
 };
 
 
-// class Decoder(sigrok.Decoder):
 typedef struct {
 	PyObject_HEAD
 } sigrok_Decoder_object;
@@ -97,6 +143,7 @@ PyMODINIT_FUNC init_sigrok_Decoder(void)
 {
 	PyObject *mod;
 
+	/* assign this here, for compiler portability */
 	sigrok_Decoder_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&sigrok_Decoder_type) < 0)
 		return;
@@ -107,6 +154,20 @@ PyMODINIT_FUNC init_sigrok_Decoder(void)
 
 }
 
+
+struct srd_decoder_instance *get_di_by_decobject(void *decobject)
+{
+	GSList *l;
+	struct srd_decoder_instance *di;
+
+	for (l = di_list; l; l = l->next) {
+		di = l->data;
+		if (decobject == di->py_instance)
+			return di;
+	}
+
+	return NULL;
+}
 
 /**
  * Initialize libsigrokdecode.
@@ -171,7 +232,7 @@ int srd_exit(void)
 	/* Unload/free all decoders, and then the list of decoders itself. */
 	/* TODO: Error handling. */
 	srd_unload_all_decoders();
-	g_slist_free(list_pds);
+	g_slist_free(pd_list);
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
@@ -227,7 +288,7 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 		Py_XDECREF(py_args);
 		return NULL; /* TODO: More specific error? */
 	}
-	decoders = g_slist_append(decoders, di);
+	di_list = g_slist_append(di_list, di);
 
 	Py_XDECREF(py_args);
 
@@ -267,7 +328,7 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 
 	fprintf(stdout, "%s: %s\n", __func__, driver);
 
-	for (d = decoders; d; d = d->next) {
+	for (d = di_list; d; d = d->next) {
 		di = d->data;
 		if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
 					"{s:s,s:l,s:l,s:l}",
@@ -293,8 +354,6 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
  * @param dec TODO
  * @param inbuf TODO
  * @param inbuflen TODO
- * @param outbuf TODO
- * @param outbuflen TODO
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -345,7 +404,7 @@ int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
 
 //	fprintf(stdout, "%s: %d bytes\n", __func__, inbuflen);
 
-	for (d = decoders; d; d = d->next) {
+	for (d = di_list; d; d = d->next) {
 		if ((ret = srd_run_decoder(d->data, inbuf, inbuflen)) != SRD_OK)
 			return ret;
 	}
@@ -354,14 +413,38 @@ int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
 }
 
 
+int pd_output_new(struct srd_decoder_instance *di, int output_type,
+		char *protocol_id, char *description)
+{
+	GSList *l;
+	struct srd_pd_output *pdo;
+	int pdo_id;
+
+	fprintf(stdout, "%s: output type %d, protocol_id %s, description %s\n",
+			__func__, output_type, protocol_id, description);
+
+	pdo_id = -1;
+	for (l = di->pd_output; l; l = l->next) {
+		pdo = l->data;
+		if (pdo->pdo_id > pdo_id)
+			pdo_id = pdo->pdo_id;
+	}
+	pdo_id++;
+
+	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output))))
+		return -1;
+
+	pdo->pdo_id = pdo_id;
+	pdo->output_type = output_type;
+	pdo->protocol_id = g_strdup(protocol_id);
+	pdo->description = g_strdup(description);
+	di->pd_output = g_slist_append(di->pd_output, pdo);
+
+	return pdo_id;
+}
+
+
 //int srd_pipeline_new(int plid)
-//{
-//
-//
-//}
-//
-//
-//int pd_output_new(int output_type, char *output_id, char *description)
 //{
 //
 //

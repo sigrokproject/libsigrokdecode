@@ -128,6 +128,17 @@
 
 import sigrok
 
+# symbols for i2c decoders up the stack
+START           = 1
+START_REPEAT    = 2
+STOP            = 3
+ACK             = 4
+NACK            = 5
+ADDRESS_READ    = 6
+ADDRESS_WRITE   = 7
+DATA_READ       = 8
+DATA_WRITE      = 9
+
 # States
 FIND_START = 0
 FIND_ADDRESS = 1
@@ -165,6 +176,8 @@ class Decoder(sigrok.Decoder):
 
     def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
+        self.output_protocol = None
+        self.output_annotation = None
 
         # TODO: Don't hardcode the number of channels.
         self.channels = 8
@@ -187,6 +200,8 @@ class Decoder(sigrok.Decoder):
 
     def start(self, metadata):
         self.unitsize = metadata["unitsize"]
+        self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
 
     def report(self):
         pass
@@ -209,21 +224,23 @@ class Decoder(sigrok.Decoder):
             return True
         return False
 
-    def find_start(self, scl, sda):
-        out = []
-        # o = {'type': 'S', 'range': (self.samplenum, self.samplenum),
-        #      'data': None, 'ann': None},
-        o = (self.is_repeat_start == 1) and 'Sr' or 'S'
-        out.append(o)
+    def found_start(self, scl, sda):
+        if self.is_repeat_start == 1:
+            out_proto = [ START_REPEAT ]
+            out_ann = [ "START REPEAT" ]
+        else:
+            out_proto = [ START ]
+            out_ann = [ "START" ]
+        self.put(self.output_protocol, out_proto)
+        self.put(self.output_annotation, out_ann)
+
         self.state = FIND_ADDRESS
         self.bitcount = self.databyte = 0
         self.is_repeat_start = 1
         self.wr = -1
-        return out
 
-    def find_address_or_data(self, scl, sda):
+    def found_address_or_data(self, scl, sda):
         """Gather 8 bits of data plus the ACK/NACK bit."""
-        out = o = []
 
         if self.startsample == -1:
             self.startsample = self.samplenum
@@ -240,8 +257,6 @@ class Decoder(sigrok.Decoder):
         # We received 8 address/data bits and the ACK/NACK bit.
         self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
 
-        ack = 'N' if (sda == 1) else 'A'
-
         if self.state == FIND_ADDRESS:
             d = self.databyte & 0xfe
             # The READ/WRITE bit is only in address bytes, not data bytes.
@@ -252,28 +267,34 @@ class Decoder(sigrok.Decoder):
             # TODO: Error?
             pass
 
-        # o = {'type': self.state,
-        #      'range': (self.startsample, self.samplenum - 1),
-        #      'data': d, 'ann': None}
-
-        o = {'data': '0x%02x' % d}
-
+        out_proto = []
+        out_ann = []
         # TODO: Simplify.
         if self.state == FIND_ADDRESS and self.wr == 1:
-            o['type'] = 'AW'
+            cmd = ADDRESS_WRITE
+            ann = 'ADDRESS WRITE'
         elif self.state == FIND_ADDRESS and self.wr == 0:
-            o['type'] = 'AR'
+            cmd = ADDRESS_READ
+            ann = 'ADDRESS READ'
         elif self.state == FIND_DATA and self.wr == 1:
-            o['type'] = 'DW'
+            cmd = DATA_WRITE
+            ann = 'DATA WRITE'
         elif self.state == FIND_DATA and self.wr == 0:
-            o['type'] = 'DR'
+            cmd = DATA_READ
+            ann = 'DATA READ'
+        out_proto.append( [cmd, d] )
+        out_ann.append( ["%s" % ann, "0x%02x" % d] )
 
-        out.append(o)
+        if sda == 1:
+            out_proto.append( [NACK] )
+            out_ann.append( ["NACK"] )
+        else:
+            out_proto.append( [ACK] )
+            out_ann.append( ["ACK"] )
 
-        # o = {'type': ack, 'range': (self.samplenum, self.samplenum),
-        #      'data': None, 'ann': None}
-        o = ack
-        out.append(o)
+        self.put(self.output_protocol, out_proto)
+        self.put(self.output_annotation, out_ann)
+
         self.bitcount = self.databyte = 0
         self.startsample = -1
 
@@ -284,26 +305,16 @@ class Decoder(sigrok.Decoder):
             # So, either find a STOP condition or another data byte next.
             pass
 
-        return out
+    def found_stop(self, scl, sda):
+        self.put(self.output_protocol, [ STOP ])
+        self.put(self.output_annotation, [ "STOP" ])
 
-    def find_stop(self, scl, sda):
-        out = o = []
-
-        # o = {'type': 'P', 'range': (self.samplenum, self.samplenum),
-        #      'data': None, 'ann': None},
-        o = 'P'
-        out.append(o)
         self.state = FIND_START
         self.is_repeat_start = 0
         self.wr = -1
 
-        return out
-
     def decode(self, data):
         """I2C protocol decoder"""
-
-        out = []
-        o = ack = d = ''
 
         # We should accept a list of samples and iterate...
         for sample in sampleiter(data['data'], self.unitsize):
@@ -330,17 +341,17 @@ class Decoder(sigrok.Decoder):
             # State machine.
             if self.state == FIND_START:
                 if self.is_start_condition(scl, sda):
-                    out += self.find_start(scl, sda)
+                    self.found_start(scl, sda)
             elif self.state == FIND_ADDRESS:
                 if self.is_data_bit(scl, sda):
-                    out += self.find_address_or_data(scl, sda)
+                    self.found_address_or_data(scl, sda)
             elif self.state == FIND_DATA:
                 if self.is_data_bit(scl, sda):
-                    out += self.find_address_or_data(scl, sda)
+                    self.found_address_or_data(scl, sda)
                 elif self.is_start_condition(scl, sda):
-                    out += self.find_start(scl, sda)
+                    self.found_start(scl, sda)
                 elif self.is_stop_condition(scl, sda):
-                    out += self.find_stop(scl, sda)
+                    self.found_stop(scl, sda)
             else:
                 # TODO: Error?
                 pass
@@ -349,6 +360,4 @@ class Decoder(sigrok.Decoder):
             self.oldscl = scl
             self.oldsda = sda
 
-        if out != []:
-            self.put(out)
 

@@ -23,8 +23,8 @@
 #include <dirent.h>
 
 /* The list of protocol decoders. */
-GSList *list_pds = NULL;
-GSList *decoders = NULL;
+GSList *pd_list = NULL;
+GSList *di_list = NULL;
 
 
 /**
@@ -37,7 +37,7 @@ GSList *decoders = NULL;
 GSList *srd_list_decoders(void)
 {
 
-	return list_pds;
+	return pd_list;
 }
 
 
@@ -194,7 +194,7 @@ int srd_load_all_decoders(void)
 		/* TODO: Warning if loading fails for a decoder. */
 		if ((ret = srd_load_decoder(decodername, &dec)) == SRD_OK) {
 			/* Append it to the list of supported/loaded decoders. */
-			list_pds = g_slist_append(list_pds, dec);
+			pd_list = g_slist_append(pd_list, dec);
 		}
 	}
 	closedir(dir);

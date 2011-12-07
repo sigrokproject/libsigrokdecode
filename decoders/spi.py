@@ -52,9 +52,13 @@ class Decoder(sigrok.Decoder):
         self.rxcount = 0
         self.rxdata = 0
         self.bytesreceived = 0
+        self.output_protocol = None
+        self.output_annotation = None
 
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
+        self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
