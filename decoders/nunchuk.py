@@ -32,6 +32,13 @@
 
 import sigrok
 
+# States
+IDLE = 0
+START = 1
+NUNCHUK_SLAVE = 2
+INIT = 3
+INITIALIZED = 4
+
 # FIXME: This is just some example input for testing purposes...
 example_packets = [
     # START condition.
@@ -86,10 +93,7 @@ class Decoder(sigrok.Decoder):
         # TODO: Don't hardcode the number of channels.
         self.channels = 8
 
-        self.IDLE, self.START, self.NUNCHUK_SLAVE, self.INIT, \
-        self.INITIALIZED = range(5)
-
-        self.state = self.IDLE # TODO: Can we assume a certain initial state?
+        self.state = IDLE # TODO: Can we assume a certain initial state?
 
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
 
@@ -115,7 +119,7 @@ class Decoder(sigrok.Decoder):
             # s = ord(sample.data)
 
             if p['type'] == 'S': # TODO: Handle 'Sr' here, too?
-                self.state = self.START
+                self.state = START
 
             elif p['type'] == 'Sr':
                 pass # FIXME
@@ -132,7 +136,7 @@ class Decoder(sigrok.Decoder):
                 else:
                     pass # TODO: What to do here? Ignore? Error?
 
-            elif p['type'] == 'DR' and self.state == self.INITIALIZED:
+            elif p['type'] == 'DR' and self.state == INITIALIZED:
                 if self.databytecount == 0:
                     self.sx = p['data']
                 elif self.databytecount == 1:
@@ -163,23 +167,23 @@ class Decoder(sigrok.Decoder):
                 # TODO: If 6 bytes read -> save and reset
 
             # TODO
-            elif p['type'] == 'DR' and self.state != self.INITIALIZED:
+            elif p['type'] == 'DR' and self.state != INITIALIZED:
                 pass
 
             elif p['type'] == 'DW':
-                if p['data'] == 0x40 and self.state == self.START:
-                    self.state = self.INIT
-                elif p['data'] == 0x00 and self.state == self.INIT:
+                if p['data'] == 0x40 and self.state == START:
+                    self.state = INIT
+                elif p['data'] == 0x00 and self.state == INIT:
                     o = {'type': 'I', 'range': (0, 0), 'data': []}
                     o['data'] = [0x40, 0x00]
                     out.append(o)
-                    self.state = self.INITIALIZED
+                    self.state = INITIALIZED
                 else:
                     pass # TODO
 
             elif p['type'] == 'P':
                 out.append(o)
-                self.state = self.INITIALIZED
+                self.state = INITIALIZED
                 self.databytecount = 0
 
         self.put(out)
