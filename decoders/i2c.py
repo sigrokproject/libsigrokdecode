@@ -313,11 +313,26 @@ class Decoder(sigrok.Decoder):
         self.is_repeat_start = 0
         self.wr = -1
 
-    def decode(self, data):
+    def put(self, output_id, data):
+        timeoffset = self.timeoffset + ((self.samplenum - self.bitcount) * self.period)
+        if self.bitcount > 0:
+            duration = self.bitcount * self.period
+        else:
+            duration = self.period
+        print "**", timeoffset, duration
+        super(Decoder, self).put(timeoffset, duration, output_id, data)
+
+    def decode(self, timeoffset, duration, data):
         """I2C protocol decoder"""
 
+        self.timeoffset = timeoffset
+        self.duration = duration
+        print "++", timeoffset, duration, len(data)
+        # duration of one bit in ps, only valid for this call to decode()
+        self.period = duration / len(data)
+
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data['data'], self.unitsize):
+        for sample in sampleiter(data, self.unitsize):
 
             # TODO: Eliminate the need for ord().
             s = ord(sample.data)

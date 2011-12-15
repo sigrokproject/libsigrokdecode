@@ -134,7 +134,10 @@ int srd_instance_start(struct srd_decoder_instance *di,
 			const char *driver, int unitsize, uint64_t starttime);
 int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 		uint64_t samplerate);
-int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen);
+int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
+		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
+int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
+		uint64_t inbuflen);
 int pd_output_new(struct srd_decoder_instance *di, int output_type,
 		char *output_id, char *description);
 

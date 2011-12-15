@@ -21,6 +21,7 @@
 #include "config.h"
 #include <sigrokdecode.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <glib.h>
+#include <inttypes.h>
 
 /* TODO: this should probably be in sigrokdecode.h */
 /* Re-define some string functions for Python >= 3.0. */
@@ -63,15 +64,17 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	PyObject *data;
 	struct srd_decoder_instance *di;
 	struct srd_pd_output *pdo;
+	uint64_t timeoffset, duration;
 	int output_id;
 
 	if (!(di = get_di_by_decobject(self)))
 		return NULL;
 
-	printf("put: %s instance %x: ", di->decoder->name, (unsigned int) di);
-
-	if (!PyArg_ParseTuple(args, "iO", &output_id, &data))
+	if (!PyArg_ParseTuple(args, "KKiO", &timeoffset, &duration, &output_id, &data))
 		return NULL;
+
+	printf("put: %s instance %p time %" PRIu64 " duration %" PRIu64 " ",
+			di->decoder->name, di, timeoffset, duration);
 
 	if (!(l = g_slist_nth(di->pd_output, output_id)))
 		/* PD supplied invalid output id */
@@ -79,7 +82,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		return NULL;
 	pdo = l->data;
 
-	printf("output type %d: ", pdo->output_type);
+	printf("stream %d: ", pdo->output_type);
 	PyObject_Print(data, stdout, Py_PRINT_RAW);
 	puts("");
 
@@ -357,16 +360,13 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_run_decoder(struct srd_decoder_instance *dec,
-		    uint8_t *inbuf, uint64_t inbuflen)
+int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
+		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_instance, *py_res;
-	/* FIXME: Don't have a timebase available here. Make one up. */
-	static int _timehack = 0;
-
-	_timehack += inbuflen;
 
 //	fprintf(stdout, "%s: %s\n", __func__, dec->decoder->name);
+//	printf("to %u du %u len %d\n", timeoffset, duration, inbuflen);
 
 	/* Return an error upon unusable input. */
 	if (dec == NULL)
@@ -381,10 +381,7 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 	Py_XINCREF(py_instance);
 
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
-					   "{s:i,s:i,s:s#}",
-					   "time", _timehack,
-					   "duration", 10,
-					   "data", inbuf, inbuflen))) { /* NEWREF */
+			"KKs#", timeoffset, duration, inbuf, inbuflen))) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 
@@ -397,7 +394,8 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 
 
 /* Feed logic samples to decoder session. */
-int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
+int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
+		uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
@@ -405,7 +403,8 @@ int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen)
 //	fprintf(stdout, "%s: %d bytes\n", __func__, inbuflen);
 
 	for (d = di_list; d; d = d->next) {
-		if ((ret = srd_run_decoder(d->data, inbuf, inbuflen)) != SRD_OK)
+		if ((ret = srd_run_decoder(timeoffset, duration, d->data, inbuf,
+				inbuflen)) != SRD_OK)
 			return ret;
 	}
 
