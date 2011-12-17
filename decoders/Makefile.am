@@ -23,6 +23,7 @@ pkgdatadir = $(DECODERS_DIR)
 # Please keep this list in alphabetical order.
 dist_pkgdata_DATA = \
 	i2c.py \
+	mx25lxx05d.py \
 	nunchuk.py \
 	spi.py \
 	srd_usb.py \
