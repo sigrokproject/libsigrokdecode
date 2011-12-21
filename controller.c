@@ -311,11 +311,11 @@ int srd_run_decoder(struct srd_decoder_instance *dec,
 
 	/* Return an error upon unusable input. */
 	if (dec == NULL)
-		return SRD_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARG; /* TODO: More specific error? */
 	if (inbuf == NULL)
-		return SRD_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARG; /* TODO: More specific error? */
 	if (inbuflen == 0) /* No point in working on empty buffers. */
-		return SRD_ERR_ARGS; /* TODO: More specific error? */
+		return SRD_ERR_ARG; /* TODO: More specific error? */
 
 	/* TODO: Error handling. */
 	py_instance = dec->py_instance;

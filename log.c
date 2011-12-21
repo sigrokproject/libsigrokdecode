@@ -34,13 +34,13 @@ static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
  *
  * @param loglevel The loglevel to set (SRD_LOG_NONE, SRD_LOG_ERR,
  *                 SRD_LOG_WARN, SRD_LOG_INFO, SRD_LOG_DBG, or SRD_LOG_SPEW).
- * @return SRD_OK upon success, SRD_ERR_ARGS upon invalid loglevel.
+ * @return SRD_OK upon success, SRD_ERR_ARG upon invalid loglevel.
  */
 int srd_set_loglevel(int loglevel)
 {
 	if (loglevel < SRD_LOG_NONE || loglevel > SRD_LOG_SPEW) {
 		srd_err("log: %s: invalid loglevel %d", __func__, loglevel);
-		return SRD_ERR_ARGS;
+		return SRD_ERR_ARG;
 	}
 
 	srd_loglevel = loglevel;
