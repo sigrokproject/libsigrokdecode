@@ -53,6 +53,14 @@ extern "C" {
 #define SRD_ERR_PYTHON		-4 /**< Python C API error */
 #define SRD_ERR_DECODERS_DIR	-5 /**< Protocol decoder path invalid */
 
+/* libsigrokdecode loglevels. */
+#define SRD_LOG_NONE	0 /**< Output no messages at all. */
+#define SRD_LOG_ERR	1 /**< Output error messages. */
+#define SRD_LOG_WARN	2 /**< Output warnings. */
+#define SRD_LOG_INFO	3 /**< Output informational messages. */
+#define SRD_LOG_DBG	4 /**< Output debug messages. */
+#define SRD_LOG_SPEW	5 /**< Output very noisy debug messages. */
+
 /* TODO: Documentation. */
 struct srd_decoder {
 	/** The decoder ID. Must be non-NULL and unique for all decoders. */
@@ -101,6 +109,8 @@ struct srd_decoder_instance {
 	GSList *pd_output;
 };
 
+/*--- controller.c ----------------------------------------------------------*/
+
 int srd_init(void);
 int srd_exit(void);
 int set_modulepath(void);
@@ -113,7 +123,8 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
 		uint64_t samplerate);
 int srd_session_feed(uint8_t *inbuf, uint64_t inbuflen);
 
-/* decoder.c */
+/*--- decoder.c -------------------------------------------------------------*/
+
 GSList *srd_list_decoders(void);
 struct srd_decoder *srd_get_decoder_by_id(const char *id);
 int srd_load_decoder(const char *name, struct srd_decoder **dec);
@@ -121,9 +132,14 @@ int srd_unload_decoder(struct srd_decoder *dec);
 int srd_load_all_decoders(void);
 int srd_unload_all_decoders(void);
 
-/* util.c */
+/*--- util.c ----------------------------------------------------------------*/
+
 int h_str(PyObject *py_res, PyObject *py_mod, const char *key, char **outstr);
 
+/*--- log.c -----------------------------------------------------------------*/
+
+int srd_set_loglevel(int loglevel);
+int srd_get_loglevel(void);
 
 #ifdef __cplusplus
 }
