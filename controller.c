@@ -23,14 +23,6 @@
 #include <glib.h>
 #include <inttypes.h>
 
-/* TODO: this should probably be in sigrokdecode.h */
-/* Re-define some string functions for Python >= 3.0. */
-#if PY_VERSION_HEX >= 0x03000000
-#define PyString_AsString PyBytes_AsString
-#define PyString_FromString PyBytes_FromString
-#define PyString_Check PyBytes_Check
-#endif
-
 
 /* TODO
 static GSList *pipelines = NULL;
@@ -134,7 +126,7 @@ typedef struct {
 } sigrok_Decoder_object;
 
 static PyTypeObject sigrok_Decoder_type = {
-	PyObject_HEAD_INIT(NULL)
+	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "sigrok.Decoder",
 	.tp_basicsize = sizeof(sigrok_Decoder_object),
 	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
@@ -142,19 +134,30 @@ static PyTypeObject sigrok_Decoder_type = {
 	.tp_methods = Decoder_methods,
 };
 
-PyMODINIT_FUNC init_sigrok_Decoder(void)
+static struct PyModuleDef sigrok_Decoder_module = {
+	PyModuleDef_HEAD_INIT,
+	.m_name = "sigrok",
+	.m_doc = "sigrok base classes",
+	.m_size = -1,
+	.m_methods = no_methods,
+};
+
+PyMODINIT_FUNC PyInit_sigrok(void)
 {
 	PyObject *mod;
 
 	/* assign this here, for compiler portability */
 	sigrok_Decoder_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&sigrok_Decoder_type) < 0)
-		return;
+		return NULL;
 
-	mod = Py_InitModule3("sigrok", no_methods, "sigrok base classes");
+//	mod = Py_InitModule3("sigrok", no_methods, "sigrok base classes");
+	mod = PyModule_Create(&sigrok_Decoder_module);
 	Py_INCREF(&sigrok_Decoder_type);
-	PyModule_AddObject(mod, "Decoder", (PyObject *)&sigrok_Decoder_type);
+	if (PyModule_AddObject(mod, "Decoder", (PyObject *)&sigrok_Decoder_type) == -1)
+		return NULL;
 
+	return mod;
 }
 
 
@@ -198,10 +201,12 @@ int srd_init(void)
 {
 	int ret;
 
+	PyImport_AppendInittab("sigrok", PyInit_sigrok);
+
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
-	init_sigrok_Decoder();
+	PyInit_sigrok();
 
 	PyRun_SimpleString("import sys;");
 	if ((ret = set_modulepath()) != SRD_OK) {
@@ -312,7 +317,7 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
-	probenum = PyInt_FromLong(num);
+	probenum = PyLong_FromLong(num);
 	PyMapping_SetItemString(probedict, (char *)probename, probenum);
 
 	Py_XDECREF(probenum);

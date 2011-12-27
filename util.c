@@ -32,22 +32,25 @@
  */
 int h_str(PyObject *py_res, PyObject *py_mod, const char *key, char **outstr)
 {
-	PyObject *py_str;
+	PyObject *py_str, *py_encstr;
 	char *str;
 	int ret;
 
-	py_str = PyObject_GetAttrString(py_res, (char *)key); /* NEWREF */
-	if (!py_str || !PyString_Check(py_str)) {
+	if (!(py_str = PyObject_GetAttrString(py_res, (char *)key))) {
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_h_decref_mod;
 	}
 
 	/*
-	 * PyString_AsString()'s returned string refers to an internal buffer
+	 * PyBytes_AsString()'s returned string refers to an internal buffer
 	 * (not a copy), i.e. the data must not be modified, and the memory
 	 * must not be free()'d.
 	 */
-	if (!(str = PyString_AsString(py_str))) {
+	if (!(py_encstr = PyUnicode_AsEncodedString(py_str, "utf-8", NULL))) {
+		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
+		goto err_h_decref_str;
+	}
+	if (!(str = PyBytes_AS_STRING(py_encstr))) {
 		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
 		goto err_h_decref_str;
 	}

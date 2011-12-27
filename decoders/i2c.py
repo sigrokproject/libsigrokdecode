@@ -319,7 +319,7 @@ class Decoder(sigrok.Decoder):
             duration = self.bitcount * self.period
         else:
             duration = self.period
-        print "**", timeoffset, duration
+        print("**", timeoffset, duration)
         super(Decoder, self).put(timeoffset, duration, output_id, data)
 
     def decode(self, timeoffset, duration, data):
@@ -327,9 +327,9 @@ class Decoder(sigrok.Decoder):
 
         self.timeoffset = timeoffset
         self.duration = duration
-        print "++", timeoffset, duration, len(data)
+        print("++", timeoffset, duration, len(data))
         # duration of one bit in ps, only valid for this call to decode()
-        self.period = duration / len(data)
+        self.period = int(duration / len(data))
 
         # We should accept a list of samples and iterate...
         for sample in sampleiter(data, self.unitsize):
