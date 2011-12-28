@@ -386,7 +386,7 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 	Py_XINCREF(py_instance);
 
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
-			"KKs#", timeoffset, duration, inbuf, inbuflen))) {
+			"KKy#", timeoffset, duration, inbuf, inbuflen))) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 
