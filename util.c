@@ -23,54 +23,57 @@
 
 
 /**
- * Helper function to handle Python strings.
+ * Helper function to get the value of a python object's attribute,
+ * returned as a newly allocated char *.
  *
- * TODO: @param entries.
+ * @param py_obj The object to probe.
+ * @param key Name of the attribute to retrieve.
+ * @param outstr ptr to char * storage to be filled in.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-int h_str(PyObject *py_res, PyObject *py_mod, const char *key, char **outstr)
+int h_str(PyObject *py_obj, const char *key, char **outstr)
 {
 	PyObject *py_str, *py_encstr;
 	char *str;
 	int ret;
 
-	if (!(py_str = PyObject_GetAttrString(py_res, (char *)key))) {
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_h_decref_mod;
+	py_str = py_encstr = NULL;
+	str = NULL;
+	ret = SRD_OK;
+
+	if (!(py_str = PyObject_GetAttrString(py_obj, (char *)key))) {
+		/* TODO: log level 4 debug message */
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
 	}
 
-	/*
-	 * PyBytes_AsString()'s returned string refers to an internal buffer
-	 * (not a copy), i.e. the data must not be modified, and the memory
-	 * must not be free()'d.
-	 */
 	if (!(py_encstr = PyUnicode_AsEncodedString(py_str, "utf-8", NULL))) {
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_h_decref_str;
+		/* TODO: log level 4 debug message */
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
 	}
 	if (!(str = PyBytes_AS_STRING(py_encstr))) {
-		ret = SRD_ERR_PYTHON; /* TODO: More specific error? */
-		goto err_h_decref_str;
+		/* TODO: log level 4 debug message */
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
 	}
 
 	if (!(*outstr = g_strdup(str))) {
+		/* TODO: log level 4 debug message */
 		ret = SRD_ERR_MALLOC;
-		goto err_h_decref_str;
+		goto err_out;
 	}
 
-	Py_XDECREF(py_str);
-
-	return SRD_OK;
-
-err_h_decref_str:
-	Py_XDECREF(py_str);
-err_h_decref_mod:
-	Py_XDECREF(py_mod);
+err_out:
+	if (py_str)
+		Py_XDECREF(py_str);
+	if (py_encstr)
+		Py_XDECREF(py_encstr);
 
 	if (PyErr_Occurred())
-		PyErr_Print(); /* Returns void. */
+		PyErr_Print();
 
 	return ret;
 }

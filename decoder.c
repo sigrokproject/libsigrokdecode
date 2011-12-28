@@ -96,30 +96,30 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if (!(d = malloc(sizeof(struct srd_decoder))))
 		return SRD_ERR_MALLOC;
 
-	if ((r = h_str(py_res, py_mod, "id", &(d->id))) < 0)
+	if ((r = h_str(py_res, "id", &(d->id))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "name", &(d->name))) < 0)
+	if ((r = h_str(py_res, "name", &(d->name))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "longname",
+	if ((r = h_str(py_res, "longname",
 		       &(d->longname))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "desc", &(d->desc))) < 0)
+	if ((r = h_str(py_res, "desc", &(d->desc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "longdesc",
+	if ((r = h_str(py_res, "longdesc",
 		       &(d->longdesc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "author", &(d->author))) < 0)
+	if ((r = h_str(py_res, "author", &(d->author))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "email", &(d->email))) < 0)
+	if ((r = h_str(py_res, "email", &(d->email))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, py_mod, "license", &(d->license))) < 0)
+	if ((r = h_str(py_res, "license", &(d->license))) < 0)
 		return r;
 
 	d->py_mod = py_mod;

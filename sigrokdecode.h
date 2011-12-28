@@ -151,8 +151,7 @@ int srd_load_all_decoders(void);
 int srd_unload_all_decoders(void);
 
 /*--- util.c ----------------------------------------------------------------*/
-
-int h_str(PyObject *py_res, PyObject *py_mod, const char *key, char **outstr);
+int h_str(PyObject *py_res, const char *key, char **outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
 
