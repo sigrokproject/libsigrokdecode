@@ -74,7 +74,7 @@ AC_SUBST(SIGROKDECODE_LT_LDFLAGS)
 AM_PATH_GLIB_2_0([2.22.0],
         [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
-# Python support.
+# Python support. We require at least Python >= 3.0.
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
 case "$build" in
