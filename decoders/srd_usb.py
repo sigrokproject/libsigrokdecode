@@ -46,7 +46,7 @@ class Sample():
     def __init__(self, data):
         self.data = data
     def probe(self, probe):
-        s = ord(self.data[int(probe / 8)]) & (1 << (probe % 8))
+        s = self.data[int(probe / 8)] & (1 << (probe % 8))
         return True if s else False
 
 def sampleiter(data, unitsize):
