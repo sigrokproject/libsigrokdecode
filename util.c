@@ -19,7 +19,7 @@
  */
 
 #include "config.h"
-#include <sigrokdecode.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 
 
 /**
