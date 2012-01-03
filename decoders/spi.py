@@ -24,7 +24,7 @@ class Sample():
     def __init__(self, data):
         self.data = data
     def probe(self, probe):
-        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        s = ord(self.data[int(probe / 8)]) & (1 << (probe % 8))
         return True if s else False
 
 def sampleiter(data, unitsize):
@@ -57,15 +57,15 @@ class Decoder(sigrok.Decoder):
 
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
-        self.output_protocol = self.output_new(2)
+        # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
 
-    def decode(self, data):
+    def decode(self, timeoffset, duration, data):
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data['data'], self.unitsize):
+        for sample in sampleiter(data, self.unitsize):
 
             sck = sample.probe(self.probes['sck'])
             # Sample SDATA on rising SCK
@@ -77,7 +77,7 @@ class Decoder(sigrok.Decoder):
 
             # If this is first bit, save timestamp
             if self.rxcount == 0:
-                self.time = data['time']
+                self.time = timeoffset # FIXME
             # Receive bit into our shift register
             sdata = sample.probe(self.probes['sdata'])
             if sdata:
@@ -88,12 +88,13 @@ class Decoder(sigrok.Decoder):
                 continue
             # Received a byte, pass up to sigrok
             outdata = {'time':self.time,
-                'duration':data['time'] + data['duration'] - self.time,
+                'duration':timeoffset + duration - self.time,
                 'data':self.rxdata,
                 'display':('%02X' % self.rxdata),
                 'type':'spi',
             }
-            self.put(outdata)
+            # self.put(self.output_protocol, 0, 0, out_proto)
+            self.put(self.output_annotation, 0, 0, outdata)
             # Reset decoder state
             self.rxdata = 0
             self.rxcount = 0
