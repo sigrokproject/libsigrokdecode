@@ -24,7 +24,7 @@ class Sample():
     def __init__(self, data):
         self.data = data
     def probe(self, probe):
-        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        s = ord(self.data[int(probe / 8)]) & (1 << (probe % 8))
         return True if s else False
 
 def sampleiter(data, unitsize):
@@ -47,6 +47,8 @@ class Decoder(sigrok.Decoder):
 
     def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
+        self.output_protocol = None
+        self.output_annotation = None
 
         # TODO: Don't hardcode the number of channels.
         self.channels = 8
@@ -59,16 +61,18 @@ class Decoder(sigrok.Decoder):
 
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
+        # self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
 
     def report(self):
         pass
 
-    def decode(self, data):
+    def decode(self, timeoffset, duration, data):
         """Counts the low->high and high->low transitions in the specified
            channel(s) of the signal."""
 
         # We should accept a list of samples and iterate...
-        for sample in sampleiter(data['data'], self.unitsize):
+        for sample in sampleiter(data, self.unitsize):
 
             # TODO: Eliminate the need for ord().
             s = ord(sample.data)
@@ -108,5 +112,8 @@ class Decoder(sigrok.Decoder):
         outdata = []
         for i in range(self.channels):
             outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
-        self.put(outdata)
+
+        if outdata != []:
+            # self.put(self.output_protocol, 0, 0, out_proto)
+            self.put(self.output_annotation, 0, 0, outdata)
 
