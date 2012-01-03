@@ -194,6 +194,8 @@ class Decoder(sigrok.Decoder):
 
     def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
+        self.output_protocol = None
+        self.output_annotation = None
 
         # Set defaults, can be overridden in 'start'.
         self.baudrate = 115200
@@ -227,6 +229,8 @@ class Decoder(sigrok.Decoder):
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
         self.samplerate = metadata['samplerate']
+        # self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
 
         # TODO
         ### self.baudrate = metadata['baudrate']
@@ -390,12 +394,12 @@ class Decoder(sigrok.Decoder):
              'data': None, 'ann': 'Stop bit'}]
         return o
 
-    def decode(self, data):
+    def decode(self, timeoffset, duration, data):
         """UART protocol decoder"""
 
         out = []
 
-        for sample in sampleiter(data["data"], self.unitsize):
+        for sample in sampleiter(data, self.unitsize):
 
             # TODO: Eliminate the need for ord().
             s = ord(sample.data)
@@ -433,5 +437,6 @@ class Decoder(sigrok.Decoder):
             # self.oldtx = tx
 
         if out != []:
-            self.put(out)
+            # self.put(self.output_protocol, 0, 0, out_proto)
+            self.put(self.output_annotation, 0, 0, out)
 
