@@ -161,7 +161,7 @@ class Sample():
     def __init__(self, data):
         self.data = data
     def probe(self, probe):
-        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        s = ord(self.data[int(probe / 8)]) & (1 << (probe % 8))
         return True if s else False
 
 def sampleiter(data, unitsize):
@@ -184,12 +184,16 @@ class Decoder(sigrok.Decoder):
 
     def __init__(self, **kwargs):
         self.probes = Decoder.probes.copy()
+        self.output_protocol = None
+        self.output_annotation = None
         self.state = IDLE
         self.cmdstate = 1 # TODO
         self.out = []
 
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
+        # self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
 
     def report(self):
         pass
@@ -320,11 +324,11 @@ class Decoder(sigrok.Decoder):
 
         self.out += o
 
-    def decode(self, data):
+    def decode(self, timeoffset, duration, data):
         self.out = []
 
         # Iterate over all SPI MISO/MOSI packets. TODO: HOLD#, WP#/ACC?
-        for i in xrange(len(miso_packets)):
+        for i in range(len(miso_packets)):
 
             p_miso = miso_packets[i]
             p_mosi = mosi_packets[i]
@@ -360,5 +364,6 @@ class Decoder(sigrok.Decoder):
                 pass
 
         if self.out != []:
-            self.put(self.out)
+            # self.put(self.output_protocol, 0, 0, out_proto)
+            self.put(self.output_annotation, 0, 0, self.out)
 
