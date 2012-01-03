@@ -395,8 +395,6 @@ class Decoder(sigrok.Decoder):
         return o
 
     def decode(self, timeoffset, duration, data):
-        """UART protocol decoder"""
-
         out = []
 
         for sample in sampleiter(data, self.unitsize):

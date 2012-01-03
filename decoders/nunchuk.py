@@ -110,8 +110,6 @@ class Decoder(sigrok.Decoder):
         pass
 
     def decode(self, timeoffset, duration, data):
-        """Nintendo Wii Nunchuk decoder"""
-
         out = []
         o = {}
 

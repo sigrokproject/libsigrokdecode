@@ -323,8 +323,6 @@ class Decoder(sigrok.Decoder):
         super(Decoder, self).put(timeoffset, duration, output_id, data)
 
     def decode(self, timeoffset, duration, data):
-        """I2C protocol decoder"""
-
         self.timeoffset = timeoffset
         self.duration = duration
         print("++", timeoffset, duration, len(data))

@@ -68,9 +68,6 @@ class Decoder(sigrok.Decoder):
         pass
 
     def decode(self, timeoffset, duration, data):
-        """Counts the low->high and high->low transitions in the specified
-           channel(s) of the signal."""
-
         # We should accept a list of samples and iterate...
         for sample in sampleiter(data, self.unitsize):
 
