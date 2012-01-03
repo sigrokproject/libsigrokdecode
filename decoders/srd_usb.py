@@ -46,7 +46,7 @@ class Sample():
     def __init__(self, data):
         self.data = data
     def probe(self, probe):
-        s = ord(self.data[probe / 8]) & (1 << (probe % 8))
+        s = ord(self.data[int(probe / 8)]) & (1 << (probe % 8))
         return True if s else False
 
 def sampleiter(data, unitsize):
@@ -127,10 +127,14 @@ class Decoder(sigrok.Decoder):
 
     def __init__(self):
         self.probes = Decoder.probes.copy()
+        self.output_protocol = None
+        self.output_annotation = None
 
     def start(self, metadata):
         self.unitsize = metadata['unitsize']
         self.rate = metadata['samplerate']
+        # self.output_protocol = self.output_new(2)
+        self.output_annotation = self.output_new(1)
         if self.rate < 48000000:
             raise Exception("Sample rate not sufficient for USB decoding")
         # Initialise decoder state.
@@ -138,8 +142,10 @@ class Decoder(sigrok.Decoder):
         self.scount = 0
         self.packet = ''
 
-    def decode(self, data):
-        for sample in sampleiter(data['data'], self.unitsize):
+    def decode(self, timeoffset, duration, data):
+        out = []
+
+        for sample in sampleiter(data, self.unitsize):
 
             self.scount += 1
 
@@ -157,18 +163,18 @@ class Decoder(sigrok.Decoder):
 
             # How many bits since the last transition?
             if self.packet or self.sym != J:
-                bitcount = (self.scount - 1) * 12000000 / self.rate
+                bitcount = int((self.scount - 1) * 12000000 / self.rate)
             else:
                 bitcount = 0
 
             if self.sym == SE0:
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
-                    self.put({"type":"usb", "data":self.packet,
-                              "display":packet_decode(self.packet)})
+                    out += [{"type":"usb", "data":self.packet,
+                              "display":packet_decode(self.packet)}]
                 else:
                     # Longer than EOP, assume reset.
-                    self.put({"type":"usb", "display":"RESET"})
+                    out += [{"type":"usb", "display":"RESET"}]
                 self.scount = 0
                 self.sym = sym
                 self.packet = ''
@@ -180,8 +186,12 @@ class Decoder(sigrok.Decoder):
             if bitcount < 6 and sym != SE0:
                 self.packet += '0'
             elif bitcount > 6:
-                self.put({"type":"usb", "display":"BIT STUFF ERROR"})
+                out += [{"type":"usb", "display":"BIT STUFF ERROR"}]
 
             self.scount = 0
             self.sym = sym
+
+        if out != []:
+            # self.put(self.output_protocol, 0, 0, out_proto)
+            self.put(self.output_annotation, 0, 0, out)
 
