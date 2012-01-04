@@ -162,3 +162,31 @@ AC_CONFIG_FILES([Makefile
 
 AC_OUTPUT
 
+echo
+echo "libsigrokdecode configuration summary:"
+echo
+echo "  - Package version (major.minor.micro):    $LIBSIGROKDECODE_VERSION"
+echo "  - Library version (current:revision:age): $LIBSIGROKDECODE_LT_VERSION"
+echo "  - Prefix: $prefix"
+echo
+echo "Detected libraries:"
+echo
+
+# Note: This only works for libs with pkg-config integration.
+for lib in "glib-2.0"; do
+        if `$PKG_CONFIG --exists $lib`; then
+                ver=`$PKG_CONFIG --modversion $lib`
+                answer="yes ($ver)"
+        else
+                answer="no"
+        fi
+        echo "  - $lib: $answer"
+done
+
+echo
+echo "Detected Python:"
+echo
+echo "  - Python CPPFLAGS: $CPPFLAGS_PYTHON"
+echo "  - Python LDFLAGS: $LDFLAGS_PYTHON"
+echo
+
