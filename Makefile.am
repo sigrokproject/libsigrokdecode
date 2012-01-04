@@ -37,3 +37,5 @@ noinst_HEADERS = sigrokdecode-internal.h
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsigrokdecode.pc
 
+EXTRA_DIST = Doxyfile
+
