@@ -17,7 +17,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-AC_PREREQ(2.61)
+AC_PREREQ([2.61])
 
 # libsigrokdecode package version number (NOT the same as shared lib version!).
 m4_define([libsigrokdecode_major_version], [0])
@@ -115,7 +115,7 @@ AC_SUBST(LDFLAGS_PYTHON)
 
 # Checks for header files.
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
-AC_CHECK_HEADERS([fcntl.h sys/time.h termios.h])
+# AC_CHECK_HEADERS([])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -130,7 +130,7 @@ AC_TYPE_UINT64_T
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([gettimeofday memset strchr strcspn strdup strerror strncasecmp strstr strtol strtoul strtoull])
+AC_CHECK_FUNCS([memset strtoull])
 
 AC_SUBST(DECODERS_DIR, "$datadir/libsigrokdecode/decoders")
 AC_SUBST(MAKEFLAGS, '--no-print-directory')
