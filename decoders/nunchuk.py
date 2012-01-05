@@ -30,7 +30,7 @@
 # https://www.sparkfun.com/products/9281
 #
 
-import sigrok
+import sigrokdecode
 
 # States
 IDLE = 0
@@ -62,18 +62,7 @@ example_packets = [
     {'type': 'P',  'range': (32, 33), 'data': None, 'ann': ''},
 ]
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[int(probe / 8)] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'nunchuk'
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk decoder'
@@ -84,16 +73,12 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['nunchuck']
-    probes = {}
+    probes = [] # TODO
     options = {}
 
     def __init__(self, **kwargs):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
-
-        # TODO: Don't hardcode the number of channels.
-        self.channels = 8
 
         self.state = IDLE # TODO: Can we assume a certain initial state?
 
@@ -102,7 +87,6 @@ class Decoder(sigrok.Decoder):
         self.databytecount = 0
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
@@ -114,8 +98,7 @@ class Decoder(sigrok.Decoder):
         o = {}
 
         # We should accept a list of samples and iterate...
-        # for sample in sampleiter(data['data'], self.unitsize):
-        for p in example_packets:
+        for p in example_packets: # TODO
 
             # TODO: Eliminate the need for ord().
             # s = ord(sample.data)
@@ -189,6 +172,6 @@ class Decoder(sigrok.Decoder):
                 self.databytecount = 0
 
         if out != []:
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, out)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, out)
 
