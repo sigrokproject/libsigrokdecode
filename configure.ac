@@ -76,15 +76,15 @@ AM_PATH_GLIB_2_0([2.22.0],
         [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
 # Python support. We require at least Python >= 3.0.
-AC_ARG_VAR([PYTHON_CONFIG], [path to python3-config utility])
-AC_CHECK_PROGS([PYTHON_CONFIG], [python3-config python3.2-config python3.1-config python3.0-config])
+AC_ARG_VAR([PYTHON3_CONFIG], [path to python3-config utility])
+AC_CHECK_PROGS([PYTHON3_CONFIG], [python3-config python3.2-config python3.1-config python3.0-config])
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
 case "$build" in
 *mingw*)
 	# We currently hardcode the paths to the Python 3.2 default install
 	# location as there's no 'python-config' script on Windows, it seems.
-	AC_MSG_WARN([using hardcoded python configuration])
+	AC_MSG_WARN([using hardcoded Python3 configuration on MinGW])
 	CPPFLAGS_PYTHON="-I/c/Python32/include"
 	LDFLAGS_PYTHON="-L/c/Python32/libs -lpython32"
 	;;
@@ -93,10 +93,10 @@ case "$build" in
 	# On Darwin, Macports has python3.x-config, fink has python3-config.
 	# Mac OS X (Snow Leopard) ships with 'python-config' per default, but
 	# that's Python 2.x, so not useful for us.
-	# Everything else is untested, we just hope 'PYTHON_CONFIG' works.
-	if test -n "$PYTHON_CONFIG"; then
-		CPPFLAGS_PYTHON="$($PYTHON_CONFIG --includes)"
-		LDFLAGS_PYTHON="$($PYTHON_CONFIG --ldflags)"
+	# Everything else is untested, we just hope 'PYTHON3_CONFIG' works.
+	if test -n "$PYTHON3_CONFIG"; then
+		CPPFLAGS_PYTHON="$($PYTHON3_CONFIG --includes)"
+		LDFLAGS_PYTHON="$($PYTHON3_CONFIG --ldflags)"
 	else
 		AC_MSG_ERROR([python3-config not found])
 	fi
