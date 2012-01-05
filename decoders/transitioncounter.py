@@ -18,20 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sigrok
+import sigrokdecode
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[int(probe / 8)] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'transitioncounter'
     name = 'Transition counter'
     longname = '...'
@@ -42,25 +31,17 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['transitioncounts']
-    probes = {}
+    probes = [
+    ] # TODO?
     options = {}
 
     def __init__(self, **kwargs):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
-
-        # TODO: Don't hardcode the number of channels.
-        self.channels = 8
-
+        self.channels = -1
         self.lastsample = None
-        self.oldbit = [0] * self.channels
-        self.transitions = [0] * self.channels
-        self.rising = [0] * self.channels
-        self.falling = [0] * self.channels
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
@@ -68,11 +49,16 @@ class Decoder(sigrok.Decoder):
         pass
 
     def decode(self, timeoffset, duration, data):
-        # We should accept a list of samples and iterate...
-        for sample in sampleiter(data, self.unitsize):
 
-            # TODO: Eliminate the need for ord().
-            s = ord(sample.data)
+        for (samplenum, s) in data:
+
+            # ...
+            if self.channels == -1:
+                self.channels = len(s)
+                self.oldbit = [0] * self.channels
+                self.transitions = [0] * self.channels
+                self.rising = [0] * self.channels
+                self.falling = [0] * self.channels
 
             # Optimization: Skip identical samples (no transitions).
             if self.lastsample == s:
@@ -82,12 +68,12 @@ class Decoder(sigrok.Decoder):
             if self.lastsample == None:
                 self.lastsample = s
                 for i in range(self.channels):
-                    self.oldbit[i] = (self.lastsample & (1 << i)) >> i
+                    self.oldbit[i] = self.lastsample[i]
 
             # Iterate over all channels/probes in this sample.
             # Count rising and falling edges for each channel.
             for i in range(self.channels):
-                curbit = (s & (1 << i)) >> i
+                curbit = s[i]
                 # Optimization: Skip identical bits (no transitions).
                 if self.oldbit[i] == curbit:
                     continue
@@ -111,6 +97,6 @@ class Decoder(sigrok.Decoder):
             outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
 
         if outdata != []:
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, outdata)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, outdata)
 
