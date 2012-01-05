@@ -76,38 +76,30 @@ AM_PATH_GLIB_2_0([2.22.0],
         [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
 # Python support. We require at least Python >= 3.0.
+AC_ARG_VAR([PYTHON_CONFIG], [path to python3-config utility])
+AC_CHECK_PROGS([PYTHON_CONFIG], [python3-config python3.2-config python3.1-config python3.0-config])
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
 case "$build" in
-*linux*)
-	# We know that Linux has 'python3-config'.
-	CPPFLAGS_PYTHON="$(python3-config --includes)"
-	LDFLAGS_PYTHON="$(python3-config --ldflags)"
-	;;
-*darwin*)
-	# On Darwin, Macports has python3.x-config, fink has python3-config.
-	# Mac OS X (Snow Leopard) ships with 'python-config' per default, but
-	# that's Python 2.x, so not useful for us.
-	if test -x python3-config; then
-		# python3-config exists, use it.
-		CPPFLAGS_PYTHON="$(python3-config --includes)"
-		LDFLAGS_PYTHON="$(python3-config --ldflags)"
-	else
-		# No python3-config found, so try hardcoded python3.2-config.
-		CPPFLAGS_PYTHON="$(python3.2-config --includes)"
-		LDFLAGS_PYTHON="$(python3.2-config --ldflags)"
-	fi
-	;;
 *mingw*)
 	# We currently hardcode the paths to the Python 3.2 default install
 	# location as there's no 'python-config' script on Windows, it seems.
+	AC_MSG_WARN([using hardcoded python configuration])
 	CPPFLAGS_PYTHON="-I/c/Python32/include"
 	LDFLAGS_PYTHON="-L/c/Python32/libs -lpython32"
 	;;
 *)
-	# Everything else is untested, we just hope 'python3-config' works.
-	CPPFLAGS_PYTHON="$(python3-config --includes)"
-	LDFLAGS_PYTHON="$(python3-config --ldflags)"
+	# We know that Linux has 'python3-config'.
+	# On Darwin, Macports has python3.x-config, fink has python3-config.
+	# Mac OS X (Snow Leopard) ships with 'python-config' per default, but
+	# that's Python 2.x, so not useful for us.
+	# Everything else is untested, we just hope 'PYTHON_CONFIG' works.
+	if test -n "$PYTHON_CONFIG"; then
+		CPPFLAGS_PYTHON="$($PYTHON_CONFIG --includes)"
+		LDFLAGS_PYTHON="$($PYTHON_CONFIG --ldflags)"
+	else
+		AC_MSG_ERROR([python3-config not found])
+	fi
 	;;
 esac
 AC_SUBST(CPPFLAGS_PYTHON)
