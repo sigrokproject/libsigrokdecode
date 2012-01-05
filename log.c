@@ -18,10 +18,10 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <stdarg.h>
-#include <stdio.h>
 #include "sigrokdecode.h"
 #include "sigrokdecode-internal.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 

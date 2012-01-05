@@ -2,6 +2,7 @@
  * This file is part of the sigrok project.
  *
  * Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+ * Copyright (C) 2012 Bert Vermeulen <bert@biot.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,26 +47,28 @@ extern "C" {
  * or reused for different #defines later. You can only add new #defines and
  * return codes, but never remove or redefine existing ones.
  */
-#define SRD_OK			 0 /**< No error */
-#define SRD_ERR			-1 /**< Generic/unspecified error */
-#define SRD_ERR_MALLOC		-2 /**< Malloc/calloc/realloc error */
-#define SRD_ERR_ARG		-3 /**< Function argument error */
-#define SRD_ERR_PYTHON		-4 /**< Python C API error */
-#define SRD_ERR_DECODERS_DIR	-5 /**< Protocol decoder path invalid */
+#define SRD_OK                 0 /**< No error */
+#define SRD_ERR               -1 /**< Generic/unspecified error */
+#define SRD_ERR_MALLOC        -2 /**< Malloc/calloc/realloc error */
+#define SRD_ERR_ARG	           -3 /**< Function argument error */
+#define SRD_ERR_PYTHON        -4 /**< Python C API error */
+#define SRD_ERR_DECODERS_DIR  -5 /**< Protocol decoder path invalid */
 
 /* libsigrokdecode loglevels. */
-#define SRD_LOG_NONE	0 /**< Output no messages at all. */
-#define SRD_LOG_ERR	1 /**< Output error messages. */
-#define SRD_LOG_WARN	2 /**< Output warnings. */
-#define SRD_LOG_INFO	3 /**< Output informational messages. */
-#define SRD_LOG_DBG	4 /**< Output debug messages. */
-#define SRD_LOG_SPEW	5 /**< Output very noisy debug messages. */
+#define SRD_LOG_NONE   0 /**< Output no messages at all. */
+#define SRD_LOG_ERR    1 /**< Output error messages. */
+#define SRD_LOG_WARN   2 /**< Output warnings. */
+#define SRD_LOG_INFO   3 /**< Output informational messages. */
+#define SRD_LOG_DBG    4 /**< Output debug messages. */
+#define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
 
 enum {
 	SRD_OUTPUT_LOGIC = 1,
 	SRD_OUTPUT_ANNOTATION,
 	SRD_OUTPUT_PROTOCOL,
 };
+
+#define SRD_MAX_NUM_PROBES   64
 
 /* TODO: Documentation. */
 struct srd_decoder {
@@ -113,6 +116,9 @@ struct srd_decoder_instance {
 	struct srd_decoder *decoder;
 	PyObject *py_instance;
 	GSList *pd_output;
+	int num_probes;
+	int unitsize;
+	uint64_t samplerate;
 };
 
 struct srd_pd_output {
@@ -122,6 +128,17 @@ struct srd_pd_output {
 	char *description;
 };
 
+typedef struct {
+	PyObject_HEAD
+	struct srd_decoder_instance *di;
+	unsigned int itercnt;
+	uint8_t *inbuf;
+	uint64_t inbuflen;
+	PyObject *sample;
+} srd_logic;
+
+
+
 /*--- controller.c ----------------------------------------------------------*/
 
 int srd_init(void);
@@ -130,16 +147,14 @@ int set_modulepath(void);
 struct srd_decoder_instance *srd_instance_new(const char *id);
 int srd_instance_set_probe(struct srd_decoder_instance *di,
 				const char *probename, int num);
-int srd_instance_start(struct srd_decoder_instance *di,
-			const char *driver, int unitsize, uint64_t starttime);
-int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
-		uint64_t samplerate);
+int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
 int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
 int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 		uint64_t inbuflen);
 int pd_output_new(struct srd_decoder_instance *di, int output_type,
 		char *output_id, char *description);
+struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 
 /*--- decoder.c -------------------------------------------------------------*/
 

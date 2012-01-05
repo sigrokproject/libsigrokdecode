@@ -2,7 +2,7 @@
  * This file is part of the sigrok project.
  *
  * Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
- * Copyright (C) 2011 Bert Vermeulen <bert@biot.com>
+ * Copyright (C) 2012 Bert Vermeulen <bert@biot.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,154 +26,22 @@
 
 /* TODO
 static GSList *pipelines = NULL;
+struct srd_pipeline {
+	int id;
+	GSList *decoders;
+};
 */
 
 /* lives in decoder.c */
 extern GSList *pd_list;
 extern GSList *di_list;
 
-struct srd_pipeline {
-	int id;
-	GSList *decoders;
-};
+/* lives in module_sigrokdecode.c */
+extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
+/* lives in type_logic.c */
+extern PyTypeObject srd_logic_type;
 
-
-static PyObject *Decoder_init(PyObject *self, PyObject *args)
-{
-	(void)self;
-	(void)args;
-//	printf("init object %x\n", self);
-
-	Py_RETURN_NONE;
-}
-
-struct srd_decoder_instance *get_di_by_decobject(void *decobject);
-
-static PyObject *Decoder_put(PyObject *self, PyObject *args)
-{
-	GSList *l;
-	PyObject *data;
-	struct srd_decoder_instance *di;
-	struct srd_pd_output *pdo;
-	uint64_t timeoffset, duration;
-	int output_id;
-
-	if (!(di = get_di_by_decobject(self)))
-		return NULL;
-
-	if (!PyArg_ParseTuple(args, "KKiO", &timeoffset, &duration, &output_id, &data))
-		return NULL;
-
-	printf("put: %s instance %p time %" PRIu64 " duration %" PRIu64 " ",
-			di->decoder->name, di, timeoffset, duration);
-
-	if (!(l = g_slist_nth(di->pd_output, output_id)))
-		/* PD supplied invalid output id */
-		/* TODO: better error message */
-		return NULL;
-	pdo = l->data;
-
-	printf("stream %d: ", pdo->output_type);
-	PyObject_Print(data, stdout, Py_PRINT_RAW);
-	puts("");
-
-	Py_RETURN_NONE;
-}
-
-
-static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
-{
-	PyObject *ret;
-	struct srd_decoder_instance *di;
-	char *protocol_id, *description;
-	int output_type, pdo_id;
-
-	if (!(di = get_di_by_decobject(self)))
-		return NULL;
-
-	printf("output_new di %s\n", di->decoder->name);
-
-//	if (!PyArg_ParseTuple(args, "i:output_type,s:protocol_id,s:description",
-//			&output_type, &protocol_id, &description))
-	if (!PyArg_ParseTuple(py_output_type, "i:output_type", &output_type))
-		return NULL;
-
-	protocol_id = "i2c";
-	description = "blah";
-	pdo_id = pd_output_new(di, output_type, protocol_id, description);
-	if (pdo_id < 0)
-		Py_RETURN_NONE;
-	else
-		ret = Py_BuildValue("i", pdo_id);
-
-	return ret;
-}
-
-static PyMethodDef no_methods[] = { {NULL, NULL, 0, NULL} };
-static PyMethodDef Decoder_methods[] = {
-	{"__init__", Decoder_init, METH_VARARGS, ""},
-	{"put", Decoder_put, METH_VARARGS,
-	 "Accepts a dictionary with the following keys: time, duration, data"},
-	{"output_new", Decoder_output_new, METH_VARARGS,
-	 "Create a new output stream"},
-	{NULL, NULL, 0, NULL}
-};
-
-
-typedef struct {
-	PyObject_HEAD
-} sigrok_Decoder_object;
-
-static PyTypeObject sigrok_Decoder_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-	.tp_name = "sigrok.Decoder",
-	.tp_basicsize = sizeof(sigrok_Decoder_object),
-	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	.tp_doc = "Sigrok Decoder object",
-	.tp_methods = Decoder_methods,
-};
-
-static struct PyModuleDef sigrok_Decoder_module = {
-	PyModuleDef_HEAD_INIT,
-	.m_name = "sigrok",
-	.m_doc = "sigrok base classes",
-	.m_size = -1,
-	.m_methods = no_methods,
-};
-
-PyMODINIT_FUNC PyInit_sigrok(void)
-{
-	PyObject *mod;
-
-	/* assign this here, for compiler portability */
-	sigrok_Decoder_type.tp_new = PyType_GenericNew;
-	if (PyType_Ready(&sigrok_Decoder_type) < 0)
-		return NULL;
-
-//	mod = Py_InitModule3("sigrok", no_methods, "sigrok base classes");
-	mod = PyModule_Create(&sigrok_Decoder_module);
-	Py_INCREF(&sigrok_Decoder_type);
-	if (PyModule_AddObject(mod, "Decoder", (PyObject *)&sigrok_Decoder_type) == -1)
-		return NULL;
-
-	return mod;
-}
-
-
-struct srd_decoder_instance *get_di_by_decobject(void *decobject)
-{
-	GSList *l;
-	struct srd_decoder_instance *di;
-
-	for (l = di_list; l; l = l->next) {
-		di = l->data;
-		if (decobject == di->py_instance)
-			return di;
-	}
-
-	return NULL;
-}
 
 /**
  * Initialize libsigrokdecode.
@@ -201,14 +69,11 @@ int srd_init(void)
 {
 	int ret;
 
-	PyImport_AppendInittab("sigrok", PyInit_sigrok);
+	PyImport_AppendInittab("sigrokdecode", PyInit_sigrokdecode);
 
 	/* Py_Initialize() returns void and usually cannot fail. */
 	Py_Initialize();
 
-	PyInit_sigrok();
-
-	PyRun_SimpleString("import sys;");
 	if ((ret = set_modulepath()) != SRD_OK) {
 		Py_Finalize();
 		return ret;
@@ -258,6 +123,7 @@ int set_modulepath(void)
 {
 	int ret;
 
+	PyRun_SimpleString("import sys");
 	ret = PyRun_SimpleString("sys.path.append(r'" DECODERS_DIR "');");
 
 	return ret;
@@ -279,6 +145,7 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 	di = g_malloc(sizeof(*di));
 	di->decoder = dec;
 	di->pd_output = NULL;
+	di->unitsize = 0;
 
 	/* Create an empty Python tuple. */
 	if (!(py_args = PyTuple_New(0))) { /* NEWREF */
@@ -327,22 +194,21 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 }
 
 
-int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
-		uint64_t samplerate)
+int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {
 	PyObject *py_res;
 	GSList *d;
 	struct srd_decoder_instance *di;
 
-	fprintf(stdout, "%s: %s\n", __func__, driver);
+	fprintf(stdout, "%s\n", __func__);
 
 	for (d = di_list; d; d = d->next) {
 		di = d->data;
+		di->num_probes = num_probes;
+		di->unitsize = unitsize;
+		di->samplerate = samplerate;
 		if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
-					"{s:s,s:l,s:l,s:l}",
-					"driver", driver,
-					"unitsize", (long)unitsize,
-					"starttime", (long)starttime,
+				    "{s:l}",
 					"samplerate", (long)samplerate))) {
 			if (PyErr_Occurred())
 				PyErr_Print(); /* Returns void. */
@@ -366,15 +232,13 @@ int srd_session_start(const char *driver, int unitsize, uint64_t starttime,
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
-		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen)
+		struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_instance, *py_res;
-
-//	fprintf(stdout, "%s: %s\n", __func__, dec->decoder->name);
-//	printf("to %u du %u len %d\n", timeoffset, duration, inbuflen);
+	srd_logic *logic;
 
 	/* Return an error upon unusable input. */
-	if (dec == NULL)
+	if (di == NULL)
 		return SRD_ERR_ARG; /* TODO: More specific error? */
 	if (inbuf == NULL)
 		return SRD_ERR_ARG; /* TODO: More specific error? */
@@ -382,11 +246,20 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 		return SRD_ERR_ARG; /* TODO: More specific error? */
 
 	/* TODO: Error handling. */
-	py_instance = dec->py_instance;
+	py_instance = di->py_instance;
 	Py_XINCREF(py_instance);
 
+	logic = PyObject_New(srd_logic, &srd_logic_type);
+	Py_INCREF(logic);
+	logic->di = di;
+	logic->itercnt = 0;
+	logic->inbuf = inbuf;
+	logic->inbuflen = inbuflen;
+	logic->sample = PyList_New(2);
+	Py_INCREF(logic->sample);
+
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
-			"KKy#", timeoffset, duration, inbuf, inbuflen))) {
+			"KKO", timeoffset, duration, logic))) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 
@@ -394,6 +267,7 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 	}
 
 	Py_XDECREF(py_res);
+
 	return SRD_OK;
 }
 
@@ -445,6 +319,20 @@ int pd_output_new(struct srd_decoder_instance *di, int output_type,
 	di->pd_output = g_slist_append(di->pd_output, pdo);
 
 	return pdo_id;
+}
+
+struct srd_decoder_instance *get_di_by_decobject(void *decobject)
+{
+	GSList *l;
+	struct srd_decoder_instance *di;
+
+	for (l = di_list; l; l = l->next) {
+		di = l->data;
+		if (decobject == di->py_instance)
+			return di;
+	}
+
+	return NULL;
 }
 
 

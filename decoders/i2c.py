@@ -126,7 +126,7 @@
 #  'signals': [{'SCL': }]}
 #
 
-import sigrok
+import sigrokdecode
 
 # symbols for i2c decoders up the stack
 START           = 1
@@ -144,18 +144,8 @@ FIND_START = 0
 FIND_ADDRESS = 1
 FIND_DATA = 2
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[probe / 8] & (1 << (probe % 8))
-        return True if s else False
 
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit (I2C) bus'
@@ -166,40 +156,28 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']
-    probes = {
-        'scl': {'ch': 0, 'name': 'SCL', 'desc': 'Serial clock line'},
-        'sda': {'ch': 1, 'name': 'SDA', 'desc': 'Serial data line'},
-    }
+    probes = [
+        {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
+        {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
+    ]
     options = {
         'address-space': ['Address space (in bits)', 7],
     }
 
     def __init__(self, **kwargs):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
-
-        # TODO: Don't hardcode the number of channels.
-        self.channels = 8
-
-        self.samplenum = 0
+        self.samplecnt = 0
         self.bitcount = 0
         self.databyte = 0
         self.wr = -1
         self.startsample = -1
         self.is_repeat_start = 0
-
         self.state = FIND_START
-
-        # Get the channel/probe number of the SCL/SDA signals.
-        self.scl_bit = self.probes['scl']['ch']
-        self.sda_bit = self.probes['sda']['ch']
-
         self.oldscl = None
         self.oldsda = None
 
     def start(self, metadata):
-        self.unitsize = metadata["unitsize"]
         self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
@@ -243,7 +221,8 @@ class Decoder(sigrok.Decoder):
         """Gather 8 bits of data plus the ACK/NACK bit."""
 
         if self.startsample == -1:
-            self.startsample = self.samplenum
+            # TODO: should be samplenum, as received from the feed
+            self.startsample = self.samplecnt
         self.bitcount += 1
 
         # Address and data are transmitted MSB-first.
@@ -314,40 +293,18 @@ class Decoder(sigrok.Decoder):
         self.wr = -1
 
     def put(self, output_id, data):
-        timeoffset = self.timeoffset + ((self.samplenum - self.bitcount) * self.period)
-        if self.bitcount > 0:
-            duration = self.bitcount * self.period
-        else:
-            duration = self.period
-        print("**", timeoffset, duration)
-        super(Decoder, self).put(timeoffset, duration, output_id, data)
+        # inject sample range into the call up to sigrok
+        super(Decoder, self).put(0, 0, output_id, data)
 
     def decode(self, timeoffset, duration, data):
-        self.timeoffset = timeoffset
-        self.duration = duration
-        print("++", timeoffset, duration, len(data))
-        # duration of one bit in ps, only valid for this call to decode()
-        self.period = int(duration / len(data))
-
-        # We should accept a list of samples and iterate...
-        for sample in sampleiter(data, self.unitsize):
-
-            # TODO: Eliminate the need for ord().
-            s = ord(sample.data)
-
-            # TODO: Start counting at 0 or 1?
-            self.samplenum += 1
+        for samplenum, (scl, sda) in data:
+            self.samplecnt += 1
 
             # First sample: Save SCL/SDA value.
             if self.oldscl == None:
-                # Get SCL/SDA bit values (0/1 for low/high) of the first sample.
-                self.oldscl = (s & (1 << self.scl_bit)) >> self.scl_bit
-                self.oldsda = (s & (1 << self.sda_bit)) >> self.sda_bit
+                self.oldscl = scl
+                self.oldsda = sda
                 continue
-
-            # Get SCL/SDA bit values (0/1 for low/high).
-            scl = (s & (1 << self.scl_bit)) >> self.scl_bit
-            sda = (s & (1 << self.sda_bit)) >> self.sda_bit
 
             # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
@@ -372,5 +329,4 @@ class Decoder(sigrok.Decoder):
             # Save current SDA/SCL values for the next round.
             self.oldscl = scl
             self.oldsda = sda
-
 
