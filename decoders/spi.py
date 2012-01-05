@@ -38,7 +38,7 @@ class Decoder(sigrokdecode.Decoder):
     options = {}
 
     def __init__(self):
-        self.oldsck = True
+        self.oldsck = 1
         self.rxcount = 0
         self.rxdata = 0
         self.bytesreceived = 0

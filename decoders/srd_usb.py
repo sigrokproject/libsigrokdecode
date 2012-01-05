@@ -45,10 +45,10 @@ import sigrokdecode
 # States
 SE0, J, K, SE1 = 0, 1, 2, 3
 syms = {
-        (False, False): SE0,
-        (True, False): J,
-        (False, True): K,
-        (True, True): SE1,
+        (0, 0): SE0,
+        (1, 0): J,
+        (0, 1): K,
+        (1, 1): SE1,
 }
 
 def bitstr_to_num(bitstr):
