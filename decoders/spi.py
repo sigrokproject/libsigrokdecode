@@ -18,20 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sigrok
+import sigrokdecode
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[int(probe / 8)] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'spi'
     name = 'SPI'
     desc = '...desc...'
@@ -42,12 +31,13 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']
-    # Probe names with a set of defaults
-    probes = {'sdata':0, 'sck':1}
+    probes = [
+        {'id': 'sdata', 'name': 'DATA', 'desc': 'SPI data line (MISO or MOSI)'},
+        {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
+    ]
     options = {}
 
     def __init__(self):
-        self.probes = Decoder.probes.copy()
         self.oldsck = True
         self.rxcount = 0
         self.rxdata = 0
@@ -56,7 +46,6 @@ class Decoder(sigrok.Decoder):
         self.output_annotation = None
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
@@ -64,10 +53,10 @@ class Decoder(sigrok.Decoder):
         return 'SPI: %d bytes received' % self.bytesreceived
 
     def decode(self, timeoffset, duration, data):
-        # We should accept a list of samples and iterate...
-        for sample in sampleiter(data, self.unitsize):
+        # HACK! At the moment the number of probes is not handled correctly.
+        # E.g. if an input file (-i foo.sr) has more than two probes enabled.
+        for (samplenum, (sdata, sck, x, y, z, a)) in data:
 
-            sck = sample.probe(self.probes['sck'])
             # Sample SDATA on rising SCK
             if sck == self.oldsck:
                 continue
@@ -79,7 +68,6 @@ class Decoder(sigrok.Decoder):
             if self.rxcount == 0:
                 self.time = timeoffset # FIXME
             # Receive bit into our shift register
-            sdata = sample.probe(self.probes['sdata'])
             if sdata:
                 self.rxdata |= 1 << (7 - self.rxcount)
             self.rxcount += 1
@@ -93,8 +81,8 @@ class Decoder(sigrok.Decoder):
                 'display':('%02X' % self.rxdata),
                 'type':'spi',
             }
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, outdata)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, outdata)
             # Reset decoder state
             self.rxdata = 0
             self.rxcount = 0
