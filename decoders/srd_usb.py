@@ -40,18 +40,7 @@
 # http://www.usb.org/developers/docs/
 #
 
-import sigrok
-
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[int(probe / 8)] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
+import sigrokdecode
 
 # States
 SE0, J, K, SE1 = 0, 1, 2, 3
@@ -110,7 +99,7 @@ def packet_decode(packet):
 
     return pid + ' ' + data
 
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'usb'
     name = 'USB'
     desc = 'Universal Serial Bus'
@@ -122,16 +111,17 @@ class Decoder(sigrok.Decoder):
     inputs = ['logic']
     outputs = ['usb']
     # Probe names with a set of defaults
-    probes = {'dp':0, 'dm':1}
+    probes = [
+        {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
+        {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
+    ]
     options = {}
 
     def __init__(self):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         self.rate = metadata['samplerate']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
@@ -145,12 +135,12 @@ class Decoder(sigrok.Decoder):
     def decode(self, timeoffset, duration, data):
         out = []
 
-        for sample in sampleiter(data, self.unitsize):
+        # FIXME
+        for (samplenum, (dp, dm, x, y, z, a)) in data:
 
             self.scount += 1
 
-            sym = syms[sample.probe(self.probes['dp']),
-                       sample.probe(self.probes['dm'])]
+            sym = syms[dp, dm]
             if sym == self.sym:
                 continue
 
@@ -192,6 +182,6 @@ class Decoder(sigrok.Decoder):
             self.sym = sym
 
         if out != []:
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, out)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, out)
 
