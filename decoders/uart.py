@@ -94,7 +94,7 @@
 # TODO: URLs
 #
 
-import sigrok
+import sigrokdecode
 
 # States
 WAIT_FOR_START_BIT = 0
@@ -127,17 +127,6 @@ DATA_FORMAT_HEX = 1
 # TODO: Remove me later.
 quick_hack = 1
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[probe / 8] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
 # usually 8 bits) return True if the parity is correct, False otherwise.
@@ -161,7 +150,7 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
     else:
         raise Exception('Invalid parity type: %d' % parity_type)
 
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'uart'
     name = 'UART'
     longname = 'Universal Asynchronous Receiver/Transmitter (UART)'
@@ -172,14 +161,12 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']
-    probes = {
+    probes = [
         # Allow specifying only one of the signals, e.g. if only one data
         # direction exists (or is relevant).
-        ## 'rx': {'ch': 0, 'name': 'RX', 'desc': 'UART receive line'},
-        ## 'tx': {'ch': 1, 'name': 'TX', 'desc': 'UART transmit line'},
-        'rx': 0,
-        'tx': 1,
-    }
+        {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
+        {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
+    ]
     options = {
         'baudrate': ['UART baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
@@ -193,7 +180,6 @@ class Decoder(sigrok.Decoder):
     }
 
     def __init__(self, **kwargs):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
 
@@ -217,17 +203,10 @@ class Decoder(sigrok.Decoder):
         # Initial state.
         self.staterx = WAIT_FOR_START_BIT
 
-        # Get the channel/probe number of the RX/TX signals.
-        ## self.rx_bit = self.probes['rx']['ch']
-        ## self.tx_bit = self.probes['tx']['ch']
-        self.rx_bit = self.probes['rx']
-        self.tx_bit = self.probes['tx']
-
         self.oldrx = None
         self.oldtx = None
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         self.samplerate = metadata['samplerate']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
@@ -394,13 +373,11 @@ class Decoder(sigrok.Decoder):
              'data': None, 'ann': 'Stop bit'}]
         return o
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, timeoffset, duration, data): # TODO
         out = []
 
-        for sample in sampleiter(data, self.unitsize):
-
-            # TODO: Eliminate the need for ord().
-            s = ord(sample.data)
+        # for (samplenum, (rx, tx)) in data:
+        for (samplenum, (rx,)) in data:
 
             # TODO: Start counting at 0 or 1? Increase before or after?
             self.samplenum += 1
@@ -408,13 +385,9 @@ class Decoder(sigrok.Decoder):
             # First sample: Save RX/TX value.
             if self.oldrx == None:
                 # Get RX/TX bit values (0/1 for low/high) of the first sample.
-                self.oldrx = (s & (1 << self.rx_bit)) >> self.rx_bit
-                # self.oldtx = (s & (1 << self.tx_bit)) >> self.tx_bit
+                self.oldrx = rx
+                # self.oldtx = tx
                 continue
-
-            # Get RX/TX bit values (0/1 for low/high).
-            rx = (s & (1 << self.rx_bit)) >> self.rx_bit
-            # tx = (s & (1 << self.tx_bit)) >> self.tx_bit
 
             # State machine.
             if self.staterx == WAIT_FOR_START_BIT:
@@ -435,6 +408,6 @@ class Decoder(sigrok.Decoder):
             # self.oldtx = tx
 
         if out != []:
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, out)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, out)
 
