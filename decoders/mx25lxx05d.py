@@ -30,7 +30,7 @@
 # http://www.macronix.com/QuickPlace/hq/PageLibrary4825740B00298A3B.nsf/h_Index/3F21BAC2E121E17848257639003A3146/$File/MX25L1605D-3205D-6405D-1.5.pdf
 #
 
-import sigrok
+import sigrokdecode
 
 # States
 IDLE = -1
@@ -157,18 +157,7 @@ miso_packets = [
     {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
 ]
 
-class Sample():
-    def __init__(self, data):
-        self.data = data
-    def probe(self, probe):
-        s = self.data[int(probe / 8)] & (1 << (probe % 8))
-        return True if s else False
-
-def sampleiter(data, unitsize):
-    for i in range(0, len(data), unitsize):
-        yield(Sample(data[i:i+unitsize]))
-
-class Decoder(sigrok.Decoder):
+class Decoder(sigrokdecode.Decoder):
     id = 'mx25lxx05d'
     name = 'Macronix MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D SPI flash chip decoder'
@@ -179,11 +168,10 @@ class Decoder(sigrok.Decoder):
     license = 'gplv2+'
     inputs = ['spi', 'spi', 'logic']
     outputs = ['mx25lxx05d']
-    probes = {} # TODO: HOLD#, WP#/ACC
+    probes = [] # TODO: HOLD#, WP#/ACC
     options = {} # TODO
 
     def __init__(self, **kwargs):
-        self.probes = Decoder.probes.copy()
         self.output_protocol = None
         self.output_annotation = None
         self.state = IDLE
@@ -191,7 +179,6 @@ class Decoder(sigrok.Decoder):
         self.out = []
 
     def start(self, metadata):
-        self.unitsize = metadata['unitsize']
         # self.output_protocol = self.output_new(2)
         self.output_annotation = self.output_new(1)
 
@@ -364,6 +351,6 @@ class Decoder(sigrok.Decoder):
                 pass
 
         if self.out != []:
-            # self.put(self.output_protocol, 0, 0, out_proto)
-            self.put(self.output_annotation, 0, 0, self.out)
+            # self.put(0, 0, self.output_protocol, out_proto)
+            self.put(0, 0, self.output_annotation, self.out)
 
