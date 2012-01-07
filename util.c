@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "config.h"
 
 
 /**
@@ -73,8 +73,35 @@ err_out:
 		Py_XDECREF(py_encstr);
 
 	if (PyErr_Occurred())
+		/* TODO: log level 4 debug message */
 		PyErr_Print();
 
 	return ret;
+}
+
+/**
+ * Convert a python list of unicode strings to a NULL-terminated UTF8-encoded
+ * char * array. The caller must free each string when finished.
+ */
+int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
+{
+	PyObject *py_str;
+	int list_len, i;
+	char **out, *str;
+
+	list_len = PyList_Size(py_strlist);
+	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1))))
+		return SRD_ERR_MALLOC;
+	for (i = 0; i < list_len; i++) {
+		if (!(py_str = PyUnicode_AsEncodedString(PyList_GetItem(py_strlist, i), "utf-8", NULL)))
+			return SRD_ERR_PYTHON;
+		if (!(str = PyBytes_AS_STRING(py_str)))
+			return SRD_ERR_PYTHON;
+		out[i] = g_strdup(str);
+	}
+	out[i] = NULL;
+	*outstr = out;
+
+	return SRD_OK;
 }
 

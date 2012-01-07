@@ -292,33 +292,24 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 
 
 int pd_output_new(struct srd_decoder_instance *di, int output_type,
-		char *protocol_id, char *description)
+		char *protocol_id)
 {
-	GSList *l;
 	struct srd_pd_output *pdo;
-	int pdo_id;
-
-	fprintf(stdout, "%s: output type %d, protocol_id %s, description %s\n",
-			__func__, output_type, protocol_id, description);
-
-	pdo_id = -1;
-	for (l = di->pd_output; l; l = l->next) {
-		pdo = l->data;
-		if (pdo->pdo_id > pdo_id)
-			pdo_id = pdo->pdo_id;
-	}
-	pdo_id++;
 
 	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output))))
 		return -1;
 
-	pdo->pdo_id = pdo_id;
+	/* pdo_id is just a simple index, nothing is deleted from this list anway */
+	pdo->pdo_id = g_slist_length(di->pd_output);
 	pdo->output_type = output_type;
+	pdo->decoder = di->decoder;
 	pdo->protocol_id = g_strdup(protocol_id);
-	pdo->description = g_strdup(description);
 	di->pd_output = g_slist_append(di->pd_output, pdo);
 
-	return pdo_id;
+	fprintf(stdout, "%s: output type %d, protocol_id %s, id %d\n",
+			__func__, output_type, protocol_id, pdo->pdo_id);
+
+	return pdo->pdo_id;
 }
 
 struct srd_decoder_instance *get_di_by_decobject(void *decobject)

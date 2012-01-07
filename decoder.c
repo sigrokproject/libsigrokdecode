@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "sigrokdecode-internal.h"
 #include <dirent.h>
 
 /* The list of protocol decoders. */
@@ -63,17 +64,19 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
 
 
 /**
- * TODO
+ * Load a protocol decoder module into the embedded python interpreter.
  *
- * @param name TODO
+ * @param name The module name to be loaded.
+ * @param dec Pointer to the struct srd_decoder filled with the loaded module.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_load_decoder(const char *name, struct srd_decoder **dec)
 {
+	PyObject *py_mod, *py_res, *py_annlist, *py_ann;
 	struct srd_decoder *d;
-	PyObject *py_mod, *py_res;
-	int r;
+	int alen, r, i;
+	char **ann;
 
 	fprintf(stdout, "%s: %s\n", __func__, name);
 
@@ -102,15 +105,13 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if ((r = h_str(py_res, "name", &(d->name))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, "longname",
-		       &(d->longname))) < 0)
+	if ((r = h_str(py_res, "longname", &(d->longname))) < 0)
 		return r;
 
 	if ((r = h_str(py_res, "desc", &(d->desc))) < 0)
 		return r;
 
-	if ((r = h_str(py_res, "longdesc",
-		       &(d->longdesc))) < 0)
+	if ((r = h_str(py_res, "longdesc", &(d->longdesc))) < 0)
 		return r;
 
 	if ((r = h_str(py_res, "author", &(d->author))) < 0)
@@ -130,6 +131,28 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	d->func = NULL;
 	d->inputformats = NULL;
 	d->outputformats = NULL;
+
+	/* Convert class annotation attribute to GSList of **char */
+	d->annotation = NULL;
+	if ((py_annlist = PyObject_GetAttrString(py_res, "annotation"))) {
+		if (!PyList_Check(py_annlist)) {
+			srd_err("Protocol decoder module %s annotation should be a list", name);
+			return SRD_ERR_PYTHON;
+		}
+		alen = PyList_Size(py_annlist);
+		for (i = 0; i < alen; i++) {
+			py_ann = PyList_GetItem(py_annlist, i);
+			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
+				srd_err("Protocol decoder module %s annotation %d should be a list with two elements",
+						name, i+1);
+				return SRD_ERR_PYTHON;
+			}
+
+			if (py_strlist_to_char(py_ann, &ann) != SRD_OK)
+				return SRD_ERR_PYTHON;
+			d->annotation = g_slist_append(d->annotation, ann);
+		}
+	}
 
 	*dec = d;
 

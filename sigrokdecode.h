@@ -63,9 +63,9 @@ extern "C" {
 #define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
 
 enum {
-	SRD_OUTPUT_LOGIC = 1,
 	SRD_OUTPUT_ANNOTATION,
 	SRD_OUTPUT_PROTOCOL,
+	SRD_OUTPUT_BINARY,
 };
 
 #define SRD_MAX_NUM_PROBES   64
@@ -105,6 +105,11 @@ struct srd_decoder {
 	/** TODO */
 	GSList *outputformats;
 
+	/* List of NULL-terminated char[], containing descriptions of the
+	 * supported annotation output.
+	 */
+	GSList *annotation;
+
 	/** TODO */
 	PyObject *py_mod;
 
@@ -124,8 +129,8 @@ struct srd_decoder_instance {
 struct srd_pd_output {
 	int pdo_id;
 	int output_type;
+	struct srd_decoder *decoder;
 	char *protocol_id;
-	char *description;
 };
 
 typedef struct {
@@ -136,6 +141,14 @@ typedef struct {
 	uint64_t inbuflen;
 	PyObject *sample;
 } srd_logic;
+
+struct srd_protocol_data {
+	uint64_t start_sample;
+	uint64_t end_sample;
+	struct srd_pd_output *pdo;
+	int annotation_type;
+	unsigned char **data;
+};
 
 
 
@@ -153,7 +166,7 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 		uint64_t inbuflen);
 int pd_output_new(struct srd_decoder_instance *di, int output_type,
-		char *output_id, char *description);
+		char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 
 /*--- decoder.c -------------------------------------------------------------*/
@@ -167,6 +180,7 @@ int srd_unload_all_decoders(void);
 
 /*--- util.c ----------------------------------------------------------------*/
 int h_str(PyObject *py_res, const char *key, char **outstr);
+int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
 

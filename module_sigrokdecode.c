@@ -18,11 +18,66 @@
  */
 
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "sigrokdecode-internal.h"
 #include "config.h"
 
 /* lives in type_logic.c */
 extern PyTypeObject srd_logic_type;
 
+
+static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
+		int *annotation_format, char ***annotation)
+{
+	PyObject *py_tmp;
+	struct srd_pd_output *pdo;
+	int ann_id;
+
+	/* Should be a list of [annotation format, [string, ...]] */
+	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
+		srd_err("Protocol decoder %s submitted %s instead of list",
+				di->decoder->name, obj->ob_type->tp_name);
+		return SRD_ERR_PYTHON;
+	}
+
+	/* Should have 2 elements... */
+	if (PyList_Size(obj) != 2) {
+		srd_err("Protocol decoder %s submitted annotation list with %d elements instead of 2",
+				di->decoder->name, PyList_Size(obj));
+		return SRD_ERR_PYTHON;
+	}
+
+	/* First element should be an integer matching a previously
+	 * registered annotation format. */
+	py_tmp = PyList_GetItem(obj, 0);
+	if (!PyLong_Check(py_tmp)) {
+		srd_err("Protocol decoder %s submitted annotation list, but first element was not an integer",
+				di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+
+	ann_id = PyLong_AsLong(py_tmp);
+	if (!(pdo = g_slist_nth_data(di->decoder->annotation, ann_id))) {
+		srd_err("Protocol decoder %s submitted data to non-existent annotation format %d",
+				di->decoder->name, ann_id);
+		return SRD_ERR_PYTHON;
+	}
+	*annotation_format = ann_id;
+
+	/* Second element must be a list */
+	py_tmp = PyList_GetItem(obj, 1);
+	if (!PyList_Check(py_tmp)) {
+		srd_err("Protocol decoder %s submitted annotation list, but second element was not a list",
+				di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+	if (py_strlist_to_char(py_tmp, annotation) != SRD_OK) {
+		srd_err("Protocol decoder %s submitted annotation list, but second element was malformed",
+				di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+
+	return SRD_OK;
+}
 
 /* TODO: not used, doesn't work actually */
 static PyObject *Decoder_init(PyObject *self, PyObject *args)
@@ -41,7 +96,8 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	struct srd_decoder_instance *di;
 	struct srd_pd_output *pdo;
 	uint64_t timeoffset, duration;
-	int output_id;
+	int output_id, annotation_format, i;
+	char **annotation, **ann_info;
 
 	if (!(di = get_di_by_decobject(self)))
 		return NULL;
@@ -50,18 +106,38 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!(l = g_slist_nth(di->pd_output, output_id))) {
-		/* PD supplied invalid output id */
-		/* TODO: better error message */
+		srd_err("Protocol decoder %s submitted invalid output ID %d",
+				di->decoder->name, output_id);
 		return NULL;
 	}
 	pdo = l->data;
 
-	/* TODO: SRD_OUTPUT_ANNOTATION should go back up to the caller,
-	 * and SRD_OUTPUT_PROTOCOL should go up the PD stack.
-	 */
-	printf("stream %d: ", pdo->output_type);
-	PyObject_Print(data, stdout, Py_PRINT_RAW);
-	puts("");
+	switch (pdo->output_type) {
+	case SRD_OUTPUT_ANNOTATION:
+		if (convert_pyobj(di, data, &annotation_format, &annotation) != SRD_OK)
+			return NULL;
+
+		/* TODO: SRD_OUTPUT_ANNOTATION should go back up to the caller */
+		ann_info = g_slist_nth_data(pdo->decoder->annotation, annotation_format);
+		printf("annotation format %d (%s): ", annotation_format, ann_info[0]);
+		for (i = 0; annotation[i]; i++)
+			printf("\"%s\" ", annotation[i]);
+		printf("\n");
+		break;
+
+	case SRD_OUTPUT_PROTOCOL:
+
+		/* TODO: SRD_OUTPUT_PROTOCOL should go up the PD stack. */
+		printf("%s protocol data: ", pdo->decoder->name);
+		PyObject_Print(data, stdout, Py_PRINT_RAW);
+		puts("");
+		break;
+
+	default:
+		srd_err("Protocol decoder %s submitted invalid output type %d",
+				di->decoder->name, pdo->output_type);
+		break;
+	}
 
 	Py_RETURN_NONE;
 }
@@ -71,7 +147,7 @@ static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
 {
 	PyObject *ret;
 	struct srd_decoder_instance *di;
-	char *protocol_id, *description;
+	char *protocol_id;
 	int output_type, pdo_id;
 
 	if (!(di = get_di_by_decobject(self)))
@@ -82,9 +158,9 @@ static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
 	if (!PyArg_ParseTuple(py_output_type, "i:output_type", &output_type))
 		return NULL;
 
+	/* TODO: take protocol_id from python */
 	protocol_id = "i2c";
-	description = "blah";
-	pdo_id = pd_output_new(di, output_type, protocol_id, description);
+	pdo_id = pd_output_new(di, output_type, protocol_id);
 	if (pdo_id < 0)
 		Py_RETURN_NONE;
 	else
