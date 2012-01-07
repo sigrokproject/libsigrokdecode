@@ -50,9 +50,10 @@ extern "C" {
 #define SRD_OK                 0 /**< No error */
 #define SRD_ERR               -1 /**< Generic/unspecified error */
 #define SRD_ERR_MALLOC        -2 /**< Malloc/calloc/realloc error */
-#define SRD_ERR_ARG	           -3 /**< Function argument error */
-#define SRD_ERR_PYTHON        -4 /**< Python C API error */
-#define SRD_ERR_DECODERS_DIR  -5 /**< Protocol decoder path invalid */
+#define SRD_ERR_ARG           -3 /**< Function argument error */
+#define SRD_ERR_BUG           -4 /**< Errors hinting at internal bugs */
+#define SRD_ERR_PYTHON        -5 /**< Python C API error */
+#define SRD_ERR_DECODERS_DIR  -6 /**< Protocol decoder path invalid */
 
 /* libsigrokdecode loglevels. */
 #define SRD_LOG_NONE   0 /**< Output no messages at all. */
