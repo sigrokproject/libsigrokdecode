@@ -128,7 +128,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_PROTOCOL:
 
 		/* TODO: SRD_OUTPUT_PROTOCOL should go up the PD stack. */
-		printf("%s protocol data: ", pdo->decoder->name);
+		printf("%s protocol data: ", pdo->protocol_id);
 		PyObject_Print(data, stdout, Py_PRINT_RAW);
 		puts("");
 		break;
@@ -143,7 +143,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
+static PyObject *Decoder_output_new(PyObject *self, PyObject *args)
 {
 	PyObject *ret;
 	struct srd_decoder_instance *di;
@@ -155,11 +155,9 @@ static PyObject *Decoder_output_new(PyObject *self, PyObject *py_output_type)
 
 	printf("output_new di %s\n", di->decoder->name);
 
-	if (!PyArg_ParseTuple(py_output_type, "i:output_type", &output_type))
+	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id))
 		return NULL;
 
-	/* TODO: take protocol_id from python */
-	protocol_id = "i2c";
 	pdo_id = pd_output_new(di, output_type, protocol_id);
 	if (pdo_id < 0)
 		Py_RETURN_NONE;
