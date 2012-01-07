@@ -134,7 +134,8 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 	/* Convert class annotation attribute to GSList of **char */
 	d->annotation = NULL;
-	if ((py_annlist = PyObject_GetAttrString(py_res, "annotation"))) {
+	if (PyObject_HasAttrString(py_res, "annotation")) {
+		py_annlist = PyObject_GetAttrString(py_res, "annotation");
 		if (!PyList_Check(py_annlist)) {
 			srd_err("Protocol decoder module %s annotation should be a list", name);
 			return SRD_ERR_PYTHON;
