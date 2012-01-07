@@ -120,9 +120,12 @@ STOP_BITS_2 = 3
 LSB_FIRST = 0
 MSB_FIRST = 1
 
-# Output data formats
-DATA_FORMAT_ASCII = 0
-DATA_FORMAT_HEX = 1
+# Annotation feed formats
+ANN_ASCII = 0
+ANN_DEC = 1
+ANN_HEX = 2
+ANN_OCT = 3
+ANN_BITS = 4
 
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
@@ -171,14 +174,25 @@ class Decoder(sigrokdecode.Decoder):
         'parity_check': ['Check parity', True],
         'num_stop_bits': ['Stop bit(s)', STOP_BITS_1],
         'bit_order': ['Bit order', LSB_FIRST],
-        'data_format': ['Output data format', DATA_FORMAT_ASCII],
         # TODO: Options to invert the signal(s).
         # ...
     }
+    annotation = [
+        # ANN_ASCII
+        ["ASCII", "TODO: description"],
+        # ANN_DEC
+        ["Decimal", "TODO: description"],
+        # ANN_HEX
+        ["Hex", "TODO: description"],
+        # ANN_OCT
+        ["Octal", "TODO: description"],
+        # ANN_BITS
+        ["Bits", "TODO: description"],
+    ]
 
     def __init__(self, **kwargs):
-        self.output_protocol = None
-        self.output_annotation = None
+        self.out_proto = None
+        self.out_ann = None
 
         # Set defaults, can be overridden in 'start'.
         self.baudrate = 115200
@@ -187,7 +201,6 @@ class Decoder(sigrokdecode.Decoder):
         self.check_parity = True
         self.num_stop_bits = 1
         self.bit_order = LSB_FIRST
-        self.data_format = DATA_FORMAT_ASCII
 
         self.samplenum = 0
         self.frame_start = -1
@@ -205,8 +218,8 @@ class Decoder(sigrokdecode.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        # self.output_protocol = self.output_new(2)
-        self.output_annotation = self.output_new(1)
+        self.out_proto = self.output_new(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'uart')
+        self.out_ann = self.output_new(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'uart')
 
         # TODO
         ### self.baudrate = metadata['baudrate']
@@ -215,7 +228,6 @@ class Decoder(sigrokdecode.Decoder):
         ### self.parity_check = metadata['parity_check']
         ### self.num_stop_bits = metadata['num_stop_bits']
         ### self.bit_order = metadata['bit_order']
-        ### self.data_format = metadata['data_format']
 
         # The width of one UART bit in number of samples.
         self.bit_width = float(self.samplerate) / float(self.baudrate)
@@ -254,7 +266,7 @@ class Decoder(sigrokdecode.Decoder):
     def get_start_bit(self, signal):
         # Skip samples until we're in the middle of the start bit.
         if not self.reached_bit(0):
-            return []
+            return
 
         self.startbit = signal
 
@@ -268,14 +280,15 @@ class Decoder(sigrokdecode.Decoder):
 
         self.staterx = GET_DATA_BITS
 
-        o = [{'type': 'S', 'range': (self.frame_start, self.samplenum),
-             'data': None, 'ann': 'Start bit'}]
-        return o
+        self.put(self.frame_start, self.samplenum, self.out_proto,
+                 ['START_BIT'])
+        self.put(self.frame_start, self.samplenum, self.out_ann,
+                 [ANN_ASCII, ['Start bit', 'S']])
 
     def get_data_bits(self, signal):
         # Skip samples until we're in the middle of the desired data bit.
         if not self.reached_bit(self.cur_data_bit + 1):
-            return []
+            return
 
         # Save the sample number where the data byte starts.
         if self.startsample == -1:
@@ -294,32 +307,33 @@ class Decoder(sigrokdecode.Decoder):
         # Return here, unless we already received all data bits.
         if self.cur_data_bit < self.num_data_bits - 1: # TODO? Off-by-one?
             self.cur_data_bit += 1
-            return []
-
-        # Convert the data byte into the configured format.
-        if self.data_format == DATA_FORMAT_ASCII:
-            d = chr(self.databyte)
-        elif self.data_format == DATA_FORMAT_HEX:
-            d = '0x%02x' % self.databyte
-        else:
-            raise Exception('Invalid data format value: %d', self.data_format)
+            return
 
         self.staterx = GET_PARITY_BIT
 
-        o = [{'type': 'D', 'range': (self.startsample, self.samplenum - 1),
-             'data': d, 'ann': None}]
+        self.put(self.startsample, self.samplenum - 1, self.out_proto,
+                 [self.databyte])
 
-        return o
+        self.put(self.startsample, self.samplenum - 1, self.out_ann,
+                 [ANN_ASCII, [chr(self.databyte)]])
+        self.put(self.startsample, self.samplenum - 1, self.out_ann,
+                 [ANN_DEC, [str(self.databyte)]])
+        self.put(self.startsample, self.samplenum - 1, self.out_ann,
+                 [ANN_HEX, [hex(self.databyte), hex(self.databyte)[2:]]])
+        self.put(self.startsample, self.samplenum - 1, self.out_ann,
+                 [ANN_OCT, [oct(self.databyte), oct(self.databyte)[2:]]])
+        self.put(self.startsample, self.samplenum - 1, self.out_ann,
+                 [ANN_BITS, [bin(self.databyte), bin(self.databyte)[2:]]])
 
     def get_parity_bit(self, signal):
         # If no parity is used/configured, skip to the next state immediately.
         if self.parity == PARITY_NONE:
             self.staterx = GET_STOP_BITS
-            return []
+            return
 
         # Skip samples until we're in the middle of the parity bit.
         if not self.reached_bit(self.num_data_bits + 1):
-            return []
+            return
 
         self.paritybit = signal
 
@@ -328,20 +342,23 @@ class Decoder(sigrokdecode.Decoder):
         if parity_ok(self.parity, self.paritybit, self.databyte,
                      self.num_data_bits):
             # TODO: Fix range.
-            o = [{'type': 'P', 'range': (self.samplenum, self.samplenum),
-                 'data': self.paritybit, 'ann': 'Parity bit'}]
+            self.put(self.samplenum, self.samplenum, self.out_proto,
+                     ['PARITY_BIT'])
+            self.put(self.samplenum, self.samplenum, self.out_ann,
+                     [ANN_ASCII, ['Parity bit', 'P']])
         else:
-            o = [{'type': 'PE', 'range': (self.samplenum, self.samplenum),
-                 'data': self.paritybit, 'ann': 'Parity error'}]
-
-        return o
+            # TODO: Fix range.
+            self.put(self.samplenum, self.samplenum, self.out_proto,
+                     ['PARITY_ERROR']) # TODO: Pass parity bit value.
+            self.put(self.samplenum, self.samplenum, self.out_ann,
+                     [ANN_ASCII, ['Parity error', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, signal):
         # Skip samples until we're in the middle of the stop bit(s).
         skip_parity = 0 if self.parity == PARITY_NONE else 1
         if not self.reached_bit(self.num_data_bits + 1 + skip_parity):
-            return []
+            return
 
         self.stopbit1 = signal
 
@@ -352,13 +369,12 @@ class Decoder(sigrokdecode.Decoder):
         self.staterx = WAIT_FOR_START_BIT
 
         # TODO: Fix range.
-        o = [{'type': 'P', 'range': (self.samplenum, self.samplenum),
-             'data': None, 'ann': 'Stop bit'}]
-        return o
+        self.put(self.samplenum, self.samplenum, self.out_proto,
+                 ['STOP_BIT'])
+        self.put(self.samplenum, self.samplenum, self.out_ann,
+                 [ANN_ASCII, ['Stop bit', 'P']])
 
     def decode(self, timeoffset, duration, data): # TODO
-        out = []
-
         # for (samplenum, (rx, tx)) in data:
         for (samplenum, (rx,)) in data:
 
@@ -376,13 +392,13 @@ class Decoder(sigrokdecode.Decoder):
             if self.staterx == WAIT_FOR_START_BIT:
                 self.wait_for_start_bit(self.oldrx, rx)
             elif self.staterx == GET_START_BIT:
-                out += self.get_start_bit(rx)
+                self.get_start_bit(rx)
             elif self.staterx == GET_DATA_BITS:
-                out += self.get_data_bits(rx)
+                self.get_data_bits(rx)
             elif self.staterx == GET_PARITY_BIT:
-                out += self.get_parity_bit(rx)
+                self.get_parity_bit(rx)
             elif self.staterx == GET_STOP_BITS:
-                out += self.get_stop_bits(rx)
+                self.get_stop_bits(rx)
             else:
                 raise Exception('Invalid state: %s' % self.staterx)
 
@@ -390,7 +406,8 @@ class Decoder(sigrokdecode.Decoder):
             self.oldrx = rx
             # self.oldtx = tx
 
-        if out != []:
-            # self.put(0, 0, self.output_protocol, out_proto)
-            self.put(0, 0, self.output_annotation, out)
+        # if proto != []:
+        #     self.put(0, 0, self.out_proto, proto)
+        # if ann != []:
+        #     self.put(0, 0, self.out_ann, ann)
 
