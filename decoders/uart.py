@@ -94,6 +94,37 @@
 # TODO: URLs
 #
 
+#
+# Protocol output format:
+# put(<startsample>, <endsample>, self.out_proto, <packet>)
+#
+# The <packet> is a list with two entries:
+# [<packet-type>, <packet-data>]
+#
+# Valid packet-type values: T_START, T_DATA, T_PARITY, T_STOP, T_INVALID_START,
+# T_INVALID_STOP, T_PARITY_ERROR
+#
+# The packet-data field has the following format and meaning:
+#  - T_START: The data is the (integer) value of the start bit (0 or 1).
+#  - T_DATA: The data is the (integer) value of the UART data. Valid values
+#    range from 0 to 512 (as the data can be up to 9 bits in size).
+#  - T_PARITY: The data is the (integer) value of the parity bit (0 or 1).
+#  - T_STOP: The data is the (integer) value of the stop bit (0 or 1).
+#  - T_INVALID_START: The data is the (integer) value of the start bit (0 or 1).
+#  - T_INVALID_STOP: The data is the (integer) value of the stop bit (0 or 1).
+#  - T_PARITY_ERROR: The data is a tuple with two entries. The first one is
+#    the expected parity value, the second is the actual parity value.
+#
+# Examples:
+# [T_START, 0]
+# [T_DATA, 65]
+# [T_PARITY, 0]
+# [T_STOP, 1]
+# [T_INVALID_START, 1]
+# [T_INVALID_STOP, 0]
+# [T_PARITY_ERROR, (0, 1)]
+#
+
 import sigrokdecode
 
 # States
@@ -126,6 +157,15 @@ ANN_DEC = 1
 ANN_HEX = 2
 ANN_OCT = 3
 ANN_BITS = 4
+
+# Protocol output packet types
+T_START = 0
+T_DATA = 1
+T_PARITY = 2
+T_STOP = 3
+T_INVALID_START = 4
+T_INVALID_STOP = 5
+T_PARITY_ERROR = 6
 
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
@@ -273,7 +313,7 @@ class Decoder(sigrokdecode.Decoder):
         # The startbit must be 0. If not, we report an error.
         if self.startbit != 0:
             self.put(self.frame_start, self.samplenum, self.out_proto,
-                     ['INVALID_START_BIT'])
+                     [T_INVALID_START, self.startbit])
             # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit = 0
@@ -283,7 +323,7 @@ class Decoder(sigrokdecode.Decoder):
         self.staterx = GET_DATA_BITS
 
         self.put(self.frame_start, self.samplenum, self.out_proto,
-                 ['START_BIT'])
+                 [T_START, self.startbit])
         self.put(self.frame_start, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Start bit', 'Start', 'S']])
 
@@ -314,7 +354,7 @@ class Decoder(sigrokdecode.Decoder):
         self.staterx = GET_PARITY_BIT
 
         self.put(self.startsample, self.samplenum - 1, self.out_proto,
-                 [self.databyte])
+                 [T_DATA, self.databyte])
 
         self.put(self.startsample, self.samplenum - 1, self.out_ann,
                  [ANN_ASCII, [chr(self.databyte)]])
@@ -345,13 +385,14 @@ class Decoder(sigrokdecode.Decoder):
                      self.num_data_bits):
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     ['PARITY_BIT'])
+                     [T_PARITY_BIT, self.paritybit])
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Fix range.
+            # TODO: Return expected/actual parity values.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     ['PARITY_ERROR']) # TODO: Pass parity bit value.
+                     [T_PARITY_ERROR, (0, 1)]) # FIXME: Dummy tuple...
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
 
@@ -367,14 +408,14 @@ class Decoder(sigrokdecode.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1 != 1:
             self.put(self.frame_start, self.samplenum, self.out_proto,
-                     ['INVALID_STOP_BIT'])
+                     [T_INVALID_STOP, self.stopbit1])
             # TODO: Abort? Ignore the frame? Other?
 
         self.staterx = WAIT_FOR_START_BIT
 
         # TODO: Fix range.
         self.put(self.samplenum, self.samplenum, self.out_proto,
-                 ['STOP_BIT'])
+                 [T_STOP, self.stopbit1])
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
