@@ -124,9 +124,6 @@ MSB_FIRST = 1
 DATA_FORMAT_ASCII = 0
 DATA_FORMAT_HEX = 1
 
-# TODO: Remove me later.
-quick_hack = 1
-
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
 # usually 8 bits) return True if the parity is correct, False otherwise.
@@ -271,9 +268,6 @@ class Decoder(sigrokdecode.Decoder):
 
         self.staterx = GET_DATA_BITS
 
-        if quick_hack: # TODO
-            return []
-
         o = [{'type': 'S', 'range': (self.frame_start, self.samplenum),
              'data': None, 'ann': 'Start bit'}]
         return o
@@ -312,9 +306,6 @@ class Decoder(sigrokdecode.Decoder):
 
         self.staterx = GET_PARITY_BIT
 
-        if quick_hack: # TODO
-            return [d]
-
         o = [{'type': 'D', 'range': (self.startsample, self.samplenum - 1),
              'data': d, 'ann': None}]
 
@@ -336,15 +327,10 @@ class Decoder(sigrokdecode.Decoder):
 
         if parity_ok(self.parity, self.paritybit, self.databyte,
                      self.num_data_bits):
-            if quick_hack: # TODO
-                # return ['P']
-                return []
             # TODO: Fix range.
             o = [{'type': 'P', 'range': (self.samplenum, self.samplenum),
                  'data': self.paritybit, 'ann': 'Parity bit'}]
         else:
-            if quick_hack: # TODO
-                return ['PE']
             o = [{'type': 'PE', 'range': (self.samplenum, self.samplenum),
                  'data': self.paritybit, 'ann': 'Parity error'}]
 
@@ -364,9 +350,6 @@ class Decoder(sigrokdecode.Decoder):
             pass
 
         self.staterx = WAIT_FOR_START_BIT
-
-        if quick_hack: # TODO
-            return []
 
         # TODO: Fix range.
         o = [{'type': 'P', 'range': (self.samplenum, self.samplenum),
