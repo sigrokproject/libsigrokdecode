@@ -180,8 +180,8 @@ class Decoder(sigrokdecode.Decoder):
         self.oldsda = None
 
     def start(self, metadata):
-        self.output_protocol = self.output_new(1, 'i2c')
-        self.output_annotation = self.output_new(0, 'i2c')
+        self.output_protocol = self.output_new(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'i2c')
+        self.output_annotation = self.output_new(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'i2c')
 
     def report(self):
         pass

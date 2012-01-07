@@ -66,6 +66,9 @@ enum {
 	SRD_OUTPUT_ANNOTATION,
 	SRD_OUTPUT_PROTOCOL,
 	SRD_OUTPUT_BINARY,
+	/* When adding an output type, don't forget to expose it to PDs
+	 * in controller.c:PyInit_sigrokdecode()
+	 */
 };
 
 #define SRD_MAX_NUM_PROBES   64
