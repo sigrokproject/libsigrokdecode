@@ -270,9 +270,11 @@ class Decoder(sigrokdecode.Decoder):
 
         self.startbit = signal
 
+        # The startbit must be 0. If not, we report an error.
         if self.startbit != 0:
-            # TODO: Startbit must be 0. If not, we report an error.
-            pass
+            self.put(self.frame_start, self.samplenum, self.out_proto,
+                     ['INVALID_START_BIT'])
+            # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit = 0
         self.databyte = 0
@@ -283,7 +285,7 @@ class Decoder(sigrokdecode.Decoder):
         self.put(self.frame_start, self.samplenum, self.out_proto,
                  ['START_BIT'])
         self.put(self.frame_start, self.samplenum, self.out_ann,
-                 [ANN_ASCII, ['Start bit', 'S']])
+                 [ANN_ASCII, ['Start bit', 'Start', 'S']])
 
     def get_data_bits(self, signal):
         # Skip samples until we're in the middle of the desired data bit.
@@ -345,13 +347,13 @@ class Decoder(sigrokdecode.Decoder):
             self.put(self.samplenum, self.samplenum, self.out_proto,
                      ['PARITY_BIT'])
             self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [ANN_ASCII, ['Parity bit', 'P']])
+                     [ANN_ASCII, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
                      ['PARITY_ERROR']) # TODO: Pass parity bit value.
             self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [ANN_ASCII, ['Parity error', 'PE']])
+                     [ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, signal):
@@ -362,9 +364,11 @@ class Decoder(sigrokdecode.Decoder):
 
         self.stopbit1 = signal
 
+        # Stop bits must be 1. If not, we report an error.
         if self.stopbit1 != 1:
-            # TODO: Stop bits must be 1. If not, we report an error.
-            pass
+            self.put(self.frame_start, self.samplenum, self.out_proto,
+                     ['INVALID_STOP_BIT'])
+            # TODO: Abort? Ignore the frame? Other?
 
         self.staterx = WAIT_FOR_START_BIT
 
@@ -372,7 +376,7 @@ class Decoder(sigrokdecode.Decoder):
         self.put(self.samplenum, self.samplenum, self.out_proto,
                  ['STOP_BIT'])
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [ANN_ASCII, ['Stop bit', 'P']])
+                 [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
     def decode(self, timeoffset, duration, data): # TODO
         # for (samplenum, (rx, tx)) in data:
