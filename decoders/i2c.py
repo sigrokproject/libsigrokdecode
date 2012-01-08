@@ -242,9 +242,12 @@ class Decoder(sigrokdecode.Decoder):
         self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
 
         if self.state == FIND_ADDRESS:
-            d = self.databyte & 0xfe
             # The READ/WRITE bit is only in address bytes, not data bytes.
-            self.wr = 1 if (self.databyte & 1) else 0
+            if self.databyte & 1:
+                self.wr = 0
+            else:
+                self.wr = 1
+            d = self.databyte >> 1
         elif self.state == FIND_DATA:
             d = self.databyte
         else:
