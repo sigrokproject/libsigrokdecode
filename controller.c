@@ -138,8 +138,6 @@ struct srd_decoder_instance *srd_instance_new(const char *id)
 	struct srd_decoder_instance *di;
 	PyObject *py_args;
 
-	fprintf(stdout, "%s: %s\n", __func__, id);
-
 	if (!(dec = srd_get_decoder_by_id(id)))
 		return NULL;
 
@@ -201,8 +199,6 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	PyObject *py_res;
 	GSList *d;
 	struct srd_decoder_instance *di;
-
-	fprintf(stdout, "%s\n", __func__);
 
 	for (d = di_list; d; d = d->next) {
 		di = d->data;
@@ -281,8 +277,6 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 	GSList *d;
 	int ret;
 
-//	fprintf(stdout, "%s: %d bytes\n", __func__, inbuflen);
-
 	for (d = di_list; d; d = d->next) {
 		if ((ret = srd_run_decoder(timeoffset, duration, d->data, inbuf,
 				inbuflen)) != SRD_OK)
@@ -301,15 +295,12 @@ int pd_add(struct srd_decoder_instance *di, int output_type,
 	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output))))
 		return -1;
 
-	/* pdo_id is just a simple index, nothing is deleted from this list anway */
+	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
 	pdo->pdo_id = g_slist_length(di->pd_output);
 	pdo->output_type = output_type;
 	pdo->decoder = di->decoder;
 	pdo->protocol_id = g_strdup(protocol_id);
 	di->pd_output = g_slist_append(di->pd_output, pdo);
-
-	fprintf(stdout, "%s: output type %d, protocol_id %s, id %d\n",
-			__func__, output_type, protocol_id, pdo->pdo_id);
 
 	return pdo->pdo_id;
 }
@@ -339,7 +330,6 @@ int srd_register_callback(int output_type, void *cb)
 	pd_cb->callback = cb;
 	callbacks = g_slist_append(callbacks, pd_cb);
 
-	printf("got cb for %d: %p\n", output_type, cb);
 	return SRD_OK;
 }
 

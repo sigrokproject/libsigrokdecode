@@ -79,16 +79,6 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	return SRD_OK;
 }
 
-/* TODO: not used, doesn't work actually */
-static PyObject *Decoder_init(PyObject *self, PyObject *args)
-{
-	(void)self;
-	(void)args;
-	printf("init Decoder object %p\n", self);
-
-	Py_RETURN_NONE;
-}
-
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
@@ -158,8 +148,6 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	if (!(di = get_di_by_decobject(self)))
 		return NULL;
 
-	printf("output_new di %s\n", di->decoder->name);
-
 	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id))
 		return NULL;
 
@@ -192,7 +180,6 @@ static PyTypeObject srd_Decoder_type = {
 	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
 	.tp_doc = "Sigrok Decoder object",
 	.tp_methods = Decoder_methods,
-	.tp_init = (initproc) Decoder_init,
 };
 
 static struct PyModuleDef sigrokdecode_module = {

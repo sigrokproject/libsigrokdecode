@@ -96,9 +96,6 @@ struct srd_decoder {
 	/** The author of the decoder. May be NULL. */
 	char *author;
 
-	/** An email address of the decoder's author. May be NULL. */
-	char *email;
-
 	/** The license of the decoder. Valid values: "gplv2+", "gplv3+". */
 	char *license;
 

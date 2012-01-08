@@ -78,8 +78,6 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	int alen, r, i;
 	char **ann;
 
-	fprintf(stdout, "%s: %s\n", __func__, name);
-
 	/* "Import" the Python module. */
 	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
 		PyErr_Print(); /* Returns void. */
@@ -92,7 +90,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 		Py_XDECREF(py_mod);
-		fprintf(stderr, "Decoder class not found in PD module %s\n", name);
+		srd_err("Decoder class not found in PD module %s", name);
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 
@@ -115,9 +113,6 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		return r;
 
 	if ((r = h_str(py_res, "author", &(d->author))) < 0)
-		return r;
-
-	if ((r = h_str(py_res, "email", &(d->email))) < 0)
 		return r;
 
 	if ((r = h_str(py_res, "license", &(d->license))) < 0)
@@ -168,7 +163,11 @@ int srd_unload_decoder(struct srd_decoder *dec)
 {
 	g_free(dec->id);
 	g_free(dec->name);
+	g_free(dec->longname);
 	g_free(dec->desc);
+	g_free(dec->longdesc);
+	g_free(dec->author);
+	g_free(dec->license);
 	g_free(dec->func);
 
 	/* TODO: Free everything in inputformats and outputformats. */
