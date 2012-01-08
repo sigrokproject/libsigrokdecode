@@ -95,14 +95,15 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	PyObject *data;
 	struct srd_decoder_instance *di;
 	struct srd_pd_output *pdo;
-	uint64_t timeoffset, duration;
-	int output_id, annotation_format, i;
-	char **annotation, **ann_info;
+	struct srd_protocol_data *pdata;
+	uint64_t start_sample, end_sample;
+	int output_id;
+	void (*cb)();
 
 	if (!(di = get_di_by_decobject(self)))
 		return NULL;
 
-	if (!PyArg_ParseTuple(args, "KKiO", &timeoffset, &duration, &output_id, &data))
+	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample, &output_id, &data))
 		return NULL;
 
 	if (!(l = g_slist_nth(di->pd_output, output_id))) {
@@ -114,29 +115,33 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 
 	switch (pdo->output_type) {
 	case SRD_OUTPUT_ANNOTATION:
-		if (convert_pyobj(di, data, &annotation_format, &annotation) != SRD_OK)
-			return NULL;
-
-		/* TODO: SRD_OUTPUT_ANNOTATION should go back up to the caller */
-		ann_info = g_slist_nth_data(pdo->decoder->annotation, annotation_format);
-		printf("annotation format %d (%s): ", annotation_format, ann_info[0]);
-		for (i = 0; annotation[i]; i++)
-			printf("\"%s\" ", annotation[i]);
-		printf("\n");
-		break;
-
 	case SRD_OUTPUT_PROTOCOL:
-
-		/* TODO: SRD_OUTPUT_PROTOCOL should go up the PD stack. */
-		printf("%s protocol data: ", pdo->protocol_id);
-		PyObject_Print(data, stdout, Py_PRINT_RAW);
-		puts("");
+	case SRD_OUTPUT_BINARY:
 		break;
-
 	default:
 		srd_err("Protocol decoder %s submitted invalid output type %d",
 				di->decoder->name, pdo->output_type);
+		return NULL;
 		break;
+	}
+
+	if ((cb = srd_find_callback(pdo->output_type))) {
+		/* Something registered an interest in this output type. */
+		if (!(pdata = g_try_malloc0(sizeof(struct srd_protocol_data))))
+			return NULL;
+		pdata->start_sample = start_sample;
+		pdata->end_sample = end_sample;
+		pdata->pdo = pdo;
+		if (pdo->output_type == SRD_OUTPUT_ANNOTATION) {
+			/* annotations need converting from PyObject */
+			if (convert_pyobj(di, data, &pdata->annotation_format,
+					(char ***)&pdata->data) != SRD_OK)
+				return NULL;
+		} else {
+			/* annotation_format is unused, data is an opaque blob. */
+			pdata->data = data;
+		}
+		cb(pdata);
 	}
 
 	Py_RETURN_NONE;

@@ -67,8 +67,10 @@ enum {
 	SRD_OUTPUT_ANNOTATION,
 	SRD_OUTPUT_PROTOCOL,
 	SRD_OUTPUT_BINARY,
-	/* When adding an output type, don't forget to expose it to PDs
-	 * in controller.c:PyInit_sigrokdecode()
+	/* When adding an output type, don't forget to expose it to PDs in:
+	 *     controller.c:PyInit_sigrokdecode()
+	 * and add a check in:
+	 *     module_sigrokdecode.c:Decoder_put()
 	 */
 };
 
@@ -150,10 +152,14 @@ struct srd_protocol_data {
 	uint64_t start_sample;
 	uint64_t end_sample;
 	struct srd_pd_output *pdo;
-	int annotation_type;
-	unsigned char **data;
+	int annotation_format;
+	void *data;
 };
 
+struct srd_pd_callback {
+	int output_type;
+	void (*callback)(struct srd_protocol_data *);
+};
 
 
 /*--- controller.c ----------------------------------------------------------*/
@@ -172,6 +178,8 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 int pd_output_new(struct srd_decoder_instance *di, int output_type,
 		char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
+int srd_register_callback(int output_type, void *cb);
+void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
 

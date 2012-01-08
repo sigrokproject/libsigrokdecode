@@ -24,6 +24,8 @@
 #include <inttypes.h>
 
 
+static GSList *callbacks = NULL;
+
 /* TODO
 static GSList *pipelines = NULL;
 struct srd_pipeline {
@@ -326,6 +328,38 @@ struct srd_decoder_instance *get_di_by_decobject(void *decobject)
 	return NULL;
 }
 
+int srd_register_callback(int output_type, void *cb)
+{
+	struct srd_pd_callback *pd_cb;
+
+	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback))))
+		return SRD_ERR_MALLOC;
+
+	pd_cb->output_type = output_type;
+	pd_cb->callback = cb;
+	callbacks = g_slist_append(callbacks, pd_cb);
+
+	printf("got cb for %d: %p\n", output_type, cb);
+	return SRD_OK;
+}
+
+void *srd_find_callback(int output_type)
+{
+	GSList *l;
+	struct srd_pd_callback *pd_cb;
+	void *(cb);
+
+	cb = NULL;
+	for (l = callbacks; l; l = l->next) {
+		pd_cb = l->data;
+		if (pd_cb->output_type == output_type) {
+			cb = pd_cb->callback;
+			break;
+		}
+	}
+
+	return cb;
+}
 
 //int srd_pipeline_new(int plid)
 //{
