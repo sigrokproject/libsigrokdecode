@@ -148,7 +148,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *Decoder_output_new(PyObject *self, PyObject *args)
+static PyObject *Decoder_add(PyObject *self, PyObject *args)
 {
 	PyObject *ret;
 	struct srd_decoder_instance *di;
@@ -163,7 +163,7 @@ static PyObject *Decoder_output_new(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id))
 		return NULL;
 
-	pdo_id = pd_output_new(di, output_type, protocol_id);
+	pdo_id = pd_add(di, output_type, protocol_id);
 	if (pdo_id < 0)
 		Py_RETURN_NONE;
 	else
@@ -176,8 +176,7 @@ static PyMethodDef no_methods[] = { {NULL, NULL, 0, NULL} };
 static PyMethodDef Decoder_methods[] = {
 	{"put", Decoder_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: time, duration, data"},
-	{"output_new", Decoder_output_new, METH_VARARGS,
-	 "Create a new output stream"},
+	{"add", Decoder_add, METH_VARARGS, "Create a new output stream"},
 	{NULL, NULL, 0, NULL}
 };
 

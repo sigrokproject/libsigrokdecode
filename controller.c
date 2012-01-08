@@ -293,7 +293,7 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 }
 
 
-int pd_output_new(struct srd_decoder_instance *di, int output_type,
+int pd_add(struct srd_decoder_instance *di, int output_type,
 		char *protocol_id)
 {
 	struct srd_pd_output *pdo;

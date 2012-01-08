@@ -175,7 +175,7 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
 int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 		uint64_t inbuflen);
-int pd_output_new(struct srd_decoder_instance *di, int output_type,
+int pd_add(struct srd_decoder_instance *di, int output_type,
 		char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 int srd_register_callback(int output_type, void *cb);
