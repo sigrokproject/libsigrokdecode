@@ -82,8 +82,8 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
-	PyObject *data;
-	struct srd_decoder_instance *di;
+	PyObject *data, *py_res;
+	struct srd_decoder_instance *di, *next_di;
 	struct srd_pd_output *pdo;
 	struct srd_protocol_data *pdata;
 	uint64_t start_sample, end_sample;
@@ -103,36 +103,48 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
+	if (!(pdata = g_try_malloc0(sizeof(struct srd_protocol_data))))
+		return NULL;
+	pdata->start_sample = start_sample;
+	pdata->end_sample = end_sample;
+	pdata->pdo = pdo;
+
 	switch (pdo->output_type) {
 	case SRD_OUTPUT_ANNOTATION:
+		/* Annotations are only fed to callbacks. */
+		if ((cb = srd_find_callback(pdo->output_type))) {
+			/* Annotations need converting from PyObject. */
+			if (convert_pyobj(di, data, &pdata->annotation_format,
+					(char ***)&pdata->data) != SRD_OK) {
+				/* An error was already logged. */
+				break;
+			}
+			cb(pdata);
+		}
+		break;
 	case SRD_OUTPUT_PROTOCOL:
+		for (l = di->next_di; l; l = l->next) {
+			next_di = l->data;
+			/* TODO: is this needed? */
+			Py_XINCREF(next_di->py_instance);
+			if (!(py_res = PyObject_CallMethod(next_di->py_instance, "decode",
+					"KKO", start_sample, end_sample, data))) {
+				if (PyErr_Occurred())
+					PyErr_Print();
+			}
+			Py_XDECREF(py_res);
+		}
+		break;
 	case SRD_OUTPUT_BINARY:
+		srd_err("SRD_OUTPUT_BINARY not yet supported");
 		break;
 	default:
 		srd_err("Protocol decoder %s submitted invalid output type %d",
 				di->decoder->name, pdo->output_type);
-		return NULL;
 		break;
 	}
 
-	if ((cb = srd_find_callback(pdo->output_type))) {
-		/* Something registered an interest in this output type. */
-		if (!(pdata = g_try_malloc0(sizeof(struct srd_protocol_data))))
-			return NULL;
-		pdata->start_sample = start_sample;
-		pdata->end_sample = end_sample;
-		pdata->pdo = pdo;
-		if (pdo->output_type == SRD_OUTPUT_ANNOTATION) {
-			/* annotations need converting from PyObject */
-			if (convert_pyobj(di, data, &pdata->annotation_format,
-					(char ***)&pdata->data) != SRD_OK)
-				return NULL;
-		} else {
-			/* annotation_format is unused, data is an opaque blob. */
-			pdata->data = data;
-		}
-		cb(pdata);
-	}
+	g_free(pdata);
 
 	Py_RETURN_NONE;
 }
@@ -145,11 +157,17 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	char *protocol_id;
 	int output_type, pdo_id;
 
-	if (!(di = get_di_by_decobject(self)))
+	if (!(di = get_di_by_decobject(self))) {
+		srd_err("%s():%d decoder instance not found", __func__, __LINE__);
+		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
+	}
 
-	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id))
+	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id)) {
+		if (PyErr_Occurred())
+			PyErr_Print();
 		return NULL;
+	}
 
 	pdo_id = pd_add(di, output_type, protocol_id);
 	if (pdo_id < 0)

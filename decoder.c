@@ -25,7 +25,6 @@
 
 /* The list of protocol decoders. */
 GSList *pd_list = NULL;
-GSList *di_list = NULL;
 
 
 /**

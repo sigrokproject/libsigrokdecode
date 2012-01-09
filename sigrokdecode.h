@@ -123,10 +123,12 @@ struct srd_decoder {
 struct srd_decoder_instance {
 	struct srd_decoder *decoder;
 	PyObject *py_instance;
+	char *instance_id;
 	GSList *pd_output;
 	int num_probes;
 	int unitsize;
 	uint64_t samplerate;
+	GSList *next_di;
 };
 
 struct srd_pd_output {
@@ -164,12 +166,17 @@ struct srd_pd_callback {
 int srd_init(void);
 int srd_exit(void);
 int set_modulepath(void);
-struct srd_decoder_instance *srd_instance_new(const char *id);
+struct srd_decoder_instance *srd_instance_new(const char *id,
+		const char *instance_id);
+int srd_instance_stack(struct srd_decoder_instance *di_from,
+		struct srd_decoder_instance *di_to);
 int srd_instance_set_probe(struct srd_decoder_instance *di,
 				const char *probename, int num);
-int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
-int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
+struct srd_decoder_instance *srd_instance_find(char *instance_id);
+int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
+int srd_instance_decode(uint64_t timeoffset, uint64_t duration,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
+int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
 int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 		uint64_t inbuflen);
 int pd_add(struct srd_decoder_instance *di, int output_type,

@@ -65,51 +65,40 @@
 # TODO: Implement support for 7bit and 10bit slave addresses.
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
-
-#
-# I2C output format:
-#
-# The output consists of a (Python) list of I2C "packets", each of which
-# has an (implicit) index number (its index in the list).
-# Each packet consists of a Python dict with certain key/value pairs.
-#
-# TODO: Make this a list later instead of a dict?
-#
-# 'type': (string)
-#   - 'S' (START condition)
-#   - 'Sr' (Repeated START)
-#   - 'AR' (Address, read)
-#   - 'AW' (Address, write)
-#   - 'DR' (Data, read)
-#   - 'DW' (Data, write)
-#   - 'P' (STOP condition)
-# 'range': (tuple of 2 integers, the min/max samplenumber of this range)
-#   - (min, max)
-#   - min/max can also be identical.
-# 'data': (actual data as integer ???) TODO: This can be very variable...
-# 'ann': (string; additional annotations / comments)
-#
 # TODO: I2C address of slaves.
 # TODO: Handle multiple different I2C devices on same bus
 #       -> we need to decode multiple protocols at the same time.
-#
 
 #
-# I2C input format:
+# I2C protocol output format:
 #
-# signals:
-# [[id, channel, description], ...] # TODO
+# The protocol output consists of a (Python) list of I2C "packets", each of
+# which is of the form
 #
-# Example:
-# {'id': 'SCL', 'ch': 5, 'desc': 'Serial clock line'}
-# {'id': 'SDA', 'ch': 7, 'desc': 'Serial data line'}
-# ...
+#        [ _i2c_command_, _data_, _ack_bit_ ]
 #
-# {'inbuf': [...],
-#  'signals': [{'SCL': }]}
+# _i2c_command_ is one of:
+#   - 'START' (START condition)
+#   - 'START_REPEAT' (Repeated START)
+#   - 'ADDRESS_READ' (Address, read)
+#   - 'ADDRESS_WRITE' (Address, write)
+#   - 'DATA_READ' (Data, read)
+#   - 'DATA_WRITE' (Data, write)
+#   - 'STOP' (STOP condition)
+#
+# _data_ is the data or address byte associated with the ADDRESS_* and DATA_*
+# command. For START, START_REPEAT and STOP, this is None.
+#
+# _ack_bit_ is either 'ACK' or 'NACK', but may also be None.
+#
 #
 
 import sigrokdecode
+
+# annotation feed formats
+ANN_SHIFTED       = 0
+ANN_SHIFTED_SHORT = 1
+ANN_RAW           = 2
 
 # values are verbose and short annotation, respectively
 protocol = {
@@ -123,18 +112,11 @@ protocol = {
     'DATA_READ':       ['DATA READ',    'DR'],
     'DATA_WRITE':      ['DATA WRITE',   'DW'],
 }
-# export protocol keys as symbols for i2c decoders up the stack
-EXPORT = [ protocol.keys() ]
 
 # States
 FIND_START = 0
 FIND_ADDRESS = 1
 FIND_DATA = 2
-
-# annotation feed formats
-ANN_SHIFTED       = 0
-ANN_SHIFTED_SHORT = 1
-ANN_RAW           = 2
 
 
 class Decoder(sigrokdecode.Decoder):
@@ -209,7 +191,7 @@ class Decoder(sigrokdecode.Decoder):
             cmd = 'START_REPEAT'
         else:
             cmd = 'START'
-        self.put(self.output_protocol, [ cmd ])
+        self.put(self.output_protocol, [ cmd, None, None ])
         self.put(self.output_annotation, [ ANN_SHIFTED, [protocol[cmd][0]] ])
         self.put(self.output_annotation, [ ANN_SHIFTED_SHORT, [protocol[cmd][1]] ])
 
@@ -269,7 +251,7 @@ class Decoder(sigrokdecode.Decoder):
             cmd = 'DATA_WRITE'
         elif self.state == FIND_DATA and self.wr == 0:
             cmd = 'DATA_READ'
-        self.put(self.output_protocol, [ [cmd, d], [ack_bit] ] )
+        self.put(self.output_protocol, [ cmd, d, ack_bit ] )
         self.put(self.output_annotation, [ANN_SHIFTED, [
                 "%s" % protocol[cmd][0],
                 "0x%02x" % d,
@@ -292,7 +274,7 @@ class Decoder(sigrokdecode.Decoder):
             pass
 
     def found_stop(self, scl, sda):
-        self.put(self.output_protocol, [ 'STOP' ])
+        self.put(self.output_protocol, [ 'STOP', None, None ])
         self.put(self.output_annotation, [ ANN_SHIFTED, [protocol['STOP'][0]] ])
         self.put(self.output_annotation, [ ANN_SHIFTED_SHORT, [protocol['STOP'][1]] ])
 

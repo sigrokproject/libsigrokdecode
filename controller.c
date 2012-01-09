@@ -18,25 +18,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "sigrokdecode-internal.h"
+#include "config.h"
 #include <glib.h>
 #include <inttypes.h>
 
 
+static GSList *di_list = NULL;
 static GSList *callbacks = NULL;
-
-/* TODO
-static GSList *pipelines = NULL;
-struct srd_pipeline {
-	int id;
-	GSList *decoders;
-};
-*/
 
 /* lives in decoder.c */
 extern GSList *pd_list;
-extern GSList *di_list;
 
 /* lives in module_sigrokdecode.c */
 extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
@@ -59,7 +52,7 @@ extern PyTypeObject srd_logic_type;
  * The caller is responsible for calling the clean-up function srd_exit(),
  * which will properly shut down libsigrokdecode and free its allocated memory.
  *
- * Multiple calls to srd_init(), without calling srd_exit() inbetween,
+ * Multiple calls to srd_init(), without calling srd_exit() in between,
  * are not allowed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
@@ -98,7 +91,7 @@ int srd_init(void)
  *
  * This function should only be called if there was a (successful!) invocation
  * of srd_init() before. Calling this function multiple times in a row, without
- * any successful srd_init() calls inbetween, is not allowed.
+ * any successful srd_init() calls in between, is not allowed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -132,42 +125,86 @@ int set_modulepath(void)
 }
 
 
-struct srd_decoder_instance *srd_instance_new(const char *id)
+/**
+ * Create a new protocol decoder instance.
+ *
+ * TODO: this should be a decoder name, as decoder ids will disappear.
+ * @param id Decoder 'id' field.
+ * @param instance_id optional unique identifier for this instance. If NULL,
+ * the id parameter is used.
+ *
+ * @returns Pointer to a newly allocated struct srd_decoder_instance, or
+ * NULL in case of failure.
+ */
+struct srd_decoder_instance *srd_instance_new(const char *id,
+		const char *instance_id)
 {
 	struct srd_decoder *dec;
 	struct srd_decoder_instance *di;
 	PyObject *py_args;
 
+	srd_dbg("%s: creating new %s instance", __func__, id);
+
 	if (!(dec = srd_get_decoder_by_id(id)))
 		return NULL;
 
-	/* TODO: Error handling. Use g_try_malloc(). */
-	di = g_malloc(sizeof(*di));
+	if (!(di = g_try_malloc(sizeof(*di)))) {
+		srd_err("failed to malloc instance");
+		return NULL;
+	}
 	di->decoder = dec;
+	di->instance_id = g_strdup(instance_id ? instance_id : id);
 	di->pd_output = NULL;
+	di->num_probes = 0;
 	di->unitsize = 0;
+	di->samplerate = 0;
+	di->next_di = NULL;
 
 	/* Create an empty Python tuple. */
 	if (!(py_args = PyTuple_New(0))) { /* NEWREF */
 		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-
-		return NULL; /* TODO: More specific error? */
+			PyErr_Print();
+		return NULL;
 	}
 
 	/* Create an instance of the 'Decoder' class. */
 	di->py_instance = PyObject_Call(dec->py_decobj, py_args, NULL);
 	if (!di->py_instance) {
 		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
+			PyErr_Print();
 		Py_XDECREF(py_args);
-		return NULL; /* TODO: More specific error? */
+		return NULL;
 	}
+
+	/* Instance takes input from a frontend by default. */
 	di_list = g_slist_append(di_list, di);
 
 	Py_XDECREF(py_args);
 
 	return di;
+}
+
+int srd_instance_stack(struct srd_decoder_instance *di_from,
+		struct srd_decoder_instance *di_to)
+{
+
+	if (!di_from || !di_to) {
+		srd_err("invalid from/to instance pair");
+		return SRD_ERR_ARG;
+	}
+
+	if (!g_slist_find(di_list, di_from)) {
+		srd_err("unstacked instance not found");
+		return SRD_ERR_ARG;
+	}
+
+	/* Remove from the unstacked list. */
+	di_list = g_slist_remove(di_list, di_to);
+
+	/* Stack on top of source di. */
+	di_from->next_di = g_slist_append(di_from->next_di, di_to);
+
+	return SRD_OK;
 }
 
 
@@ -193,32 +230,48 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 	return SRD_OK;
 }
 
-
-int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
+struct srd_decoder_instance *srd_instance_find(char *instance_id)
 {
-	PyObject *py_res;
-	GSList *d;
-	struct srd_decoder_instance *di;
+	GSList *l;
+	struct srd_decoder_instance *tmp, *di;
 
-	for (d = di_list; d; d = d->next) {
-		di = d->data;
-		di->num_probes = num_probes;
-		di->unitsize = unitsize;
-		di->samplerate = samplerate;
-		if (!(py_res = PyObject_CallMethod(di->py_instance, "start",
-				    "{s:l}",
-					"samplerate", (long)samplerate))) {
-			if (PyErr_Occurred())
-				PyErr_Print(); /* Returns void. */
-
-			return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	di = NULL;
+	for (l = di_list; l; l = l->next) {
+		tmp = l->data;
+		if (!strcmp(tmp->instance_id, instance_id)) {
+			di = tmp;
+			break;
 		}
-		Py_XDECREF(py_res);
 	}
+
+	return di;
+}
+
+int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
+{
+	PyObject *py_name, *py_res;
+
+	srd_dbg("calling start() method on protocol decoder instance %s", di->instance_id);
+
+	if (!(py_name = PyUnicode_FromString("start"))) {
+		srd_err("unable to build python object for 'start'");
+		if (PyErr_Occurred())
+			PyErr_Print();
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_res = PyObject_CallMethodObjArgs(di->py_instance,
+			py_name, args, NULL))) {
+		if (PyErr_Occurred())
+			PyErr_Print();
+		return SRD_ERR_PYTHON;
+	}
+
+	Py_XDECREF(py_res);
+	Py_DECREF(py_name);
 
 	return SRD_OK;
 }
-
 
 /**
  * Run the specified decoder function.
@@ -229,7 +282,7 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
+int srd_instance_decode(uint64_t timeoffset, uint64_t duration,
 		struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_instance, *py_res;
@@ -270,6 +323,41 @@ int srd_run_decoder(uint64_t timeoffset, uint64_t duration,
 }
 
 
+int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
+{
+	PyObject *args;
+	GSList *d, *s;
+	struct srd_decoder_instance *di;
+	int ret;
+
+	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)samplerate))) {
+		srd_err("unable to build python object for metadata");
+		return SRD_ERR_PYTHON;
+	}
+
+	/* Run the start() method on all decoders receiving frontend data. */
+	for (d = di_list; d; d = d->next) {
+		di = d->data;
+		di->num_probes = num_probes;
+		di->unitsize = unitsize;
+		di->samplerate = samplerate;
+		if ((ret = srd_instance_start(di, args) != SRD_OK))
+			return ret;
+
+		/* Run the start() method on all decoders up the stack from this one. */
+		for (s = di->next_di; s; s = s->next) {
+			/* These don't need probes, unitsize and samplerate. */
+			di = s->data;
+			if ((ret = srd_instance_start(di, args) != SRD_OK))
+				return ret;
+		}
+	}
+
+	Py_DECREF(args);
+
+	return SRD_OK;
+}
+
 /* Feed logic samples to decoder session. */
 int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 		uint64_t inbuflen)
@@ -278,7 +366,7 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 	int ret;
 
 	for (d = di_list; d; d = d->next) {
-		if ((ret = srd_run_decoder(timeoffset, duration, d->data, inbuf,
+		if ((ret = srd_instance_decode(timeoffset, duration, d->data, inbuf,
 				inbuflen)) != SRD_OK)
 			return ret;
 	}
@@ -307,13 +395,19 @@ int pd_add(struct srd_decoder_instance *di, int output_type,
 
 struct srd_decoder_instance *get_di_by_decobject(void *decobject)
 {
-	GSList *l;
+	GSList *l, *s;
 	struct srd_decoder_instance *di;
 
 	for (l = di_list; l; l = l->next) {
 		di = l->data;
 		if (decobject == di->py_instance)
 			return di;
+		/* Check decoders stacked on top of this one. */
+		for (s = di->next_di; s; s = s->next) {
+			di = s->data;
+			if (decobject == di->py_instance)
+				return di;
+		}
 	}
 
 	return NULL;
@@ -350,13 +444,4 @@ void *srd_find_callback(int output_type)
 
 	return cb;
 }
-
-//int srd_pipeline_new(int plid)
-//{
-//
-//
-//}
-
-
-
 
