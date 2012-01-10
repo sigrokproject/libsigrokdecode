@@ -45,7 +45,7 @@ class Decoder(sigrokdecode.Decoder):
         self.state = None
 
     def start(self, metadata):
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'ddc')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'ddc')
 
     def decode(self, start_sample, end_sample, i2c_data):
         try:

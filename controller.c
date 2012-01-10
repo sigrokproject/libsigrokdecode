@@ -376,7 +376,7 @@ int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
 
 
 int pd_add(struct srd_decoder_instance *di, int output_type,
-		char *protocol_id)
+		char *proto_id)
 {
 	struct srd_pd_output *pdo;
 
@@ -387,7 +387,7 @@ int pd_add(struct srd_decoder_instance *di, int output_type,
 	pdo->pdo_id = g_slist_length(di->pd_output);
 	pdo->output_type = output_type;
 	pdo->decoder = di->decoder;
-	pdo->protocol_id = g_strdup(protocol_id);
+	pdo->proto_id = g_strdup(proto_id);
 	di->pd_output = g_slist_append(di->pd_output, pdo);
 
 	return pdo->pdo_id;

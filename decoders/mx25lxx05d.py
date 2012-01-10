@@ -179,8 +179,8 @@ class Decoder(sigrokdecode.Decoder):
         self.out = []
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'mx25lxx05d')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'mx25lxx05d')
+        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'mx25lxx05d')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'mx25lxx05d')
 
     def report(self):
         pass

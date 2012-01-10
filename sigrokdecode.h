@@ -64,8 +64,8 @@ extern "C" {
 #define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
 
 enum {
-	SRD_OUTPUT_ANNOTATION,
-	SRD_OUTPUT_PROTOCOL,
+	SRD_OUTPUT_ANN,
+	SRD_OUTPUT_PROTO,
 	SRD_OUTPUT_BINARY,
 	/* When adding an output type, don't forget to expose it to PDs in:
 	 *     controller.c:PyInit_sigrokdecode()
@@ -135,7 +135,7 @@ struct srd_pd_output {
 	int pdo_id;
 	int output_type;
 	struct srd_decoder *decoder;
-	char *protocol_id;
+	char *proto_id;
 };
 
 typedef struct {
@@ -147,17 +147,17 @@ typedef struct {
 	PyObject *sample;
 } srd_logic;
 
-struct srd_protocol_data {
+struct srd_proto_data {
 	uint64_t start_sample;
 	uint64_t end_sample;
 	struct srd_pd_output *pdo;
-	int annotation_format;
+	int ann_format;
 	void *data;
 };
 
 struct srd_pd_callback {
 	int output_type;
-	void (*callback)(struct srd_protocol_data *);
+	void (*callback)(struct srd_proto_data *);
 };
 
 

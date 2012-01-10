@@ -87,8 +87,8 @@ class Decoder(sigrokdecode.Decoder):
         self.databytecount = 0
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'nunchuk')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'nunchuk')
+        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'nunchuk')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'nunchuk')
 
     def report(self):
         pass

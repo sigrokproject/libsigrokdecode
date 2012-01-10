@@ -56,8 +56,8 @@ class Decoder(sigrokdecode.Decoder):
         self.cmd = ''
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'pan1321')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'pan1321')
+        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'pan1321')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'pan1321')
 
     def report(self):
         pass

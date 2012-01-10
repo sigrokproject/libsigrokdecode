@@ -26,7 +26,7 @@ extern PyTypeObject srd_logic_type;
 
 
 static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
-		int *annotation_format, char ***annotation)
+		int *ann_format, char ***ann)
 {
 	PyObject *py_tmp;
 	struct srd_pd_output *pdo;
@@ -61,7 +61,7 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 				di->decoder->name, ann_id);
 		return SRD_ERR_PYTHON;
 	}
-	*annotation_format = ann_id;
+	*ann_format = ann_id;
 
 	/* Second element must be a list */
 	py_tmp = PyList_GetItem(obj, 1);
@@ -70,7 +70,7 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 				di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
-	if (py_strlist_to_char(py_tmp, annotation) != SRD_OK) {
+	if (py_strlist_to_char(py_tmp, ann) != SRD_OK) {
 		srd_err("Protocol decoder %s submitted annotation list, but second element was malformed",
 				di->decoder->name);
 		return SRD_ERR_PYTHON;
@@ -85,7 +85,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	PyObject *data, *py_res;
 	struct srd_decoder_instance *di, *next_di;
 	struct srd_pd_output *pdo;
-	struct srd_protocol_data *pdata;
+	struct srd_proto_data *pdata;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	void (*cb)();
@@ -103,18 +103,18 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
-	if (!(pdata = g_try_malloc0(sizeof(struct srd_protocol_data))))
+	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data))))
 		return NULL;
 	pdata->start_sample = start_sample;
 	pdata->end_sample = end_sample;
 	pdata->pdo = pdo;
 
 	switch (pdo->output_type) {
-	case SRD_OUTPUT_ANNOTATION:
+	case SRD_OUTPUT_ANN:
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_find_callback(pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
-			if (convert_pyobj(di, data, &pdata->annotation_format,
+			if (convert_pyobj(di, data, &pdata->ann_format,
 					(char ***)&pdata->data) != SRD_OK) {
 				/* An error was already logged. */
 				break;
@@ -122,7 +122,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			cb(pdata);
 		}
 		break;
-	case SRD_OUTPUT_PROTOCOL:
+	case SRD_OUTPUT_PROTO:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
 			/* TODO: is this needed? */
@@ -154,7 +154,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 {
 	PyObject *ret;
 	struct srd_decoder_instance *di;
-	char *protocol_id;
+	char *proto_id;
 	int output_type, pdo_id;
 
 	if (!(di = get_di_by_decobject(self))) {
@@ -163,13 +163,13 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "is", &output_type, &protocol_id)) {
+	if (!PyArg_ParseTuple(args, "is", &output_type, &proto_id)) {
 		if (PyErr_Occurred())
 			PyErr_Print();
 		return NULL;
 	}
 
-	pdo_id = pd_add(di, output_type, protocol_id);
+	pdo_id = pd_add(di, output_type, proto_id);
 	if (pdo_id < 0)
 		Py_RETURN_NONE;
 	else
@@ -230,11 +230,11 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 		return NULL;
 
 	/* expose output types as symbols in the sigrokdecode module */
-	if(PyModule_AddObject(mod, "SRD_OUTPUT_ANNOTATION",
-			PyLong_FromLong(SRD_OUTPUT_ANNOTATION)) == -1)
+	if(PyModule_AddObject(mod, "SRD_OUTPUT_ANN",
+			PyLong_FromLong(SRD_OUTPUT_ANN)) == -1)
 		return NULL;
-	if(PyModule_AddObject(mod, "SRD_OUTPUT_PROTOCOL",
-			PyLong_FromLong(SRD_OUTPUT_PROTOCOL)) == -1)
+	if(PyModule_AddObject(mod, "SRD_OUTPUT_PROTO",
+			PyLong_FromLong(SRD_OUTPUT_PROTO)) == -1)
 		return NULL;
 	if(PyModule_AddObject(mod, "SRD_OUTPUT_BINARY",
 			PyLong_FromLong(SRD_OUTPUT_BINARY)) == -1)
