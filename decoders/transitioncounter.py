@@ -42,8 +42,8 @@ class Decoder(sigrokdecode.Decoder):
         self.lastsample = None
 
     def start(self, metadata):
-        # self.out_proto = self.add(2)
-        self.out_ann = self.add(1)
+        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'transitioncounter')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'transitioncounter')
 
     def report(self):
         pass
