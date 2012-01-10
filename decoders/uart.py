@@ -255,8 +255,8 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'uart')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'uart')
+        self.out_proto = self.add(srd.OUTPUT_PROTO, 'uart')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'uart')
 
         # TODO
         ### self.baudrate = metadata['baudrate']

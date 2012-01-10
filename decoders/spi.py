@@ -44,8 +44,8 @@ class Decoder(srd.Decoder):
         self.bytesreceived = 0
 
     def start(self, metadata):
-        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'spi')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'spi')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived

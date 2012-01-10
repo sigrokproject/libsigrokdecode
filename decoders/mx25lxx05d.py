@@ -177,8 +177,8 @@ class Decoder(srd.Decoder):
         self.out = []
 
     def start(self, metadata):
-        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'mx25lxx05d')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'mx25lxx05d')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mx25lxx05d')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'mx25lxx05d')
 
     def report(self):
         pass

@@ -122,8 +122,8 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.rate = metadata['samplerate']
-        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'usb')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'usb')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
         if self.rate < 48000000:
             raise Exception("Sample rate not sufficient for USB decoding")
         # Initialise decoder state.

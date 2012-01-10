@@ -54,8 +54,8 @@ class Decoder(srd.Decoder):
         self.cmd = ''
 
     def start(self, metadata):
-        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'pan1321')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'pan1321')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'pan1321')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'pan1321')
 
     def report(self):
         pass

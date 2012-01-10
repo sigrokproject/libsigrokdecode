@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
         self.state = None
 
     def start(self, metadata):
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'ddc')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'ddc')
 
     def decode(self, start_sample, end_sample, i2c_data):
         try:

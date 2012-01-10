@@ -84,8 +84,8 @@ class Decoder(srd.Decoder):
         self.databytecount = 0
 
     def start(self, metadata):
-        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'nunchuk')
-        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'nunchuk')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'nunchuk')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'nunchuk')
 
     def report(self):
         pass
