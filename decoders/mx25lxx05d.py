@@ -30,7 +30,7 @@
 # http://www.macronix.com/QuickPlace/hq/PageLibrary4825740B00298A3B.nsf/h_Index/3F21BAC2E121E17848257639003A3146/$File/MX25L1605D-3205D-6405D-1.5.pdf
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # States
 IDLE = -1
@@ -157,7 +157,7 @@ miso_packets = [
     {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
 ]
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'mx25lxx05d'
     name = 'Macronix MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D SPI flash chip decoder'
@@ -179,8 +179,8 @@ class Decoder(sigrokdecode.Decoder):
         self.out = []
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'mx25lxx05d')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'mx25lxx05d')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'mx25lxx05d')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'mx25lxx05d')
 
     def report(self):
         pass

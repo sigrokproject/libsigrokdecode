@@ -125,7 +125,7 @@
 # [T_PARITY_ERROR, (0, 1)]
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # States
 WAIT_FOR_START_BIT = 0
@@ -190,7 +190,7 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
     else:
         raise Exception('Invalid parity type: %d' % parity_type)
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'uart'
     name = 'UART'
     longname = 'Universal Asynchronous Receiver/Transmitter (UART)'
@@ -258,8 +258,8 @@ class Decoder(sigrokdecode.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'uart')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'uart')
+        self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'uart')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'uart')
 
         # TODO
         ### self.baudrate = metadata['baudrate']

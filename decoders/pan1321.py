@@ -22,7 +22,7 @@
 # TODO
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # Annotation feed formats
 ANN_ASCII = 0
@@ -30,7 +30,7 @@ ANN_ASCII = 0
 # UART 'data' packet type.
 T_DATA = 1
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'pan1321'
     name = 'Panasonic PAN1321'
     longname = 'TODO.'
@@ -56,8 +56,8 @@ class Decoder(sigrokdecode.Decoder):
         self.cmd = ''
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'pan1321')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'pan1321')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'pan1321')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'pan1321')
 
     def report(self):
         pass

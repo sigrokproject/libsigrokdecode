@@ -40,7 +40,7 @@
 # http://www.usb.org/developers/docs/
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # States
 SE0, J, K, SE1 = 0, 1, 2, 3
@@ -99,7 +99,7 @@ def packet_decode(packet):
 
     return pid + ' ' + data
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'usb'
     name = 'USB'
     desc = 'Universal Serial Bus'
@@ -123,8 +123,8 @@ class Decoder(sigrokdecode.Decoder):
 
     def start(self, metadata):
         self.rate = metadata['samplerate']
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'usb')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'usb')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'usb')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'usb')
         if self.rate < 48000000:
             raise Exception("Sample rate not sufficient for USB decoding")
         # Initialise decoder state.

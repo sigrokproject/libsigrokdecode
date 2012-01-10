@@ -18,9 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sigrokdecode
+import sigrokdecode as srd
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'transitioncounter'
     name = 'Transition counter'
     longname = '...'
@@ -42,8 +42,8 @@ class Decoder(sigrokdecode.Decoder):
         self.lastsample = None
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'transitioncounter')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'transitioncounter')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'transitioncounter')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'transitioncounter')
 
     def report(self):
         pass

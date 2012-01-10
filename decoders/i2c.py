@@ -93,7 +93,7 @@
 #
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # annotation feed formats
 ANN_SHIFTED       = 0
@@ -119,7 +119,7 @@ FIND_ADDRESS = 1
 FIND_DATA = 2
 
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit (I2C) bus'
@@ -162,8 +162,8 @@ class Decoder(sigrokdecode.Decoder):
         self.oldsda = None
 
     def start(self, metadata):
-        self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'i2c')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'i2c')
+        self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'i2c')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'i2c')
 
     def report(self):
         pass

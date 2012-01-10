@@ -24,10 +24,10 @@
 # and a display device. The stream is output as plain bytes.
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'ddc'
     name = 'DDC'
     longname = 'Display Data Channel'
@@ -45,7 +45,7 @@ class Decoder(sigrokdecode.Decoder):
         self.state = None
 
     def start(self, metadata):
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'ddc')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'ddc')
 
     def decode(self, start_sample, end_sample, i2c_data):
         try:

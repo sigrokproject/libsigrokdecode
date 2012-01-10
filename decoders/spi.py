@@ -18,9 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sigrokdecode
+import sigrokdecode as srd
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'spi'
     name = 'SPI'
     desc = '...desc...'
@@ -46,8 +46,8 @@ class Decoder(sigrokdecode.Decoder):
         self.out_ann = None
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'spi')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'spi')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'spi')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'spi')
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived

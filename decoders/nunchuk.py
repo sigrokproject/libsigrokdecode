@@ -30,7 +30,7 @@
 # https://www.sparkfun.com/products/9281
 #
 
-import sigrokdecode
+import sigrokdecode as srd
 
 # States
 IDLE = 0
@@ -62,7 +62,7 @@ example_packets = [
     {'type': 'P',  'range': (32, 33), 'data': None, 'ann': ''},
 ]
 
-class Decoder(sigrokdecode.Decoder):
+class Decoder(srd.Decoder):
     id = 'nunchuk'
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk decoder'
@@ -87,8 +87,8 @@ class Decoder(sigrokdecode.Decoder):
         self.databytecount = 0
 
     def start(self, metadata):
-        # self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTO, 'nunchuk')
-        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANN, 'nunchuk')
+        # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'nunchuk')
+        self.out_ann = self.add(srd.SRD_OUTPUT_ANN, 'nunchuk')
 
     def report(self):
         pass
