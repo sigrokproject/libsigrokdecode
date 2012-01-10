@@ -172,15 +172,15 @@ class Decoder(sigrokdecode.Decoder):
     options = {} # TODO
 
     def __init__(self, **kwargs):
-        self.output_protocol = None
-        self.output_annotation = None
+        self.out_proto = None
+        self.out_ann = None
         self.state = IDLE
         self.cmdstate = 1 # TODO
         self.out = []
 
     def start(self, metadata):
-        # self.output_protocol = self.add(2)
-        self.output_annotation = self.add(1)
+        # self.out_proto = self.add(2)
+        self.out_ann = self.add(1)
 
     def report(self):
         pass
@@ -351,6 +351,6 @@ class Decoder(sigrokdecode.Decoder):
                 pass
 
         if self.out != []:
-            # self.put(0, 0, self.output_protocol, out_proto)
-            self.put(0, 0, self.output_annotation, self.out)
+            # self.put(0, 0, self.out_proto, out_proto)
+            self.put(0, 0, self.out_ann, self.out)
 

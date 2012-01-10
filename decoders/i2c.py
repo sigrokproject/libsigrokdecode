@@ -149,8 +149,8 @@ class Decoder(sigrokdecode.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.output_protocol = None
-        self.output_annotation = None
+        self.out_proto = None
+        self.out_ann = None
         self.samplecnt = 0
         self.bitcount = 0
         self.databyte = 0
@@ -162,8 +162,8 @@ class Decoder(sigrokdecode.Decoder):
         self.oldsda = None
 
     def start(self, metadata):
-        self.output_protocol = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'i2c')
-        self.output_annotation = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'i2c')
+        self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'i2c')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'i2c')
 
     def report(self):
         pass
@@ -191,9 +191,9 @@ class Decoder(sigrokdecode.Decoder):
             cmd = 'START_REPEAT'
         else:
             cmd = 'START'
-        self.put(self.output_protocol, [ cmd, None, None ])
-        self.put(self.output_annotation, [ ANN_SHIFTED, [protocol[cmd][0]] ])
-        self.put(self.output_annotation, [ ANN_SHIFTED_SHORT, [protocol[cmd][1]] ])
+        self.put(self.out_proto, [ cmd, None, None ])
+        self.put(self.out_ann, [ ANN_SHIFTED, [protocol[cmd][0]] ])
+        self.put(self.out_ann, [ ANN_SHIFTED_SHORT, [protocol[cmd][1]] ])
 
         self.state = FIND_ADDRESS
         self.bitcount = self.databyte = 0
@@ -218,7 +218,7 @@ class Decoder(sigrokdecode.Decoder):
 
         # send raw output annotation before we start shifting out
         # read/write and ack/nack bits
-        self.put(self.output_annotation, [ANN_RAW, ["0x%.2x" % self.databyte]])
+        self.put(self.out_ann, [ANN_RAW, ["0x%.2x" % self.databyte]])
 
         # We received 8 address/data bits and the ACK/NACK bit.
         self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
@@ -251,13 +251,13 @@ class Decoder(sigrokdecode.Decoder):
             cmd = 'DATA_WRITE'
         elif self.state == FIND_DATA and self.wr == 0:
             cmd = 'DATA_READ'
-        self.put(self.output_protocol, [ cmd, d, ack_bit ] )
-        self.put(self.output_annotation, [ANN_SHIFTED, [
+        self.put(self.out_proto, [ cmd, d, ack_bit ] )
+        self.put(self.out_ann, [ANN_SHIFTED, [
                 "%s" % protocol[cmd][0],
                 "0x%02x" % d,
                 "%s" % protocol[ack_bit][0]]
             ] )
-        self.put(self.output_annotation, [ANN_SHIFTED_SHORT, [
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [
                 "%s" % protocol[cmd][1],
                 "0x%02x" % d,
                 "%s" % protocol[ack_bit][1]]
@@ -274,9 +274,9 @@ class Decoder(sigrokdecode.Decoder):
             pass
 
     def found_stop(self, scl, sda):
-        self.put(self.output_protocol, [ 'STOP', None, None ])
-        self.put(self.output_annotation, [ ANN_SHIFTED, [protocol['STOP'][0]] ])
-        self.put(self.output_annotation, [ ANN_SHIFTED_SHORT, [protocol['STOP'][1]] ])
+        self.put(self.out_proto, [ 'STOP', None, None ])
+        self.put(self.out_ann, [ ANN_SHIFTED, [protocol['STOP'][0]] ])
+        self.put(self.out_ann, [ ANN_SHIFTED_SHORT, [protocol['STOP'][1]] ])
 
         self.state = FIND_START
         self.is_repeat_start = 0

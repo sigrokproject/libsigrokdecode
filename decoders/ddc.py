@@ -45,7 +45,7 @@ class Decoder(sigrokdecode.Decoder):
         self.state = None
 
     def start(self, metadata):
-        self.output_annotation = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'ddc')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'ddc')
 
     def decode(self, start_sample, end_sample, i2c_data):
         try:
@@ -69,6 +69,6 @@ class Decoder(sigrokdecode.Decoder):
             if cmd == 'DATA_READ':
                 # there shouldn't be anything but data reads on this
                 # address, so ignore everything else
-                self.put(start_sample, end_sample, self.output_annotation,
+                self.put(start_sample, end_sample, self.out_ann,
                          [0, ["0x%.2x" % data]])
 

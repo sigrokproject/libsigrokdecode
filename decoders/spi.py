@@ -42,12 +42,12 @@ class Decoder(sigrokdecode.Decoder):
         self.rxcount = 0
         self.rxdata = 0
         self.bytesreceived = 0
-        self.output_protocol = None
-        self.output_annotation = None
+        self.out_proto = None
+        self.out_ann = None
 
     def start(self, metadata):
-        # self.output_protocol = self.add(2)
-        self.output_annotation = self.add(1)
+        # self.out_proto = self.add(2)
+        self.out_ann = self.add(1)
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
@@ -81,8 +81,8 @@ class Decoder(sigrokdecode.Decoder):
                 'display':('%02X' % self.rxdata),
                 'type':'spi',
             }
-            # self.put(0, 0, self.output_protocol, out_proto)
-            self.put(0, 0, self.output_annotation, outdata)
+            # self.put(0, 0, self.out_proto, out_proto)
+            self.put(0, 0, self.out_ann, outdata)
             # Reset decoder state
             self.rxdata = 0
             self.rxcount = 0
