@@ -30,7 +30,7 @@ dist_pkgdata_DATA = \
 	spi.py \
 	srd_usb.py \
 	transitioncounter.py \
-	uart.py \
+	uart.py
 
 CLEANFILES = *.pyc
 
