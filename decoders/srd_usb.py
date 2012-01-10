@@ -123,8 +123,8 @@ class Decoder(sigrokdecode.Decoder):
 
     def start(self, metadata):
         self.rate = metadata['samplerate']
-        # self.output_protocol = self.output_new(2)
-        self.output_annotation = self.output_new(1)
+        # self.output_protocol = self.add(2)
+        self.output_annotation = self.add(1)
         if self.rate < 48000000:
             raise Exception("Sample rate not sufficient for USB decoding")
         # Initialise decoder state.

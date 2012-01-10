@@ -46,8 +46,8 @@ class Decoder(sigrokdecode.Decoder):
         self.output_annotation = None
 
     def start(self, metadata):
-        # self.output_protocol = self.output_new(2)
-        self.output_annotation = self.output_new(1)
+        # self.output_protocol = self.add(2)
+        self.output_annotation = self.add(1)
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived

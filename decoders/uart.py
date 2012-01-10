@@ -258,8 +258,8 @@ class Decoder(sigrokdecode.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        self.out_proto = self.output_new(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'uart')
-        self.out_ann = self.output_new(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'uart')
+        self.out_proto = self.add(sigrokdecode.SRD_OUTPUT_PROTOCOL, 'uart')
+        self.out_ann = self.add(sigrokdecode.SRD_OUTPUT_ANNOTATION, 'uart')
 
         # TODO
         ### self.baudrate = metadata['baudrate']
