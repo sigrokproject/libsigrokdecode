@@ -22,14 +22,15 @@ pkgdatadir = $(DECODERS_DIR)
 
 # Please keep this list in alphabetical order.
 dist_pkgdata_DATA = \
+	ddc.py \
 	i2c.py \
 	mx25lxx05d.py \
 	nunchuk.py \
+	pan1321.py \
 	spi.py \
 	srd_usb.py \
 	transitioncounter.py \
 	uart.py \
-	ddc.py
 
 CLEANFILES = *.pyc
 
