@@ -51,8 +51,6 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        # self.out_proto = None
-        self.out_ann = None
         self.cmd = ''
 
     def start(self, metadata):

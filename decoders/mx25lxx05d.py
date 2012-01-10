@@ -172,8 +172,6 @@ class Decoder(srd.Decoder):
     options = {} # TODO
 
     def __init__(self, **kwargs):
-        self.out_proto = None
-        self.out_ann = None
         self.state = IDLE
         self.cmdstate = 1 # TODO
         self.out = []

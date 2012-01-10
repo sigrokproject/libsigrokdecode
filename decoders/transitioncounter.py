@@ -36,8 +36,6 @@ class Decoder(srd.Decoder):
     options = {}
 
     def __init__(self, **kwargs):
-        self.out_proto = None
-        self.out_ann = None
         self.channels = -1
         self.lastsample = None
 

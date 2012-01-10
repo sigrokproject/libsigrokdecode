@@ -231,9 +231,6 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.out_proto = None
-        self.out_ann = None
-
         # Set defaults, can be overridden in 'start'.
         self.baudrate = 115200
         self.num_data_bits = 8

@@ -42,8 +42,6 @@ class Decoder(srd.Decoder):
         self.rxcount = 0
         self.rxdata = 0
         self.bytesreceived = 0
-        self.out_proto = None
-        self.out_ann = None
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.SRD_OUTPUT_PROTO, 'spi')

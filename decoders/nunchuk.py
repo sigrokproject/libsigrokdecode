@@ -77,9 +77,6 @@ class Decoder(srd.Decoder):
     options = {}
 
     def __init__(self, **kwargs):
-        self.out_proto = None
-        self.out_ann = None
-
         self.state = IDLE # TODO: Can we assume a certain initial state?
 
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0

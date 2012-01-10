@@ -118,8 +118,7 @@ class Decoder(srd.Decoder):
     options = {}
 
     def __init__(self):
-        self.out_proto = None
-        self.out_ann = None
+        pass
 
     def start(self, metadata):
         self.rate = metadata['samplerate']
