@@ -127,11 +127,11 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	d->outputformats = NULL;
 
 	/* Convert class annotation attribute to GSList of **char */
-	d->annotation = NULL;
-	if (PyObject_HasAttrString(py_res, "annotation")) {
-		py_annlist = PyObject_GetAttrString(py_res, "annotation");
+	d->annotations = NULL;
+	if (PyObject_HasAttrString(py_res, "annotations")) {
+		py_annlist = PyObject_GetAttrString(py_res, "annotations");
 		if (!PyList_Check(py_annlist)) {
-			srd_err("Protocol decoder module %s annotation should be a list", name);
+			srd_err("Protocol decoder module %s annotations should be a list", name);
 			return SRD_ERR_PYTHON;
 		}
 		alen = PyList_Size(py_annlist);
@@ -145,7 +145,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 			if (py_strlist_to_char(py_ann, &ann) != SRD_OK)
 				return SRD_ERR_PYTHON;
-			d->annotation = g_slist_append(d->annotation, ann);
+			d->annotations = g_slist_append(d->annotations, ann);
 		}
 	}
 

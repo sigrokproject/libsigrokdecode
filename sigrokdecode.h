@@ -111,7 +111,7 @@ struct srd_decoder {
 	/* List of NULL-terminated char[], containing descriptions of the
 	 * supported annotation output.
 	 */
-	GSList *annotation;
+	GSList *annotations;
 
 	/** TODO */
 	PyObject *py_mod;

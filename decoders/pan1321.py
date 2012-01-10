@@ -45,7 +45,7 @@ class Decoder(sigrokdecode.Decoder):
     # ]
     options = {
     }
-    annotation = [
+    annotations = [
         # ANN_ASCII
         ["ASCII", "TODO: description"],
     ]

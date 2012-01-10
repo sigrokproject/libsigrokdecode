@@ -56,7 +56,7 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	}
 
 	ann_id = PyLong_AsLong(py_tmp);
-	if (!(pdo = g_slist_nth_data(di->decoder->annotation, ann_id))) {
+	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_id))) {
 		srd_err("Protocol decoder %s submitted data to non-existent annotation format %d",
 				di->decoder->name, ann_id);
 		return SRD_ERR_PYTHON;

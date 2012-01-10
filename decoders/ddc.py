@@ -37,7 +37,7 @@ class Decoder(sigrokdecode.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['ddc']
-    annotation = [
+    annotations = [
         ["Byte stream", "DDC byte stream as read from display."],
     ]
 

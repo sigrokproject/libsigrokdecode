@@ -217,7 +217,7 @@ class Decoder(sigrokdecode.Decoder):
         # TODO: Options to invert the signal(s).
         # ...
     }
-    annotation = [
+    annotations = [
         # ANN_ASCII
         ["ASCII", "TODO: description"],
         # ANN_DEC

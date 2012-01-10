@@ -137,7 +137,7 @@ class Decoder(sigrokdecode.Decoder):
     options = {
         'address-space': ['Address space (in bits)', 7],
     }
-    annotation = [
+    annotations = [
         # ANN_SHIFTED
         ["7-bit shifted hex",
          "Read/Write bit shifted out from the 8-bit i2c slave address"],
