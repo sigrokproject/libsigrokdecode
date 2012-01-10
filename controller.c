@@ -129,12 +129,12 @@ int set_modulepath(void)
  * Create a new protocol decoder instance.
  *
  * TODO: this should be a decoder name, as decoder ids will disappear.
- * @param id Decoder 'id' field.
- * @param instance_id optional unique identifier for this instance. If NULL,
- * the id parameter is used.
  *
- * @returns Pointer to a newly allocated struct srd_decoder_instance, or
- * NULL in case of failure.
+ * @param id Decoder 'id' field.
+ * @param instance_id Optional unique identifier for this instance. If NULL,
+ *        the 'id' parameter is used.
+ * @return Pointer to a newly allocated struct srd_decoder_instance, or
+ *         NULL in case of failure.
  */
 struct srd_decoder_instance *srd_instance_new(const char *id,
 		const char *instance_id)
