@@ -240,16 +240,10 @@ class Decoder(srd.Decoder):
             cmd = 'DATA_READ'
 
         self.put(self.out_proto, [cmd, d, ack_bit])
-        self.put(self.out_ann, [ANN_SHIFTED, [
-                '%s' % protocol[cmd][0],
-                '0x%02x' % d,
-                '%s' % protocol[ack_bit][0]]
-            ])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [
-                '%s' % protocol[cmd][1],
-                '0x%02x' % d,
-                '%s' % protocol[ack_bit][1]]
-            ])
+        self.put(self.out_ann, [ANN_SHIFTED,
+                 [protocol[cmd][0], '0x%02x' % d, protocol[ack_bit][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT,
+                 [protocol[cmd][1], '0x%02x' % d, protocol[ack_bit][1]]])
 
         self.bitcount = self.databyte = 0
         self.startsample = -1
