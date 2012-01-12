@@ -51,7 +51,7 @@ class Decoder(srd.Decoder):
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, ss, es, data):
         # HACK! At the moment the number of probes is not handled correctly.
         # E.g. if an input file (-i foo.sr) has more than two probes enabled.
         for (samplenum, (sdata, sck, x, y, z, a)) in data:
@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
 
             # If this is first bit, save timestamp
             if self.rxcount == 0:
-                self.time = timeoffset # FIXME
+                self.time = ss # FIXME
             # Receive bit into our shift register
             if sdata:
                 self.rxdata |= 1 << (7 - self.rxcount)
@@ -74,8 +74,8 @@ class Decoder(srd.Decoder):
             if self.rxcount != 8:
                 continue
             # Received a byte, pass up to sigrok
-            outdata = {'time':self.time,
-                'duration':timeoffset + duration - self.time,
+            outdata = {'time':self.time, # FIXME
+                'duration':ss + es - self.time, # FIXME
                 'data':self.rxdata,
                 'display':('%02X' % self.rxdata),
                 'type':'spi',

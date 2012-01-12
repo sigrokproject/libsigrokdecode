@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
         self.scount = 0
         self.packet = ''
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, ss, es, data):
         out = []
 
         # FIXME

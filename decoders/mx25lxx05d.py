@@ -310,7 +310,7 @@ class Decoder(srd.Decoder):
 
         self.out += o
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, ss, es, data):
         self.out = []
 
         # Iterate over all SPI MISO/MOSI packets. TODO: HOLD#, WP#/ACC?

@@ -416,7 +416,7 @@ class Decoder(srd.Decoder):
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
-    def decode(self, timeoffset, duration, data): # TODO
+    def decode(self, ss, es, data): # TODO
         # for (samplenum, (rx, tx)) in data:
         for (samplenum, (rx,)) in data:
 

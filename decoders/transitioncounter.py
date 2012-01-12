@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, ss, es, data):
 
         for (samplenum, s) in data:
 

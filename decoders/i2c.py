@@ -269,7 +269,7 @@ class Decoder(srd.Decoder):
         # TODO: 0-0 sample range for now.
         super(Decoder, self).put(0, 0, output_id, data)
 
-    def decode(self, timeoffset, duration, data):
+    def decode(self, ss, es, data):
         for samplenum, (scl, sda) in data:
             self.samplecnt += 1
 

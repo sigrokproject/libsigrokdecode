@@ -52,9 +52,9 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'ddc')
 
-    def decode(self, start_sample, end_sample, i2c_data):
+    def decode(self, ss, es, data):
         try:
-            cmd, data, ack_bit = i2c_data
+            cmd, data, ack_bit = data
         except Exception as e:
             raise Exception('malformed I2C input: %s' % str(e)) from e
 
@@ -74,6 +74,5 @@ class Decoder(srd.Decoder):
             if cmd == 'DATA_READ':
                 # There shouldn't be anything but data reads on this
                 # address, so ignore everything else.
-                self.put(start_sample, end_sample, self.out_ann,
-                         [0, ['0x%.2x' % data]])
+                self.put(ss, es, self.out_ann, [0, ['0x%.2x' % data]])
 
