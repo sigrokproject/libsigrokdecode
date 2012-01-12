@@ -31,9 +31,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['transitioncounts']
-    probes = [
-    ] # TODO?
+    probes = []
     options = {}
+    annotations = []
 
     def __init__(self, **kwargs):
         self.channels = -1

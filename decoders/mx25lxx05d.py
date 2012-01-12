@@ -159,7 +159,7 @@ miso_packets = [
 
 class Decoder(srd.Decoder):
     id = 'mx25lxx05d'
-    name = 'Macronix MX25Lxx05D'
+    name = 'MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D SPI flash chip decoder'
     desc = 'Macronix MX25Lxx05D SPI flash chip decoder'
     longdesc = 'TODO'
@@ -170,6 +170,7 @@ class Decoder(srd.Decoder):
     outputs = ['mx25lxx05d']
     probes = [] # TODO: HOLD#, WP#/ACC
     options = {} # TODO
+    annotations = []
 
     def __init__(self, **kwargs):
         self.state = IDLE

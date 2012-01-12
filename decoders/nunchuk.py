@@ -75,6 +75,7 @@ class Decoder(srd.Decoder):
     outputs = ['nunchuck']
     probes = [] # TODO
     options = {}
+    annotations = []
 
     def __init__(self, **kwargs):
         self.state = IDLE # TODO: Can we assume a certain initial state?

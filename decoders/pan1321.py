@@ -41,10 +41,8 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']
-    # probes = [
-    # ]
-    options = {
-    }
+    probes = []
+    options = {}
     annotations = [
         # ANN_ASCII
         ['ASCII', 'TODO: description'],

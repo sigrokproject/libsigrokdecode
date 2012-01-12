@@ -23,8 +23,8 @@ import sigrokdecode as srd
 class Decoder(srd.Decoder):
     id = 'spi'
     name = 'SPI'
-    desc = '...desc...'
     longname = 'Serial Peripheral Interface (SPI) bus'
+    desc = '...desc...'
     longdesc = '...longdesc...'
     author = 'Gareth McMullin'
     email = 'gareth@blacksphere.co.nz'
@@ -36,6 +36,7 @@ class Decoder(srd.Decoder):
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
     ]
     options = {}
+    annotations = []
 
     def __init__(self):
         self.oldsck = 1

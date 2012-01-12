@@ -104,8 +104,8 @@ def packet_decode(packet):
 class Decoder(srd.Decoder):
     id = 'usb'
     name = 'USB'
-    desc = 'Universal Serial Bus'
     longname = '...longname...'
+    desc = 'Universal Serial Bus'
     longdesc = '...longdesc...'
     author = 'Gareth McMullin'
     email = 'gareth@blacksphere.co.nz'
@@ -117,6 +117,7 @@ class Decoder(srd.Decoder):
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
     options = {}
+    annotations = []
 
     def __init__(self):
         pass

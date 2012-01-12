@@ -120,7 +120,7 @@ FIND_DATA = 2
 class Decoder(srd.Decoder):
     id = 'i2c'
     name = 'I2C'
-    longname = 'Inter-Integrated Circuit (I2C) bus'
+    longname = 'Inter-Integrated Circuit'
     desc = 'I2C is a two-wire, multi-master, serial bus.'
     longdesc = '...'
     author = 'Uwe Hermann'
