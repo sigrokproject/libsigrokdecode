@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         # ANN_ASCII
-        ["ASCII", "TODO: description"],
+        ['ASCII', 'TODO: description'],
     ]
 
     def __init__(self, **kwargs):

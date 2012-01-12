@@ -52,28 +52,30 @@ syms = {
 }
 
 def bitstr_to_num(bitstr):
-    if not bitstr: return 0
+    if not bitstr:
+        return 0
     l = list(bitstr)
     l.reverse()
     return int(''.join(l), 2)
 
 def packet_decode(packet):
     pids = {
-        '10000111':'OUT',      # Tokens
-        '10010110':'IN',
-        '10100101':'SOF',
-        '10110100':'SETUP',
-        '11000011':'DATA0',    # Data
-        '11010010':'DATA1',
-        '01001011':'ACK',      # Handshake
-        '01011010':'NAK',
-        '01111000':'STALL',
-        '01101001':'NYET',
+        '10000111': 'OUT',      # Tokens
+        '10010110': 'IN',
+        '10100101': 'SOF',
+        '10110100': 'SETUP',
+        '11000011': 'DATA0',    # Data
+        '11010010': 'DATA1',
+        '01001011': 'ACK',      # Handshake
+        '01011010': 'NAK',
+        '01111000': 'STALL',
+        '01101001': 'NYET',
     }
 
     sync = packet[:8]
     pid = packet[8:16]
     pid = pids.get(pid, pid)
+
     # Remove CRC.
     if pid in ('OUT', 'IN', 'SOF', 'SETUP'):
         data = packet[16:-5]
@@ -82,20 +84,20 @@ def packet_decode(packet):
         else:
             dev = bitstr_to_num(data[:7])
             ep = bitstr_to_num(data[7:])
-            data = "DEV %d EP %d" % (dev, ep)
+            data = 'DEV %d EP %d' % (dev, ep)
 
     elif pid in ('DATA0', 'DATA1'):
         data = packet[16:-16]
-        tmp = ""
+        tmp = ''
         while data:
-            tmp += "%02X " % bitstr_to_num(data[:8])
+            tmp += '%02X ' % bitstr_to_num(data[:8])
             data = data[8:]
         data = tmp
     else:
         data = packet[16:]
 
-    if sync != "00000001":
-        return "SYNC INVALID!"
+    if sync != '00000001':
+        return 'SYNC INVALID!'
 
     return pid + ' ' + data
 
@@ -110,7 +112,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb']
-    # Probe names with a set of defaults
     probes = [
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
@@ -125,7 +126,7 @@ class Decoder(srd.Decoder):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
         if self.rate < 48000000:
-            raise Exception("Sample rate not sufficient for USB decoding")
+            raise Exception('Sample rate not sufficient for USB decoding')
         # Initialise decoder state.
         self.sym = J
         self.scount = 0
@@ -159,11 +160,11 @@ class Decoder(srd.Decoder):
             if self.sym == SE0:
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
-                    out += [{"type":"usb", "data":self.packet,
-                              "display":packet_decode(self.packet)}]
+                    out += [{'type': 'usb', 'data': self.packet,
+                             'display': packet_decode(self.packet)}]
                 else:
                     # Longer than EOP, assume reset.
-                    out += [{"type":"usb", "display":"RESET"}]
+                    out += [{'type': 'usb', 'display': 'RESET'}]
                 self.scount = 0
                 self.sym = sym
                 self.packet = ''
@@ -175,7 +176,7 @@ class Decoder(srd.Decoder):
             if bitcount < 6 and sym != SE0:
                 self.packet += '0'
             elif bitcount > 6:
-                out += [{"type":"usb", "display":"BIT STUFF ERROR"}]
+                out += [{'type': 'usb', 'display': 'BIT STUFF ERROR'}]
 
             self.scount = 0
             self.sym = sym

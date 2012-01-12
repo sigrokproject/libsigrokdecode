@@ -23,22 +23,24 @@
 # This decoder extracts a DDC stream from an I2C session between a computer
 # and a display device. The stream is output as plain bytes.
 #
+# Details:
+# https://en.wikipedia.org/wiki/Display_Data_Channel
+#
 
 import sigrokdecode as srd
-
 
 class Decoder(srd.Decoder):
     id = 'ddc'
     name = 'DDC'
     longname = 'Display Data Channel'
-    desc = 'DDC is a protocol for communication between computers and displays.'
+    desc = 'A protocol for communication between computers and displays.'
     longdesc = ''
     author = 'Bert Vermeulen <bert@biot.com>'
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['ddc']
     annotations = [
-        ["Byte stream", "DDC byte stream as read from display."],
+        ['Byte stream', 'DDC byte stream as read from display.'],
     ]
 
     def __init__(self, **kwargs):
@@ -51,10 +53,10 @@ class Decoder(srd.Decoder):
         try:
             cmd, data, ack_bit = i2c_data
         except Exception as e:
-            raise Exception("malformed I2C input: %s" % str(e)) from e
+            raise Exception('malformed I2C input: %s' % str(e)) from e
 
         if self.state is None:
-            # waiting for the DDC session to start
+            # Wait for the DDC session to start.
             if cmd in ('START', 'START_REPEAT'):
                 self.state = 'start'
         elif self.state == 'start':
@@ -63,12 +65,12 @@ class Decoder(srd.Decoder):
                 # so this marks the start of the DDC data transfer.
                 self.state = 'transfer'
             elif cmd == 'STOP':
-                # back to idle
+                # Got back to the idle state.
                 self.state = None
         elif self.state == 'transfer':
             if cmd == 'DATA_READ':
-                # there shouldn't be anything but data reads on this
-                # address, so ignore everything else
+                # There shouldn't be anything but data reads on this
+                # address, so ignore everything else.
                 self.put(start_sample, end_sample, self.out_ann,
-                         [0, ["0x%.2x" % data]])
+                         [0, ['0x%.2x' % data]])
 

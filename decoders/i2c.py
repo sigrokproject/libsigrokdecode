@@ -75,49 +75,47 @@
 # The protocol output consists of a (Python) list of I2C "packets", each of
 # which is of the form
 #
-#        [ _i2c_command_, _data_, _ack_bit_ ]
+#        [<i2c_command>, <data>, <ack_bit>]
 #
-# _i2c_command_ is one of:
+# <i2c_command> is one of:
 #   - 'START' (START condition)
 #   - 'START_REPEAT' (Repeated START)
-#   - 'ADDRESS_READ' (Address, read)
-#   - 'ADDRESS_WRITE' (Address, write)
+#   - 'ADDRESS_READ' (Slave address, read)
+#   - 'ADDRESS_WRITE' (Slave address, write)
 #   - 'DATA_READ' (Data, read)
 #   - 'DATA_WRITE' (Data, write)
 #   - 'STOP' (STOP condition)
 #
-# _data_ is the data or address byte associated with the ADDRESS_* and DATA_*
+# <data> is the data or address byte associated with the ADDRESS_* and DATA_*
 # command. For START, START_REPEAT and STOP, this is None.
 #
-# _ack_bit_ is either 'ACK' or 'NACK', but may also be None.
-#
+# <ack_bit> is either 'ACK' or 'NACK', but may also be None.
 #
 
 import sigrokdecode as srd
 
-# annotation feed formats
+# Annotation feed formats
 ANN_SHIFTED       = 0
 ANN_SHIFTED_SHORT = 1
 ANN_RAW           = 2
 
-# values are verbose and short annotation, respectively
+# Values are verbose and short annotation, respectively.
 protocol = {
-    'START':           ['START',        'S'],
-    'START_REPEAT':    ['START REPEAT', 'Sr'],
-    'STOP':            ['STOP',         'P'],
-    'ACK':             ['ACK',          'A'],
-    'NACK':            ['NACK',         'N'],
-    'ADDRESS_READ':    ['ADDRESS READ', 'AR'],
-    'ADDRESS_WRITE':   ['ADDRESS WRITE','AW'],
-    'DATA_READ':       ['DATA READ',    'DR'],
-    'DATA_WRITE':      ['DATA WRITE',   'DW'],
+    'START':           ['START',         'S'],
+    'START_REPEAT':    ['START REPEAT',  'Sr'],
+    'STOP':            ['STOP',          'P'],
+    'ACK':             ['ACK',           'A'],
+    'NACK':            ['NACK',          'N'],
+    'ADDRESS_READ':    ['ADDRESS READ',  'AR'],
+    'ADDRESS_WRITE':   ['ADDRESS WRITE', 'AW'],
+    'DATA_READ':       ['DATA READ',     'DR'],
+    'DATA_WRITE':      ['DATA WRITE',    'DW'],
 }
 
 # States
 FIND_START = 0
 FIND_ADDRESS = 1
 FIND_DATA = 2
-
 
 class Decoder(srd.Decoder):
     id = 'i2c'
@@ -139,13 +137,13 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         # ANN_SHIFTED
-        ["7-bit shifted hex",
-         "Read/Write bit shifted out from the 8-bit i2c slave address"],
+        ['7-bit shifted hex',
+         'Read/write bit shifted out from the 8-bit I2C slave address'],
         # ANN_SHIFTED_SHORT
-        ["7-bit shifted hex (short)",
-         "Read/Write bit shifted out from the 8-bit i2c slave address"],
+        ['7-bit shifted hex (short)',
+         'Read/write bit shifted out from the 8-bit I2C slave address'],
         # ANN_RAW
-        ["Raw hex", "Unaltered raw data"]
+        ['Raw hex', 'Unaltered raw data'],
     ]
 
     def __init__(self, **kwargs):
@@ -167,19 +165,19 @@ class Decoder(srd.Decoder):
         pass
 
     def is_start_condition(self, scl, sda):
-        """START condition (S): SDA = falling, SCL = high"""
+        # START condition (S): SDA = falling, SCL = high
         if (self.oldsda == 1 and sda == 0) and scl == 1:
             return True
         return False
 
     def is_data_bit(self, scl, sda):
-        """Data sampling of receiver: SCL = rising"""
+        # Data sampling of receiver: SCL = rising
         if self.oldscl == 0 and scl == 1:
             return True
         return False
 
     def is_stop_condition(self, scl, sda):
-        """STOP condition (P): SDA = rising, SCL = high"""
+        # STOP condition (P): SDA = rising, SCL = high
         if (self.oldsda == 0 and sda == 1) and scl == 1:
             return True
         return False
@@ -189,9 +187,10 @@ class Decoder(srd.Decoder):
             cmd = 'START_REPEAT'
         else:
             cmd = 'START'
-        self.put(self.out_proto, [ cmd, None, None ])
-        self.put(self.out_ann, [ ANN_SHIFTED, [protocol[cmd][0]] ])
-        self.put(self.out_ann, [ ANN_SHIFTED_SHORT, [protocol[cmd][1]] ])
+
+        self.put(self.out_proto, [cmd, None, None])
+        self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1]]])
 
         self.state = FIND_ADDRESS
         self.bitcount = self.databyte = 0
@@ -199,10 +198,10 @@ class Decoder(srd.Decoder):
         self.wr = -1
 
     def found_address_or_data(self, scl, sda):
-        """Gather 8 bits of data plus the ACK/NACK bit."""
+        # Gather 8 bits of data plus the ACK/NACK bit.
 
         if self.startsample == -1:
-            # TODO: should be samplenum, as received from the feed
+            # TODO: Should be samplenum, as received from the feed.
             self.startsample = self.samplecnt
         self.bitcount += 1
 
@@ -212,11 +211,11 @@ class Decoder(srd.Decoder):
 
         # Return if we haven't collected all 8 + 1 bits, yet.
         if self.bitcount != 9:
-            return []
+            return
 
-        # send raw output annotation before we start shifting out
-        # read/write and ack/nack bits
-        self.put(self.out_ann, [ANN_RAW, ["0x%.2x" % self.databyte]])
+        # Send raw output annotation before we start shifting out
+        # read/write and ack/nack bits.
+        self.put(self.out_ann, [ANN_RAW, ['0x%.2x' % self.databyte]])
 
         # We received 8 address/data bits and the ACK/NACK bit.
         self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
@@ -234,13 +233,12 @@ class Decoder(srd.Decoder):
             # TODO: Error?
             pass
 
-        # last bit that came in was the ACK/NACK bit (1 = NACK)
+        # Last bit that came in was the ACK/NACK bit (1 = NACK).
         if sda == 1:
             ack_bit = 'NACK'
         else:
             ack_bit = 'ACK'
 
-        # TODO: Simplify.
         if self.state == FIND_ADDRESS and self.wr == 1:
             cmd = 'ADDRESS_WRITE'
         elif self.state == FIND_ADDRESS and self.wr == 0:
@@ -249,17 +247,18 @@ class Decoder(srd.Decoder):
             cmd = 'DATA_WRITE'
         elif self.state == FIND_DATA and self.wr == 0:
             cmd = 'DATA_READ'
-        self.put(self.out_proto, [ cmd, d, ack_bit ] )
+
+        self.put(self.out_proto, [cmd, d, ack_bit])
         self.put(self.out_ann, [ANN_SHIFTED, [
-                "%s" % protocol[cmd][0],
-                "0x%02x" % d,
-                "%s" % protocol[ack_bit][0]]
-            ] )
+                '%s' % protocol[cmd][0],
+                '0x%02x' % d,
+                '%s' % protocol[ack_bit][0]]
+            ])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [
-                "%s" % protocol[cmd][1],
-                "0x%02x" % d,
-                "%s" % protocol[ack_bit][1]]
-            ] )
+                '%s' % protocol[cmd][1],
+                '0x%02x' % d,
+                '%s' % protocol[ack_bit][1]]
+            ])
 
         self.bitcount = self.databyte = 0
         self.startsample = -1
@@ -272,17 +271,17 @@ class Decoder(srd.Decoder):
             pass
 
     def found_stop(self, scl, sda):
-        self.put(self.out_proto, [ 'STOP', None, None ])
-        self.put(self.out_ann, [ ANN_SHIFTED, [protocol['STOP'][0]] ])
-        self.put(self.out_ann, [ ANN_SHIFTED_SHORT, [protocol['STOP'][1]] ])
+        self.put(self.out_proto, ['STOP', None, None])
+        self.put(self.out_ann, [ANN_SHIFTED, [protocol['STOP'][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol['STOP'][1]]])
 
         self.state = FIND_START
         self.is_repeat_start = 0
         self.wr = -1
 
     def put(self, output_id, data):
-        # inject sample range into the call up to sigrok
-        # TODO: 0-0 sample range for now
+        # Inject sample range into the call up to sigrok.
+        # TODO: 0-0 sample range for now.
         super(Decoder, self).put(0, 0, output_id, data)
 
     def decode(self, timeoffset, duration, data):

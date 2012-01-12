@@ -219,15 +219,15 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         # ANN_ASCII
-        ["ASCII", "TODO: description"],
+        ['ASCII', 'TODO: description'],
         # ANN_DEC
-        ["Decimal", "TODO: description"],
+        ['Decimal', 'TODO: description'],
         # ANN_HEX
-        ["Hex", "TODO: description"],
+        ['Hex', 'TODO: description'],
         # ANN_OCT
-        ["Octal", "TODO: description"],
+        ['Octal', 'TODO: description'],
         # ANN_BITS
-        ["Bits", "TODO: description"],
+        ['Bits', 'TODO: description'],
     ]
 
     def __init__(self, **kwargs):
