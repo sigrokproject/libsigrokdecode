@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2010-2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -39,29 +39,6 @@ NUNCHUK_SLAVE = 2
 INIT = 3
 INITIALIZED = 4
 
-# FIXME: This is just some example input for testing purposes...
-example_packets = [
-    # START condition.
-    {'type': 'S',  'range': (10, 11), 'data': None, 'ann': ''},
-
-    # Nunchuk init: Write 0x40,0x00 to slave address 0x54.
-    {'type': 'AW', 'range': (12, 13), 'data': 0x54, 'ann': ''},
-    {'type': 'DW', 'range': (14, 15), 'data': 0x40, 'ann': ''},
-    {'type': 'AW', 'range': (16, 17), 'data': 0x54, 'ann': ''},
-    {'type': 'DW', 'range': (18, 19), 'data': 0x00, 'ann': ''},
-
-    # Get data: Read 6 bytes of data.
-    {'type': 'DR', 'range': (20, 21), 'data': 0x11, 'ann': ''},
-    {'type': 'DR', 'range': (22, 23), 'data': 0x22, 'ann': ''},
-    {'type': 'DR', 'range': (24, 25), 'data': 0x33, 'ann': ''},
-    {'type': 'DR', 'range': (26, 27), 'data': 0x44, 'ann': ''},
-    {'type': 'DR', 'range': (28, 29), 'data': 0x55, 'ann': ''},
-    {'type': 'DR', 'range': (30, 31), 'data': 0x66, 'ann': ''},
-
-    # STOP condition.
-    {'type': 'P',  'range': (32, 33), 'data': None, 'ann': ''},
-]
-
 class Decoder(srd.Decoder):
     id = 'nunchuk'
     name = 'Nunchuk'
@@ -75,13 +52,13 @@ class Decoder(srd.Decoder):
     outputs = ['nunchuck']
     probes = [] # TODO
     options = {}
-    annotations = []
+    annotations = [
+        ['TODO', 'TODO'], 
+    ]
 
     def __init__(self, **kwargs):
         self.state = IDLE # TODO: Can we assume a certain initial state?
-
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
-
         self.databytecount = 0
 
     def start(self, metadata):
@@ -92,84 +69,78 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        out = []
-        o = {}
 
-        # We should accept a list of samples and iterate...
-        for p in example_packets: # TODO
+        cmd, databyte, ack_bit = data
 
-            # TODO: Eliminate the need for ord().
-            # s = ord(sample.data)
+        if cmd == 'START': # TODO: Handle 'Sr' here, too?
+            self.state = START
 
-            if p['type'] == 'S': # TODO: Handle 'Sr' here, too?
-                self.state = START
+        elif cmd == 'START_REPEAT':
+            pass # FIXME
 
-            elif p['type'] == 'Sr':
-                pass # FIXME
+        elif cmd == 'ADDRESS_READ':
+            # TODO: Error/Warning, not supported, I think.
+            pass
 
-            elif p['type'] == 'AR':
-                # TODO: Error/Warning, not supported, I think.
-                pass
+        elif cmd == 'ADDRESS_WRITE':
+            # The Wii Nunchuk always has slave address 0x54.
+            # TODO: Handle this stuff more correctly.
+            if databyte == 0x54:
+                pass # TODO
+            else:
+                pass # TODO: What to do here? Ignore? Error?
 
-            elif p['type'] == 'AW':
-                # The Wii Nunchuk always has slave address 0x54.
-                # TODO: Handle this stuff more correctly.
-                if p['data'] == 0x54:
-                    pass # TODO
-                else:
-                    pass # TODO: What to do here? Ignore? Error?
+        elif cmd == 'DATA_READ' and self.state == INITIALIZED:
+            if self.databytecount == 0:
+                self.sx = databyte
+            elif self.databytecount == 1:
+                self.sy = databyte
+            elif self.databytecount == 2:
+                self.ax = databyte << 2
+            elif self.databytecount == 3:
+                self.ay = databyte << 2
+            elif self.databytecount == 4:
+                self.az = databyte << 2
+            elif self.databytecount == 5:
+                self.bz =  (databyte & (1 << 0)) >> 0
+                self.bc =  (databyte & (1 << 1)) >> 1
+                self.ax |= (databyte & (3 << 2)) >> 2
+                self.ay |= (databyte & (3 << 4)) >> 4
+                self.az |= (databyte & (3 << 6)) >> 6
 
-            elif p['type'] == 'DR' and self.state == INITIALIZED:
-                if self.databytecount == 0:
-                    self.sx = p['data']
-                elif self.databytecount == 1:
-                    self.sy = p['data']
-                elif self.databytecount == 2:
-                    self.ax = p['data'] << 2
-                elif self.databytecount == 3:
-                    self.ay = p['data'] << 2
-                elif self.databytecount == 4:
-                    self.az = p['data'] << 2
-                elif self.databytecount == 5:
-                    self.bz =  (p['data'] & (1 << 0)) >> 0
-                    self.bc =  (p['data'] & (1 << 1)) >> 1
-                    self.ax |= (p['data'] & (3 << 2)) >> 2
-                    self.ay |= (p['data'] & (3 << 4)) >> 4
-                    self.az |= (p['data'] & (3 << 6)) >> 6
-                    # del o
-                    o = {'type': 'D', 'range': (0, 0), 'data': []}
-                    o['data'] = [self.sx, self.sy, self.ax, self.ay, \
-                                 self.az, self.bz, self.bc]
-                    # sx = sy = ax = ay = az = bz = bc = 0
-                else:
-                    pass # TODO
+                d = 'sx = 0x%02x, sy = 0x%02x, ax = 0x%02x, ay = 0x%02x, ' \
+                    'az = 0x%02x, bz = 0x%02x, bc = 0x%02x' % (self.sx, \
+                    self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
+                self.put(ss, es, self.out_ann, [0, [d]])
 
-                if 0 <= self.databytecount <= 5:
-                    self.databytecount += 1
+                self.sx = self.sy = self.ax = self.ay = self.az = 0
+                self.bz = self.bc = 0
+            else:
+                pass # TODO
 
-                # TODO: If 6 bytes read -> save and reset
+            if 0 <= self.databytecount <= 5:
+                self.databytecount += 1
 
-            # TODO
-            elif p['type'] == 'DR' and self.state != INITIALIZED:
-                pass
+            # TODO: If 6 bytes read -> save and reset
 
-            elif p['type'] == 'DW':
-                if p['data'] == 0x40 and self.state == START:
-                    self.state = INIT
-                elif p['data'] == 0x00 and self.state == INIT:
-                    o = {'type': 'I', 'range': (0, 0), 'data': []}
-                    o['data'] = [0x40, 0x00]
-                    out.append(o)
-                    self.state = INITIALIZED
-                else:
-                    pass # TODO
+        # TODO
+        elif cmd == 'DATA_READ' and self.state != INITIALIZED:
+            pass
 
-            elif p['type'] == 'P':
-                out.append(o)
+        elif cmd == 'DATA_WRITE':
+            if self.state == IDLE:
                 self.state = INITIALIZED
-                self.databytecount = 0
+            return
+    
+            if databyte == 0x40 and self.state == START:
+                self.state = INIT
+            elif databyte == 0x00 and self.state == INIT:
+                self.put(ss, es, self.out_ann, [0, ['Initialize nunchuk']])
+                self.state = INITIALIZED
+            else:
+                pass # TODO
 
-        if out != []:
-            # self.put(0, 0, self.out_proto, out_proto)
-            self.put(0, 0, self.out_ann, out)
+        elif cmd == 'STOP':
+            self.state = INITIALIZED
+            self.databytecount = 0
 
