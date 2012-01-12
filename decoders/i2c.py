@@ -183,10 +183,7 @@ class Decoder(srd.Decoder):
         return False
 
     def found_start(self, scl, sda):
-        if self.is_repeat_start == 1:
-            cmd = 'START_REPEAT'
-        else:
-            cmd = 'START'
+        cmd = 'START_REPEAT' if (self.is_repeat_start == 1) else 'START'
 
         self.put(self.out_proto, [cmd, None, None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
@@ -222,10 +219,7 @@ class Decoder(srd.Decoder):
 
         if self.state == FIND_ADDRESS:
             # The READ/WRITE bit is only in address bytes, not data bytes.
-            if self.databyte & 1:
-                self.wr = 0
-            else:
-                self.wr = 1
+            self.wr = 0 if (self.databyte & 1) else 1
             d = self.databyte >> 1
         elif self.state == FIND_DATA:
             d = self.databyte
@@ -234,10 +228,7 @@ class Decoder(srd.Decoder):
             pass
 
         # Last bit that came in was the ACK/NACK bit (1 = NACK).
-        if sda == 1:
-            ack_bit = 'NACK'
-        else:
-            ack_bit = 'ACK'
+        ack_bit = 'NACK' if (sda == 1) else 'ACK'
 
         if self.state == FIND_ADDRESS and self.wr == 1:
             cmd = 'ADDRESS_WRITE'
