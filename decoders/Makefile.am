@@ -22,6 +22,7 @@ pkgdatadir = $(DECODERS_DIR)
 
 # Please keep this list in alphabetical order.
 dist_pkgdata_DATA = \
+	dcf77.py \
 	ddc.py \
 	i2c.py \
 	mx25lxx05d.py \
