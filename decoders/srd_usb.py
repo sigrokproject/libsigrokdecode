@@ -53,6 +53,20 @@ syms = {
         (1, 1): SE1,
 }
 
+# ...
+pids = {
+    '10000111': 'OUT',      # Tokens
+    '10010110': 'IN',
+    '10100101': 'SOF',
+    '10110100': 'SETUP',
+    '11000011': 'DATA0',    # Data
+    '11010010': 'DATA1',
+    '01001011': 'ACK',      # Handshake
+    '01011010': 'NAK',
+    '01111000': 'STALL',
+    '01101001': 'NYET',
+}
+
 def bitstr_to_num(bitstr):
     if not bitstr:
         return 0
@@ -61,19 +75,6 @@ def bitstr_to_num(bitstr):
     return int(''.join(l), 2)
 
 def packet_decode(packet):
-    pids = {
-        '10000111': 'OUT',      # Tokens
-        '10010110': 'IN',
-        '10100101': 'SOF',
-        '10110100': 'SETUP',
-        '11000011': 'DATA0',    # Data
-        '11010010': 'DATA1',
-        '01001011': 'ACK',      # Handshake
-        '01011010': 'NAK',
-        '01111000': 'STALL',
-        '01101001': 'NYET',
-    }
-
     sync = packet[:8]
     pid = packet[8:16]
     pid = pids.get(pid, pid)
