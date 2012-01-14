@@ -32,7 +32,8 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['spi']
     probes = [
-        {'id': 'sdata', 'name': 'DATA', 'desc': 'SPI data line (MISO or MOSI)'},
+        {'id': 'mosi', 'name': 'MOSI',
+         'desc': 'SPI MOSI line (Master out, slave in)'},
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
     ]
     options = {}
@@ -56,11 +57,11 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         # HACK! At the moment the number of probes is not handled correctly.
         # E.g. if an input file (-i foo.sr) has more than two probes enabled.
-        # for (samplenum, (sdata, sck, x, y, z, a)) in data:
+        # for (samplenum, (mosi, sck, x, y, z, a)) in data:
         # for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
-        for (samplenum, (cs, miso, sck, sdata, wp, hold)) in data:
+        for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
 
-            # Sample SDATA on rising SCK.
+            # Sample data on rising SCK edges.
             if sck == self.oldsck:
                 continue
             self.oldsck = sck
@@ -72,7 +73,7 @@ class Decoder(srd.Decoder):
                 self.time = samplenum
 
             # Receive bit into our shift register.
-            if sdata == 1:
+            if mosi == 1:
                 self.mosidata |= 1 << (7 - self.bitcount)
 
             self.bitcount += 1
