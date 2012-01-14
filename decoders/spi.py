@@ -2,6 +2,7 @@
 ## This file is part of the sigrok project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,6 +20,9 @@
 ##
 
 import sigrokdecode as srd
+
+# Annotation formats
+ANN_HEX = 0
 
 class Decoder(srd.Decoder):
     id = 'spi'
@@ -41,17 +45,19 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['TODO', 'TODO'],
+        ['Hex', 'SPI data bytes in hex format'],
     ]
 
     def __init__(self):
         self.oldsck = 1
         self.bitcount = 0
         self.mosidata = 0
+        self.misodata = 0
         self.bytesreceived = 0
+        self.samplenum = -1
 
     def start(self, metadata):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
+        self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
 
     def report(self):
@@ -64,6 +70,8 @@ class Decoder(srd.Decoder):
         # for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
         for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
 
+            self.samplenum += 1 # FIXME
+
             # Sample data on rising SCK edges.
             if sck == self.oldsck:
                 continue
@@ -71,13 +79,15 @@ class Decoder(srd.Decoder):
             if sck == 0:
                 continue
 
-            # If this is the first bit, save timestamp.
+            # If this is the first bit, save its sample number.
             if self.bitcount == 0:
-                self.time = samplenum
+                self.start_sample = samplenum
 
             # Receive bit into our shift register.
             if mosi == 1:
                 self.mosidata |= 1 << (7 - self.bitcount)
+            if miso == 1:
+                self.misodata |= 1 << (7 - self.bitcount)
 
             self.bitcount += 1
 
@@ -85,11 +95,15 @@ class Decoder(srd.Decoder):
             if self.bitcount != 8:
                 continue
 
-            # self.put(0, 0, self.out_proto, out_proto) # TODO
-            self.put(0, 0, self.out_ann, [0, ['0x%02x' % self.mosidata]])
+            self.put(self.start_sample, self.samplenum, self.out_proto,
+                     ['data', self.mosidata, self.misodata])
+            self.put(self.start_sample, self.samplenum, self.out_ann,
+                     [ANN_HEX, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
+                     self.misodata)]])
 
             # Reset decoder state.
             self.mosidata = 0
+            self.misodata = 0
             self.bitcount = 0
 
             # Keep stats for summary.
