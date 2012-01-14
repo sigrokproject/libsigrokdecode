@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.oldsck = 1
         self.bitcount = 0
-        self.rxdata = 0
+        self.mosidata = 0
         self.bytesreceived = 0
 
     def start(self, metadata):
@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
 
             # Receive bit into our shift register.
             if sdata == 1:
-                self.rxdata |= 1 << (7 - self.bitcount)
+                self.mosidata |= 1 << (7 - self.bitcount)
 
             self.bitcount += 1
 
@@ -82,10 +82,10 @@ class Decoder(srd.Decoder):
                 continue
 
             # self.put(0, 0, self.out_proto, out_proto) # TODO
-            self.put(0, 0, self.out_ann, [0, ['0x%02x' % self.rxdata]])
+            self.put(0, 0, self.out_ann, [0, ['0x%02x' % self.mosidata]])
 
             # Reset decoder state.
-            self.rxdata = 0
+            self.mosidata = 0
             self.bitcount = 0
 
             # Keep stats for summary.
