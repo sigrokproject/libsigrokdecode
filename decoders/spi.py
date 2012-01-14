@@ -36,7 +36,9 @@ class Decoder(srd.Decoder):
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
     ]
     options = {}
-    annotations = []
+    annotations = [
+        ['TODO', 'TODO'],
+    ]
 
     def __init__(self):
         self.oldsck = 1
@@ -54,37 +56,38 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         # HACK! At the moment the number of probes is not handled correctly.
         # E.g. if an input file (-i foo.sr) has more than two probes enabled.
-        for (samplenum, (sdata, sck, x, y, z, a)) in data:
+        # for (samplenum, (sdata, sck, x, y, z, a)) in data:
+        # for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
+        for (samplenum, (cs, miso, sck, sdata, wp, hold)) in data:
 
-            # Sample SDATA on rising SCK
+            # Sample SDATA on rising SCK.
             if sck == self.oldsck:
                 continue
             self.oldsck = sck
-            if not sck:
+            if sck == 0:
                 continue
 
-            # If this is first bit, save timestamp
+            # If this is the first bit, save timestamp.
             if self.rxcount == 0:
-                self.time = ss # FIXME
-            # Receive bit into our shift register
-            if sdata:
+                self.time = samplenum
+
+            # Receive bit into our shift register.
+            if sdata == 1:
                 self.rxdata |= 1 << (7 - self.rxcount)
+
             self.rxcount += 1
-            # Continue to receive if not a byte yet
+
+            # Continue to receive if not a byte yet.
             if self.rxcount != 8:
                 continue
-            # Received a byte, pass up to sigrok
-            outdata = {'time':self.time, # FIXME
-                'duration':ss + es - self.time, # FIXME
-                'data':self.rxdata,
-                'display':('%02X' % self.rxdata),
-                'type':'spi',
-            }
-            # self.put(0, 0, self.out_proto, out_proto)
-            self.put(0, 0, self.out_ann, outdata)
-            # Reset decoder state
+
+            # self.put(0, 0, self.out_proto, out_proto) # TODO
+            self.put(0, 0, self.out_ann, [0, ['0x%02x' % self.rxdata]])
+
+            # Reset decoder state.
             self.rxdata = 0
             self.rxcount = 0
-            # Keep stats for summary
+
+            # Keep stats for summary.
             self.bytesreceived += 1
 
