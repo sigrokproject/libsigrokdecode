@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2011 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -101,62 +101,6 @@ device_name = {
     0x16: 'MX25L6405D',
 }
 
-# FIXME: This is just some example input for testing purposes...
-
-mosi_packets = [
-    # REMS
-    {'type': 'D',  'range': (100, 110), 'data': 0x90, 'ann': ''},
-    {'type': 'D',  'range': (120, 130), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (170, 180), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (190, 200), 'data': 0x00, 'ann': ''},
-    {'type': 'D',  'range': (400, 410), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (411, 421), 'data': 0xff, 'ann': ''},
-    # RDID
-    {'type': 'D',  'range': (10, 11), 'data': 0x9f, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    # SE
-    {'type': 'D',  'range': (10, 11), 'data': 0x20, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x12, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x34, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x56, 'ann': ''},
-    # SE
-    {'type': 'D',  'range': (10, 11), 'data': 0x20, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x44, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x55, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x66, 'ann': ''},
-    # WREN
-    {'type': 'D',  'range': (10, 11), 'data': 0x06, 'ann': ''},
-]
-
-miso_packets = [
-    # REMS
-    {'type': 'D',  'range': (100, 110), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (120, 130), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (170, 180), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (190, 200), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (400, 410), 'data': 0xc2, 'ann': ''},
-    {'type': 'D',  'range': (411, 421), 'data': 0x14, 'ann': ''},
-    # RDID
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xc2, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x20, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0x15, 'ann': ''},
-    # SE
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    # SE
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-    # WREN
-    {'type': 'D',  'range': (10, 11), 'data': 0xff, 'ann': ''},
-]
-
 class Decoder(srd.Decoder):
     id = 'mx25lxx05d'
     name = 'MX25Lxx05D'
@@ -170,12 +114,13 @@ class Decoder(srd.Decoder):
     outputs = ['mx25lxx05d']
     probes = [] # TODO: HOLD#, WP#/ACC
     options = {} # TODO
-    annotations = []
+    annotations = [
+        ['TODO', 'TODO'],
+    ]
 
     def __init__(self, **kwargs):
         self.state = IDLE
         self.cmdstate = 1 # TODO
-        self.out = []
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mx25lxx05d')
@@ -184,172 +129,146 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def handle_wren(self, miso_packet, mosi_packet):
-        self.out += [{'type': self.cmd, 'range': mosi_packet['range'],
-                      'data': None, 'ann': cmds[self.state]}]
+    def putann(self, data):
+        # Simplification, most annotations span extactly one SPI byte/packet.
+        self.put(self.ss, self.es, self.out_ann, data)
+
+    def handle_wren(self, mosi, miso):
+        self.putann([0, ['Command: %s' % cmds[self.cmd]]])
         self.state = IDLE
 
     # TODO: Check/display device ID / name
-    def handle_rdid(self, miso_packet, mosi_packet):
-        ## self.state = IDLE
-        ## return # FIXME
-
+    def handle_rdid(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = mosi_packet['range'][0]
-            o = [] # TODO
+            self.start_sample = self.ss
+            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
-            o = [{'type': self.cmd, 'range': miso_packet['range'],
-                  'data': miso_packet['data'], 'ann': 'Manufacturer ID'}]
+            self.putann([0, ['Manufacturer ID: 0x%02x' % miso]])
         elif self.cmdstate == 3:
             # Byte 3: Slave sends the memory type (0x20 for this chip).
-            o = [{'type': self.cmd, 'range': miso_packet['range'],
-                  'data': miso_packet['data'], 'ann': 'Memory type'}]
+            self.putann([0, ['Memory type: 0x%02x' % miso]])
         elif self.cmdstate == 4:
             # Byte 4: Slave sends the device ID.
-            self.device_id = miso_packet['data']
-            o = [{'type': self.cmd, 'range': miso_packet['range'],
-                  'data': miso_packet['data'], 'ann': 'Device ID'}]
+            self.device_id = miso
+            self.putann([0, ['Device ID: 0x%02x' % miso]])
 
         if self.cmdstate == 4:
             # TODO: Check self.device_id is valid & exists in device_names.
             # TODO: Same device ID? Check!
-            dev = 'Device: Macronix %s' % device_name[self.device_id]
-            o += [{'type': 'RDID', # TODO: self.cmd?
-                   'range': (self.start_sample, miso_packet['range'][1]),
-                   'data': None, # TODO?
-                   'ann': dev}]
+            d = 'Device: Macronix %s' % device_name[self.device_id]
+            self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
             self.state = IDLE
         else:
             self.cmdstate += 1
 
-        self.out += o
-
     # TODO: Warn/abort if we don't see the necessary amount of bytes.
     # TODO: Warn if WREN was not seen before.
-    def handle_se(self, miso_packet, mosi_packet):
+    def handle_se(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.addr = 0
-            self.start_sample = mosi_packet['range'][0]
-            o = [{'type': self.cmd, 'range': mosi_packet['range'],
-                  'data': self.cmd, 'ann': 'Command ID'}]
+            self.start_sample = self.ss
+            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends address of the sector to erase.
             # Note: Assumes SPI data is 8 bits wide (it is for MX25Lxx05D).
             # TODO: LSB-first of MSB-first?
             self.addr <<= 8
-            self.addr |= mosi_packet['data']
-            o = [] # TODO: Output 'Address byte 1' and such fields?
+            self.addr |= mosi
+            self.putann([0, ['Address byte %d: 0x%02x' % (self.cmdstate - 1,
+                        miso)]]) # TODO: Count from 0 or 1?
 
         if self.cmdstate == 4:
-            o += [{'type': self.cmd,
-                   'range': (self.start_sample, mosi_packet['range'][1]),
-                   'data': '0x%x' % self.addr, 'ann': cmds[self.state]}]
+            d = 'Erase sector %d' % self.addr
+            self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
                 # Sector addresses must be 4K-aligned (same for all 3 chips).
-                o += [{'type': self.cmd, # TODO: Type == 'Warning' or such?
-                       'range': (self.start_sample, mosi_packet['range'][1]),
-                       'data': None, 'ann': 'Warning: Invalid sector address!'}]
+                d = 'Warning: Invalid sector address!' # TODO: type == WARN?
+                self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
             self.state = IDLE
         else:
             self.cmdstate += 1
 
-        self.out += o
-
-    def handle_rems(self, miso_packet, mosi_packet):
+    def handle_rems(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = mosi_packet['range'][0]
-            o = [{'type': self.cmd, 'range': mosi_packet['range'],
-                  'data': self.cmd, 'ann': 'Command ID'}]
+            self.start_sample = self.ss
+            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
             # TODO: Check dummy bytes? Check reply from device?
-            o = [{'type': self.cmd, 'range': mosi_packet['range'],
-                  'data': mosi_packet['data'], 'ann': 'Dummy byte'}]
+            self.putann([0, ['Dummy byte: %s' % mosi]])
         elif self.cmdstate == 4:
             # Byte 4: Master sends 0x00 or 0x01.
             # 0x00: Master wants manufacturer ID as first reply byte.
             # 0x01: Master wants device ID as first reply byte.
-            b = mosi_packet['data']
-            self.manufacturer_id_first = True if (b == 0x00) else False
-            d = 'manufacturer' if (b == 0x00) else 'device'
-            o = [{'type': self.cmd, 'range': mosi_packet['range'],
-                  'data': b, 'ann': '%s (%s ID first)' % (cmds[self.cmd], d)}]
+            self.manufacturer_id_first = True if (mosi == 0x00) else False
+            d = 'manufacturer' if (mosi == 0x00) else 'device'
+            self.putann([0, ['Master wants %s ID first' % d]])
         elif self.cmdstate == 5:
             # Byte 5: Slave sends manufacturer ID (or device ID).
-            self.ids = [miso_packet['data']]
-            o = []
-        elif self.cmdstate in (5, 6):
+            self.ids = [miso]
+            d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
+            self.putann([0, ['%s ID' % d]])
+        elif self.cmdstate == 6:
             # Byte 6: Slave sends device ID (or manufacturer ID).
-            self.ids += [miso_packet['data']]
-            ann = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            o = [{'type': self.cmd, 'range': miso_packet['range'],
-                  'data': '0x%02x' % self.ids[0], 'ann': ann}]
-            ann = 'Device' if self.manufacturer_id_first else 'Manufacturer'
-            o += [{'type': self.cmd, 'range': miso_packet['range'],
-                   'data': '0x%02x' % self.ids[1], 'ann': '%s ID' % ann}]
+            self.ids += [miso]
+            d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
+            self.putann([0, ['%s ID' % d]])
         else:
             # TODO: Error?
             pass
 
         if self.cmdstate == 6:
-            self.end_sample = miso_packet['range'][1]
+            self.end_sample = self.es
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            dev = 'Device: Macronix %s' % device_name[id]
-            o += [{'type': self.cmd,
-                   'range': (self.start_sample, self.end_sample),
-                   'data': None, # TODO: Both IDs? Which format?
-                   'ann': dev}]
+            self.putann([0, ['Device: Macronix %s' % device_name[id]]])
             self.state = IDLE
         else:
             self.cmdstate += 1
 
-        self.out += o
+    def handle_rdsr(self, mosi, miso):
+        self.putann([0, ['Command: %s (0x%02x)' % (cmds[self.cmd], miso)]])
+        self.state = IDLE
 
     def decode(self, ss, es, data):
-        self.out = []
 
-        # Iterate over all SPI MISO/MOSI packets. TODO: HOLD#, WP#/ACC?
-        for i in range(len(miso_packets)):
+        ptype, mosi, miso = data
 
-            p_miso = miso_packets[i]
-            p_mosi = mosi_packets[i]
+        if ptype != 'data':
+            return
 
-            # Assumption: Every p_miso has a p_mosi entry with same range.
+        cmd = mosi
+        self.ss = ss
+        self.es = es
 
-            # For now, skip non-data packets.
-            if p_mosi['type'] != 'D':
-                continue
-
-            cmd = p_mosi['data']
-
-            # If we encountered a known chip command, enter the resp. state.
-            if self.state == IDLE:
-                if cmd in cmds:
-                    self.state = cmd
-                    self.cmd = cmd # TODO: Eliminate?
-                    self.cmdstate = 1
-                else:
-                    pass # TODO
-
-            # Handle commands.
-            # TODO: Use some generic way to invoke the resp. method.
-            if self.state == CMD_WREN:
-                self.handle_wren(p_miso, p_mosi)
-            elif self.state == CMD_SE:
-                self.handle_se(p_miso, p_mosi)
-            elif self.state == CMD_RDID:
-                self.handle_rdid(p_miso, p_mosi)
-            if self.state == CMD_REMS:
-                self.handle_rems(p_miso, p_mosi)
+        # If we encountered a known chip command, enter the resp. state.
+        if self.state == IDLE:
+            if cmd in cmds:
+                self.state = cmd
+                self.cmd = cmd # TODO: Eliminate?
+                self.cmdstate = 1
             else:
-                pass
+                pass # TODO
+        else:
+            pass
 
-        if self.out != []:
-            # self.put(0, 0, self.out_proto, out_proto)
-            self.put(0, 0, self.out_ann, self.out)
+        # Handle commands.
+        # TODO: Use some generic way to invoke the resp. method.
+        if self.state == CMD_WREN:
+            self.handle_wren(mosi, miso)
+        elif self.state == CMD_SE:
+            self.handle_se(mosi, miso)
+        elif self.state == CMD_RDID:
+            self.handle_rdid(mosi, miso)
+        if self.state == CMD_REMS:
+            self.handle_rems(mosi, miso)
+        if self.state == CMD_RDSR:
+            self.handle_rdsr(mosi, miso)
+        else:
+            self.put(0, 0, self.out_ann, [0, ['Unknown command: 0x%02x' % cmd]])
+            self.state = IDLE
 
