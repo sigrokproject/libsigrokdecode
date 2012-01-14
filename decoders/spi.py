@@ -30,8 +30,8 @@ CPOL_0 = 0 # Clock is low when inactive
 CPOL_1 = 1 # Clock is high when inactive
 
 # Clock phase options
-CPHA_0 = 0 # Data is valid on the rising clock edge
-CPHA_1 = 1 # Data is valid on the falling clock edge
+CPHA_0 = 0 # Data is valid on the leading clock edge
+CPHA_1 = 1 # Data is valid on the trailing clock edge
 
 # Bit order options
 MSB_FIRST = 0
@@ -67,7 +67,7 @@ class Decoder(srd.Decoder):
         {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
     options = {
-        'cs_active_low': ['CS# active low', ACTIVE_LOW],
+        'cs_polarity': ['CS# polarity', ACTIVE_LOW],
         'cpol': ['Clock polarity', CPOL_0],
         'cpha': ['Clock phase', CPHA_0],
         'bitorder': ['Bit order within the SPI data', MSB_FIRST],
@@ -87,7 +87,7 @@ class Decoder(srd.Decoder):
         self.cs_was_deasserted_during_data_word = 0
 
         # Set protocol decoder option defaults.
-        self.cs_active_low = Decoder.options['cs_active_low'][1]
+        self.cs_polarity = Decoder.options['cs_polarity'][1]
         self.cpol = Decoder.options['cpol'][1]
         self.cpha = Decoder.options['cpha'][1]
         self.bitorder = Decoder.options['bitorder'][1]
@@ -129,7 +129,8 @@ class Decoder(srd.Decoder):
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
                 self.start_sample = samplenum
-                if cs:
+                deasserted = cs if (self.cs_polarity == ACTIVE_LOW) else not c
+                if deasserted:
                     self.cs_was_deasserted_during_data_word = 1
 
             # Receive MOSI bit into our shift register.
@@ -158,7 +159,8 @@ class Decoder(srd.Decoder):
 
             if self.cs_was_deasserted_during_data_word:
                 self.put(self.start_sample, self.samplenum, self.out_ann,
-                         [ANN_HEX, ['WARNING: CS# was deasserted!']])
+                         [ANN_HEX, ['WARNING: CS# was deasserted during this '
+                         'SPI data byte!']])
 
             # Reset decoder state.
             self.mosidata = 0
