@@ -50,7 +50,7 @@ ANN_HEX = 0
 class Decoder(srd.Decoder):
     id = 'spi'
     name = 'SPI'
-    longname = 'Serial Peripheral Interface (SPI) bus'
+    longname = 'Serial Peripheral Interface'
     desc = '...desc...'
     longdesc = '...longdesc...'
     author = 'Gareth McMullin'

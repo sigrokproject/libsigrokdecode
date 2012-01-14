@@ -104,7 +104,7 @@ device_name = {
 class Decoder(srd.Decoder):
     id = 'mx25lxx05d'
     name = 'MX25Lxx05D'
-    longname = 'Macronix MX25Lxx05D SPI flash chip decoder'
+    longname = 'Macronix MX25Lxx05D'
     desc = 'Macronix MX25Lxx05D SPI flash chip decoder'
     longdesc = 'TODO'
     author = 'Uwe Hermann'

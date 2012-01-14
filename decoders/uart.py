@@ -193,7 +193,7 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
 class Decoder(srd.Decoder):
     id = 'uart'
     name = 'UART'
-    longname = 'Universal Asynchronous Receiver/Transmitter (UART)'
+    longname = 'Universal Asynchronous Receiver/Transmitter'
     desc = 'Universal Asynchronous Receiver/Transmitter (UART)'
     longdesc = 'TODO.'
     author = 'Uwe Hermann'

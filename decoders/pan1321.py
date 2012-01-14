@@ -32,8 +32,8 @@ T_DATA = 1
 
 class Decoder(srd.Decoder):
     id = 'pan1321'
-    name = 'Panasonic PAN1321'
-    longname = 'TODO.'
+    name = 'PAN1321'
+    longname = 'Panasonic PAN1321'
     desc = 'TODO.'
     longdesc = 'TODO.'
     author = 'Uwe Hermann'

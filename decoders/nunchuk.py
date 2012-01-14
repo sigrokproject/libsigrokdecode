@@ -42,7 +42,7 @@ INITIALIZED = 4
 class Decoder(srd.Decoder):
     id = 'nunchuk'
     name = 'Nunchuk'
-    longname = 'Nintendo Wii Nunchuk decoder'
+    longname = 'Nintendo Wii Nunchuk'
     desc = 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.'
     longdesc = '...'
     author = 'Uwe Hermann'

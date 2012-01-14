@@ -23,7 +23,7 @@ import sigrokdecode as srd
 class Decoder(srd.Decoder):
     id = 'transitioncounter'
     name = 'Transition counter'
-    longname = '...'
+    longname = 'Pin transition counter'
     desc = 'Counts rising/falling edges in the signal.'
     longdesc = '...'
     author = 'Uwe Hermann'

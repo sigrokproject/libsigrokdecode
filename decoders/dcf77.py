@@ -47,7 +47,7 @@ def bcd2int(b):
 class Decoder(srd.Decoder):
     id = 'dcf77'
     name = 'DCF77'
-    longname = 'TODO.'
+    longname = 'DCF77 time protocol'
     desc = 'TODO.'
     longdesc = 'TODO.'
     author = 'Uwe Hermann'
