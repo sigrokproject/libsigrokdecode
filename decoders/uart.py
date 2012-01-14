@@ -411,7 +411,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data): # TODO
         # for (samplenum, (rx, tx)) in data:
-        for (samplenum, (rx,)) in data:
+        for (samplenum, (rx)) in data:
 
             # TODO: Start counting at 0 or 1? Increase before or after?
             self.samplenum += 1
@@ -440,9 +440,4 @@ class Decoder(srd.Decoder):
             # Save current RX/TX values for the next round.
             self.oldrx = rx
             # self.oldtx = tx
-
-        # if proto != []:
-        #     self.put(0, 0, self.out_proto, proto)
-        # if ann != []:
-        #     self.put(0, 0, self.out_ann, ann)
 

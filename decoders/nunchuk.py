@@ -75,14 +75,14 @@ class Decoder(srd.Decoder):
         if cmd == 'START': # TODO: Handle 'Sr' here, too?
             self.state = START
 
-        elif cmd == 'START_REPEAT':
+        elif cmd == 'START REPEAT':
             pass # FIXME
 
-        elif cmd == 'ADDRESS_READ':
+        elif cmd == 'ADDRESS READ':
             # TODO: Error/Warning, not supported, I think.
             pass
 
-        elif cmd == 'ADDRESS_WRITE':
+        elif cmd == 'ADDRESS WRITE':
             # The Wii Nunchuk always has slave address 0x54.
             # TODO: Handle this stuff more correctly.
             if databyte == 0x54:
@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
             else:
                 pass # TODO: What to do here? Ignore? Error?
 
-        elif cmd == 'DATA_READ' and self.state == INITIALIZED:
+        elif cmd == 'DATA READ' and self.state == INITIALIZED:
             if self.databytecount == 0:
                 self.sx = databyte
             elif self.databytecount == 1:
@@ -124,10 +124,10 @@ class Decoder(srd.Decoder):
             # TODO: If 6 bytes read -> save and reset
 
         # TODO
-        elif cmd == 'DATA_READ' and self.state != INITIALIZED:
+        elif cmd == 'DATA READ' and self.state != INITIALIZED:
             pass
 
-        elif cmd == 'DATA_WRITE':
+        elif cmd == 'DATA WRITE':
             if self.state == IDLE:
                 self.state = INITIALIZED
             return

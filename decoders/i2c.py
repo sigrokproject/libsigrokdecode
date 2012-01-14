@@ -70,23 +70,21 @@
 #       -> we need to decode multiple protocols at the same time.
 
 #
-# I2C protocol output format:
+# Protocol output format:
 #
-# The protocol output consists of a (Python) list of I2C "packets", each of
-# which is of the form
-#
-#        [<i2c_command>, <data>, <ack_bit>]
+# I2C packet:
+# [<i2c_command>, <data>, <ack_bit>]
 #
 # <i2c_command> is one of:
 #   - 'START' (START condition)
-#   - 'START_REPEAT' (Repeated START)
-#   - 'ADDRESS_READ' (Slave address, read)
-#   - 'ADDRESS_WRITE' (Slave address, write)
-#   - 'DATA_READ' (Data, read)
-#   - 'DATA_WRITE' (Data, write)
+#   - 'START REPEAT' (Repeated START)
+#   - 'ADDRESS READ' (Slave address, read)
+#   - 'ADDRESS WRITE' (Slave address, write)
+#   - 'DATA READ' (Data, read)
+#   - 'DATA WRITE' (Data, write)
 #   - 'STOP' (STOP condition)
 #
-# <data> is the data or address byte associated with the ADDRESS_* and DATA_*
+# <data> is the data or address byte associated with the ADDRESS* and DATA*
 # command. For START, START_REPEAT and STOP, this is None.
 #
 # <ack_bit> is either 'ACK' or 'NACK', but may also be None.
@@ -102,14 +100,14 @@ ANN_RAW           = 2
 # Values are verbose and short annotation, respectively.
 protocol = {
     'START':           ['START',         'S'],
-    'START_REPEAT':    ['START REPEAT',  'Sr'],
+    'START REPEAT':    ['START REPEAT',  'Sr'],
     'STOP':            ['STOP',          'P'],
     'ACK':             ['ACK',           'A'],
     'NACK':            ['NACK',          'N'],
-    'ADDRESS_READ':    ['ADDRESS READ',  'AR'],
-    'ADDRESS_WRITE':   ['ADDRESS WRITE', 'AW'],
-    'DATA_READ':       ['DATA READ',     'DR'],
-    'DATA_WRITE':      ['DATA WRITE',    'DW'],
+    'ADDRESS READ':    ['ADDRESS READ',  'AR'],
+    'ADDRESS WRITE':   ['ADDRESS WRITE', 'AW'],
+    'DATA READ':       ['DATA READ',     'DR'],
+    'DATA WRITE':      ['DATA WRITE',    'DW'],
 }
 
 # States
@@ -234,13 +232,13 @@ class Decoder(srd.Decoder):
         ack_bit = 'NACK' if (sda == 1) else 'ACK'
 
         if self.state == FIND_ADDRESS and self.wr == 1:
-            cmd = 'ADDRESS_WRITE'
+            cmd = 'ADDRESS WRITE'
         elif self.state == FIND_ADDRESS and self.wr == 0:
-            cmd = 'ADDRESS_READ'
+            cmd = 'ADDRESS READ'
         elif self.state == FIND_DATA and self.wr == 1:
-            cmd = 'DATA_WRITE'
+            cmd = 'DATA WRITE'
         elif self.state == FIND_DATA and self.wr == 0:
-            cmd = 'DATA_READ'
+            cmd = 'DATA READ'
 
         self.put(self.out_proto, [cmd, d, ack_bit])
         self.put(self.out_ann, [ANN_SHIFTED,

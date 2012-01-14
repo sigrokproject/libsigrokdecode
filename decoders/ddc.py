@@ -60,10 +60,10 @@ class Decoder(srd.Decoder):
 
         if self.state is None:
             # Wait for the DDC session to start.
-            if cmd in ('START', 'START_REPEAT'):
+            if cmd in ('START', 'START REPEAT'):
                 self.state = 'start'
         elif self.state == 'start':
-            if cmd == 'ADDRESS_READ' and data == 80:
+            if cmd == 'ADDRESS READ' and data == 80:
                 # 80 is the I2C slave address of a connected display,
                 # so this marks the start of the DDC data transfer.
                 self.state = 'transfer'
@@ -71,7 +71,7 @@ class Decoder(srd.Decoder):
                 # Got back to the idle state.
                 self.state = None
         elif self.state == 'transfer':
-            if cmd == 'DATA_READ':
+            if cmd == 'DATA READ':
                 # There shouldn't be anything but data reads on this
                 # address, so ignore everything else.
                 self.put(ss, es, self.out_ann, [0, ['0x%.2x' % data]])
