@@ -34,7 +34,10 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'mosi', 'name': 'MOSI',
          'desc': 'SPI MOSI line (Master out, slave in)'},
+        {'id': 'miso', 'name': 'MISO',
+         'desc': 'SPI MISO line (Master in, slave out)'},
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
+        {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
     options = {}
     annotations = [
