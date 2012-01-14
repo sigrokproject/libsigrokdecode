@@ -35,7 +35,7 @@ CPHA_1 = 1 # Data is valid on the falling clock edge
 
 # Bit order options
 MSB_FIRST = 0
-LSB_FIRST = 0
+LSB_FIRST = 1
 
 # Annotation formats
 ANN_HEX = 0
