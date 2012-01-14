@@ -112,11 +112,17 @@ class Decoder(srd.Decoder):
             if self.bitcount == 0:
                 self.start_sample = samplenum
 
-            # Receive bit into our shift register.
-            if mosi == 1:
-                self.mosidata |= 1 << (7 - self.bitcount)
-            if miso == 1:
-                self.misodata |= 1 << (7 - self.bitcount)
+            # Receive MOSI bit into our shift register.
+            if self.bit_order == MSB_FIRST:
+                self.mosidata |= mosi << (7 - self.bitcount)
+            else:
+                self.mosidata |= mosi << self.bitcount
+
+            # Receive MISO bit into our shift register.
+            if self.bit_order == MSB_FIRST:
+                self.misodata |= miso << (7 - self.bitcount)
+            else:
+                self.misodata |= miso << self.bitcount
 
             self.bitcount += 1
 
