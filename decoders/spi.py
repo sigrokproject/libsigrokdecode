@@ -37,6 +37,13 @@ CPHA_1 = 1 # Data is valid on the falling clock edge
 MSB_FIRST = 0
 LSB_FIRST = 1
 
+spi_mode = {
+    (0, 0): 0, # Mode 0
+    (0, 1): 1, # Mode 1
+    (1, 0): 2, # Mode 2
+    (1, 1): 3, # Mode 3
+}
+
 # Annotation formats
 ANN_HEX = 0
 
@@ -61,10 +68,10 @@ class Decoder(srd.Decoder):
     ]
     options = {
         'cs_active_low': ['CS# active low', ACTIVE_LOW],
-        'clock_polarity': ['Clock polarity', CPOL_0],
-        'clock_phase': ['Clock phase', CPHA_0],
-        'bit_order': ['Bit order within the SPI data', MSB_FIRST],
-        'word_size': ['Word size of SPI data', 8], # 1-64?
+        'cpol': ['Clock polarity', CPOL_0],
+        'cpha': ['Clock phase', CPHA_0],
+        'bitorder': ['Bit order within the SPI data', MSB_FIRST],
+        'wordsize': ['Word size of SPI data', 8], # 1-64?
     }
     annotations = [
         ['Hex', 'SPI data bytes in hex format'],
@@ -80,10 +87,10 @@ class Decoder(srd.Decoder):
 
         # Set protocol decoder option defaults.
         self.cs_active_low = Decoder.options['cs_active_low'][1]
-        self.clock_polarity = Decoder.options['clock_polarity'][1]
-        self.clock_phase = Decoder.options['clock_phase'][1]
-        self.bit_order = Decoder.options['bit_order'][1]
-        self.word_size = Decoder.options['word_size'][1]
+        self.cpol = Decoder.options['cpol'][1]
+        self.cpha = Decoder.options['cpha'][1]
+        self.bitorder = Decoder.options['bitorder'][1]
+        self.wordsize = Decoder.options['wordsize'][1]
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
@@ -101,25 +108,35 @@ class Decoder(srd.Decoder):
 
             self.samplenum += 1 # FIXME
 
-            # Sample data on rising SCK edges.
+            # Ignore sample if the clock pin hasn't changed.
             if sck == self.oldsck:
                 continue
+
             self.oldsck = sck
-            if sck == 0:
-                continue
+
+            # Sample data on rising/falling clock edge (depends on mode).
+            mode = spi_mode[self.cpol, self.cpha]
+            if mode == 0 and sck == 0:   # Sample on rising clock edge
+                    continue
+            elif mode == 1 and sck == 1: # Sample on falling clock edge
+                    continue
+            elif mode == 2 and sck == 1: # Sample on falling clock edge
+                    continue
+            elif mode == 3 and sck == 0: # Sample on rising clock edge
+                    continue
 
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
                 self.start_sample = samplenum
 
             # Receive MOSI bit into our shift register.
-            if self.bit_order == MSB_FIRST:
+            if self.bitorder == MSB_FIRST:
                 self.mosidata |= mosi << (self.wordsize - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
 
             # Receive MISO bit into our shift register.
-            if self.bit_order == MSB_FIRST:
+            if self.bitorder == MSB_FIRST:
                 self.misodata |= miso << (self.wordsize - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
