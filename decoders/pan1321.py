@@ -30,6 +30,10 @@ ANN_ASCII = 0
 # UART 'data' packet type.
 T_DATA = 1
 
+# ...
+RX = 0
+TX = 1
+
 class Decoder(srd.Decoder):
     id = 'pan1321'
     name = 'PAN1321'
@@ -44,7 +48,6 @@ class Decoder(srd.Decoder):
     probes = []
     options = {}
     annotations = [
-        # ANN_ASCII
         ['ASCII', 'TODO: description'],
     ]
 
@@ -59,7 +62,7 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        ptype, pdata = data
+        ptype, rxtx, pdata = data
 
         # For now, ignore all UART packets except the actual data packets.
         if ptype != T_DATA:
