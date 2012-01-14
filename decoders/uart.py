@@ -96,15 +96,11 @@
 
 #
 # Protocol output format:
-# put(<startsample>, <endsample>, self.out_proto, <packet>)
 #
-# The <packet> is a list with two entries:
-# [<packet-type>, <packet-data>]
+# UART packet:
+# [<packet-type>, <rxtx>, <packet-data>]
 #
-# Valid packet-type values: T_START, T_DATA, T_PARITY, T_STOP, T_INVALID_START,
-# T_INVALID_STOP, T_PARITY_ERROR
-#
-# The packet-data field has the following format and meaning:
+# This is the list of <packet-types>s and their respective <packet-data>:
 #  - T_START: The data is the (integer) value of the start bit (0 or 1).
 #  - T_DATA: The data is the (integer) value of the UART data. Valid values
 #    range from 0 to 512 (as the data can be up to 9 bits in size).
@@ -115,14 +111,7 @@
 #  - T_PARITY_ERROR: The data is a tuple with two entries. The first one is
 #    the expected parity value, the second is the actual parity value.
 #
-# Examples:
-# [T_START, 0]
-# [T_DATA, 65]
-# [T_PARITY, 0]
-# [T_STOP, 1]
-# [T_INVALID_START, 1]
-# [T_INVALID_STOP, 0]
-# [T_PARITY_ERROR, (0, 1)]
+# The <rxtx> field is 0 for RX packets, 1 for TX packets.
 #
 
 import sigrokdecode as srd
@@ -133,6 +122,10 @@ GET_START_BIT = 1
 GET_DATA_BITS = 2
 GET_PARITY_BIT = 3
 GET_STOP_BITS = 4
+
+# Used for differentiating between the two data directions.
+RX = 0
+TX = 1
 
 # Parity options
 PARITY_NONE = 0
@@ -208,7 +201,7 @@ class Decoder(srd.Decoder):
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
     ]
     options = {
-        'baudrate': ['UART baud rate', 115200],
+        'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
         'parity': ['Parity', PARITY_NONE],
         'parity_check': ['Check parity', True],
@@ -217,32 +210,29 @@ class Decoder(srd.Decoder):
         # TODO: Options to invert the signal(s).
     }
     annotations = [
-        # ANN_ASCII
-        ['ASCII', 'TODO: description'],
-        # ANN_DEC
-        ['Decimal', 'TODO: description'],
-        # ANN_HEX
-        ['Hex', 'TODO: description'],
-        # ANN_OCT
-        ['Octal', 'TODO: description'],
-        # ANN_BITS
-        ['Bits', 'TODO: description'],
+        ['ASCII', 'Data bytes as ASCII characters'],
+        ['Decimal', 'Databytes as decimal, integer values'],
+        ['Hex', 'Data bytes in hex format'],
+        ['Octal', 'Data bytes as octal numbers'],
+        ['Bits', 'Data bytes in bit notation (sequence of 0/1 digits)'],
     ]
+
+    def putx(self, rxtx, data):
+        self.put(self.startsample[rxtx], self.samplenum - 1, self.out_ann, data)
 
     def __init__(self, **kwargs):
         self.samplenum = 0
-        self.frame_start = -1
-        self.startbit = -1
-        self.cur_data_bit = 0
-        self.databyte = 0
-        self.stopbit1 = -1
-        self.startsample = -1
+        self.frame_start = [-1, -1]
+        self.startbit = [-1, -1]
+        self.cur_data_bit = [0, 0]
+        self.databyte = [0, 0]
+        self.stopbit1 = [-1, -1]
+        self.startsample = [-1, -1]
 
         # Initial state.
-        self.staterx = WAIT_FOR_START_BIT
+        self.state = [WAIT_FOR_START_BIT, WAIT_FOR_START_BIT]
 
-        self.oldrx = None
-        self.oldtx = None
+        self.oldbit = [None, None]
 
         # Set protocol decoder option defaults.
         self.baudrate = Decoder.options['baudrate'][1]
@@ -266,178 +256,179 @@ class Decoder(srd.Decoder):
         pass
 
     # Return true if we reached the middle of the desired bit, false otherwise.
-    def reached_bit(self, bitnum):
+    def reached_bit(self, rxtx, bitnum):
         # bitpos is the samplenumber which is in the middle of the
         # specified UART bit (0 = start bit, 1..x = data, x+1 = parity bit
         # (if used) or the first stop bit, and so on).
-        bitpos = self.frame_start + (self.bit_width / 2.0)
+        bitpos = self.frame_start[rxtx] + (self.bit_width / 2.0)
         bitpos += bitnum * self.bit_width
         if self.samplenum >= bitpos:
             return True
         return False
 
-    def reached_bit_last(self, bitnum):
-        bitpos = self.frame_start + ((bitnum + 1) * self.bit_width)
+    def reached_bit_last(self, rxtx, bitnum):
+        bitpos = self.frame_start[rxtx] + ((bitnum + 1) * self.bit_width)
         if self.samplenum >= bitpos:
             return True
         return False
 
-    def wait_for_start_bit(self, old_signal, signal):
+    def wait_for_start_bit(self, rxtx, old_signal, signal):
         # The start bit is always 0 (low). As the idle UART (and the stop bit)
         # level is 1 (high), the beginning of a start bit is a falling edge.
         if not (old_signal == 1 and signal == 0):
             return
 
         # Save the sample number where the start bit begins.
-        self.frame_start = self.samplenum
+        self.frame_start[rxtx] = self.samplenum
 
-        self.staterx = GET_START_BIT
+        self.state[rxtx] = GET_START_BIT
 
-    def get_start_bit(self, signal):
+    def get_start_bit(self, rxtx, signal):
         # Skip samples until we're in the middle of the start bit.
-        if not self.reached_bit(0):
+        if not self.reached_bit(rxtx, 0):
             return
 
-        self.startbit = signal
+        self.startbit[rxtx] = signal
 
         # The startbit must be 0. If not, we report an error.
-        if self.startbit != 0:
-            self.put(self.frame_start, self.samplenum, self.out_proto,
-                     [T_INVALID_START, self.startbit])
+        if self.startbit[rxtx] != 0:
+            self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
+                     [T_INVALID_START, rxtx, self.startbit[rxtx]])
             # TODO: Abort? Ignore rest of the frame?
 
-        self.cur_data_bit = 0
-        self.databyte = 0
-        self.startsample = -1
+        self.cur_data_bit[rxtx] = 0
+        self.databyte[rxtx] = 0
+        self.startsample[rxtx] = -1
 
-        self.staterx = GET_DATA_BITS
+        self.state[rxtx] = GET_DATA_BITS
 
-        self.put(self.frame_start, self.samplenum, self.out_proto,
-                 [T_START, self.startbit])
-        self.put(self.frame_start, self.samplenum, self.out_ann,
+        self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
+                 [T_START, rxtx, self.startbit[rxtx]])
+        self.put(self.frame_start[rxtx], self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Start bit', 'Start', 'S']])
 
-    def get_data_bits(self, signal):
+    def get_data_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the desired data bit.
-        if not self.reached_bit(self.cur_data_bit + 1):
+        if not self.reached_bit(rxtx, self.cur_data_bit[rxtx] + 1):
             return
 
         # Save the sample number where the data byte starts.
-        if self.startsample == -1:
-            self.startsample = self.samplenum
+        if self.startsample[rxtx] == -1:
+            self.startsample[rxtx] = self.samplenum
 
         # Get the next data bit in LSB-first or MSB-first fashion.
         if self.bit_order == LSB_FIRST:
-            self.databyte >>= 1
-            self.databyte |= (signal << (self.num_data_bits - 1))
+            self.databyte[rxtx] >>= 1
+            self.databyte[rxtx] |= (signal << (self.num_data_bits - 1))
         elif self.bit_order == MSB_FIRST:
-            self.databyte <<= 1
-            self.databyte |= (signal << 0)
+            self.databyte[rxtx] <<= 1
+            self.databyte[rxtx] |= (signal << 0)
         else:
             raise Exception('Invalid bit order value: %d', self.bit_order)
 
         # Return here, unless we already received all data bits.
-        if self.cur_data_bit < self.num_data_bits - 1: # TODO? Off-by-one?
-            self.cur_data_bit += 1
+        if self.cur_data_bit[rxtx] < self.num_data_bits - 1: # TODO? Off-by-one?
+            self.cur_data_bit[rxtx] += 1
             return
 
-        self.staterx = GET_PARITY_BIT
+        self.state[rxtx] = GET_PARITY_BIT
 
-        self.put(self.startsample, self.samplenum - 1, self.out_proto,
-                 [T_DATA, self.databyte])
+        self.put(self.startsample[rxtx], self.samplenum - 1, self.out_proto,
+                 [T_DATA, rxtx, self.databyte[rxtx]])
 
-        self.put(self.startsample, self.samplenum - 1, self.out_ann,
-                 [ANN_ASCII, [chr(self.databyte)]])
-        self.put(self.startsample, self.samplenum - 1, self.out_ann,
-                 [ANN_DEC, [str(self.databyte)]])
-        self.put(self.startsample, self.samplenum - 1, self.out_ann,
-                 [ANN_HEX, [hex(self.databyte), hex(self.databyte)[2:]]])
-        self.put(self.startsample, self.samplenum - 1, self.out_ann,
-                 [ANN_OCT, [oct(self.databyte), oct(self.databyte)[2:]]])
-        self.put(self.startsample, self.samplenum - 1, self.out_ann,
-                 [ANN_BITS, [bin(self.databyte), bin(self.databyte)[2:]]])
+        s = 'RX: ' if (rxtx == RX) else 'TX: '
+        self.putx(rxtx, [ANN_ASCII, [s + chr(self.databyte[rxtx])]])
+        self.putx(rxtx, [ANN_DEC,   [s + str(self.databyte[rxtx])]])
+        self.putx(rxtx, [ANN_HEX,   [s + hex(self.databyte[rxtx]),
+                                     s + hex(self.databyte[rxtx])[2:]]])
+        self.putx(rxtx, [ANN_OCT,   [s + oct(self.databyte[rxtx]),
+                                     s + oct(self.databyte[rxtx])[2:]]])
+        self.putx(rxtx, [ANN_BITS,  [s + bin(self.databyte[rxtx]),
+                                     s + bin(self.databyte[rxtx])[2:]]])
 
-    def get_parity_bit(self, signal):
+    def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
         if self.parity == PARITY_NONE:
-            self.staterx = GET_STOP_BITS
+            self.state[rxtx] = GET_STOP_BITS
             return
 
         # Skip samples until we're in the middle of the parity bit.
-        if not self.reached_bit(self.num_data_bits + 1):
+        if not self.reached_bit(rxtx, self.num_data_bits + 1):
             return
 
-        self.paritybit = signal
+        self.paritybit[rxtx] = signal
 
-        self.staterx = GET_STOP_BITS
+        self.state[rxtx] = GET_STOP_BITS
 
-        if parity_ok(self.parity, self.paritybit, self.databyte,
-                     self.num_data_bits):
+        if parity_ok(self.parity[rxtx], self.paritybit[rxtx],
+                     self.databyte[rxtx], self.num_data_bits):
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     [T_PARITY_BIT, self.paritybit])
+                     [T_PARITY_BIT, rxtx, self.paritybit[rxtx]])
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Fix range.
             # TODO: Return expected/actual parity values.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     [T_PARITY_ERROR, (0, 1)]) # FIXME: Dummy tuple...
+                     [T_PARITY_ERROR, rxtx, (0, 1)]) # FIXME: Dummy tuple...
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
-    def get_stop_bits(self, signal):
+    def get_stop_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the stop bit(s).
         skip_parity = 0 if self.parity == PARITY_NONE else 1
-        if not self.reached_bit(self.num_data_bits + 1 + skip_parity):
+        if not self.reached_bit(rxtx, self.num_data_bits + 1 + skip_parity):
             return
 
-        self.stopbit1 = signal
+        self.stopbit1[rxtx] = signal
 
         # Stop bits must be 1. If not, we report an error.
-        if self.stopbit1 != 1:
-            self.put(self.frame_start, self.samplenum, self.out_proto,
-                     [T_INVALID_STOP, self.stopbit1])
+        if self.stopbit1[rxtx] != 1:
+            self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
+                     [T_INVALID_STOP, rxtx, self.stopbit1[rxtx]])
             # TODO: Abort? Ignore the frame? Other?
 
-        self.staterx = WAIT_FOR_START_BIT
+        self.state[rxtx] = WAIT_FOR_START_BIT
 
         # TODO: Fix range.
         self.put(self.samplenum, self.samplenum, self.out_proto,
-                 [T_STOP, self.stopbit1])
+                 [T_STOP, rxtx, self.stopbit1[rxtx]])
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
     def decode(self, ss, es, data): # TODO
-        # for (samplenum, (rx, tx)) in data:
-        for (samplenum, (rx)) in data:
+        for (samplenum, (rx, tx)) in data:
 
             # TODO: Start counting at 0 or 1? Increase before or after?
             self.samplenum += 1
 
             # First sample: Save RX/TX value.
-            if self.oldrx == None:
-                # Get RX/TX bit values (0/1 for low/high) of the first sample.
-                self.oldrx = rx
-                # self.oldtx = tx
+            if self.oldbit[RX] == None:
+                self.oldbit[RX] = rx
+                continue
+            if self.oldbit[TX] == None:
+                self.oldbit[TX] = tx
                 continue
 
             # State machine.
-            if self.staterx == WAIT_FOR_START_BIT:
-                self.wait_for_start_bit(self.oldrx, rx)
-            elif self.staterx == GET_START_BIT:
-                self.get_start_bit(rx)
-            elif self.staterx == GET_DATA_BITS:
-                self.get_data_bits(rx)
-            elif self.staterx == GET_PARITY_BIT:
-                self.get_parity_bit(rx)
-            elif self.staterx == GET_STOP_BITS:
-                self.get_stop_bits(rx)
-            else:
-                raise Exception('Invalid state: %s' % self.staterx)
+            for rxtx in (RX, TX):
+                signal = rx if (rxtx == RX) else tx
 
-            # Save current RX/TX values for the next round.
-            self.oldrx = rx
-            # self.oldtx = tx
+                if self.state[rxtx] == WAIT_FOR_START_BIT:
+                    self.wait_for_start_bit(rxtx, self.oldbit[rxtx], signal)
+                elif self.state[rxtx] == GET_START_BIT:
+                    self.get_start_bit(rxtx, signal)
+                elif self.state[rxtx] == GET_DATA_BITS:
+                    self.get_data_bits(rxtx, signal)
+                elif self.state[rxtx] == GET_PARITY_BIT:
+                    self.get_parity_bit(rxtx, signal)
+                elif self.state[rxtx] == GET_STOP_BITS:
+                    self.get_stop_bits(rxtx, signal)
+                else:
+                    raise Exception('Invalid state: %s' % self.state[rxtx])
+
+                # Save current RX/TX values for the next round.
+                self.oldbit[rxtx] = signal
 
