@@ -114,20 +114,20 @@ class Decoder(srd.Decoder):
 
             # Receive MOSI bit into our shift register.
             if self.bit_order == MSB_FIRST:
-                self.mosidata |= mosi << (7 - self.bitcount)
+                self.mosidata |= mosi << (self.wordsize - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
 
             # Receive MISO bit into our shift register.
             if self.bit_order == MSB_FIRST:
-                self.misodata |= miso << (7 - self.bitcount)
+                self.misodata |= miso << (self.wordsize - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
 
             self.bitcount += 1
 
             # Continue to receive if not a byte yet.
-            if self.bitcount != 8:
+            if self.bitcount != self.wordsize:
                 continue
 
             self.put(self.start_sample, self.samplenum, self.out_proto,
