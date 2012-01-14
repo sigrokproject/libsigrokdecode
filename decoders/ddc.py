@@ -35,8 +35,8 @@ class Decoder(srd.Decoder):
     longname = 'Display Data Channel'
     desc = 'A protocol for communication between computers and displays.'
     longdesc = ''
-    author = 'Bert Vermeulen <bert@biot.com>'
-    email = '<bert@biot.com>'
+    author = 'Bert Vermeulen'
+    email = 'bert@biot.com'
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['ddc']
