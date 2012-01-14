@@ -33,7 +33,9 @@ class Decoder(srd.Decoder):
     outputs = ['transitioncounts']
     probes = []
     options = {}
-    annotations = []
+    annotations = [
+        ['TODO', 'TODO'],
+    ]
 
     def __init__(self, **kwargs):
         self.channels = -1
@@ -96,5 +98,5 @@ class Decoder(srd.Decoder):
 
         if outdata != []:
             # self.put(0, 0, self.out_proto, out_proto)
-            self.put(0, 0, self.out_ann, outdata)
+            self.put(0, 0, self.out_ann, [0, [str(outdata)]])
 
