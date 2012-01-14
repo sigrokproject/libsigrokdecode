@@ -78,6 +78,13 @@ class Decoder(srd.Decoder):
         self.bytesreceived = 0
         self.samplenum = -1
 
+        # Set protocol decoder option defaults.
+        self.cs_active_low = Decoder.options['cs_active_low'][1]
+        self.clock_polarity = Decoder.options['clock_polarity'][1]
+        self.clock_phase = Decoder.options['clock_phase'][1]
+        self.bit_order = Decoder.options['bit_order'][1]
+        self.word_size = Decoder.options['word_size'][1]
+
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
