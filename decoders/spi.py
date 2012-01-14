@@ -84,6 +84,7 @@ class Decoder(srd.Decoder):
         self.misodata = 0
         self.bytesreceived = 0
         self.samplenum = -1
+        self.cs_was_deasserted_during_data_word = 0
 
         # Set protocol decoder option defaults.
         self.cs_active_low = Decoder.options['cs_active_low'][1]
@@ -128,6 +129,8 @@ class Decoder(srd.Decoder):
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
                 self.start_sample = samplenum
+                if cs:
+                    self.cs_was_deasserted_during_data_word = 1
 
             # Receive MOSI bit into our shift register.
             if self.bitorder == MSB_FIRST:
@@ -152,6 +155,10 @@ class Decoder(srd.Decoder):
             self.put(self.start_sample, self.samplenum, self.out_ann,
                      [ANN_HEX, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
                      self.misodata)]])
+
+            if self.cs_was_deasserted_during_data_word:
+                self.put(self.start_sample, self.samplenum, self.out_ann,
+                         [ANN_HEX, ['WARNING: CS# was deasserted!']])
 
             # Reset decoder state.
             self.mosidata = 0
