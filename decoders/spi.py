@@ -21,6 +21,22 @@
 
 import sigrokdecode as srd
 
+# Chip-select options
+ACTIVE_LOW = 0
+ACTIVE_HIGH = 1
+
+# Clock polarity options
+CPOL_0 = 0 # Clock is low when inactive
+CPOL_1 = 1 # Clock is high when inactive
+
+# Clock phase options
+CPHA_0 = 0 # Data is valid on the rising clock edge
+CPHA_1 = 1 # Data is valid on the falling clock edge
+
+# Bit order options
+MSB_FIRST = 0
+LSB_FIRST = 0
+
 # Annotation formats
 ANN_HEX = 0
 
@@ -43,7 +59,13 @@ class Decoder(srd.Decoder):
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
-    options = {}
+    options = {
+        'cs_active_low': ['CS# active low', ACTIVE_LOW],
+        'clock_polarity': ['Clock polarity', CPOL_0],
+        'clock_phase': ['Clock phase', CPHA_0],
+        'bit_order': ['Bit order within the SPI data', MSB_FIRST],
+        'word_size': ['Word size of SPI data', 8], # 1-64?
+    }
     annotations = [
         ['Hex', 'SPI data bytes in hex format'],
     ]
