@@ -215,7 +215,6 @@ class Decoder(srd.Decoder):
         'num_stop_bits': ['Stop bit(s)', STOP_BITS_1],
         'bit_order': ['Bit order', LSB_FIRST],
         # TODO: Options to invert the signal(s).
-        # ...
     }
     annotations = [
         # ANN_ASCII
@@ -231,14 +230,6 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        # Set defaults, can be overridden in 'start'.
-        self.baudrate = 115200
-        self.num_data_bits = 8
-        self.parity = PARITY_NONE
-        self.check_parity = True
-        self.num_stop_bits = 1
-        self.bit_order = LSB_FIRST
-
         self.samplenum = 0
         self.frame_start = -1
         self.startbit = -1
@@ -253,18 +244,20 @@ class Decoder(srd.Decoder):
         self.oldrx = None
         self.oldtx = None
 
+        # Set protocol decoder option defaults.
+        self.baudrate = Decoder.options['baudrate'][1]
+        self.num_data_bits = Decoder.options['num_data_bits'][1]
+        self.parity = Decoder.options['parity'][1]
+        self.check_parity = Decoder.options['parity_check'][1]
+        self.num_stop_bits = Decoder.options['num_stop_bits'][1]
+        self.bit_order = Decoder.options['bit_order'][1]
+
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'uart')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'uart')
 
-        # TODO
-        ### self.baudrate = metadata['baudrate']
-        ### self.num_data_bits = metadata['num_data_bits']
-        ### self.parity = metadata['parity']
-        ### self.parity_check = metadata['parity_check']
-        ### self.num_stop_bits = metadata['num_stop_bits']
-        ### self.bit_order = metadata['bit_order']
+        # TODO: Override PD options, if user wants that.
 
         # The width of one UART bit in number of samples.
         self.bit_width = float(self.samplerate) / float(self.baudrate)

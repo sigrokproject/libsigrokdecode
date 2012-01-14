@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
     ]
     options = {
-        'address-space': ['Address space (in bits)', 7],
+        'addressing': ['Slave addressing (in bits)', 7], # 7 or 10
     }
     annotations = [
         # ANN_SHIFTED
@@ -156,6 +156,9 @@ class Decoder(srd.Decoder):
         self.state = FIND_START
         self.oldscl = None
         self.oldsda = None
+
+        # Set protocol decoder option defaults.
+        self.addressing = Decoder.options['addressing'][1]
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
