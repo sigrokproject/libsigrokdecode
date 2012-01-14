@@ -44,6 +44,8 @@ import sigrokdecode as srd
 
 # States
 SE0, J, K, SE1 = 0, 1, 2, 3
+
+# ...
 syms = {
         (0, 0): SE0,
         (1, 0): J,
@@ -90,7 +92,7 @@ def packet_decode(packet):
         data = packet[16:-16]
         tmp = ''
         while data:
-            tmp += '%02X ' % bitstr_to_num(data[:8])
+            tmp += '%02x ' % bitstr_to_num(data[:8])
             data = data[8:]
         data = tmp
     else:
@@ -104,7 +106,7 @@ def packet_decode(packet):
 class Decoder(srd.Decoder):
     id = 'usb'
     name = 'USB'
-    longname = '...longname...'
+    longname = 'Universal Serial Bus'
     desc = 'Universal Serial Bus'
     longdesc = '...longdesc...'
     author = 'Gareth McMullin'
@@ -117,31 +119,38 @@ class Decoder(srd.Decoder):
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
     options = {}
-    annotations = []
+    annotations = [
+        ['TODO', 'TODO']
+    ]
 
     def __init__(self):
         pass
 
     def start(self, metadata):
         self.rate = metadata['samplerate']
+
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
+
         if self.rate < 48000000:
             raise Exception('Sample rate not sufficient for USB decoding')
+
         # Initialise decoder state.
         self.sym = J
         self.scount = 0
         self.packet = ''
 
     def decode(self, ss, es, data):
-        out = []
 
         # FIXME
-        for (samplenum, (dp, dm, x, y, z, a)) in data:
+        # for (samplenum, (dp, dm, x, y, z, a)) in data:
+        for (samplenum, (dm, dp)) in data:
 
             self.scount += 1
 
             sym = syms[dp, dm]
+
+            # ...
             if sym == self.sym:
                 continue
 
@@ -153,7 +162,7 @@ class Decoder(srd.Decoder):
                 continue
 
             # How many bits since the last transition?
-            if self.packet or self.sym != J:
+            if self.packet != '' or self.sym != J:
                 bitcount = int((self.scount - 1) * 12000000 / self.rate)
             else:
                 bitcount = 0
@@ -161,11 +170,11 @@ class Decoder(srd.Decoder):
             if self.sym == SE0:
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
-                    out += [{'type': 'usb', 'data': self.packet,
-                             'display': packet_decode(self.packet)}]
+                    self.put(0, 0, self.out_ann,
+                             [0, [packet_decode(self.packet), self.packet]])
                 else:
                     # Longer than EOP, assume reset.
-                    out += [{'type': 'usb', 'display': 'RESET'}]
+                    self.put(0, 0, self.out_ann, [0, ['RESET']])
                 self.scount = 0
                 self.sym = sym
                 self.packet = ''
@@ -173,16 +182,13 @@ class Decoder(srd.Decoder):
 
             # Add bits to the packet string.
             self.packet += '1' * bitcount
+
             # Handle bit stuffing.
             if bitcount < 6 and sym != SE0:
                 self.packet += '0'
             elif bitcount > 6:
-                out += [{'type': 'usb', 'display': 'BIT STUFF ERROR'}]
+                self.put(0, 0, self.out_ann, [0, ['BIT STUFF ERROR']])
 
             self.scount = 0
             self.sym = sym
-
-        if out != []:
-            # self.put(0, 0, self.out_proto, out_proto)
-            self.put(0, 0, self.out_ann, out)
 
