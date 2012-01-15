@@ -31,6 +31,7 @@ dist_pkgdata_DATA = \
 	spi.py \
 	srd_usb.py \
 	transitioncounter.py \
+	ebr30a_i2c_demux.py \
 	uart.py
 
 CLEANFILES = *.pyc
