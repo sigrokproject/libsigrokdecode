@@ -19,6 +19,8 @@
 ##
 
 #
+# Panasonic PAN1321 Bluetooth module protocol decoder
+#
 # TODO
 #
 
@@ -52,7 +54,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.cmd = ''
+        self.cmd = ['', '']
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'pan1321')
@@ -61,6 +63,36 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
+    def handle_host_command(self, ss, es, rxtx, s):
+        if s.startswith('AT+JSEC'):
+            pin = s[s.find('\r\n') - 4:len(s) - 2]
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Host set the Bluetooth PIN to ' + pin]])
+        elif s.startswith('AT+JSLN'):
+            name = s[s.find(',') + 1:-2]
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Host set the Bluetooth name to ' + name]])
+        else:
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Host sent unsupported command']])
+        self.cmd[rxtx] = ''
+
+    def handle_device_reply(self, ss, es, rxtx, s):
+        if s == 'ROK\r\n':
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Device initialized correctly']])
+        elif s == 'OK\r\n':
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Device acknowledged last command']])
+        elif s.startswith('ERR'):
+            error = s[s.find('=') + 1:]
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Device sent error code ' + error]])
+        else:
+            self.put(ss, es, self.out_ann,
+                     [ANN_ASCII, ['Device sent an unknown reply']])
+        self.cmd[rxtx] = ''
+
     def decode(self, ss, es, data):
         ptype, rxtx, pdata = data
 
@@ -68,26 +100,18 @@ class Decoder(srd.Decoder):
         if ptype != T_DATA:
             return
 
-        # Append new (ASCII) byte to the current command.
-        self.cmd += chr(pdata)
+        # Append a new (ASCII) byte to the currently built/parsed command.
+        self.cmd[rxtx] += chr(pdata)
 
         # Get packets/bytes until an \r\n sequence is found (end of command).
-        if chr(pdata) != '\n':
+        if self.cmd[rxtx][-1:] != '\n':
             return
 
-        s = self.cmd
-
-        # FIXME: This is just a quick hack.
-        if s.startswith('AT+JSEC'):
-            pin = s[s.find('\r\n') - 4:len(s) - 2]
-            self.put(ss, es, self.out_ann,
-                     [ANN_ASCII, ['Setting Bluetooth PIN to ' + pin]])
-        elif s.startswith('AT+JSLN'):
-            name = s[s.find(',') + 1:-2]
-            self.put(ss, es, self.out_ann,
-                     [ANN_ASCII, ['Setting Bluetooth name to ' + name]])
+        # Handle host commands and device replies.
+        if rxtx == RX:
+            self.handle_device_reply(ss, es, rxtx, self.cmd[rxtx])
+        elif rxtx == TX:
+            self.handle_host_command(ss, es, rxtx, self.cmd[rxtx])
         else:
-            self.put(ss, es, self.out_ann, [ANN_ASCII, ['Unsupported command']])
-
-        self.cmd = ''
+            pass # TODO: Error.
 
