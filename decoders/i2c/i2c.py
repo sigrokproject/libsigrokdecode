@@ -144,11 +144,11 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.samplecnt = 0
+        self.startsample = -1
+        self.samplenum = None
         self.bitcount = 0
         self.databyte = 0
         self.wr = -1
-        self.startsample = -1
         self.is_repeat_start = 0
         self.state = FIND_START
         self.oldscl = None
@@ -160,9 +160,6 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2c')
-
-    def report(self):
-        pass
 
     def is_start_condition(self, scl, sda):
         # START condition (S): SDA = falling, SCL = high
@@ -183,8 +180,9 @@ class Decoder(srd.Decoder):
         return False
 
     def found_start(self, scl, sda):
-        cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
+        self.startsample = self.samplenum
 
+        cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
         self.put(self.out_proto, [cmd, None, None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1]]])
@@ -194,19 +192,17 @@ class Decoder(srd.Decoder):
         self.is_repeat_start = 1
         self.wr = -1
 
+    # Gather 8 bits of data plus the ACK/NACK bit.
     def found_address_or_data(self, scl, sda):
-        # Gather 8 bits of data plus the ACK/NACK bit.
-
-        if self.startsample == -1:
-            # TODO: Should be samplenum, as received from the feed.
-            self.startsample = self.samplecnt
-        self.bitcount += 1
-
         # Address and data are transmitted MSB-first.
         self.databyte <<= 1
         self.databyte |= sda
 
+        if self.bitcount == 0:
+            self.startsample = self.samplenum
+
         # Return if we haven't collected all 8 + 1 bits, yet.
+        self.bitcount += 1
         if self.bitcount != 9:
             return
 
@@ -256,6 +252,8 @@ class Decoder(srd.Decoder):
             pass
 
     def found_stop(self, scl, sda):
+        self.startsample = self.samplenum
+
         self.put(self.out_proto, ['STOP', None, None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol['STOP'][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol['STOP'][1]]])
@@ -266,12 +264,11 @@ class Decoder(srd.Decoder):
 
     def put(self, output_id, data):
         # Inject sample range into the call up to sigrok.
-        # TODO: 0-0 sample range for now.
-        super(Decoder, self).put(0, 0, output_id, data)
+        super(Decoder, self).put(self.startsample, self.samplenum, output_id, data)
 
     def decode(self, ss, es, data):
         for samplenum, (scl, sda) in data:
-            self.samplecnt += 1
+            self.samplenum = samplenum
 
             # First sample: Save SCL/SDA value.
             if self.oldscl == None:
@@ -296,8 +293,8 @@ class Decoder(srd.Decoder):
                 elif self.is_stop_condition(scl, sda):
                     self.found_stop(scl, sda)
             else:
-                # TODO: Error?
-                pass
+                # Shouldn't happen.
+                raise Exception("unknown state %d" % self.STATE)
 
             # Save current SDA/SCL values for the next round.
             self.oldscl = scl
