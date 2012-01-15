@@ -40,6 +40,7 @@ INIT = 3
 INITIALIZED = 4
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'nunchuk'
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk'

@@ -45,6 +45,7 @@ def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'dcf77'
     name = 'DCF77'
     longname = 'DCF77 time protocol'

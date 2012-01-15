@@ -48,6 +48,7 @@ spi_mode = {
 ANN_HEX = 0
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'spi'
     name = 'SPI'
     longname = 'Serial Peripheral Interface'

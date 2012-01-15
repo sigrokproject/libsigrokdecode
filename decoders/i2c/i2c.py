@@ -116,6 +116,7 @@ FIND_ADDRESS = 1
 FIND_DATA = 2
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit'

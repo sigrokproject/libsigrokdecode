@@ -102,6 +102,7 @@ device_name = {
 }
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'mx25lxx05d'
     name = 'MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D'

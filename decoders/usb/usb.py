@@ -105,6 +105,7 @@ def packet_decode(packet):
     return pid + ' ' + data
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'usb'
     name = 'USB'
     longname = 'Universal Serial Bus'

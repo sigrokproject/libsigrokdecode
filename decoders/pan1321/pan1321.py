@@ -37,6 +37,7 @@ RX = 0
 TX = 1
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'pan1321'
     name = 'PAN1321'
     longname = 'Panasonic PAN1321'

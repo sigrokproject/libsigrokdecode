@@ -28,6 +28,7 @@ https://en.wikipedia.org/wiki/Display_Data_Channel
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'ddc'
     name = 'DDC'
     longname = 'Display Data Channel'

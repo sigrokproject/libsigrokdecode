@@ -21,6 +21,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'transitioncounter'
     name = 'Transition counter'
     longname = 'Pin transition counter'

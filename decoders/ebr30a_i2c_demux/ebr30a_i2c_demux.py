@@ -40,6 +40,7 @@ H8563S = 1
 ACCEL = 2
 
 class Decoder(srd.Decoder):
+    api_version = 1
     id = 'ebr30a_i2c_demux'
     name = 'EBR30-a I2C demux'
     longname = 'TrekStor EBR30-a I2C demux'
