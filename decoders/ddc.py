@@ -16,16 +16,13 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, If not, see <http://www.gnu.org/licenses/>.
 ##
+"""
+This decoder extracts a DDC stream from an I2C session between a computer
+and a display device. The stream is output as plain bytes.
 
-#
-# DDC protocol decoder
-#
-# This decoder extracts a DDC stream from an I2C session between a computer
-# and a display device. The stream is output as plain bytes.
-#
-# Details:
-# https://en.wikipedia.org/wiki/Display_Data_Channel
-#
+Details:
+https://en.wikipedia.org/wiki/Display_Data_Channel
+"""
 
 import sigrokdecode as srd
 
