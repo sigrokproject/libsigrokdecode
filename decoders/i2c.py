@@ -121,8 +121,6 @@ class Decoder(srd.Decoder):
     longname = 'Inter-Integrated Circuit'
     desc = 'I2C is a two-wire, multi-master, serial bus.'
     longdesc = '...'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']

@@ -107,8 +107,6 @@ class Decoder(srd.Decoder):
     longname = 'Macronix MX25Lxx05D'
     desc = 'Macronix MX25Lxx05D SPI flash chip decoder'
     longdesc = 'TODO'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['spi', 'spi', 'logic']
     outputs = ['mx25lxx05d']

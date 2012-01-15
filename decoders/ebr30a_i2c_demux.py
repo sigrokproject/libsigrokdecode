@@ -45,8 +45,6 @@ class Decoder(srd.Decoder):
     longname = 'TrekStor EBR30-a I2C demux'
     desc = 'TODO.'
     longdesc = 'TODO.'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['i2c-axp199', 'i2c-h8563s', 'i2c-accel']

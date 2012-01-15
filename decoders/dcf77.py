@@ -50,8 +50,6 @@ class Decoder(srd.Decoder):
     longname = 'DCF77 time protocol'
     desc = 'TODO.'
     longdesc = 'TODO.'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dcf77']

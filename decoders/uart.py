@@ -189,8 +189,6 @@ class Decoder(srd.Decoder):
     longname = 'Universal Asynchronous Receiver/Transmitter'
     desc = 'Universal Asynchronous Receiver/Transmitter (UART)'
     longdesc = 'TODO.'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']

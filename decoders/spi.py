@@ -53,8 +53,6 @@ class Decoder(srd.Decoder):
     longname = 'Serial Peripheral Interface'
     desc = '...desc...'
     longdesc = '...longdesc...'
-    author = 'Gareth McMullin'
-    email = 'gareth@blacksphere.co.nz'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']

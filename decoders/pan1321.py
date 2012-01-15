@@ -42,8 +42,6 @@ class Decoder(srd.Decoder):
     longname = 'Panasonic PAN1321'
     desc = 'TODO.'
     longdesc = 'TODO.'
-    author = 'Uwe Hermann'
-    email = 'uwe@hermann-uwe.de'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']
