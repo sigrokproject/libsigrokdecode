@@ -84,8 +84,8 @@
 #   - 'DATA WRITE' (Data, write)
 #   - 'STOP' (STOP condition)
 #
-# <data> is the data or address byte associated with the ADDRESS* and DATA*
-# command. For START, START_REPEAT and STOP, this is None.
+# <data> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
+# command. For 'START', 'START REPEAT' and 'STOP', this is None.
 #
 # <ack_bit> is either 'ACK' or 'NACK', but may also be None.
 #
@@ -184,7 +184,7 @@ class Decoder(srd.Decoder):
         return False
 
     def found_start(self, scl, sda):
-        cmd = 'START_REPEAT' if (self.is_repeat_start == 1) else 'START'
+        cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
 
         self.put(self.out_proto, [cmd, None, None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
