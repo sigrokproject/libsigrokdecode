@@ -22,6 +22,7 @@
 # I2C protocol decoder
 #
 
+#
 # The Inter-Integrated Circuit (I2C) bus is a bidirectional, multi-master
 # bus using two signals (SCL = serial clock line, SDA = serial data line).
 #
@@ -68,28 +69,26 @@
 # TODO: Handle multiple different I2C devices on same bus
 #       -> we need to decode multiple protocols at the same time.
 
-"""
-I2C protocol output format:
+'''
+Protocol output format:
 
-The protocol output consists of a (Python) list of I2C "packets", each of
-which is of the form
+I2C packet:
+[<i2c_command>, <data>, <ack_bit>]
 
-       [ _i2c_command_, _data_, _ack_bit_ ]
-
-_i2c_command_ is one of:
+<i2c_command> is one of:
   - 'START' (START condition)
-  - 'START_REPEAT' (Repeated START)
-  - 'ADDRESS_READ' (Address, read)
-  - 'ADDRESS_WRITE' (Address, write)
-  - 'DATA_READ' (Data, read)
-  - 'DATA_WRITE' (Data, write)
+  - 'START REPEAT' (Repeated START)
+  - 'ADDRESS READ' (Address, read)
+  - 'ADDRESS WRITE' (Address, write)
+  - 'DATA READ' (Data, read)
+  - 'DATA WRITE' (Data, write)
   - 'STOP' (STOP condition)
 
-_data_ is the data or address byte associated with the ADDRESS_* and DATA_*
-command. For START, START_REPEAT and STOP, this is None.
+<data> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
+command. For 'START', 'START REPEAT' and 'STOP', this is None.
 
-_ack_bit_ is either 'ACK' or 'NACK', but may also be None.
-"""
+<ack_bit> is either 'ACK' or 'NACK', but may also be None.
+'''
 
 import sigrokdecode as srd
 
