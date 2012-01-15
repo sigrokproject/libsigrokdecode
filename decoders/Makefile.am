@@ -29,7 +29,7 @@ dist_pkgdata_DATA = \
 	nunchuk.py \
 	pan1321.py \
 	spi.py \
-	srd_usb.py \
+	usb.py \
 	transitioncounter.py \
 	ebr30a_i2c_demux.py \
 	uart.py
