@@ -150,6 +150,17 @@ AC_DEFINE(LIBSIGROKDECODE_VERSION, [libsigrokdecode_version],
 AC_CONFIG_FILES([Makefile
 		 libsigrokdecode.pc
 		 decoders/Makefile
+		 decoders/dcf77/Makefile
+		 decoders/ddc/Makefile
+		 decoders/ebr30a_i2c_demux/Makefile
+		 decoders/i2c/Makefile
+		 decoders/mx25lxx05d/Makefile
+		 decoders/nunchuk/Makefile
+		 decoders/pan1321/Makefile
+		 decoders/spi/Makefile
+		 decoders/transitioncounter/Makefile
+		 decoders/uart/Makefile
+		 decoders/usb/Makefile
 		])
 
 AC_OUTPUT

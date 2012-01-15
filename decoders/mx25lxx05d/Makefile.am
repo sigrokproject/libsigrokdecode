@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,17 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Please keep this list in alphabetical order.
-SUBDIRS = \
-	dcf77 \
-	ddc \
-	ebr30a_i2c_demux \
-	i2c \
-	mx25lxx05d \
-	nunchuk \
-	pan1321 \
-	spi \
-	transitioncounter \
-	uart \
-	usb
+pkgdatadir = $(DECODERS_DIR)/mx25lxx05d
+
+dist_pkgdata_DATA = __init__.py mx25lxx05d.py
+
+CLEANFILES = *.pyc
 

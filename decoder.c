@@ -18,10 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <glib.h>
 #include "config.h"
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "sigrokdecode-internal.h"
-#include <dirent.h>
 
 /* The list of protocol decoders. */
 GSList *pd_list = NULL;
@@ -66,7 +66,7 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
 
 
 /**
- * Load a protocol decoder module into the embedded python interpreter.
+ * Load a protocol decoder module into the embedded Python interpreter.
  *
  * @param name The module name to be loaded.
  * @param dec Pointer to the struct srd_decoder filled with the loaded module.
@@ -82,17 +82,20 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 	py_basedec = NULL;
 	ret = SRD_ERR;
-	srd_dbg("loading module %s", name);
+
+	srd_dbg("decoder: %s: loading module '%s'", __func__, name);
 
 	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
+		srd_err("decoder: %s: d malloc failed", __func__);
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
 
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(name))) {
-		/* TODO: report exception message/traceback to err/dbg */
-		srd_dbg("import failed");
+		/* TODO: Report exception message/traceback to err/dbg. */
+		srd_warn("decoder: %s: import of '%s' failed", __func__, name);
+		PyErr_Print();
 		PyErr_Clear();
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
@@ -101,6 +104,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Get the 'Decoder' class as Python object. */
 	if (!(d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder"))) {
 		/* This generated an AttributeError exception. */
+		PyErr_Print();
 		PyErr_Clear();
 		srd_err("Decoder class not found in protocol decoder module %s", name);
 		ret = SRD_ERR_PYTHON;
@@ -243,27 +247,117 @@ int srd_unload_decoder(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
+/**
+ * Check if the directory in the specified search path is a valid PD dir.
+ *
+ * A valid sigrok protocol decoder consists of a directory, which contains
+ * at least two .py files (the special __init__.py and at least one additional
+ * .py file which contains the actual PD code).
+ *
+ * TODO: We should also check that this is not a random other Python module,
+ * but really a sigrok PD module by some means.
+ *
+ * @param search_path A string containing the (absolute) path to the directory
+ *                    where 'entry' resides in.
+ * @param entry A string containing the (relative) directory name of the
+ *              sigrok PD module. E.g. "i2c" for the I2C protocol decoder.
+ * @return SRD_OK, if the directory is a valid sigrok PD, a negative error
+ *         code, such as SRD_ERR, otherwise.
+ */
+int srd_is_valid_pd_dir(const gchar *search_path, const gchar *entry)
+{
+	GDir *dir;
+	int py_files = 0, has_init_py = 0;
+	gchar *path1, *path2, *file;
+	GError *error;
+
+	/* TODO: Error handling. */
+	path1 = g_build_filename(search_path, entry, NULL);
+
+	/* Check that it is a directory (and exists). */
+	if (!g_file_test(path1, G_FILE_TEST_IS_DIR)) {
+		srd_dbg("decoder: %s: '%s' not a directory or doesn't exist",
+			__func__, entry);
+		return SRD_ERR;
+	}
+
+	if (!(dir = g_dir_open(path1, 0, &error))) { /* TODO: flags? */
+		srd_dbg("decoder: %s: '%s' failed to open directory",
+			__func__, entry);
+		return SRD_ERR;
+	}
+
+	/* Check the contents of the directory. */
+	while ((file = g_dir_read_name(dir)) != NULL) {
+		/* TODO: Error handling. */
+		path2 = g_build_filename(path1, file, NULL);
+
+		/* Ignore non-files. */
+		if (!g_file_test(path2, G_FILE_TEST_IS_REGULAR)) {
+			srd_spew("decoder: %s: '%s' not a file, ignoring",
+				 __func__, file);
+			continue;
+		}
+
+		/* Count number of .py files. */
+		if (g_str_has_suffix(path2, ".py")) {
+			srd_spew("decoder: %s: found .py file: '%s'",
+				 __func__, file);
+			py_files++;
+		}
+
+		/* Check if it's an __init__.py file. */
+		if (g_str_has_suffix(path2, "__init__.py")) {
+			srd_spew("decoder: %s: found __init__.py file: '%s'",
+				 __func__, path2);
+			has_init_py = 1;
+		}
+	}
+	g_dir_close(dir);
+
+	/* Check if the directory contains >= 2 *.py files. */
+	if (py_files < 2) {
+		srd_dbg("decoder: %s: '%s' is not a valid PD dir, it doesn't "
+			"contain >= 2 .py files", __func__, entry);
+		return SRD_ERR;
+	}
+
+	/* Check if the directory contains an __init__.py file. */
+	if (!has_init_py) {
+		srd_dbg("decoder: %s: '%s' is not a valid PD dir, it doesn't "
+			"contain an __init__.py file", __func__, entry);
+		return SRD_ERR;
+	}
+
+	/* TODO: Check if it's a PD, not a random other Python module. */
+
+	return SRD_OK;
+}
 
 int srd_load_all_decoders(void)
 {
-	DIR *dir;
-	struct dirent *dp;
+	GDir *dir;
+	gchar *direntry;
 	int ret;
 	char *decodername;
 	struct srd_decoder *dec;
+	GError *error;
 
-	if (!(dir = opendir(DECODERS_DIR))) {
+	if (!(dir = g_dir_open(DECODERS_DIR, 0, &error))) { /* TODO: flags? */
 		Py_Finalize(); /* Returns void. */
 		return SRD_ERR_DECODERS_DIR;
 	}
 
-	while ((dp = readdir(dir)) != NULL) {
-		/* Ignore filenames which don't end with ".py". */
-		if (!g_str_has_suffix(dp->d_name, ".py"))
+	while ((direntry = g_dir_read_name(dir)) != NULL) {
+		/* Ignore directory entries which are not valid PDs. */
+		if (srd_is_valid_pd_dir(DECODERS_DIR, direntry) != SRD_OK) {
+			srd_dbg("decoder: %s: '%s' not a valid PD dir, "
+				"ignoring it", __func__, direntry);
 			continue;
+		}
 
-		/* Decoder name == filename (without .py suffix). */
-		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
+		/* The decoder name is the PD directory name (e.g. "i2c"). */
+		decodername = g_strdup(direntry);
 
 		/* TODO: Error handling. Use g_try_malloc(). */
 		if (!(dec = malloc(sizeof(struct srd_decoder)))) {
@@ -278,11 +372,10 @@ int srd_load_all_decoders(void)
 			pd_list = g_slist_append(pd_list, dec);
 		}
 	}
-	closedir(dir);
+	g_dir_close(dir);
 
 	return SRD_OK;
 }
-
 
 /**
  * TODO
