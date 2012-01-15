@@ -138,15 +138,6 @@ struct srd_pd_output {
 	char *proto_id;
 };
 
-typedef struct {
-	PyObject_HEAD
-	struct srd_decoder_instance *di;
-	unsigned int itercnt;
-	uint8_t *inbuf;
-	uint64_t inbuflen;
-	PyObject *sample;
-} srd_logic;
-
 struct srd_proto_data {
 	uint64_t start_sample;
 	uint64_t end_sample;
@@ -161,8 +152,22 @@ struct srd_pd_callback {
 };
 
 
-/*--- controller.c ----------------------------------------------------------*/
+/* custom python types */
+typedef struct {
+	PyObject_HEAD
+} srd_Decoder;
 
+typedef struct {
+	PyObject_HEAD
+	struct srd_decoder_instance *di;
+	unsigned int itercnt;
+	uint8_t *inbuf;
+	uint64_t inbuflen;
+	PyObject *sample;
+} srd_logic;
+
+
+/*--- controller.c ----------------------------------------------------------*/
 int srd_init(void);
 int srd_exit(void);
 int set_modulepath(void);

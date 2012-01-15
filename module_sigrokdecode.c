@@ -187,23 +187,19 @@ static PyMethodDef Decoder_methods[] = {
 };
 
 
-typedef struct {
-	PyObject_HEAD
-} sigrok_Decoder_object;
-
-static PyTypeObject srd_Decoder_type = {
+PyTypeObject srd_Decoder_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "sigrokdecode.Decoder",
-	.tp_basicsize = sizeof(sigrok_Decoder_object),
+	.tp_basicsize = sizeof(srd_Decoder),
 	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	.tp_doc = "Sigrok Decoder object",
+	.tp_doc = "Sigrok Decoder base class",
 	.tp_methods = Decoder_methods,
 };
 
 static struct PyModuleDef sigrokdecode_module = {
 	PyModuleDef_HEAD_INIT,
 	.m_name = "sigrokdecode",
-	.m_doc = "sigrokdecode base class",
+	.m_doc = "sigrokdecode module",
 	.m_size = -1,
 	.m_methods = no_methods,
 };
