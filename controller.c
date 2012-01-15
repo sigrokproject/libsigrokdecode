@@ -168,7 +168,7 @@ struct srd_decoder_instance *srd_instance_new(const char *id,
 	}
 
 	/* Create an instance of the 'Decoder' class. */
-	di->py_instance = PyObject_Call(dec->py_decobj, py_args, NULL);
+	di->py_instance = PyObject_Call(dec->py_dec, py_args, NULL);
 	if (!di->py_instance) {
 		if (PyErr_Occurred())
 			PyErr_Print();
@@ -230,6 +230,7 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 	return SRD_OK;
 }
 
+/* TODO: this should go into the PD stack */
 struct srd_decoder_instance *srd_instance_find(char *instance_id)
 {
 	GSList *l;

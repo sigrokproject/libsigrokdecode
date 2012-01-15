@@ -26,6 +26,9 @@
 /* The list of protocol decoders. */
 GSList *pd_list = NULL;
 
+/* lives in module_sigrokdecode.c */
+extern PyObject *mod_sigrokdecode;
+
 
 /**
  * Returns the list of supported/loaded protocol decoders.
@@ -72,67 +75,89 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
  */
 int srd_load_decoder(const char *name, struct srd_decoder **dec)
 {
-	PyObject *py_mod, *py_res, *py_annlist, *py_ann;
+	PyObject *py_basedec, *py_annlist, *py_ann;
 	struct srd_decoder *d;
-	int alen, r, i;
+	int alen, ret, i;
 	char **ann;
 
-	/* "Import" the Python module. */
-	if (!(py_mod = PyImport_ImportModule(name))) { /* NEWREF */
-		PyErr_Print(); /* Returns void. */
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	py_basedec = NULL;
+	ret = SRD_ERR;
+	srd_dbg("loading module %s", name);
+
+	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
+		ret = SRD_ERR_MALLOC;
+		goto err_out;
+	}
+
+	/* Import the Python module. */
+	if (!(d->py_mod = PyImport_ImportModule(name))) {
+		/* TODO: report exception message/traceback to err/dbg */
+		srd_dbg("import failed");
+		PyErr_Clear();
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
 	}
 
 	/* Get the 'Decoder' class as Python object. */
-	py_res = PyObject_GetAttrString(py_mod, "Decoder"); /* NEWREF */
-	if (!py_res) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-		Py_XDECREF(py_mod);
-		srd_err("Decoder class not found in PD module %s", name);
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+	if (!(d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder"))) {
+		/* This generated an AttributeError exception. */
+		PyErr_Clear();
+		srd_err("Decoder class not found in protocol decoder module %s", name);
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
 	}
 
-	if (!(d = malloc(sizeof(struct srd_decoder))))
-		return SRD_ERR_MALLOC;
+	if (!(py_basedec = PyObject_GetAttrString(mod_sigrokdecode, "Decoder"))) {
+		srd_dbg("sigrokdecode module not loaded");
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "id", &(d->id))) < 0)
-		return r;
+	if (!PyObject_IsSubclass(d->py_dec, py_basedec)) {
+		srd_err("Decoder class in protocol decoder module %s is not "
+				"a subclass of sigrokdecode.Decoder", name);
+		ret = SRD_ERR_PYTHON;
+		goto err_out;
+	}
+	Py_DecRef(py_basedec);
 
-	if ((r = h_str(py_res, "name", &(d->name))) < 0)
-		return r;
+	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK) {
+		return SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "longname", &(d->longname))) < 0)
-		return r;
+	if (py_attr_as_str(d->py_dec, "name", &(d->name)) != SRD_OK) {
+		return SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "desc", &(d->desc))) < 0)
-		return r;
+	if (py_attr_as_str(d->py_dec, "longname", &(d->longname)) != SRD_OK) {
+		return SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "longdesc", &(d->longdesc))) < 0)
-		return r;
+	if (py_attr_as_str(d->py_dec, "desc", &(d->desc)) != SRD_OK) {
+		return SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "author", &(d->author))) < 0)
-		return r;
+	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK) {
+		return SRD_ERR_PYTHON;
+		goto err_out;
+	}
 
-	if ((r = h_str(py_res, "license", &(d->license))) < 0)
-		return r;
-
-	d->py_mod = py_mod;
-	d->py_decobj = py_res;
-
-	/* TODO: Handle func, inputformats, outputformats. */
-	/* Note: They must at least be set to NULL, will segfault otherwise. */
-	d->func = NULL;
+	/* TODO: Handle inputformats, outputformats. */
 	d->inputformats = NULL;
 	d->outputformats = NULL;
 
 	/* Convert class annotation attribute to GSList of **char */
 	d->annotations = NULL;
-	if (PyObject_HasAttrString(py_res, "annotations")) {
-		py_annlist = PyObject_GetAttrString(py_res, "annotations");
+	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
+		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
 		if (!PyList_Check(py_annlist)) {
 			srd_err("Protocol decoder module %s annotations should be a list", name);
-			return SRD_ERR_PYTHON;
+			ret = SRD_ERR_PYTHON;
+			goto err_out;
 		}
 		alen = PyList_Size(py_annlist);
 		for (i = 0; i < alen; i++) {
@@ -140,43 +165,66 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
 				srd_err("Protocol decoder module %s annotation %d should be a list with two elements",
 						name, i+1);
-				return SRD_ERR_PYTHON;
+				ret = SRD_ERR_PYTHON;
+				goto err_out;
 			}
 
-			if (py_strlist_to_char(py_ann, &ann) != SRD_OK)
-				return SRD_ERR_PYTHON;
+			if (py_strlist_to_char(py_ann, &ann) != SRD_OK) {
+				ret = SRD_ERR_PYTHON;
+				goto err_out;
+			}
 			d->annotations = g_slist_append(d->annotations, ann);
 		}
 	}
 
 	*dec = d;
+	ret = SRD_OK;
 
-	return SRD_OK;
+err_out:
+	if (ret != SRD_OK) {
+		Py_XDECREF(py_basedec);
+		Py_XDECREF(d->py_dec);
+		Py_XDECREF(d->py_mod);
+		g_free(d);
+	}
+
+	return ret;
+}
+
+char *srd_decoder_doc(struct srd_decoder *dec)
+{
+	char *doc;
+
+	doc = NULL;
+	py_attr_as_str(dec->py_mod, "__doc__", &doc);
+
+	return doc;
 }
 
 
 /**
- * TODO
+ * Unload decoder module.
+ *
+ * @param dec The decoder struct to be unloaded.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_unload_decoder(struct srd_decoder *dec)
 {
+
 	g_free(dec->id);
 	g_free(dec->name);
 	g_free(dec->longname);
 	g_free(dec->desc);
-	g_free(dec->longdesc);
-	g_free(dec->author);
 	g_free(dec->license);
-	g_free(dec->func);
 
 	/* TODO: Free everything in inputformats and outputformats. */
-
 	if (dec->inputformats != NULL)
 		g_slist_free(dec->inputformats);
 	if (dec->outputformats != NULL)
 		g_slist_free(dec->outputformats);
 
-	Py_XDECREF(dec->py_decobj);
+	Py_XDECREF(dec->py_dec);
 	Py_XDECREF(dec->py_mod);
 
 	/* TODO: (g_)free dec itself? */

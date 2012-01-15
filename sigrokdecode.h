@@ -90,17 +90,8 @@ struct srd_decoder {
 	/** A (short, one-line) description of the decoder. */
 	char *desc;
 
-	/** A (long, multi-line) description of the decoder. May be NULL. */
-	char *longdesc;
-
-	/** The author of the decoder. May be NULL. */
-	char *author;
-
 	/** The license of the decoder. Valid values: "gplv2+", "gplv3+". */
 	char *license;
-
-	/** TODO */
-	char *func;
 
 	/** TODO */
 	GSList *inputformats;
@@ -113,11 +104,11 @@ struct srd_decoder {
 	 */
 	GSList *annotations;
 
-	/** TODO */
+	/** Python module */
 	PyObject *py_mod;
 
-	/** Python object that performs the decoding */
-	PyObject *py_decobj;
+	/** sigrokdecode.Decoder class */
+	PyObject *py_dec;
 };
 
 struct srd_decoder_instance {
@@ -191,20 +182,20 @@ int srd_register_callback(int output_type, void *cb);
 void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
-
 GSList *srd_list_decoders(void);
 struct srd_decoder *srd_get_decoder_by_id(const char *id);
 int srd_load_decoder(const char *name, struct srd_decoder **dec);
 int srd_unload_decoder(struct srd_decoder *dec);
 int srd_load_all_decoders(void);
 int srd_unload_all_decoders(void);
+char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- util.c ----------------------------------------------------------------*/
-int h_str(PyObject *py_res, const char *key, char **outstr);
+int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+int py_str_as_str(PyObject *py_str, char **outstr);
 int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
-
 int srd_set_loglevel(int loglevel);
 int srd_get_loglevel(void);
 

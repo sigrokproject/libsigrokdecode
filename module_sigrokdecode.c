@@ -21,6 +21,12 @@
 #include "sigrokdecode-internal.h"
 #include "config.h"
 
+
+/* When initialized, a reference to this module inside the python interpreter
+ * lives here.
+ */
+PyObject *mod_sigrokdecode = NULL;
+
 /* lives in type_logic.c */
 extern PyTypeObject srd_logic_type;
 
@@ -235,6 +241,8 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 	if(PyModule_AddObject(mod, "OUTPUT_BINARY",
 			PyLong_FromLong(SRD_OUTPUT_BINARY)) == -1)
 		return NULL;
+
+	mod_sigrokdecode = mod;
 
 	return mod;
 }

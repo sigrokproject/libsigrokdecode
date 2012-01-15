@@ -19,49 +19,81 @@
  */
 
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "sigrokdecode-internal.h"
 #include "config.h"
 
 
 /**
- * Helper function to get the value of a python object's attribute,
- * returned as a newly allocated char *.
+ * Get the value of a python object's attribute, returned as a newly
+ * allocated char *.
  *
  * @param py_obj The object to probe.
- * @param key Name of the attribute to retrieve.
+ * @param attr Name of the attribute to retrieve.
  * @param outstr ptr to char * storage to be filled in.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-int h_str(PyObject *py_obj, const char *key, char **outstr)
+int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 {
-	PyObject *py_str, *py_encstr;
-	char *str;
+	PyObject *py_str;
 	int ret;
 
-	py_str = py_encstr = NULL;
+	if (!PyObject_HasAttrString(py_obj, attr)) {
+		srd_dbg("object has no attribute '%s'", attr);
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_str = PyObject_GetAttrString(py_obj, attr))) {
+		/* TODO: report exception message/traceback to err/dbg */
+		PyErr_Clear();
+		return SRD_ERR_PYTHON;
+	}
+
+	ret = py_str_as_str(py_str, outstr);
+	Py_XDECREF(py_str);
+
+	return ret;
+}
+
+
+/**
+ * Get the value of a python unicode string object, returned as a newly
+ * allocated char *.
+ *
+ * @param py_str The unicode string object.
+ * @param outstr ptr to char * storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a malloc()ed string upon success.
+ */
+int py_str_as_str(PyObject *py_str, char **outstr)
+{
+	PyObject *py_encstr;
+	int ret;
+	char *str;
+
+	py_encstr = NULL;
 	str = NULL;
 	ret = SRD_OK;
 
-	if (!(py_str = PyObject_GetAttrString(py_obj, (char *)key))) {
-		/* TODO: log level 4 debug message */
+	if (!PyUnicode_Check(py_str)) {
+		srd_dbg("not a string object");
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
 
 	if (!(py_encstr = PyUnicode_AsEncodedString(py_str, "utf-8", NULL))) {
-		/* TODO: log level 4 debug message */
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
 	if (!(str = PyBytes_AS_STRING(py_encstr))) {
-		/* TODO: log level 4 debug message */
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
 
 	if (!(*outstr = g_strdup(str))) {
-		/* TODO: log level 4 debug message */
+		srd_dbg("malloc failed");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
@@ -72,16 +104,25 @@ err_out:
 	if (py_encstr)
 		Py_XDECREF(py_encstr);
 
-	if (PyErr_Occurred())
-		/* TODO: log level 4 debug message */
-		PyErr_Print();
+	if (PyErr_Occurred()) {
+		srd_dbg("string conversion failed");
+		/* TODO: dump exception to srd_dbg */
+		PyErr_Clear();
+	}
 
 	return ret;
 }
 
+
 /**
  * Convert a python list of unicode strings to a NULL-terminated UTF8-encoded
  * char * array. The caller must free each string when finished.
+ *
+ * @param py_strlist The list object.
+ * @param outstr ptr to char ** storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a malloc()ed char ** upon success.
  */
 int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 {
@@ -93,7 +134,8 @@ int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1))))
 		return SRD_ERR_MALLOC;
 	for (i = 0; i < list_len; i++) {
-		if (!(py_str = PyUnicode_AsEncodedString(PyList_GetItem(py_strlist, i), "utf-8", NULL)))
+		if (!(py_str = PyUnicode_AsEncodedString(
+				PyList_GetItem(py_strlist, i), "utf-8", NULL)))
 			return SRD_ERR_PYTHON;
 		if (!(str = PyBytes_AS_STRING(py_str)))
 			return SRD_ERR_PYTHON;
