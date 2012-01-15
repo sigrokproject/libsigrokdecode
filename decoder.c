@@ -193,10 +193,21 @@ err_out:
 
 char *srd_decoder_doc(struct srd_decoder *dec)
 {
+	PyObject *py_str;
 	char *doc;
 
+	if (!PyObject_HasAttrString(dec->py_mod, "__doc__"))
+		return NULL;
+
+	if (!(py_str = PyObject_GetAttrString(dec->py_mod, "__doc__"))) {
+		PyErr_Clear();
+		return NULL;
+	}
+
 	doc = NULL;
-	py_attr_as_str(dec->py_mod, "__doc__", &doc);
+	if (py_str != Py_None)
+		py_str_as_str(py_str, &doc);
+	Py_DecRef(py_str);
 
 	return doc;
 }
