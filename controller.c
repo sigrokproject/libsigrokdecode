@@ -283,11 +283,12 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_instance_decode(uint64_t timeoffset, uint64_t duration,
+int srd_instance_decode(uint64_t start_samplenum,
 		struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_instance, *py_res;
 	srd_logic *logic;
+	uint64_t end_samplenum;
 
 	/* Return an error upon unusable input. */
 	if (di == NULL)
@@ -304,14 +305,16 @@ int srd_instance_decode(uint64_t timeoffset, uint64_t duration,
 	logic = PyObject_New(srd_logic, &srd_logic_type);
 	Py_INCREF(logic);
 	logic->di = di;
+	logic->start_samplenum = start_samplenum;
 	logic->itercnt = 0;
 	logic->inbuf = inbuf;
 	logic->inbuflen = inbuflen;
 	logic->sample = PyList_New(2);
 	Py_INCREF(logic->sample);
 
+	end_samplenum = start_samplenum + inbuflen / di->unitsize;
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
-			"KKO", timeoffset, duration, logic))) {
+			"KKO", logic->start_samplenum, end_samplenum, logic))) {
 		if (PyErr_Occurred())
 			PyErr_Print(); /* Returns void. */
 
@@ -360,14 +363,13 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 }
 
 /* Feed logic samples to decoder session. */
-int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
-		uint64_t inbuflen)
+int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
 
 	for (d = di_list; d; d = d->next) {
-		if ((ret = srd_instance_decode(timeoffset, duration, d->data, inbuf,
+		if ((ret = srd_instance_decode(start_samplenum, d->data, inbuf,
 				inbuflen)) != SRD_OK)
 			return ret;
 	}

@@ -151,6 +151,7 @@ typedef struct {
 typedef struct {
 	PyObject_HEAD
 	struct srd_decoder_instance *di;
+	uint64_t start_samplenum;
 	unsigned int itercnt;
 	uint8_t *inbuf;
 	uint64_t inbuflen;
@@ -170,13 +171,11 @@ int srd_instance_set_probe(struct srd_decoder_instance *di,
 				const char *probename, int num);
 struct srd_decoder_instance *srd_instance_find(char *instance_id);
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
-int srd_instance_decode(uint64_t timeoffset, uint64_t duration,
+int srd_instance_decode(uint64_t start_samplenum,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
-int srd_session_feed(uint64_t timeoffset, uint64_t duration, uint8_t *inbuf,
-		uint64_t inbuflen);
-int pd_add(struct srd_decoder_instance *di, int output_type,
-		char *output_id);
+int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen);
+int pd_add(struct srd_decoder_instance *di, int output_type, char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 int srd_register_callback(int output_type, void *cb);
 void *srd_find_callback(int output_type);

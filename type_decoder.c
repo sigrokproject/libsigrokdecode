@@ -177,7 +177,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 
 static PyMethodDef Decoder_methods[] = {
 	{"put", Decoder_put, METH_VARARGS,
-	 "Accepts a dictionary with the following keys: time, duration, data"},
+	 "Accepts a dictionary with the following keys: startsample, endsample, data"},
 	{"add", Decoder_add, METH_VARARGS, "Create a new output stream"},
 	{NULL, NULL, 0, NULL}
 };

@@ -56,16 +56,14 @@ PyObject *srd_logic_iternext(PyObject *self)
 		sample >>= 1;
 	}
 
-	/* TODO: samplenum should be in the inbuf feed, instead of time/duration.
-	 * fake it for now...
-	 */
 	/* Prepare the next samplenum/sample list in this iteration. */
-	py_samplenum = PyLong_FromUnsignedLongLong(logic->itercnt++);
+	py_samplenum = PyLong_FromUnsignedLongLong(logic->start_samplenum + logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
 	py_samples = PyBytes_FromStringAndSize((const char *)probe_samples,
 			logic->di->num_probes);
 	PyList_SetItem(logic->sample, 1, py_samples);
 	Py_INCREF(logic->sample);
+	logic->itercnt++;
 
 	return logic->sample;
 }
