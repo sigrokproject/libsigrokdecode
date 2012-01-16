@@ -99,8 +99,6 @@ int py_str_as_str(PyObject *py_str, char **outstr)
 	}
 
 err_out:
-	if (py_str)
-		Py_XDECREF(py_str);
 	if (py_encstr)
 		Py_XDECREF(py_encstr);
 
