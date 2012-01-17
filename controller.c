@@ -23,6 +23,7 @@
 #include "config.h"
 #include <glib.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 
 static GSList *di_list = NULL;
@@ -126,60 +127,208 @@ int set_modulepath(void)
 
 
 /**
+ * Set options in a decoder instance.
+ *
+ * @param di Decoder instance.
+ * @param options A GHashTable of options to set.
+ *
+ * Handled options are removed from the hash.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
+int srd_instance_set_options(struct srd_decoder_instance *di,
+		GHashTable *options)
+{
+	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
+	PyObject *py_optlist, *py_classval;
+	Py_UNICODE *py_ustr;
+	unsigned long long int val_ull;
+	int num_optkeys, ret, size, i;
+	char *key, *value;
+
+	if (g_hash_table_size(options) == 0)
+		/* No options provided. */
+		return SRD_OK;
+
+	if(!PyObject_HasAttrString(di->decoder->py_dec, "options"))
+		/* Decoder has no options. */
+		return SRD_OK;
+
+	ret = SRD_ERR_PYTHON;
+	key = NULL;
+	py_dec_options = py_dec_optkeys = py_di_options = py_optval = NULL;
+	py_optlist = py_classval = NULL;
+	py_dec_options = PyObject_GetAttrString(di->decoder->py_dec, "options");
+	if (!PyDict_Check(py_dec_options)) {
+		srd_err("Protocol decoder %s options is not a dictionary.",
+				di->decoder->name);
+		goto err_out;
+	}
+
+	/* All of these are synthesized objects, so they're good. */
+	py_dec_optkeys = PyDict_Keys(py_dec_options);
+	num_optkeys = PyList_Size(py_dec_optkeys);
+	if (!(py_di_options = PyObject_GetAttrString(di->py_instance, "options")))
+		goto err_out;
+	for (i = 0; i < num_optkeys; i++) {
+		/* Get the default class value for this option. */
+		py_str_as_str(PyList_GetItem(py_dec_optkeys, i), &key);
+		if (!(py_optlist = PyDict_GetItemString(py_dec_options, key)))
+			goto err_out;
+		if (!(py_classval = PyList_GetItem(py_optlist, 1)))
+			goto err_out;
+
+		if ((value = g_hash_table_lookup(options, key))) {
+			/* An override for this option was provided. */
+			if (PyUnicode_Check(py_classval)) {
+				if (!(py_optval = PyUnicode_FromString(value))) {
+					/* Some UTF-8 encoding error. */
+					PyErr_Clear();
+					goto err_out;
+				}
+			} else if (PyLong_Check(py_classval)) {
+				if (!(py_optval = PyLong_FromString(value, NULL, 0))) {
+					/* ValueError Exception */
+					PyErr_Clear();
+					srd_err("Option %s has invalid value %s: expected integer",
+							key, value);
+					goto err_out;
+				}
+			}
+			g_hash_table_remove(options, key);
+		} else {
+			/* Use the class default for this option. */
+			if (PyUnicode_Check(py_classval)) {
+				/* Make a brand new copy of the string. */
+				py_ustr = PyUnicode_AS_UNICODE(py_classval);
+				size = PyUnicode_GET_SIZE(py_classval);
+				py_optval = PyUnicode_FromUnicode(py_ustr, size);
+			} else if (PyLong_Check(py_classval)) {
+				/* Make a brand new copy of the integer. */
+				val_ull = PyLong_AsUnsignedLongLong(py_classval);
+				if (val_ull == (unsigned long long)-1) {
+					/* OverFlowError exception */
+					PyErr_Clear();
+					srd_err("Invalid integer value for %s: expected integer", key);
+					goto err_out;
+				}
+				if (!(py_optval = PyLong_FromUnsignedLongLong(val_ull)))
+					goto err_out;
+			}
+		}
+
+		/* If we got here, py_optval holds a known good new reference
+		 * to the instance option to set.
+		 */
+		if (PyDict_SetItemString(py_di_options, key, py_optval) == -1)
+			goto err_out;
+	}
+
+	ret = SRD_OK;
+
+err_out:
+	Py_XDECREF(py_optlist);
+	Py_XDECREF(py_di_options);
+	Py_XDECREF(py_dec_optkeys);
+	Py_XDECREF(py_dec_options);
+	if (key)
+		g_free(key);
+	if (PyErr_Occurred()) {
+		srd_dbg("stray exception!");
+		PyErr_Print();
+		PyErr_Clear();
+	}
+
+	return ret;
+}
+
+/**
+ * Set probes in a decoder instance.
+ *
+ * @param di Decoder instance.
+ * @param probes A GHashTable of probes to set. Key is probe name, value is
+ * the probe number. Samples passed to this instance will be arranged in this
+ * order.
+ *
+ * Handled probes are removed from the hash.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
+int srd_instance_set_probes(struct srd_decoder_instance *di,
+		GHashTable *probes)
+{
+	int ret;
+
+	if (g_hash_table_size(probes) == 0)
+		/* No probes provided. */
+		return SRD_OK;
+
+	if(!PyObject_HasAttrString(di->decoder->py_dec, "probes"))
+		/* Decoder has no probes. */
+		return SRD_OK;
+
+	ret = SRD_ERR_PYTHON;
+
+	/* TODO */
+	if (g_hash_table_size(probes) > 0) {
+		srd_err("Setting probes is not yet supported.");
+		return SRD_ERR_PYTHON;
+	}
+
+	ret = SRD_OK;
+
+	return ret;
+}
+
+/**
  * Create a new protocol decoder instance.
  *
- * TODO: this should be a decoder name, as decoder ids will disappear.
- *
  * @param id Decoder 'id' field.
- * @param instance_id Optional unique identifier for this instance. If NULL,
- *        the 'id' parameter is used.
+ * @param options GHashtable of options which override the defaults set in
+ * 	    the decoder class.
  * @return Pointer to a newly allocated struct srd_decoder_instance, or
- *         NULL in case of failure.
+ * 		NULL in case of failure.
  */
-struct srd_decoder_instance *srd_instance_new(const char *id,
-		const char *instance_id)
+struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
+		GHashTable *options)
 {
 	struct srd_decoder *dec;
 	struct srd_decoder_instance *di;
-	PyObject *py_args;
+	char *instance_id;
 
-	srd_dbg("%s: creating new %s instance", __func__, id);
+	srd_dbg("%s: creating new %s instance", __func__, decoder_id);
 
-	if (!(dec = srd_get_decoder_by_id(id)))
-		return NULL;
-
-	if (!(di = g_try_malloc(sizeof(*di)))) {
-		srd_err("failed to malloc instance");
+	if (!(dec = srd_get_decoder_by_id(decoder_id))) {
+		srd_err("Protocol decoder %s not found.", decoder_id);
 		return NULL;
 	}
+
+	if (!(di = g_try_malloc0(sizeof(*di)))) {
+		srd_err("Failed to malloc instance.");
+		return NULL;
+	}
+
+	instance_id = g_hash_table_lookup(options, "id");
 	di->decoder = dec;
-	di->instance_id = g_strdup(instance_id ? instance_id : id);
-	di->pd_output = NULL;
-	di->num_probes = 0;
-	di->unitsize = 0;
-	di->samplerate = 0;
-	di->next_di = NULL;
+	di->instance_id = g_strdup(instance_id ? instance_id : decoder_id);
+	g_hash_table_remove(options, "id");
 
-	/* Create an empty Python tuple. */
-	if (!(py_args = PyTuple_New(0))) { /* NEWREF */
+	/* Create a new instance of this decoder class. */
+	if (!(di->py_instance = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
 			PyErr_Print();
-		return NULL;
-	}
-
-	/* Create an instance of the 'Decoder' class. */
-	di->py_instance = PyObject_Call(dec->py_dec, py_args, NULL);
-	if (!di->py_instance) {
-		if (PyErr_Occurred())
-			PyErr_Print();
-		Py_XDECREF(py_args);
+		g_free(di);
 		return NULL;
 	}
 
 	/* Instance takes input from a frontend by default. */
 	di_list = g_slist_append(di_list, di);
 
-	Py_XDECREF(py_args);
+	if (srd_instance_set_options(di, options) != SRD_OK) {
+		di_list = g_slist_remove(di_list, di);
+		g_free(di);
+		return NULL;
+	}
 
 	return di;
 }
@@ -207,28 +356,6 @@ int srd_instance_stack(struct srd_decoder_instance *di_from,
 	return SRD_OK;
 }
 
-
-int srd_instance_set_probe(struct srd_decoder_instance *di,
-			   const char *probename, int num)
-{
-	PyObject *probedict, *probenum;
-
-	probedict = PyObject_GetAttrString(di->py_instance, "probes"); /* NEWREF */
-	if (!probedict) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
-	}
-
-	probenum = PyLong_FromLong(num);
-	PyMapping_SetItemString(probedict, (char *)probename, probenum);
-
-	Py_XDECREF(probenum);
-	Py_XDECREF(probedict);
-
-	return SRD_OK;
-}
 
 /* TODO: this should go into the PD stack */
 struct srd_decoder_instance *srd_instance_find(char *instance_id)

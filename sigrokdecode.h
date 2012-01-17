@@ -163,12 +163,14 @@ typedef struct {
 int srd_init(void);
 int srd_exit(void);
 int set_modulepath(void);
+int srd_instance_set_options(struct srd_decoder_instance *di,
+		GHashTable *options);
+int srd_instance_set_probes(struct srd_decoder_instance *di,
+		GHashTable *probes);
 struct srd_decoder_instance *srd_instance_new(const char *id,
-		const char *instance_id);
+		GHashTable *options);
 int srd_instance_stack(struct srd_decoder_instance *di_from,
 		struct srd_decoder_instance *di_to);
-int srd_instance_set_probe(struct srd_decoder_instance *di,
-				const char *probename, int num);
 struct srd_decoder_instance *srd_instance_find(char *instance_id);
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
 int srd_instance_decode(uint64_t start_samplenum,
