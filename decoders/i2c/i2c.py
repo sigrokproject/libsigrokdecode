@@ -154,9 +154,6 @@ class Decoder(srd.Decoder):
         self.oldscl = None
         self.oldsda = None
 
-        # Set protocol decoder option defaults.
-        self.addressing = Decoder.options['addressing'][1]
-
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2c')
