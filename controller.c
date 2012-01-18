@@ -114,13 +114,36 @@ int srd_exit(void)
  * Add search directories for the protocol decoders.
  *
  * TODO: add path from env var SIGROKDECODE_PATH, config etc
+ * TODO: Should take directoryname/path as input.
  */
 int set_modulepath(void)
 {
 	int ret;
+	gchar *path, *s;
 
-	PyRun_SimpleString("import sys");
-	ret = PyRun_SimpleString("sys.path.append(r'" DECODERS_DIR "');");
+#ifdef _WIN32
+	gchar **splitted;
+
+	/*
+	 * On Windows/MinGW, Python's sys.path needs entries of the form
+	 * 'C:\\foo\\bar' instead of '/foo/bar'.
+	 */
+
+	splitted = g_strsplit(DECODERS_DIR, "/", 0);
+	path = g_build_pathv("\\\\", splitted);
+	g_strfreev(splitted);
+#else
+	path = g_strdup(DECODERS_DIR);
+#endif
+
+	/* TODO: Prepend instead of appending. */
+	/* TODO: Sanity check on 'path' (length, escape special chars, ...). */
+	s = g_strdup_printf("import sys; sys.path.append(r'%s')", path);
+
+	ret = PyRun_SimpleString(s);
+
+	g_free(path);
+	g_free(s);
 
 	return ret;
 }
