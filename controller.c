@@ -146,13 +146,17 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 	int num_optkeys, ret, size, i;
 	char *key, *value;
 
-	if (g_hash_table_size(options) == 0)
-		/* No options provided. */
-		return SRD_OK;
-
-	if(!PyObject_HasAttrString(di->decoder->py_dec, "options"))
+	if(!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
 		/* Decoder has no options. */
+		if (g_hash_table_size(options) == 0) {
+			/* No options provided. */
+			return SRD_OK;
+		} else {
+			srd_err("Protocol decoder has no options.");
+			return SRD_ERR_ARG;
+		}
 		return SRD_OK;
+	}
 
 	ret = SRD_ERR_PYTHON;
 	key = NULL;
