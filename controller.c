@@ -204,6 +204,10 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 			goto err_out;
 		if (!(py_classval = PyList_GetItem(py_optlist, 1)))
 			goto err_out;
+		if (!PyUnicode_Check(py_classval) && !PyLong_Check(py_classval)) {
+			srd_err("Options of type %s are not yet supported.", Py_TYPE(py_classval)->tp_name);
+			goto err_out;
+		}
 
 		if ((value = g_hash_table_lookup(options, key))) {
 			/* An override for this option was provided. */
