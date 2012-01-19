@@ -21,7 +21,7 @@
 #include "config.h"
 #include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "sigrokdecode-internal.h"
-#include <dirent.h>
+#include <glib.h>
 
 /* The list of protocol decoders. */
 GSList *pd_list = NULL;
@@ -262,24 +262,20 @@ int srd_unload_decoder(struct srd_decoder *dec)
 
 int srd_load_all_decoders(void)
 {
-	DIR *dir;
-	struct dirent *dp;
-	int ret;
-	char *decodername;
+	GDir *dir;
+	GError *error;
 	struct srd_decoder *dec;
+	int ret;
+	const gchar *direntry;
+	char *decodername;
 
-	if (!(dir = opendir(DECODERS_DIR))) {
-		Py_Finalize(); /* Returns void. */
+	if (!(dir = g_dir_open(DECODERS_DIR, 0, &error))) {
 		return SRD_ERR_DECODERS_DIR;
 	}
 
-	while ((dp = readdir(dir)) != NULL) {
-		/* Ignore filenames which don't end with ".py". */
-		if (!g_str_has_suffix(dp->d_name, ".py"))
-			continue;
-
+	while ((direntry = g_dir_read_name(dir)) != NULL) {
 		/* The decoder name is the PD directory name (e.g. "i2c"). */
-		decodername = g_strndup(dp->d_name, strlen(dp->d_name) - 3);
+		decodername = g_strdup(direntry);
 
 		/* TODO: Error handling. Use g_try_malloc(). */
 		if (!(dec = malloc(sizeof(struct srd_decoder)))) {
@@ -294,7 +290,7 @@ int srd_load_all_decoders(void)
 			pd_list = g_slist_append(pd_list, dec);
 		}
 	}
-	closedir(dir);
+	g_dir_close(dir);
 
 	return SRD_OK;
 }
