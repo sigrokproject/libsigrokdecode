@@ -37,6 +37,7 @@ CPHA_1 = 1 # Data is valid on the trailing clock edge
 MSB_FIRST = 0
 LSB_FIRST = 1
 
+# Key: (CPOL, CPHA). Value: SPI mode.
 spi_mode = {
     (0, 0): 0, # Mode 0
     (0, 1): 1, # Mode 1
@@ -85,13 +86,6 @@ class Decoder(srd.Decoder):
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
 
-        # Set protocol decoder option defaults.
-        self.cs_polarity = Decoder.options['cs_polarity'][1]
-        self.cpol = Decoder.options['cpol'][1]
-        self.cpha = Decoder.options['cpha'][1]
-        self.bitorder = Decoder.options['bitorder'][1]
-        self.wordsize = Decoder.options['wordsize'][1]
-
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
@@ -115,7 +109,7 @@ class Decoder(srd.Decoder):
             self.oldsck = sck
 
             # Sample data on rising/falling clock edge (depends on mode).
-            mode = spi_mode[self.cpol, self.cpha]
+            mode = spi_mode[self.options['cpol'], self.options['cpha']]
             if mode == 0 and sck == 0:   # Sample on rising clock edge
                     continue
             elif mode == 1 and sck == 1: # Sample on falling clock edge
@@ -128,26 +122,27 @@ class Decoder(srd.Decoder):
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
                 self.start_sample = samplenum
-                deasserted = cs if (self.cs_polarity == ACTIVE_LOW) else not c
+                active_low = (self.options['cs_polarity'] == ACTIVE_LOW)
+                deasserted = cs if active_low else not cs
                 if deasserted:
                     self.cs_was_deasserted_during_data_word = 1
 
             # Receive MOSI bit into our shift register.
-            if self.bitorder == MSB_FIRST:
-                self.mosidata |= mosi << (self.wordsize - 1 - self.bitcount)
+            if self.options['bitorder'] == MSB_FIRST:
+                self.mosidata |= mosi << (self.options['wordsize'] - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
 
             # Receive MISO bit into our shift register.
-            if self.bitorder == MSB_FIRST:
-                self.misodata |= miso << (self.wordsize - 1 - self.bitcount)
+            if self.options['bitorder'] == MSB_FIRST:
+                self.misodata |= miso << (self.options['wordsize'] - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
 
             self.bitcount += 1
 
             # Continue to receive if not a byte yet.
-            if self.bitcount != self.wordsize:
+            if self.bitcount != self.options['wordsize']:
                 continue
 
             self.put(self.start_sample, self.samplenum, self.out_proto,
