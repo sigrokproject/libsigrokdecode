@@ -75,12 +75,12 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
  */
 int srd_load_decoder(const char *name, struct srd_decoder **dec)
 {
-	PyObject *py_basedec, *py_method, *py_annlist, *py_ann;
+	PyObject *py_basedec, *py_method, *py_attr, *py_annlist, *py_ann;
 	struct srd_decoder *d;
 	int alen, ret, i;
 	char **ann;
 
-	py_basedec = py_method = NULL;
+	py_basedec = py_method = py_attr = NULL;
 
 	srd_dbg("decoder: %s: loading module '%s'", __func__, name);
 
@@ -149,6 +149,17 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		goto err_out;
 	}
 	Py_DecRef(py_method);
+
+	/* If present, options must be a dictionary. */
+	if (PyObject_HasAttrString(d->py_dec, "options")) {
+		py_attr = PyObject_GetAttrString(d->py_dec, "options");
+		if (!PyDict_Check(py_attr)) {
+			srd_err("Protocol decoder %s options attribute is not "
+					"a dictionary.", d->name);
+			goto err_out;
+		}
+		Py_DecRef(py_attr);
+	}
 
 	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
 		goto err_out;

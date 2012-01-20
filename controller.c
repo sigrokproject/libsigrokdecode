@@ -186,11 +186,6 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 	py_dec_options = py_dec_optkeys = py_di_options = py_optval = NULL;
 	py_optlist = py_classval = NULL;
 	py_dec_options = PyObject_GetAttrString(di->decoder->py_dec, "options");
-	if (!PyDict_Check(py_dec_options)) {
-		srd_err("Protocol decoder %s options is not a dictionary.",
-				di->decoder->name);
-		goto err_out;
-	}
 
 	/* All of these are synthesized objects, so they're good. */
 	py_dec_optkeys = PyDict_Keys(py_dec_options);
