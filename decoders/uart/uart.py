@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2011 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -202,8 +202,8 @@ class Decoder(srd.Decoder):
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
-        'parity': ['Parity', PARITY_NONE],
-        'parity_check': ['Check parity', True],
+        'parity': ['Parity', PARITY_NONE], # TODO: Rename to parity_type.
+        'parity_check': ['Check parity', True], # TODO: Bool supported?
         'num_stop_bits': ['Stop bit(s)', STOP_BITS_1],
         'bit_order': ['Bit order', LSB_FIRST],
         # TODO: Options to invert the signal(s).
@@ -233,23 +233,14 @@ class Decoder(srd.Decoder):
 
         self.oldbit = [None, None]
 
-        # Set protocol decoder option defaults.
-        self.baudrate = Decoder.options['baudrate'][1]
-        self.num_data_bits = Decoder.options['num_data_bits'][1]
-        self.parity = Decoder.options['parity'][1]
-        self.check_parity = Decoder.options['parity_check'][1]
-        self.num_stop_bits = Decoder.options['num_stop_bits'][1]
-        self.bit_order = Decoder.options['bit_order'][1]
-
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'uart')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'uart')
 
-        # TODO: Override PD options, if user wants that.
-
         # The width of one UART bit in number of samples.
-        self.bit_width = float(self.samplerate) / float(self.baudrate)
+        self.bit_width = \
+            float(self.samplerate) / float(self.options['baudrate'])
 
     def report(self):
         pass
@@ -316,17 +307,19 @@ class Decoder(srd.Decoder):
             self.startsample[rxtx] = self.samplenum
 
         # Get the next data bit in LSB-first or MSB-first fashion.
-        if self.bit_order == LSB_FIRST:
+        if self.options['bit_order'] == LSB_FIRST:
             self.databyte[rxtx] >>= 1
-            self.databyte[rxtx] |= (signal << (self.num_data_bits - 1))
-        elif self.bit_order == MSB_FIRST:
+            self.databyte[rxtx] |= (signal << (self.options['num_data_bits'] - 1))
+        elif self.options['bit_order'] == MSB_FIRST:
             self.databyte[rxtx] <<= 1
             self.databyte[rxtx] |= (signal << 0)
         else:
-            raise Exception('Invalid bit order value: %d', self.bit_order)
+            raise Exception('Invalid bit order value: %d',
+                            self.options['bit_order'])
 
         # Return here, unless we already received all data bits.
-        if self.cur_data_bit[rxtx] < self.num_data_bits - 1: # TODO? Off-by-one?
+        # TODO? Off-by-one?
+        if self.cur_data_bit[rxtx] < self.options['num_data_bits'] - 1:
             self.cur_data_bit[rxtx] += 1
             return
 
@@ -347,20 +340,20 @@ class Decoder(srd.Decoder):
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
-        if self.parity == PARITY_NONE:
+        if self.options['parity'] == PARITY_NONE:
             self.state[rxtx] = GET_STOP_BITS
             return
 
         # Skip samples until we're in the middle of the parity bit.
-        if not self.reached_bit(rxtx, self.num_data_bits + 1):
+        if not self.reached_bit(rxtx, self.options['num_data_bits'] + 1):
             return
 
         self.paritybit[rxtx] = signal
 
         self.state[rxtx] = GET_STOP_BITS
 
-        if parity_ok(self.parity[rxtx], self.paritybit[rxtx],
-                     self.databyte[rxtx], self.num_data_bits):
+        if parity_ok(self.options['parity'], self.paritybit[rxtx],
+                     self.databyte[rxtx], self.options['num_data_bits']):
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
                      [T_PARITY_BIT, rxtx, self.paritybit[rxtx]])
@@ -377,8 +370,9 @@ class Decoder(srd.Decoder):
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the stop bit(s).
-        skip_parity = 0 if self.parity == PARITY_NONE else 1
-        if not self.reached_bit(rxtx, self.num_data_bits + 1 + skip_parity):
+        skip_parity = 0 if self.options['parity'] == PARITY_NONE else 1
+        b = self.options['num_data_bits'] + 1 + skip_parity
+        if not self.reached_bit(rxtx, b):
             return
 
         self.stopbit1[rxtx] = signal
