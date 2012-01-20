@@ -99,6 +99,12 @@ struct srd_decoder {
 	/** TODO */
 	GSList *outputformats;
 
+	/** Probes */
+	GSList *probes;
+
+	/** Optional probes */
+	GSList *extra_probes;
+
 	/* List of NULL-terminated char[], containing descriptions of the
 	 * supported annotation output.
 	 */
@@ -111,14 +117,23 @@ struct srd_decoder {
 	PyObject *py_dec;
 };
 
+struct srd_probe {
+	char *id;
+	char *name;
+	char *desc;
+	int order;
+};
+
 struct srd_decoder_instance {
 	struct srd_decoder *decoder;
 	PyObject *py_instance;
 	char *instance_id;
 	GSList *pd_output;
-	int num_probes;
-	int unitsize;
-	uint64_t samplerate;
+	int dec_num_probes;
+	int *dec_probemap;
+	int data_num_probes;
+	int data_unitsize;
+	uint64_t data_samplerate;
 	GSList *next_di;
 };
 
@@ -193,6 +208,7 @@ char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- util.c ----------------------------------------------------------------*/
 int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 int py_str_as_str(PyObject *py_str, char **outstr);
 int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 

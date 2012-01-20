@@ -65,6 +65,63 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
 }
 
 
+static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
+{
+	PyObject *py_probelist, *py_entry;
+	struct srd_probe *p;
+	int ret, num_probes, i;
+
+	if (!PyObject_HasAttrString(d->py_dec, attr))
+		/* No probes of this type specified. */
+		return SRD_OK;
+
+	ret = SRD_ERR_PYTHON;
+	py_probelist = py_entry = NULL;
+
+	py_probelist = PyObject_GetAttrString(d->py_dec, attr);
+	if (!PyList_Check(py_probelist)) {
+		srd_err("Protocol decoder %s %s attribute is not "
+				"a list.", d->name, attr);
+		goto err_out;
+	}
+
+	num_probes = PyList_Size(py_probelist);
+	if (num_probes == 0)
+		/* Empty probelist. */
+		return SRD_OK;
+
+	for (i = 0; i < num_probes; i++) {
+		py_entry = PyList_GetItem(py_probelist, i);
+		if (!PyDict_Check(py_entry)) {
+			srd_err("Protocol decoder %s %s attribute is not "
+					"a list with dict elements.", d->name, attr);
+			goto err_out;
+		}
+
+		if (!(p = g_try_malloc(sizeof(struct srd_probe)))) {
+			ret = SRD_ERR_MALLOC;
+			goto err_out;
+		}
+
+		if ((py_dictitem_as_str(py_entry, "id", &p->id)) != SRD_OK)
+			goto err_out;
+		if ((py_dictitem_as_str(py_entry, "name", &p->name)) != SRD_OK)
+			goto err_out;
+		if ((py_dictitem_as_str(py_entry, "desc", &p->desc)) != SRD_OK)
+			goto err_out;
+		p->order = i;
+
+		*pl = g_slist_append(*pl, p);
+	}
+	ret = SRD_OK;
+
+err_out:
+	Py_DecRef(py_entry);
+	Py_DecRef(py_probelist);
+
+	return ret;
+}
+
 /**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
@@ -161,6 +218,15 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		Py_DecRef(py_attr);
 	}
 
+	/* Check and import required probes. */
+	if (get_probes(d, "probes", &d->probes) != SRD_OK)
+		goto err_out;
+
+	/* Check and import optional probes. */
+	if (get_probes(d, "extra_probes", &d->extra_probes) != SRD_OK)
+		goto err_out;
+
+	/* Store required fields in newly allocated strings. */
 	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
 		goto err_out;
 

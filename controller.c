@@ -268,6 +268,12 @@ err_out:
 	return ret;
 }
 
+static gint compare_probe_id(struct srd_probe *a, char *probe_id)
+{
+
+	return strcmp(a->id, probe_id);
+}
+
 /**
  * Set probes in a decoder instance.
  *
@@ -276,34 +282,57 @@ err_out:
  * the probe number. Samples passed to this instance will be arranged in this
  * order.
  *
- * Handled probes are removed from the hash.
- *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_instance_set_probes(struct srd_decoder_instance *di,
-		GHashTable *probes)
+		GHashTable *new_probes)
 {
-	int ret;
+	GList *l;
+	GSList *sl;
+	struct srd_probe *p;
+	int *new_probemap, new_probenum;
+	char *probe_id;
 
-	if (g_hash_table_size(probes) == 0)
+	if (g_hash_table_size(new_probes) == 0)
 		/* No probes provided. */
 		return SRD_OK;
 
-	if(!PyObject_HasAttrString(di->decoder->py_dec, "probes"))
+	if(!PyObject_HasAttrString(di->decoder->py_dec, "probes")
+		&& !PyObject_HasAttrString(di->decoder->py_dec, "extra_probes")) {
 		/* Decoder has no probes. */
-		return SRD_OK;
-
-	ret = SRD_ERR_PYTHON;
-
-	/* TODO */
-	if (g_hash_table_size(probes) > 0) {
-		srd_err("Setting probes is not yet supported.");
-		return SRD_ERR_PYTHON;
+		srd_err("Protocol decoder %s has no probes to define.",
+				di->decoder->name);
+		return SRD_ERR_ARG;
 	}
 
-	ret = SRD_OK;
+	new_probemap = NULL;
 
-	return ret;
+	if (!(new_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
+		srd_err("Failed to malloc new probe map.");
+		return SRD_ERR_MALLOC;
+	}
+
+	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
+		probe_id = l->data;
+		new_probenum = strtol(g_hash_table_lookup(new_probes, probe_id), NULL, 10);
+		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
+				(GCompareFunc)compare_probe_id))) {
+			/* Fall back on optional probes. */
+			if (!(sl = g_slist_find_custom(di->decoder->extra_probes,
+					probe_id, (GCompareFunc)compare_probe_id))) {
+				srd_err("Protocol decoder %s has no probe '%s'",
+						di->decoder->name, probe_id);
+				g_free(new_probemap);
+				return SRD_ERR_ARG;
+			}
+		}
+		p = sl->data;
+		new_probemap[p->order] = new_probenum;
+	}
+	g_free(di->dec_probemap);
+	di->dec_probemap = new_probemap;
+
+	return SRD_OK;
 }
 
 /**
@@ -320,6 +349,7 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 {
 	struct srd_decoder *dec;
 	struct srd_decoder_instance *di;
+	int i;
 	char *instance_id;
 
 	srd_dbg("%s: creating new %s instance", __func__, decoder_id);
@@ -339,22 +369,36 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	di->instance_id = g_strdup(instance_id ? instance_id : decoder_id);
 	g_hash_table_remove(options, "id");
 
+	/* Prepare a default probe map, where samples come in the
+	 * order in which the decoder class defined them.
+	 */
+	di->dec_num_probes = g_slist_length(di->decoder->probes) +
+			g_slist_length(di->decoder->extra_probes);
+	if (!(di->dec_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
+		srd_err("Failed to malloc probe map.");
+		g_free(di);
+		return NULL;
+	}
+	for (i = 0; i < di->dec_num_probes; i++)
+		di->dec_probemap[i] = i;
+
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_instance = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
 			PyErr_Print();
+		g_free(di->dec_probemap);
+		g_free(di);
+		return NULL;
+	}
+
+	if (srd_instance_set_options(di, options) != SRD_OK) {
+		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
 	}
 
 	/* Instance takes input from a frontend by default. */
 	di_list = g_slist_append(di_list, di);
-
-	if (srd_instance_set_options(di, options) != SRD_OK) {
-		di_list = g_slist_remove(di_list, di);
-		g_free(di);
-		return NULL;
-	}
 
 	return di;
 }
@@ -421,8 +465,8 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 		return SRD_ERR_PYTHON;
 	}
 
-	Py_XDECREF(py_res);
-	Py_DECREF(py_name);
+	Py_DecRef(py_res);
+	Py_DecRef(py_name);
 
 	return SRD_OK;
 }
@@ -465,7 +509,7 @@ int srd_instance_decode(uint64_t start_samplenum,
 	logic->sample = PyList_New(2);
 	Py_INCREF(logic->sample);
 
-	end_samplenum = start_samplenum + inbuflen / di->unitsize;
+	end_samplenum = start_samplenum + inbuflen / di->data_unitsize;
 	if (!(py_res = PyObject_CallMethod(py_instance, "decode",
 			"KKO", logic->start_samplenum, end_samplenum, logic))) {
 		if (PyErr_Occurred())
@@ -495,9 +539,9 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	/* Run the start() method on all decoders receiving frontend data. */
 	for (d = di_list; d; d = d->next) {
 		di = d->data;
-		di->num_probes = num_probes;
-		di->unitsize = unitsize;
-		di->samplerate = samplerate;
+		di->data_num_probes = num_probes;
+		di->data_unitsize = unitsize;
+		di->data_samplerate = samplerate;
 		if ((ret = srd_instance_start(di, args) != SRD_OK))
 			return ret;
 

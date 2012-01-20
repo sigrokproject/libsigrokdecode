@@ -38,21 +38,18 @@ PyObject *srd_logic_iternext(PyObject *self)
 	unsigned char probe_samples[SRD_MAX_NUM_PROBES];
 
 	logic = (srd_logic *) self;
-	if (logic->itercnt >= logic->inbuflen / logic->di->unitsize) {
+	if (logic->itercnt >= logic->inbuflen / logic->di->data_unitsize) {
 		/* End iteration loop. */
 		return NULL;
 	}
 
-	/* TODO: use number of probes defined in the PD, in the order the PD
-	 * defined them -- not whatever came in from the driver.
-	 */
 	/* Convert the bit-packed sample to an array of bytes, with only 0x01
 	 * and 0x00 values, so the PD doesn't need to do any bitshifting.
 	 */
-	memcpy(&sample, logic->inbuf + logic->itercnt * logic->di->unitsize,
-			logic->di->unitsize);
-	for (i = 0; i < logic->di->num_probes; i++) {
-		probe_samples[i] = sample & 0x01;
+	memcpy(&sample, logic->inbuf + logic->itercnt * logic->di->data_unitsize,
+			logic->di->data_unitsize);
+	for (i = 0; i < logic->di->dec_num_probes; i++) {
+		probe_samples[logic->di->dec_probemap[i]] = sample & 0x01;
 		sample >>= 1;
 	}
 
@@ -60,7 +57,7 @@ PyObject *srd_logic_iternext(PyObject *self)
 	py_samplenum = PyLong_FromUnsignedLongLong(logic->start_samplenum + logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
 	py_samples = PyBytes_FromStringAndSize((const char *)probe_samples,
-			logic->di->num_probes);
+			logic->di->dec_num_probes);
 	PyList_SetItem(logic->sample, 1, py_samples);
 	Py_INCREF(logic->sample);
 	logic->itercnt++;
