@@ -50,10 +50,55 @@ int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 		return SRD_ERR_PYTHON;
 	}
 
+	if (!PyUnicode_Check(py_str)) {
+		srd_err("%s attribute should be a string, but is a %s.",
+				attr, py_str->ob_type->tp_name);
+		Py_DecRef(py_str);
+		return SRD_ERR_PYTHON;
+	}
+
 	ret = py_str_as_str(py_str, outstr);
-	Py_XDECREF(py_str);
+	Py_DecRef(py_str);
 
 	return ret;
+}
+
+
+/**
+ * Get the value of a python dictionary item, returned as a newly
+ * allocated char *.
+ *
+ * @param py_obj The dictionary to probe.
+ * @param attr Key of the item to retrieve.
+ * @param outstr ptr to char * storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a malloc()ed string upon success.
+ */
+int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr)
+{
+	PyObject *py_value;
+	int ret;
+
+	if (!PyDict_Check(py_obj)) {
+		srd_err("Object is not a dictionary.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_value = PyDict_GetItemString(py_obj, key))) {
+		srd_err("Dictionary has no attribute '%s'", key);
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!PyUnicode_Check(py_value)) {
+		srd_err("Dictionary value should be a string, but is a %s.",
+				key, py_value->ob_type->tp_name);
+		return SRD_ERR_PYTHON;
+	}
+
+	ret = py_str_as_str(py_value, outstr);
+
+	return SRD_OK;
 }
 
 
