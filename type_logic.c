@@ -48,10 +48,8 @@ PyObject *srd_logic_iternext(PyObject *self)
 	 */
 	memcpy(&sample, logic->inbuf + logic->itercnt * logic->di->data_unitsize,
 			logic->di->data_unitsize);
-	for (i = 0; i < logic->di->dec_num_probes; i++) {
-		probe_samples[logic->di->dec_probemap[i]] = sample & 0x01;
-		sample >>= 1;
-	}
+	for (i = 0; i < logic->di->dec_num_probes; i++)
+		probe_samples[i] = sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
 
 	/* Prepare the next samplenum/sample list in this iteration. */
 	py_samplenum = PyLong_FromUnsignedLongLong(logic->start_samplenum + logic->itercnt);
