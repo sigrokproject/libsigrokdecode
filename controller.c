@@ -297,8 +297,7 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 		/* No probes provided. */
 		return SRD_OK;
 
-	if(!PyObject_HasAttrString(di->decoder->py_dec, "probes")
-		&& !PyObject_HasAttrString(di->decoder->py_dec, "extra_probes")) {
+	if(di->dec_num_probes == 0) {
 		/* Decoder has no probes. */
 		srd_err("Protocol decoder %s has no probes to define.",
 				di->decoder->name);
@@ -374,13 +373,15 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	 */
 	di->dec_num_probes = g_slist_length(di->decoder->probes) +
 			g_slist_length(di->decoder->extra_probes);
-	if (!(di->dec_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
-		srd_err("Failed to malloc probe map.");
-		g_free(di);
-		return NULL;
+	if (di->dec_num_probes) {
+		if (!(di->dec_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
+			srd_err("Failed to malloc probe map.");
+			g_free(di);
+			return NULL;
+		}
+		for (i = 0; i < di->dec_num_probes; i++)
+			di->dec_probemap[i] = i;
 	}
-	for (i = 0; i < di->dec_num_probes; i++)
-		di->dec_probemap[i] = i;
 
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_instance = PyObject_CallObject(dec->py_dec, NULL))) {
