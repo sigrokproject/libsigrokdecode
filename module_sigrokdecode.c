@@ -64,14 +64,11 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 		return NULL;
 
 	/* expose output types as symbols in the sigrokdecode module */
-	if(PyModule_AddObject(mod, "OUTPUT_ANN",
-			PyLong_FromLong(SRD_OUTPUT_ANN)) == -1)
+	if(PyModule_AddIntConstant(mod, "OUTPUT_ANN", SRD_OUTPUT_ANN) == -1)
 		return NULL;
-	if(PyModule_AddObject(mod, "OUTPUT_PROTO",
-			PyLong_FromLong(SRD_OUTPUT_PROTO)) == -1)
+	if(PyModule_AddIntConstant(mod, "OUTPUT_PROTO", SRD_OUTPUT_PROTO) == -1)
 		return NULL;
-	if(PyModule_AddObject(mod, "OUTPUT_BINARY",
-			PyLong_FromLong(SRD_OUTPUT_BINARY)) == -1)
+	if(PyModule_AddIntConstant(mod, "OUTPUT_BINARY", SRD_OUTPUT_BINARY) == -1)
 		return NULL;
 
 	mod_sigrokdecode = mod;
