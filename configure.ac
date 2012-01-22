@@ -154,6 +154,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/ddc/Makefile
 		 decoders/ebr30a_i2c_demux/Makefile
 		 decoders/i2c/Makefile
+		 decoders/i2cdemux/Makefile
 		 decoders/mx25lxx05d/Makefile
 		 decoders/nunchuk/Makefile
 		 decoders/pan1321/Makefile
