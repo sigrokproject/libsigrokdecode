@@ -40,7 +40,8 @@ int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 	int ret;
 
 	if (!PyObject_HasAttrString(py_obj, attr)) {
-		srd_dbg("object has no attribute '%s'", attr);
+		srd_dbg("srd: %s object has no attribute '%s'.",
+				Py_TYPE(py_obj)->tp_name, attr);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -51,8 +52,8 @@ int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 	}
 
 	if (!PyUnicode_Check(py_str)) {
-		srd_err("%s attribute should be a string, but is a %s.",
-				attr, py_str->ob_type->tp_name);
+		srd_dbg("srd: %s attribute should be a string, but is a %s.",
+				attr, Py_TYPE(py_str)->tp_name);
 		Py_DecRef(py_str);
 		return SRD_ERR_PYTHON;
 	}
@@ -81,18 +82,18 @@ int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr)
 	int ret;
 
 	if (!PyDict_Check(py_obj)) {
-		srd_err("Object is not a dictionary.");
+		srd_dbg("srd: Object is a %s, not a dictionary.", Py_TYPE(py_obj)->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
 	if (!(py_value = PyDict_GetItemString(py_obj, key))) {
-		srd_err("Dictionary has no attribute '%s'", key);
+		srd_dbg("srd: Dictionary has no attribute '%s'.", key);
 		return SRD_ERR_PYTHON;
 	}
 
 	if (!PyUnicode_Check(py_value)) {
-		srd_err("Dictionary value should be a string, but is a %s.",
-				key, py_value->ob_type->tp_name);
+		srd_dbg("srd: Dictionary value for %s should be a string, but is a %s.",
+				key, Py_TYPE(py_value)->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -123,7 +124,7 @@ int py_str_as_str(PyObject *py_str, char **outstr)
 	ret = SRD_OK;
 
 	if (!PyUnicode_Check(py_str)) {
-		srd_dbg("not a string object");
+		srd_dbg("srd: object is a %s, not a string object", Py_TYPE(py_str)->tp_name);
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
@@ -138,7 +139,7 @@ int py_str_as_str(PyObject *py_str, char **outstr)
 	}
 
 	if (!(*outstr = g_strdup(str))) {
-		srd_dbg("malloc failed");
+		srd_dbg("srd: malloc failed");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
@@ -148,7 +149,7 @@ err_out:
 		Py_XDECREF(py_encstr);
 
 	if (PyErr_Occurred()) {
-		srd_dbg("string conversion failed");
+		srd_dbg("srd: string conversion failed");
 		/* TODO: dump exception to srd_dbg */
 		PyErr_Clear();
 	}

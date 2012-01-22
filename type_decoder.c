@@ -31,15 +31,15 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 
 	/* Should be a list of [annotation format, [string, ...]] */
 	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
-		srd_err("Protocol decoder %s submitted %s instead of list",
+		srd_err("Protocol decoder %s submitted %s instead of list.",
 				di->decoder->name, obj->ob_type->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
 	/* Should have 2 elements... */
 	if (PyList_Size(obj) != 2) {
-		srd_err("Protocol decoder %s submitted annotation list with %d elements instead of 2",
-				di->decoder->name, PyList_Size(obj));
+		srd_err("Protocol decoder %s submitted annotation list with %d elements "
+				"instead of 2", di->decoder->name, PyList_Size(obj));
 		return SRD_ERR_PYTHON;
 	}
 
@@ -47,15 +47,15 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	 * registered annotation format. */
 	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted annotation list, but first element was not an integer",
-				di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but first "
+				"element was not an integer.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
 	ann_id = PyLong_AsLong(py_tmp);
 	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_id))) {
-		srd_err("Protocol decoder %s submitted data to non-existent annotation format %d",
-				di->decoder->name, ann_id);
+		srd_err("Protocol decoder %s submitted data to unregistered "
+				"annotation format %d.", di->decoder->name, ann_id);
 		return SRD_ERR_PYTHON;
 	}
 	*ann_format = ann_id;
@@ -63,13 +63,13 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	/* Second element must be a list */
 	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyList_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted annotation list, but second element was not a list",
-				di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but "
+				"second element was not a list.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 	if (py_strlist_to_char(py_tmp, ann) != SRD_OK) {
-		srd_err("Protocol decoder %s submitted annotation list, but second element was malformed",
-				di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but "
+				"second element was malformed.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -94,7 +94,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!(l = g_slist_nth(di->pd_output, output_id))) {
-		srd_err("Protocol decoder %s submitted invalid output ID %d",
+		srd_err("Protocol decoder %s submitted invalid output ID %d.",
 				di->decoder->name, output_id);
 		return NULL;
 	}
@@ -133,10 +133,10 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		}
 		break;
 	case SRD_OUTPUT_BINARY:
-		srd_err("SRD_OUTPUT_BINARY not yet supported");
+		srd_err("SRD_OUTPUT_BINARY not yet supported.");
 		break;
 	default:
-		srd_err("Protocol decoder %s submitted invalid output type %d",
+		srd_err("Protocol decoder %s submitted invalid output type %d.",
 				di->decoder->name, pdo->output_type);
 		break;
 	}
@@ -155,7 +155,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	int output_type, pdo_id;
 
 	if (!(di = get_di_by_decobject(self))) {
-		srd_err("%s():%d decoder instance not found", __func__, __LINE__);
+		srd_dbg("srd: %s():%d decoder instance not found", __func__, __LINE__);
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}

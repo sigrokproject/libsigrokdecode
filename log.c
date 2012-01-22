@@ -39,14 +39,13 @@ static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 int srd_set_loglevel(int loglevel)
 {
 	if (loglevel < SRD_LOG_NONE || loglevel > SRD_LOG_SPEW) {
-		srd_err("log: %s: invalid loglevel %d", __func__, loglevel);
+		srd_err("Invalid loglevel %d.", loglevel);
 		return SRD_ERR_ARG;
 	}
 
 	srd_loglevel = loglevel;
 
-	srd_dbg("log: %s: libsigrokdecode loglevel set to %d",
-		__func__, loglevel);
+	srd_dbg("srd: loglevel set to %d", loglevel);
 
 	return SRD_OK;
 }

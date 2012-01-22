@@ -137,12 +137,12 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	int alen, ret, i;
 	char **ann;
 
+	srd_dbg("srd: loading module '%s'", name);
+
 	py_basedec = py_method = py_attr = NULL;
 
-	srd_dbg("decoder: %s: loading module '%s'", __func__, name);
-
 	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
-		srd_err("decoder: %s: d malloc failed", __func__);
+		srd_dbg("srd: Failed to malloc struct srd_decoder");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
@@ -152,7 +152,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(name))) {
 		/* TODO: Report exception message/traceback to err/dbg. */
-		srd_warn("decoder: %s: import of '%s' failed", __func__, name);
+		srd_warn("srd: import of '%s' failed.", name);
 		PyErr_Print();
 		PyErr_Clear();
 		goto err_out;
@@ -163,18 +163,18 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		/* This generated an AttributeError exception. */
 		PyErr_Print();
 		PyErr_Clear();
-		srd_err("Decoder class not found in protocol decoder %s", name);
+		srd_err("Decoder class not found in protocol decoder %s.", name);
 		goto err_out;
 	}
 
 	if (!(py_basedec = PyObject_GetAttrString(mod_sigrokdecode, "Decoder"))) {
-		srd_dbg("sigrokdecode module not loaded");
+		srd_dbg("srd: sigrokdecode module not loaded");
 		goto err_out;
 	}
 
 	if (!PyObject_IsSubclass(d->py_dec, py_basedec)) {
 		srd_err("Decoder class in protocol decoder module %s is not "
-				"a subclass of sigrokdecode.Decoder", name);
+				"a subclass of sigrokdecode.Decoder.", name);
 		goto err_out;
 	}
 	Py_DecRef(py_basedec);
@@ -187,7 +187,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "start");
 	if (!PyFunction_Check(py_method)) {
-		srd_err("Protocol decoder %s Decoder class attribute 'start'"
+		srd_err("Protocol decoder %s Decoder class attribute 'start' "
 				"is not a method.", name);
 		goto err_out;
 	}
@@ -251,15 +251,15 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
 		if (!PyList_Check(py_annlist)) {
-			srd_err("Protocol decoder module %s annotations should be a list", name);
+			srd_err("Protocol decoder module %s annotations should be a list.", name);
 			goto err_out;
 		}
 		alen = PyList_Size(py_annlist);
 		for (i = 0; i < alen; i++) {
 			py_ann = PyList_GetItem(py_annlist, i);
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
-				srd_err("Protocol decoder module %s annotation %d should be a list with two elements",
-						name, i+1);
+				srd_err("Protocol decoder module %s annotation %d should "
+						"be a list with two elements.", name, i+1);
 				goto err_out;
 			}
 
