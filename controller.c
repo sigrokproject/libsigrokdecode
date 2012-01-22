@@ -275,6 +275,7 @@ err_out:
 	return ret;
 }
 
+/* Helper GComparefunc for g_slist_find_custom() in srd_instance_set_probes() */
 static gint compare_probe_id(struct srd_probe *a, char *probe_id)
 {
 
@@ -604,6 +605,41 @@ int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen
 }
 
 
+int srd_register_callback(int output_type, void *cb)
+{
+	struct srd_pd_callback *pd_cb;
+
+	srd_dbg("srd: registering new callback for output type %d", output_type);
+
+	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback))))
+		return SRD_ERR_MALLOC;
+
+	pd_cb->output_type = output_type;
+	pd_cb->callback = cb;
+	callbacks = g_slist_append(callbacks, pd_cb);
+
+	return SRD_OK;
+}
+
+void *srd_find_callback(int output_type)
+{
+	GSList *l;
+	struct srd_pd_callback *pd_cb;
+	void *(cb);
+
+	cb = NULL;
+	for (l = callbacks; l; l = l->next) {
+		pd_cb = l->data;
+		if (pd_cb->output_type == output_type) {
+			cb = pd_cb->callback;
+			break;
+		}
+	}
+
+	return cb;
+}
+
+
 /* This is the backend function to python sigrokdecode.add() call. */
 int pd_add(struct srd_decoder_instance *di, int output_type,
 		char *proto_id)
@@ -644,39 +680,5 @@ struct srd_decoder_instance *get_di_by_decobject(void *decobject)
 	}
 
 	return NULL;
-}
-
-int srd_register_callback(int output_type, void *cb)
-{
-	struct srd_pd_callback *pd_cb;
-
-	srd_dbg("srd: registering new callback for output type %d", output_type);
-
-	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback))))
-		return SRD_ERR_MALLOC;
-
-	pd_cb->output_type = output_type;
-	pd_cb->callback = cb;
-	callbacks = g_slist_append(callbacks, pd_cb);
-
-	return SRD_OK;
-}
-
-void *srd_find_callback(int output_type)
-{
-	GSList *l;
-	struct srd_pd_callback *pd_cb;
-	void *(cb);
-
-	cb = NULL;
-	for (l = callbacks; l; l = l->next) {
-		pd_cb = l->data;
-		if (pd_cb->output_type == output_type) {
-			cb = pd_cb->callback;
-			break;
-		}
-	}
-
-	return cb;
 }
 
