@@ -296,7 +296,7 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 	GSList *sl;
 	struct srd_probe *p;
 	int *new_probemap, new_probenum;
-	char *probe_id;
+	char *probe_id, *probenum_str;
 
 	if (g_hash_table_size(new_probes) == 0)
 		/* No probes provided. */
@@ -318,7 +318,14 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
-		new_probenum = strtol(g_hash_table_lookup(new_probes, probe_id), NULL, 10);
+		probenum_str = g_hash_table_lookup(new_probes, probe_id);
+		if (!probenum_str) {
+			/* Probe name was specified without a value. */
+			srd_err("No probe number was specified for %s.", probe_id);
+			g_free(new_probemap);
+			return SRD_ERR_ARG;
+		}
+		new_probenum = strtol(probenum_str, NULL, 10);
 		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
 				(GCompareFunc)compare_probe_id))) {
 			/* Fall back on optional probes. */
