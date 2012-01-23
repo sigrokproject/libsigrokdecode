@@ -206,6 +206,9 @@ int srd_load_all_decoders(void);
 int srd_unload_all_decoders(void);
 char *srd_decoder_doc(struct srd_decoder *dec);
 
+/*--- exception.c -----------------------------------------------------------*/
+void catch_exception(const char *format, ...);
+
 /*--- util.c ----------------------------------------------------------------*/
 int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
