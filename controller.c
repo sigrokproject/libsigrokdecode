@@ -118,10 +118,19 @@ int srd_exit(void)
 
 
 /**
- * Add search directories for the protocol decoders.
+ * Add an additional search directory for the protocol decoders.
+ *
+ * The specified directory is prepended (not appended!) to Python's sys.path,
+ * in order to search for sigrok protocol decoders in the specified
+ * directories first, and in the generic Python module directories (and in
+ * the current working directory) last. This avoids conflicts if there are
+ * Python modules which have the same name as a sigrok protocol decoder in
+ * sys.path or in the current working directory.
  *
  * TODO: add path from env var SIGROKDECODE_PATH, config etc
  * TODO: Should take directoryname/path as input.
+ *
+ * @return TODO.
  */
 int set_modulepath(void)
 {
@@ -143,9 +152,8 @@ int set_modulepath(void)
 	path = g_strdup(DECODERS_DIR);
 #endif
 
-	/* TODO: Prepend instead of appending. */
 	/* TODO: Sanity check on 'path' (length, escape special chars, ...). */
-	s = g_strdup_printf("import sys; sys.path.append(r'%s')", path);
+	s = g_strdup_printf("import sys; sys.path.insert(0, r'%s')", path);
 
 	ret = PyRun_SimpleString(s);
 
