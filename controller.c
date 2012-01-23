@@ -266,11 +266,8 @@ err_out:
 	Py_XDECREF(py_dec_options);
 	if (key)
 		g_free(key);
-	if (PyErr_Occurred()) {
-		srd_dbg("srd: stray exception!");
-		PyErr_Print();
-		PyErr_Clear();
-	}
+	if (PyErr_Occurred())
+		catch_exception("srd: stray exception in srd_instance_set_options()");
 
 	return ret;
 }
@@ -394,7 +391,7 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_instance = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
-			PyErr_Print();
+			catch_exception("failed to create %s instance: ", decoder_id);
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -463,15 +460,13 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 
 	if (!(py_name = PyUnicode_FromString("start"))) {
 		srd_err("Unable to build python object for 'start'.");
-		if (PyErr_Occurred())
-			PyErr_Print();
+		catch_exception("Protocol decoder instance %s: ", di->instance_id);
 		return SRD_ERR_PYTHON;
 	}
 
 	if (!(py_res = PyObject_CallMethodObjArgs(di->py_instance,
 			py_name, args, NULL))) {
-		if (PyErr_Occurred())
-			PyErr_Print();
+		catch_exception("Protocol decoder instance %s: ", di->instance_id);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -533,9 +528,7 @@ int srd_instance_decode(uint64_t start_samplenum,
 	end_samplenum = start_samplenum + inbuflen / di->data_unitsize;
 	if (!(py_res = PyObject_CallMethod(di->py_instance, "decode",
 			"KKO", logic->start_samplenum, end_samplenum, logic))) {
-		if (PyErr_Occurred())
-			PyErr_Print(); /* Returns void. */
-
+		catch_exception("Protocol decoder instance %s: ", di->instance_id);
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 	Py_DecRef(py_res);

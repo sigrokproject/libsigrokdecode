@@ -151,17 +151,13 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(name))) {
-		/* TODO: Report exception message/traceback to err/dbg. */
-		srd_warn("srd: import of '%s' failed.", name);
-		PyErr_Print();
-		PyErr_Clear();
+		catch_exception("import of '%s' failed.", name);
 		goto err_out;
 	}
 
 	/* Get the 'Decoder' class as Python object. */
 	if (!(d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder"))) {
 		/* This generated an AttributeError exception. */
-		PyErr_Print();
 		PyErr_Clear();
 		srd_err("Decoder class not found in protocol decoder %s.", name);
 		goto err_out;
@@ -294,7 +290,7 @@ char *srd_decoder_doc(struct srd_decoder *dec)
 		return NULL;
 
 	if (!(py_str = PyObject_GetAttrString(dec->py_mod, "__doc__"))) {
-		PyErr_Clear();
+		catch_exception("");
 		return NULL;
 	}
 
@@ -354,14 +350,9 @@ int srd_load_all_decoders(void)
 		/* The decoder name is the PD directory name (e.g. "i2c"). */
 		decodername = g_strdup(direntry);
 
-		/* TODO: Error handling. Use g_try_malloc(). */
-		if (!(dec = malloc(sizeof(struct srd_decoder)))) {
-			Py_Finalize(); /* Returns void. */
+		if (!(dec = g_try_malloc(sizeof(struct srd_decoder))))
 			return SRD_ERR_MALLOC;
-		}
 
-		/* Load the decoder. */
-		/* TODO: Warning if loading fails for a decoder. */
 		if ((ret = srd_load_decoder(decodername, &dec)) == SRD_OK) {
 			/* Append it to the list of supported/loaded decoders. */
 			pd_list = g_slist_append(pd_list, dec);
@@ -382,7 +373,6 @@ int srd_unload_all_decoders(void)
 
 	for (l = srd_list_decoders(); l; l = l->next) {
 		dec = l->data;
-		/* TODO: Error handling. */
 		srd_unload_decoder(dec);
 	}
 

@@ -126,8 +126,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			Py_XINCREF(next_di->py_instance);
 			if (!(py_res = PyObject_CallMethod(next_di->py_instance, "decode",
 					"KKO", start_sample, end_sample, data))) {
-				if (PyErr_Occurred())
-					PyErr_Print();
+				catch_exception("calling %s decode(): ", next_di->instance_id);
 			}
 			Py_XDECREF(py_res);
 		}
@@ -155,14 +154,13 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	int output_type, pdo_id;
 
 	if (!(di = get_di_by_decobject(self))) {
-		srd_dbg("srd: %s():%d decoder instance not found", __func__, __LINE__);
+		srd_dbg("srd: decoder instance not found");
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}
 
 	if (!PyArg_ParseTuple(args, "is", &output_type, &proto_id)) {
-		if (PyErr_Occurred())
-			PyErr_Print();
+		catch_exception("");
 		return NULL;
 	}
 
