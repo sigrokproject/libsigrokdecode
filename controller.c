@@ -663,7 +663,7 @@ int pd_add(struct srd_decoder_instance *di, int output_type,
 	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
 	pdo->pdo_id = g_slist_length(di->pd_output);
 	pdo->output_type = output_type;
-	pdo->decoder = di->decoder;
+	pdo->di = di;
 	pdo->proto_id = g_strdup(proto_id);
 	di->pd_output = g_slist_append(di->pd_output, pdo);
 

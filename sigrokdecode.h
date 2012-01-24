@@ -140,7 +140,7 @@ struct srd_decoder_instance {
 struct srd_pd_output {
 	int pdo_id;
 	int output_type;
-	struct srd_decoder *decoder;
+	struct srd_decoder_instance *di;
 	char *proto_id;
 };
 
