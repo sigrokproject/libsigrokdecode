@@ -22,6 +22,14 @@
 #include "config.h"
 
 
+/* This is only used for nicer srd_dbg() output. */
+char *OUTPUT_TYPES[] = {
+	"OUTPUT_ANN",
+	"OUTPUT_PROTO",
+	"OUTPUT_BINARY",
+};
+
+
 static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 		int *ann_format, char ***ann)
 {
@@ -87,10 +95,16 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	int output_id;
 	void (*cb)();
 
-	if (!(di = get_di_by_decobject(self)))
+	if (!(di = get_di_by_decobject(self))) {
+		/* Shouldn't happen. */
+		srd_dbg("srd: put(): self instance not found.");
 		return NULL;
+	}
 
 	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample, &output_id, &data))
+		/* This throws an exception, but by returning NULL here we let python
+		 * raise it. This results in a much better trace in controller.c
+		 * on the decode() method call. */
 		return NULL;
 
 	if (!(l = g_slist_nth(di->pd_output, output_id))) {
@@ -99,6 +113,9 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	pdo = l->data;
+
+	srd_spew("srd: instance %s put %d-%d %s %d", di->instance_id,
+			start_sample, end_sample, OUTPUT_TYPES[output_id], output_id);
 
 	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data))))
 		return NULL;
@@ -154,13 +171,12 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	int output_type, pdo_id;
 
 	if (!(di = get_di_by_decobject(self))) {
-		srd_dbg("srd: decoder instance not found");
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}
 
 	if (!PyArg_ParseTuple(args, "is", &output_type, &proto_id)) {
-		catch_exception("");
+		/* Let python raise this exception. */
 		return NULL;
 	}
 

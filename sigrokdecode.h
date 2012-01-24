@@ -67,10 +67,10 @@ enum {
 	SRD_OUTPUT_ANN,
 	SRD_OUTPUT_PROTO,
 	SRD_OUTPUT_BINARY,
-	/* When adding an output type, don't forget to expose it to PDs in:
-	 *     controller.c:PyInit_sigrokdecode()
-	 * and add a check in:
-	 *     module_sigrokdecode.c:Decoder_put()
+	/* When adding an output type, don't forget to...
+	 * 	  - expose it to PDs in controller.c:PyInit_sigrokdecode()
+	 * 	  - add a check in module_sigrokdecode.c:Decoder_put()
+	 *    - add a debug string in type_decoder.c:OUTPUT_TYPES
 	 */
 };
 
