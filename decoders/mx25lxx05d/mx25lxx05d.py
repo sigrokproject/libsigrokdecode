@@ -109,9 +109,13 @@ class Decoder(srd.Decoder):
     desc = 'Macronix MX25Lxx05D SPI flash chip decoder'
     longdesc = 'TODO'
     license = 'gplv2+'
-    inputs = ['spi', 'spi', 'logic']
+    inputs = ['spi', 'logic']
     outputs = ['mx25lxx05d']
-    probes = [] # TODO: HOLD#, WP#/ACC
+    probes = []
+    extra_probes = [
+        {'id': 'hold', 'name': 'HOLD#', 'desc': 'TODO.'},
+        {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'TODO.'},
+    ]
     options = {} # TODO
     annotations = [
         ['TODO', 'TODO'],
@@ -128,12 +132,12 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def putann(self, data):
+    def putx(self, data):
         # Simplification, most annotations span extactly one SPI byte/packet.
         self.put(self.ss, self.es, self.out_ann, data)
 
     def handle_wren(self, mosi, miso):
-        self.putann([0, ['Command: %s' % cmds[self.cmd]]])
+        self.putx([0, ['Command: %s' % cmds[self.cmd]]])
         self.state = IDLE
 
     # TODO: Check/display device ID / name
@@ -141,17 +145,17 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
-            self.putann([0, ['Manufacturer ID: 0x%02x' % miso]])
+            self.putx([0, ['Manufacturer ID: 0x%02x' % miso]])
         elif self.cmdstate == 3:
             # Byte 3: Slave sends the memory type (0x20 for this chip).
-            self.putann([0, ['Memory type: 0x%02x' % miso]])
+            self.putx([0, ['Memory type: 0x%02x' % miso]])
         elif self.cmdstate == 4:
             # Byte 4: Slave sends the device ID.
             self.device_id = miso
-            self.putann([0, ['Device ID: 0x%02x' % miso]])
+            self.putx([0, ['Device ID: 0x%02x' % miso]])
 
         if self.cmdstate == 4:
             # TODO: Check self.device_id is valid & exists in device_names.
@@ -169,14 +173,14 @@ class Decoder(srd.Decoder):
             # Byte 1: Master sends command ID.
             self.addr = 0
             self.start_sample = self.ss
-            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends address of the sector to erase.
             # Note: Assumes SPI data is 8 bits wide (it is for MX25Lxx05D).
             # TODO: LSB-first of MSB-first?
             self.addr <<= 8
             self.addr |= mosi
-            self.putann([0, ['Address byte %d: 0x%02x' % (self.cmdstate - 1,
+            self.putx([0, ['Address byte %d: 0x%02x' % (self.cmdstate - 1,
                         miso)]]) # TODO: Count from 0 or 1?
 
         if self.cmdstate == 4:
@@ -195,28 +199,28 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putann([0, ['Command: %s' % cmds[self.cmd]]])
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
             # TODO: Check dummy bytes? Check reply from device?
-            self.putann([0, ['Dummy byte: %s' % mosi]])
+            self.putx([0, ['Dummy byte: %s' % mosi]])
         elif self.cmdstate == 4:
             # Byte 4: Master sends 0x00 or 0x01.
             # 0x00: Master wants manufacturer ID as first reply byte.
             # 0x01: Master wants device ID as first reply byte.
             self.manufacturer_id_first = True if (mosi == 0x00) else False
             d = 'manufacturer' if (mosi == 0x00) else 'device'
-            self.putann([0, ['Master wants %s ID first' % d]])
+            self.putx([0, ['Master wants %s ID first' % d]])
         elif self.cmdstate == 5:
             # Byte 5: Slave sends manufacturer ID (or device ID).
             self.ids = [miso]
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            self.putann([0, ['%s ID' % d]])
+            self.putx([0, ['%s ID' % d]])
         elif self.cmdstate == 6:
             # Byte 6: Slave sends device ID (or manufacturer ID).
             self.ids += [miso]
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            self.putann([0, ['%s ID' % d]])
+            self.putx([0, ['%s ID' % d]])
         else:
             # TODO: Error?
             pass
@@ -224,13 +228,13 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 6:
             self.end_sample = self.es
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            self.putann([0, ['Device: Macronix %s' % device_name[id]]])
+            self.putx([0, ['Device: Macronix %s' % device_name[id]]])
             self.state = IDLE
         else:
             self.cmdstate += 1
 
     def handle_rdsr(self, mosi, miso):
-        self.putann([0, ['Command: %s (0x%02x)' % (cmds[self.cmd], miso)]])
+        self.putx([0, ['Command: %s (0x%02x)' % (cmds[self.cmd], miso)]])
         self.state = IDLE
 
     def decode(self, ss, es, data):
