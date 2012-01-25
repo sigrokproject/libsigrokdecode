@@ -173,13 +173,13 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
         return parity_bit == 1
 
     # Count number of 1 (high) bits in the data (and the parity bit itself!).
-    parity = bin(data).count('1') + parity_bit
+    ones = bin(data).count('1') + parity_bit
 
     # Check for odd/even parity.
     if parity_type == PARITY_ODD:
-        return (parity % 2) == 1
+        return (ones % 2) == 1
     elif parity_type == PARITY_EVEN:
-        return (parity % 2) == 0
+        return (ones % 2) == 0
     else:
         raise Exception('Invalid parity type: %d' % parity_type)
 
@@ -203,8 +203,8 @@ class Decoder(srd.Decoder):
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
-        'parity': ['Parity', PARITY_NONE], # TODO: Rename to parity_type.
-        'parity_check': ['Check parity', True], # TODO: Bool supported?
+        'parity_type': ['Parity type', PARITY_NONE],
+        'parity_check': ['Check parity?', True], # TODO: Bool supported?
         'num_stop_bits': ['Stop bit(s)', STOP_BITS_1],
         'bit_order': ['Bit order', LSB_FIRST],
         # TODO: Options to invert the signal(s).
@@ -341,7 +341,7 @@ class Decoder(srd.Decoder):
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
-        if self.options['parity'] == PARITY_NONE:
+        if self.options['parity_type'] == PARITY_NONE:
             self.state[rxtx] = GET_STOP_BITS
             return
 
@@ -353,7 +353,7 @@ class Decoder(srd.Decoder):
 
         self.state[rxtx] = GET_STOP_BITS
 
-        if parity_ok(self.options['parity'], self.paritybit[rxtx],
+        if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.databyte[rxtx], self.options['num_data_bits']):
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
@@ -371,7 +371,7 @@ class Decoder(srd.Decoder):
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the stop bit(s).
-        skip_parity = 0 if self.options['parity'] == PARITY_NONE else 1
+        skip_parity = 0 if self.options['parity_type'] == PARITY_NONE else 1
         b = self.options['num_data_bits'] + 1 + skip_parity
         if not self.reached_bit(rxtx, b):
             return
