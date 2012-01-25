@@ -95,7 +95,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	int output_id;
 	void (*cb)();
 
-	if (!(di = get_di_by_decobject(self))) {
+	if (!(di = srd_instance_find_by_obj(NULL, self))) {
 		/* Shouldn't happen. */
 		srd_dbg("srd: put(): self instance not found.");
 		return NULL;
@@ -114,8 +114,8 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
-	srd_spew("srd: instance %s put %d-%d %s %d", di->instance_id,
-			start_sample, end_sample, OUTPUT_TYPES[output_id], output_id);
+	srd_spew("srd: instance %s put %d-%d %s on oid %d", di->instance_id,
+			start_sample, end_sample, OUTPUT_TYPES[pdo->output_type], output_id);
 
 	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data))))
 		return NULL;
@@ -141,6 +141,8 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			next_di = l->data;
 			/* TODO: is this needed? */
 			Py_XINCREF(next_di->py_instance);
+			srd_spew("srd: sending %d-%d to instance %s",
+					start_sample, end_sample, next_di->instance_id);
 			if (!(py_res = PyObject_CallMethod(next_di->py_instance, "decode",
 					"KKO", start_sample, end_sample, data))) {
 				catch_exception("calling %s decode(): ", next_di->instance_id);
@@ -170,7 +172,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	char *proto_id;
 	int output_type, pdo_id;
 
-	if (!(di = get_di_by_decobject(self))) {
+	if (!(di = srd_instance_find_by_obj(NULL, self))) {
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}

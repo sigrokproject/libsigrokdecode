@@ -433,13 +433,10 @@ int srd_instance_stack(struct srd_decoder_instance *di_from,
 		return SRD_ERR_ARG;
 	}
 
-	if (!g_slist_find(di_list, di_from)) {
-		srd_err("Unstacked instance not found.");
-		return SRD_ERR_ARG;
+	if (g_slist_find(di_list, di_to)) {
+		/* Remove from the unstacked list. */
+		di_list = g_slist_remove(di_list, di_to);
 	}
-
-	/* Remove from the unstacked list. */
-	di_list = g_slist_remove(di_list, di_to);
 
 	/* Stack on top of source di. */
 	di_from->next_di = g_slist_append(di_from->next_di, di_to);
@@ -447,9 +444,16 @@ int srd_instance_stack(struct srd_decoder_instance *di_from,
 	return SRD_OK;
 }
 
-
-/* TODO: this should go into the PD stack */
-struct srd_decoder_instance *srd_instance_find(char *instance_id)
+/**
+ * Finds a decoder instance by its instance id, but only in the bottom
+ * level of instances -- instances already stacked on top of another one
+ * will not be found.
+ *
+ * @param instance_id The instance id to be found.
+ *
+ * @return Pointer to struct srd_decoder_instance, or NULL if not found.
+ */
+struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
 {
 	GSList *l;
 	struct srd_decoder_instance *tmp, *di;
@@ -466,9 +470,41 @@ struct srd_decoder_instance *srd_instance_find(char *instance_id)
 	return di;
 }
 
+/**
+ * Finds a decoder instance by its python object, i.e. that instance's
+ * instantiation of the sigrokdecode.Decoder class. This will recurse
+ * to find the instance anywhere in the stack tree.
+ *
+ * @param stack Pointer to a GSList of struct srd_decoder_instance,
+ * 		indicating the stack to search. To start searching at the bottom
+ * 		level of decoder instances, pass NULL.
+ * @param obj The python class instantiation.
+ *
+ * @return Pointer to struct srd_decoder_instance, or NULL if not found.
+ */
+struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
+		PyObject *obj)
+{
+	GSList *l;
+	struct srd_decoder_instance *tmp, *di;
+
+	di = NULL;
+	for (l = stack ? stack : di_list; di == NULL && l != NULL; l = l->next) {
+		tmp = l->data;
+		if (tmp->py_instance == obj)
+			di = tmp;
+		else if (tmp->next_di)
+			di = srd_instance_find_by_obj(tmp->next_di, obj);
+	}
+
+	return di;
+}
+
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 {
 	PyObject *py_name, *py_res;
+	GSList *l;
+	struct srd_decoder_instance *next_di;
 
 	srd_dbg("srd: calling start() method on protocol decoder instance %s",
 			di->instance_id);
@@ -487,6 +523,15 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 
 	Py_DecRef(py_res);
 	Py_DecRef(py_name);
+
+	/* Start all the PDs stacked on top of this one. Pass along the
+	 * metadata all the way from the bottom PD, even though it's only
+	 * applicable to logic data for now.
+	 */
+	for (l = di->next_di; l; l = l->next) {
+		next_di = l->data;
+		srd_instance_start(next_di, args);
+	}
 
 	return SRD_OK;
 }
@@ -555,7 +600,7 @@ int srd_instance_decode(uint64_t start_samplenum,
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {
 	PyObject *args;
-	GSList *d, *s;
+	GSList *d;
 	struct srd_decoder_instance *di;
 	int ret;
 
@@ -577,20 +622,12 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 		di->data_unitsize = unitsize;
 		di->data_samplerate = samplerate;
 		if ((ret = srd_instance_start(di, args) != SRD_OK))
-			return ret;
-
-		/* Run the start() method on all decoders up the stack from this one. */
-		for (s = di->next_di; s; s = s->next) {
-			/* These don't need probes, unitsize and samplerate. */
-			di = s->data;
-			if ((ret = srd_instance_start(di, args) != SRD_OK))
-				return ret;
-		}
+			break;
 	}
 
 	Py_DecRef(args);
 
-	return SRD_OK;
+	return ret;
 }
 
 /* Feed logic samples to decoder session. */
@@ -668,25 +705,5 @@ int pd_add(struct srd_decoder_instance *di, int output_type,
 	di->pd_output = g_slist_append(di->pd_output, pdo);
 
 	return pdo->pdo_id;
-}
-
-struct srd_decoder_instance *get_di_by_decobject(void *decobject)
-{
-	GSList *l, *s;
-	struct srd_decoder_instance *di;
-
-	for (l = di_list; l; l = l->next) {
-		di = l->data;
-		if (decobject == di->py_instance)
-			return di;
-		/* Check decoders stacked on top of this one. */
-		for (s = di->next_di; s; s = s->next) {
-			di = s->data;
-			if (decobject == di->py_instance)
-				return di;
-		}
-	}
-
-	return NULL;
 }
 

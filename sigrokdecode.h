@@ -186,7 +186,9 @@ struct srd_decoder_instance *srd_instance_new(const char *id,
 		GHashTable *options);
 int srd_instance_stack(struct srd_decoder_instance *di_from,
 		struct srd_decoder_instance *di_to);
-struct srd_decoder_instance *srd_instance_find(char *instance_id);
+struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id);
+struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
+		PyObject *obj);
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
 int srd_instance_decode(uint64_t start_samplenum,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
