@@ -1,7 +1,7 @@
 /*
  * This file is part of the sigrok project.
  *
- * Copyright (C) 2011 Uwe Hermann <uwe@hermann-uwe.de>
+ * Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,20 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+/* Currently selected libsigrokdecode loglevel. Default: SRD_LOG_WARN. */
 static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
+
+/* Function prototype. */
+static int srd_logv(void *data, int loglevel, const char *format, va_list args);
+
+/* Pointer to the currently selected log handler. Default: srd_logv(). */
+static srd_log_handler_t srd_handler = srd_logv;
+
+/*
+ * Pointer to private data that can be passed to the log handler.
+ * This can be used (for example) by C++ GUIs to pass a "this" pointer.
+ */
+static void *srd_handler_data = NULL;
 
 /**
  * Set the libsigrokdecode loglevel.
@@ -60,9 +73,57 @@ int srd_get_loglevel(void)
 	return srd_loglevel;
 }
 
-static int srd_logv(int loglevel, const char *format, va_list args)
+/**
+ * Set the libsigrokdecode log handler to the specified function.
+ *
+ * @param handler Function pointer to the log handler function to use.
+ *                Must not be NULL.
+ * @param data Pointer to private data to be passed on. This can be used by
+ *             the caller pass arbitrary data to the log functions. This
+ *             pointer is only stored or passed on by libsigrokdecode, and
+ *             is never used or interpreted in any way.
+ * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
+ */
+int srd_log_set_handler(srd_log_handler_t handler, void *data)
+{
+	if (!handler) {
+		srd_err("log: %s: handler was NULL", __func__);
+		return SRD_ERR_ARG;
+	}
+
+	/* Note: 'data' is allowed to be NULL. */
+
+	srd_handler = handler;
+	srd_handler_data = data;
+
+	return SRD_OK;
+}
+
+/**
+ * Set the libsigrokdecode log handler to the default built-in one.
+ *
+ * Additionally, the internal 'srd_handler_data' pointer is set to NULL.
+ *
+ * @return SRD_OK upon success, a negative error code otherwise.
+ */
+int srd_log_set_default_handler(void)
+{
+	/*
+	 * Note: No log output in this function, as it should safely work
+	 * even if the currently set log handler is buggy/broken.
+	 */
+	srd_handler = srd_logv;
+	srd_handler_data = NULL;
+
+	return SRD_OK;
+}
+
+static int srd_logv(void *data, int loglevel, const char *format, va_list args)
 {
 	int ret;
+
+	/* This specific log handler doesn't need the void pointer data. */
+	(void)data;
 
 	/* Only output messages of at least the selected loglevel(s). */
 	if (loglevel > srd_loglevel)
@@ -80,7 +141,7 @@ int srd_log(int loglevel, const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(loglevel, format, args);
+	ret = srd_handler(srd_handler_data, loglevel, format, args);
 	va_end(args);
 
 	return ret;
@@ -92,7 +153,7 @@ int srd_spew(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(SRD_LOG_SPEW, format, args);
+	ret = srd_handler(srd_handler_data, SRD_LOG_SPEW, format, args);
 	va_end(args);
 
 	return ret;
@@ -104,7 +165,7 @@ int srd_dbg(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(SRD_LOG_DBG, format, args);
+	ret = srd_handler(srd_handler_data, SRD_LOG_DBG, format, args);
 	va_end(args);
 
 	return ret;
@@ -116,7 +177,7 @@ int srd_info(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(SRD_LOG_INFO, format, args);
+	ret = srd_handler(srd_handler_data, SRD_LOG_INFO, format, args);
 	va_end(args);
 
 	return ret;
@@ -128,7 +189,7 @@ int srd_warn(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(SRD_LOG_WARN, format, args);
+	ret = srd_handler(srd_handler_data, SRD_LOG_WARN, format, args);
 	va_end(args);
 
 	return ret;
@@ -140,7 +201,7 @@ int srd_err(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_logv(SRD_LOG_ERR, format, args);
+	ret = srd_handler(srd_handler_data, SRD_LOG_ERR, format, args);
 	va_end(args);
 
 	return ret;
