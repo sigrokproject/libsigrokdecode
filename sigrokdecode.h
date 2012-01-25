@@ -224,6 +224,8 @@ int srd_set_loglevel(int loglevel);
 int srd_get_loglevel(void);
 int srd_log_set_handler(srd_log_handler_t handler, void *data);
 int srd_log_set_default_handler(void);
+int srd_log_set_logdomain(const char *logdomain);
+char *srd_log_get_logdomain(void);
 
 #ifdef __cplusplus
 }

@@ -38,6 +38,11 @@ static srd_log_handler_t srd_handler = srd_logv;
  */
 static void *srd_handler_data = NULL;
 
+/* Log domain (a short string that is used as prefix for all messages). */
+#define LOGDOMAIN_MAXLEN 30
+#define LOGDOMAIN_DEFAULT "srd: "
+static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
+
 /**
  * Set the libsigrokdecode loglevel.
  *
@@ -71,6 +76,37 @@ int srd_set_loglevel(int loglevel)
 int srd_get_loglevel(void)
 {
 	return srd_loglevel;
+}
+
+/**
+ * TODO.
+ *
+ * @param logdomain TODO
+ * @return TODO.
+ */
+int srd_log_set_logdomain(const char *logdomain)
+{
+	if (!logdomain) {
+		srd_err("log: %s: logdomain was NULL", __func__);
+		return SRD_ERR_ARG;
+	}
+
+	/* TODO: Error handling. */
+	snprintf((char *)&srd_log_domain, LOGDOMAIN_MAXLEN, "%s", logdomain);
+
+	srd_dbg("log domain set to '%s'", (const char *)&srd_log_domain);
+
+	return SRD_OK;
+}
+
+/**
+ * TODO.
+ *
+ * @return TODO.
+ */
+char *srd_log_get_logdomain(void)
+{
+	return g_strdup((char *)srd_log_domain);
 }
 
 /**
@@ -129,6 +165,8 @@ static int srd_logv(void *data, int loglevel, const char *format, va_list args)
 	if (loglevel > srd_loglevel)
 		return SRD_OK; /* TODO? */
 
+	if (srd_log_domain[0] != '\0')
+		fprintf(stderr, srd_log_domain);
 	ret = vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 
