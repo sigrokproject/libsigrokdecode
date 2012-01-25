@@ -118,6 +118,7 @@ class Decoder(srd.Decoder):
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
+    extra_probes = []
     options = {}
     annotations = [
         ['TODO', 'TODO']
@@ -133,17 +134,18 @@ class Decoder(srd.Decoder):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
 
         if self.rate < 48000000:
-            raise Exception('Sample rate not sufficient for USB decoding')
+            raise Exception('Sample rate (%d) not sufficient for USB '
+                            'decoding, need at least 48MHz' % self.rate)
 
         # Initialise decoder state.
         self.sym = J
         self.scount = 0
         self.packet = ''
 
-    def decode(self, ss, es, data):
+    def report(self):
+        pass
 
-        # FIXME
-        # for (samplenum, (dp, dm, x, y, z, a)) in data:
+    def decode(self, ss, es, data):
         for (samplenum, (dm, dp)) in data:
 
             self.scount += 1

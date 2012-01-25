@@ -59,13 +59,14 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['spi']
     probes = [
-        {'id': 'mosi', 'name': 'MOSI',
-         'desc': 'SPI MOSI line (Master out, slave in)'},
         {'id': 'miso', 'name': 'MISO',
          'desc': 'SPI MISO line (Master in, slave out)'},
+        {'id': 'mosi', 'name': 'MOSI',
+         'desc': 'SPI MOSI line (Master out, slave in)'},
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
+    extra_probes = [] # TODO
     options = {
         'cs_polarity': ['CS# polarity', ACTIVE_LOW],
         'cpol': ['Clock polarity', CPOL_0],
@@ -94,11 +95,8 @@ class Decoder(srd.Decoder):
         return 'SPI: %d bytes received' % self.bytesreceived
 
     def decode(self, ss, es, data):
-        # HACK! At the moment the number of probes is not handled correctly.
-        # E.g. if an input file (-i foo.sr) has more than two probes enabled.
-        # for (samplenum, (mosi, sck, x, y, z, a)) in data:
-        # for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
-        for (samplenum, (cs, miso, sck, mosi, wp, hold)) in data:
+        # TODO: Either MISO or MOSI could be optional. CS# is optional.
+        for (samplenum, (miso, mosi, sck, cs)) in data:
 
             self.samplenum += 1 # FIXME
 

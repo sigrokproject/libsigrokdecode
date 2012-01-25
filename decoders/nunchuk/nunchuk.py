@@ -49,7 +49,8 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['nunchuck']
-    probes = [] # TODO
+    probes = []
+    extra_probes = [] # TODO
     options = {}
     annotations = [
         ['TODO', 'TODO'], 

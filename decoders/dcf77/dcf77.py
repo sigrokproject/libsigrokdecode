@@ -57,6 +57,9 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
     ]
+    extra_probes = [
+        {'id': 'pon', 'name': 'PON', 'desc': 'TODO'},
+    ]
     options = {}
     annotations = [
         # ANN_ASCII
@@ -211,7 +214,7 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
-        for samplenum, (pon, val) in data: # FIXME
+        for samplenum, (val) in data: # TODO: Handle optional PON.
 
             self.samplenum += 1 # FIXME. Use samplenum. Off-by-one?
 
@@ -272,7 +275,7 @@ class Decoder(srd.Decoder):
                 self.state = WAIT_FOR_RISING_EDGE
 
             else:
-                raise Exception('Invalid state: %s' % self.state)
+                raise Exception('Invalid state: %d' % self.state)
 
             self.oldval = val
 

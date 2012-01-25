@@ -38,6 +38,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['ddc']
     probes = []
+    extra_probes = []
     options = {}
     annotations = [
         ['Byte stream', 'DDC byte stream as read from display.'],
@@ -49,11 +50,14 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'ddc')
 
+    def report(self):
+        pass
+
     def decode(self, ss, es, data):
         try:
             cmd, data, ack_bit = data
         except Exception as e:
-            raise Exception('malformed I2C input: %s' % str(e)) from e
+            raise Exception('Malformed I2C input: %s' % str(e)) from e
 
         if self.state is None:
             # Wait for the DDC session to start.
@@ -72,4 +76,6 @@ class Decoder(srd.Decoder):
                 # There shouldn't be anything but data reads on this
                 # address, so ignore everything else.
                 self.put(ss, es, self.out_ann, [0, ['0x%.2x' % data]])
+        else:
+            raise Exception('Invalid state: %s' % self.state)
 

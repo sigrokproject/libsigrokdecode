@@ -256,8 +256,6 @@ class Decoder(srd.Decoder):
                 self.cmdstate = 1
             else:
                 pass # TODO
-        else:
-            pass
 
         # Handle commands.
         # TODO: Use some generic way to invoke the resp. method.

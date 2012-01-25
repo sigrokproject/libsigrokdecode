@@ -48,8 +48,9 @@ class Decoder(srd.Decoder):
     longdesc = 'TODO.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['i2c-axp199', 'i2c-h8563s', 'i2c-accel']
+    outputs = ['i2c-axp199', 'i2c-h8563s', 'i2c-accel'] # TODO: type vs. inst.
     probes = []
+    extra_probes = []
     options = {}
     annotations = []
 
@@ -102,4 +103,6 @@ class Decoder(srd.Decoder):
                 print('Error: Could not determine correct stream!') # FIXME
             self.packets = []
             self.stream = -1
+        else:
+            pass # Do nothing, only add the I2C packet to our cache.
 

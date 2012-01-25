@@ -47,6 +47,7 @@ class Decoder(srd.Decoder):
     inputs = ['uart']
     outputs = ['pan1321']
     probes = []
+    extra_probes = []
     options = {}
     annotations = [
         ['ASCII', 'TODO: description'],
@@ -73,7 +74,7 @@ class Decoder(srd.Decoder):
                      [ANN_ASCII, ['Host set the Bluetooth name to ' + name]])
         else:
             self.put(ss, es, self.out_ann,
-                     [ANN_ASCII, ['Host sent unsupported command']])
+                     [ANN_ASCII, ['Host sent unsupported command: %s' % s]])
         self.cmd[rxtx] = ''
 
     def handle_device_reply(self, ss, es, rxtx, s):
@@ -89,7 +90,7 @@ class Decoder(srd.Decoder):
                      [ANN_ASCII, ['Device sent error code ' + error]])
         else:
             self.put(ss, es, self.out_ann,
-                     [ANN_ASCII, ['Device sent an unknown reply']])
+                     [ANN_ASCII, ['Device sent an unknown reply: %s' % s]])
         self.cmd[rxtx] = ''
 
     def decode(self, ss, es, data):
@@ -112,5 +113,5 @@ class Decoder(srd.Decoder):
         elif rxtx == TX:
             self.handle_host_command(ss, es, rxtx, self.cmd[rxtx])
         else:
-            pass # TODO: Error.
+            raise Exception('Invalid rxtx value: %d' % rxtx)
 

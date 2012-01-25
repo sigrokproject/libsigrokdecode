@@ -38,6 +38,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
     probes = []
+    extra_probes = []
     options = {}
     annotations = []
 
@@ -87,4 +88,6 @@ class Decoder(srd.Decoder):
 
             self.packets = []
             self.stream = -1
+        else:
+            pass # Do nothing, only add the I2C packet to our cache.
 

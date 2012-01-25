@@ -199,6 +199,7 @@ class Decoder(srd.Decoder):
         {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
     ]
+    extra_probes = []
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
@@ -391,7 +392,8 @@ class Decoder(srd.Decoder):
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
-    def decode(self, ss, es, data): # TODO
+    def decode(self, ss, es, data):
+        # TODO: Either RX or TX could be omitted (optional probe).
         for (samplenum, (rx, tx)) in data:
 
             # TODO: Start counting at 0 or 1? Increase before or after?
@@ -420,7 +422,7 @@ class Decoder(srd.Decoder):
                 elif self.state[rxtx] == GET_STOP_BITS:
                     self.get_stop_bits(rxtx, signal)
                 else:
-                    raise Exception('Invalid state: %s' % self.state[rxtx])
+                    raise Exception('Invalid state: %d' % self.state[rxtx])
 
                 # Save current RX/TX values for the next round.
                 self.oldbit[rxtx] = signal

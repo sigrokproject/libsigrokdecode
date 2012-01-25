@@ -129,6 +129,7 @@ class Decoder(srd.Decoder):
         {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
     ]
+    extra_probes = []
     options = {
         'addressing': ['Slave addressing (in bits)', 7], # 7 or 10
     }
@@ -157,6 +158,9 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2c')
+
+    def report(self):
+        pass
 
     def is_start_condition(self, scl, sda):
         # START condition (S): SDA = falling, SCL = high
@@ -290,8 +294,7 @@ class Decoder(srd.Decoder):
                 elif self.is_stop_condition(scl, sda):
                     self.found_stop(scl, sda)
             else:
-                # Shouldn't happen.
-                raise Exception("unknown state %d" % self.STATE)
+                raise Exception('Invalid state %d' % self.STATE)
 
             # Save current SDA/SCL values for the next round.
             self.oldscl = scl
