@@ -68,7 +68,7 @@ int srd_init(void)
 {
 	int ret;
 
-	srd_dbg("srd: initializing");
+	srd_dbg("Initializing libsigrokdecode.");
 
 	/* Add our own module to the list of built-in modules. */
 	PyImport_AppendInittab("sigrokdecode", PyInit_sigrokdecode);
@@ -105,7 +105,7 @@ int srd_init(void)
 int srd_exit(void)
 {
 
-	srd_dbg("srd: exiting");
+	srd_dbg("Exiting libsigrokdecode.");
 
 	srd_unload_all_decoders();
 	g_slist_free(pd_list);
@@ -275,7 +275,7 @@ err_out:
 	if (key)
 		g_free(key);
 	if (PyErr_Occurred())
-		catch_exception("srd: stray exception in srd_instance_set_options()");
+		catch_exception("Stray exception in srd_instance_set_options().");
 
 	return ret;
 }
@@ -371,7 +371,7 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	int i;
 	char *instance_id;
 
-	srd_dbg("srd: creating new %s instance", decoder_id);
+	srd_dbg("Creating new %s instance.", decoder_id);
 
 	if (!(dec = srd_get_decoder_by_id(decoder_id))) {
 		srd_err("Protocol decoder %s not found.", decoder_id);
@@ -506,8 +506,8 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 	GSList *l;
 	struct srd_decoder_instance *next_di;
 
-	srd_dbg("srd: calling start() method on protocol decoder instance %s",
-			di->instance_id);
+	srd_dbg("Calling start() method on protocol decoder instance %s.",
+		di->instance_id);
 
 	if (!(py_name = PyUnicode_FromString("start"))) {
 		srd_err("Unable to build python object for 'start'.");
@@ -540,34 +540,34 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
  * Run the specified decoder function.
  *
  * @param start_samplenum The starting sample number for the buffer's sample
- * 		set, relative to the start of capture.
- * @param di The decoder instance to call.
- * @param inbuf The buffer to decode.
- * @param inbuflen Length of the buffer.
+ * 			  set, relative to the start of capture.
+ * @param di The decoder instance to call. Must not be NULL.
+ * @param inbuf The buffer to decode. Must not be NULL.
+ * @param inbuflen Length of the buffer. Must be > 0.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_instance_decode(uint64_t start_samplenum,
-		struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
+	struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
 	uint64_t end_samplenum;
 
-	srd_dbg("srd: calling decode() on instance %s with %d bytes starting "
-			"at sample %d", di->instance_id, inbuflen, start_samplenum);
+	srd_dbg("Calling decode() on instance %s with %d bytes starting "
+		"at sample %d.", di->instance_id, inbuflen, start_samplenum);
 
 	/* Return an error upon unusable input. */
-	if (di == NULL) {
-		srd_dbg("srd: empty decoder instance");
+	if (!di) {
+		srd_dbg("empty decoder instance");
 		return SRD_ERR_ARG;
 	}
-	if (inbuf == NULL) {
-		srd_dbg("srd: NULL buffer pointer");
+	if (!inbuf) {
+		srd_dbg("NULL buffer pointer");
 		return SRD_ERR_ARG;
 	}
 	if (inbuflen == 0) {
-		srd_dbg("srd: empty buffer");
+		srd_dbg("empty buffer");
 		return SRD_ERR_ARG;
 	}
 
@@ -604,8 +604,8 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	struct srd_decoder_instance *di;
 	int ret;
 
-	srd_dbg("srd: calling start() on all instances with %d probes, "
-			"unitsize %d samplerate %d", num_probes, unitsize, samplerate);
+	srd_dbg("Calling start() on all instances with %d probes, "
+		"unitsize %d samplerate %d.", num_probes, unitsize, samplerate);
 
 	/* Currently only one item of metadata is passed along to decoders,
 	 * samplerate. This can be extended as needed.
@@ -636,9 +636,9 @@ int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen
 	GSList *d;
 	int ret;
 
-	srd_dbg("srd: calling decode() on all instances with starting sample "
-			"number %"PRIu64", %"PRIu64" bytes at 0x%p", start_samplenum,
-			inbuflen, inbuf);
+	srd_dbg("Calling decode() on all instances with starting sample "
+		"number %"PRIu64", %"PRIu64" bytes at 0x%p", start_samplenum,
+		inbuflen, inbuf);
 
 	for (d = di_list; d; d = d->next) {
 		if ((ret = srd_instance_decode(start_samplenum, d->data, inbuf,
@@ -654,7 +654,7 @@ int srd_register_callback(int output_type, void *cb)
 {
 	struct srd_pd_callback *pd_cb;
 
-	srd_dbg("srd: registering new callback for output type %d", output_type);
+	srd_dbg("Registering new callback for output type %d.", output_type);
 
 	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback))))
 		return SRD_ERR_MALLOC;
@@ -686,13 +686,12 @@ void *srd_find_callback(int output_type)
 
 
 /* This is the backend function to python sigrokdecode.add() call. */
-int pd_add(struct srd_decoder_instance *di, int output_type,
-		char *proto_id)
+int pd_add(struct srd_decoder_instance *di, int output_type, char *proto_id)
 {
 	struct srd_pd_output *pdo;
 
-	srd_dbg("srd: instance %s creating new output type %d for %s",
-			di->instance_id, output_type, proto_id);
+	srd_dbg("Instance %s creating new output type %d for %s.",
+		di->instance_id, output_type, proto_id);
 
 	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output))))
 		return -1;

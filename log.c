@@ -63,7 +63,7 @@ int srd_set_loglevel(int loglevel)
 
 	srd_loglevel = loglevel;
 
-	srd_dbg("srd: loglevel set to %d", loglevel);
+	srd_dbg("libsigrokdecode loglevel set to %d.", loglevel);
 
 	return SRD_OK;
 }

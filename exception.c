@@ -41,8 +41,8 @@ void catch_exception(const char *format, ...)
 	PyErr_NormalizeException(&etype, &evalue, &etb);
 
 	if (!(py_str = PyObject_Str(evalue))) {
-		/* Shouldn't happen */
-		srd_dbg("srd: failed to convert exception value to string");
+		/* Shouldn't happen. */
+		srd_dbg("Failed to convert exception value to string.");
 		return;
 	}
 
@@ -74,8 +74,7 @@ void catch_exception(const char *format, ...)
 				py_tb->tb_frame->f_code->co_name);
 		py_str_as_str(py_str, &tracestr);
 		Py_DecRef(py_str);
-		g_string_printf(msg, "srd: %s in %s: %s", ename,
-				tracestr, str);
+		g_string_printf(msg, "%s in %s: %s", ename, tracestr, str);
 		srd_dbg(msg->str);
 		g_free(tracestr);
 	}

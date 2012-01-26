@@ -137,12 +137,12 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	int alen, ret, i;
 	char **ann;
 
-	srd_dbg("srd: loading module '%s'", name);
+	srd_dbg("Loading module '%s'.", name);
 
 	py_basedec = py_method = py_attr = NULL;
 
 	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
-		srd_dbg("srd: Failed to malloc struct srd_decoder");
+		srd_dbg("Failed to malloc struct srd_decoder.");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
@@ -164,7 +164,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	}
 
 	if (!(py_basedec = PyObject_GetAttrString(mod_sigrokdecode, "Decoder"))) {
-		srd_dbg("srd: sigrokdecode module not loaded");
+		srd_dbg("sigrokdecode module not loaded.");
 		goto err_out;
 	}
 
