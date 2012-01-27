@@ -114,9 +114,9 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
-	srd_spew("Instance %s put %d-%d %s on oid %d.", di->instance_id,
-		 start_sample, end_sample, OUTPUT_TYPES[pdo->output_type],
-		 output_id);
+	srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on oid %d.",
+		 di->instance_id, start_sample, end_sample,
+		 OUTPUT_TYPES[pdo->output_type], output_id);
 
 	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data))))
 		return NULL;
