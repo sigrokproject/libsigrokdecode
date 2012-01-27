@@ -306,6 +306,9 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 	int *new_probemap, new_probenum;
 	char *probe_id, *probenum_str;
 
+	srd_dbg("set probes called for instance %s with list of %d probes",
+			di->instance_id, g_hash_table_size(new_probes));
+
 	if (g_hash_table_size(new_probes) == 0)
 		/* No probes provided. */
 		return SRD_OK;
@@ -347,6 +350,7 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 		}
 		p = sl->data;
 		new_probemap[p->order] = new_probenum;
+		srd_dbg("setting probe mapping for %d = probe %d", p->order, new_probenum);
 	}
 	g_free(di->dec_probemap);
 	di->dec_probemap = new_probemap;
