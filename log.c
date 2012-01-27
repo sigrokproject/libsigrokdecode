@@ -166,7 +166,7 @@ static int srd_logv(void *data, int loglevel, const char *format, va_list args)
 		return SRD_OK; /* TODO? */
 
 	if (srd_log_domain[0] != '\0')
-		fprintf(stderr, srd_log_domain);
+		fprintf(stderr, "%s", srd_log_domain);
 	ret = vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 
