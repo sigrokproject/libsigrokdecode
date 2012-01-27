@@ -79,8 +79,8 @@ class Decoder(srd.Decoder):
             else:
                 kelvin = (self.data[0] | (self.data[1] << 8)) * 0.02
                 celsius = kelvin - 273.15
-                self.putx([0, ['Temperature: %d °C' % celsius]])
-                self.putx([1, ['Temperature: %d °K' % kelvin]])
+                self.putx([0, ['Temperature: %3.2f °C' % celsius]])
+                self.putx([1, ['Temperature: %3.2f °K' % kelvin]])
                 self.state = 'IGNORE START REPEAT'
                 self.data = []
         else:
