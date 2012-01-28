@@ -125,22 +125,24 @@ class Decoder(srd.Decoder):
                 if deasserted:
                     self.cs_was_deasserted_during_data_word = 1
 
+            ws = self.options['wordsize']
+
             # Receive MOSI bit into our shift register.
             if self.options['bitorder'] == MSB_FIRST:
-                self.mosidata |= mosi << (self.options['wordsize'] - 1 - self.bitcount)
+                self.mosidata |= mosi << (ws - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
 
             # Receive MISO bit into our shift register.
             if self.options['bitorder'] == MSB_FIRST:
-                self.misodata |= miso << (self.options['wordsize'] - 1 - self.bitcount)
+                self.misodata |= miso << (ws - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
 
             self.bitcount += 1
 
-            # Continue to receive if not a byte yet.
-            if self.bitcount != self.options['wordsize']:
+            # Continue to receive if not enough bits were received, yet.
+            if self.bitcount != ws:
                 continue
 
             self.put(self.start_sample, self.samplenum, self.out_proto,

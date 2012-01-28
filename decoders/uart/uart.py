@@ -310,7 +310,8 @@ class Decoder(srd.Decoder):
         # Get the next data bit in LSB-first or MSB-first fashion.
         if self.options['bit_order'] == LSB_FIRST:
             self.databyte[rxtx] >>= 1
-            self.databyte[rxtx] |= (signal << (self.options['num_data_bits'] - 1))
+            self.databyte[rxtx] |= \
+                (signal << (self.options['num_data_bits'] - 1))
         elif self.options['bit_order'] == MSB_FIRST:
             self.databyte[rxtx] <<= 1
             self.databyte[rxtx] |= (signal << 0)
