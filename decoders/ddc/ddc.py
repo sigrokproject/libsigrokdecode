@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program; if not, If not, see <http://www.gnu.org/licenses/>.
+## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
 '''
@@ -30,28 +30,24 @@ import sigrokdecode as srd
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'ddc'
-    name = 'DDC'
+    name = 'DDC2'
     longname = 'Display Data Channel'
     desc = 'A protocol for communication between computers and displays.'
     longdesc = ''
     license = 'gplv3+'
     inputs = ['i2c']
-    outputs = ['ddc']
-    probes = []
-    extra_probes = []
+    outputs = ['ddc2']
     options = {}
     annotations = [
-        ['Byte stream', 'DDC byte stream as read from display.'],
+        ['Byte stream', 'DDC2B byte stream as read from display.'],
     ]
 
     def __init__(self, **kwargs):
         self.state = None
 
     def start(self, metadata):
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'ddc')
-
-    def report(self):
-        pass
+        self.out_proto = self.add(srd.OUTPUT_PROTO, 'ddc2')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'ddc2')
 
     def decode(self, ss, es, data):
         try:
@@ -75,6 +71,7 @@ class Decoder(srd.Decoder):
             if cmd == 'DATA READ':
                 # There shouldn't be anything but data reads on this
                 # address, so ignore everything else.
+                self.put(ss, es, self.out_proto, data)
                 self.put(ss, es, self.out_ann, [0, ['0x%.2x' % data]])
         else:
             raise Exception('Invalid state: %s' % self.state)
