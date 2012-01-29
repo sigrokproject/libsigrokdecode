@@ -17,15 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
-EDID 1.3 structure decoder.
-
-Details:
-https://en.wikipedia.org/wiki/Extended_display_identification_data
-'''
-
 # TODO:
 #    - EDID < 1.3
+#    - add short annotations
 #    - Signal level standard field in basic display parameters block
 #    - Additional color point descriptors
 #    - Additional standard timing descriptors
@@ -33,6 +27,7 @@ https://en.wikipedia.org/wiki/Extended_display_identification_data
 
 import sigrokdecode as srd
 import os
+
 
 EDID_HEADER = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00]
 OFF_VENDOR = 8
@@ -44,7 +39,6 @@ OFF_STD_TIMING = 38
 OFF_DET_TIMING = 54
 OFF_NUM_EXT = 126
 OFF_CHECKSUM = 127
-
 
 # Pre-EDID established timing modes
 est_modes = [
@@ -78,6 +72,7 @@ xy_ratio = [
 # Annotation types
 ANN_FIELDS = 0
 ANN_SECTIONS = 1
+
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -161,7 +156,7 @@ class Decoder(srd.Decoder):
         self.put(self.sn[start][0], self.sn[end][1], self.out_ann, [ANN_FIELDS, [annotation]])
 
     def lookup_pnpid(self, pnpid):
-        pnpid_file = os.path.dirname(__file__) + '/pnpids.txt'
+        pnpid_file = os.path.join(os.path.dirname(__file__), 'pnpids.txt')
         if os.path.exists(pnpid_file):
             for line in open(pnpid_file).readlines():
                 if line.find(pnpid + ';') == 0:
@@ -461,7 +456,7 @@ class Decoder(srd.Decoder):
             if self.cache[i] != 0 and self.cache[i+1] != 0:
                 self.decode_detailed_timing(i)
             else:
-                if self.cache[i+2] == 0 or self.cache[i+4] == 0 or True:
+                if self.cache[i+2] == 0 or self.cache[i+4] == 0:
                     self.decode_descriptor(i)
 
 
