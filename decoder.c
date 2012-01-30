@@ -351,9 +351,6 @@ int srd_load_all_decoders(void)
 		/* The decoder name is the PD directory name (e.g. "i2c"). */
 		decodername = g_strdup(direntry);
 
-		if (!(dec = g_try_malloc(sizeof(struct srd_decoder))))
-			return SRD_ERR_MALLOC;
-
 		if ((ret = srd_load_decoder(decodername, &dec)) == SRD_OK) {
 			/* Append it to the list of supported/loaded decoders. */
 			pd_list = g_slist_append(pd_list, dec);
