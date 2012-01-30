@@ -173,7 +173,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 				"a subclass of sigrokdecode.Decoder.", name);
 		goto err_out;
 	}
-	Py_DecRef(py_basedec);
+	Py_CLEAR(py_basedec);
 
 	/* Check for a proper start() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "start")) {
@@ -187,7 +187,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 				"is not a method.", name);
 		goto err_out;
 	}
-	Py_DecRef(py_method);
+	Py_CLEAR(py_method);
 
 	/* Check for a proper decode() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "decode")) {
@@ -201,7 +201,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 				"is not a method.", name);
 		goto err_out;
 	}
-	Py_DecRef(py_method);
+	Py_CLEAR(py_method);
 
 	/* If present, options must be a dictionary. */
 	if (PyObject_HasAttrString(d->py_dec, "options")) {
@@ -209,6 +209,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		if (!PyDict_Check(py_attr)) {
 			srd_err("Protocol decoder %s options attribute is not "
 					"a dictionary.", d->name);
+			Py_DecRef(py_attr);
 			goto err_out;
 		}
 		Py_DecRef(py_attr);
