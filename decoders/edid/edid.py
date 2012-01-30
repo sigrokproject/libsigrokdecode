@@ -107,6 +107,8 @@ class Decoder(srd.Decoder):
         self.cnt += 1
         self.sn.append( [ss, es] )
         self.cache.append(data)
+        # debug
+#        self.put(ss, es, self.out_ann, [0, ["%d: [%.2x]" % (self.cnt, data)]])
 
         if self.state is None:
             # Wait for the EDID header
@@ -115,6 +117,7 @@ class Decoder(srd.Decoder):
                     # Throw away any garbage before the header
                     self.sn = self.sn[-8:]
                     self.cache = self.cache[-8:]
+                    self.cnt = 8
                     self.state = 'edid'
                     self.put(ss, es, self.out_ann, [0, ["EDID header"]])
         elif self.state == 'edid':
@@ -401,7 +404,7 @@ class Decoder(srd.Decoder):
                     + (posneg[sync2 & 0x01]) + ')'
         elif sync == 0x03:
             features += 'digital separate ('
-            features += 'Vsync polarity ' + (posneg[sync2 >> 1])
+            features += 'Vsync polarity ' + (posneg[(sync2 & 0x02) >> 1])
             features += ', Hsync polarity ' + (posneg[sync2 & 0x01])
             features += ')'
         features += ', '
