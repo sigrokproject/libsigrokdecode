@@ -192,6 +192,8 @@ struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
 int srd_instance_decode(uint64_t start_samplenum,
 		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
+void srd_instance_free(struct srd_decoder_instance *di);
+void srd_instance_free_all(GSList *stack);
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
 int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen);
 int pd_add(struct srd_decoder_instance *di, int output_type, char *output_id);

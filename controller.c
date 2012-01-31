@@ -599,6 +599,44 @@ int srd_instance_decode(uint64_t start_samplenum,
 	return SRD_OK;
 }
 
+void srd_instance_free(struct srd_decoder_instance *di)
+{
+	GSList *l;
+	struct srd_pd_output *pdo;
+
+	srd_dbg("Freeing instance %s", di->instance_id);
+
+	Py_DecRef(di->py_instance);
+	g_free(di->instance_id);
+	g_free(di->dec_probemap);
+	g_slist_free(di->next_di);
+	for (l = di->pd_output; l; l = l->next) {
+		pdo = l->data;
+		g_free(pdo->proto_id);
+		g_free(pdo);
+	}
+	g_slist_free(di->pd_output);
+
+}
+
+void srd_instance_free_all(GSList *stack)
+{
+	GSList *l;
+	struct srd_decoder_instance *di;
+
+	di = NULL;
+	for (l = stack ? stack : di_list; di == NULL && l != NULL; l = l->next) {
+		di = l->data;
+		if (di->next_di)
+			srd_instance_free_all(di->next_di);
+		srd_instance_free(di);
+	}
+	if (!stack) {
+		g_slist_free(di_list);
+		di_list = NULL;
+	}
+
+}
 
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {

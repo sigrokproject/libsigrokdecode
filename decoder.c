@@ -304,16 +304,45 @@ char *srd_decoder_doc(struct srd_decoder *dec)
 }
 
 
+static void free_probes(GSList *probelist)
+{
+	GSList *l;
+	struct srd_probe *p;
+
+	if (probelist == NULL)
+		return;
+
+	for (l = probelist; l; l = l->next) {
+		p = l->data;
+		g_free(p->id);
+		g_free(p->name);
+		g_free(p->desc);
+		g_free(p);
+	}
+	g_slist_free(probelist);
+
+}
+
 /**
  * Unload decoder module.
  *
- * @param dec The decoder struct to be unloaded.
+ * @param dec The struct srd_decoder to be unloaded.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_unload_decoder(struct srd_decoder *dec)
 {
 
+	srd_dbg("unloading decoder %s", dec->name);
+
+	/* Since any instances of this decoder need to be released as well,
+	 * but they could be anywhere in the stack, just free the entire
+	 * stack. A frontend reloading a decoder thus has to restart all
+	 * instances, and rebuild the stack. */
+	srd_instance_free_all(NULL);
+
+	free_probes(dec->probes);
+	free_probes(dec->extra_probes);
 	g_free(dec->id);
 	g_free(dec->name);
 	g_free(dec->longname);
@@ -326,7 +355,9 @@ int srd_unload_decoder(struct srd_decoder *dec)
 	if (dec->outputformats != NULL)
 		g_slist_free(dec->outputformats);
 
+	/* The module's Decoder class. */
 	Py_XDECREF(dec->py_dec);
+	/* The module itself. */
 	Py_XDECREF(dec->py_mod);
 
 	/* TODO: (g_)free dec itself? */
