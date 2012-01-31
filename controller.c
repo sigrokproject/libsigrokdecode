@@ -339,7 +339,7 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
 				(GCompareFunc)compare_probe_id))) {
 			/* Fall back on optional probes. */
-			if (!(sl = g_slist_find_custom(di->decoder->extra_probes,
+			if (!(sl = g_slist_find_custom(di->decoder->opt_probes,
 					probe_id, (GCompareFunc)compare_probe_id))) {
 				srd_err("Protocol decoder %s has no probe '%s'.",
 						di->decoder->name, probe_id);
@@ -395,7 +395,7 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	 * order in which the decoder class defined them.
 	 */
 	di->dec_num_probes = g_slist_length(di->decoder->probes) +
-			g_slist_length(di->decoder->extra_probes);
+			g_slist_length(di->decoder->opt_probes);
 	if (di->dec_num_probes) {
 		if (!(di->dec_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
 			srd_err("Failed to malloc probe map.");

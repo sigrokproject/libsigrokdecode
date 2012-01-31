@@ -220,7 +220,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		goto err_out;
 
 	/* Check and import optional probes. */
-	if (get_probes(d, "extra_probes", &d->extra_probes) != SRD_OK)
+	if (get_probes(d, "optional_probes", &d->opt_probes) != SRD_OK)
 		goto err_out;
 
 	/* Store required fields in newly allocated strings. */
@@ -342,7 +342,7 @@ int srd_unload_decoder(struct srd_decoder *dec)
 	srd_instance_free_all(NULL);
 
 	free_probes(dec->probes);
-	free_probes(dec->extra_probes);
+	free_probes(dec->opt_probes);
 	g_free(dec->id);
 	g_free(dec->name);
 	g_free(dec->longname);

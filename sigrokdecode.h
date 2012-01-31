@@ -103,7 +103,7 @@ struct srd_decoder {
 	GSList *probes;
 
 	/** Optional probes */
-	GSList *extra_probes;
+	GSList *opt_probes;
 
 	/* List of NULL-terminated char[], containing descriptions of the
 	 * supported annotation output.
