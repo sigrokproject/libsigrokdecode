@@ -35,7 +35,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['mlx90614']
     probes = []
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = [
         ['Celsius', 'Temperature in degrees Celsius'],

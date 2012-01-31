@@ -38,7 +38,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
     probes = []
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = []
 

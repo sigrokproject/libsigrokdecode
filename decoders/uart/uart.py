@@ -199,7 +199,7 @@ class Decoder(srd.Decoder):
         {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
     ]
-    extra_probes = []
+    optional_probes = []
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.

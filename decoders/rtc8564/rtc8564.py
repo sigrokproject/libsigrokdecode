@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['rtc8564']
     probes = []
-    extra_probes = [
+    optional_probes = [
         {'id': 'clkout', 'name': 'CLKOUT', 'desc': 'TODO.'},
         {'id': 'clkoe', 'name': 'CLKOE', 'desc': 'TODO.'},
         {'id': 'int', 'name': 'INT#', 'desc': 'TODO.'},

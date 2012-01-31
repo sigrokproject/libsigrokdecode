@@ -129,7 +129,7 @@ class Decoder(srd.Decoder):
         {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
     ]
-    extra_probes = []
+    optional_probes = []
     options = {
         'addressing': ['Slave addressing (in bits)', 7], # 7 or 10
     }

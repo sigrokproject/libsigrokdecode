@@ -118,7 +118,7 @@ class Decoder(srd.Decoder):
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = [
         ['TODO', 'TODO']

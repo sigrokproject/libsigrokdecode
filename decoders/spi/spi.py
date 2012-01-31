@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
-    extra_probes = [] # TODO
+    optional_probes = [] # TODO
     options = {
         'cs_polarity': ['CS# polarity', ACTIVE_LOW],
         'cpol': ['Clock polarity', CPOL_0],

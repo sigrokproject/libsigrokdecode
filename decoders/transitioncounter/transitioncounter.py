@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['transitioncounts']
     probes = []
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = [
         ['TODO', 'TODO'],

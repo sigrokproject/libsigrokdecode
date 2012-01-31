@@ -57,7 +57,7 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
     ]
-    extra_probes = [
+    optional_probes = [
         {'id': 'pon', 'name': 'PON', 'desc': 'TODO'},
     ]
     options = {}

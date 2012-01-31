@@ -112,7 +112,7 @@ class Decoder(srd.Decoder):
     inputs = ['spi', 'logic']
     outputs = ['mx25lxx05d']
     probes = []
-    extra_probes = [
+    optional_probes = [
         {'id': 'hold', 'name': 'HOLD#', 'desc': 'TODO.'},
         {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'TODO.'},
     ]

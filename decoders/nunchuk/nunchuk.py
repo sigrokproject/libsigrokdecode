@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['nunchuck']
     probes = []
-    extra_probes = [] # TODO
+    optional_probes = [] # TODO
     options = {}
     annotations = [
         ['TODO', 'TODO'], 

@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['i2c-axp199', 'i2c-h8563s', 'i2c-accel'] # TODO: type vs. inst.
     probes = []
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = []
 

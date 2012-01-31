@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
     inputs = ['uart']
     outputs = ['pan1321']
     probes = []
-    extra_probes = []
+    optional_probes = []
     options = {}
     annotations = [
         ['ASCII', 'TODO: description'],
