@@ -18,5 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+TODO.
+
+Details:
+http://en.wikipedia.org/wiki/DCF77
+'''
+
 from .dcf77 import *
 

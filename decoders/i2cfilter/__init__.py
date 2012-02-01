@@ -18,6 +18,8 @@
 ##
 
 '''
+Generic I2C filtering protocol decoder.
+
 Takes input from the I2C protocol decoder and filters out traffic from/to
 a single address on the I2C bus.
 

@@ -19,6 +19,8 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+# SPI protocol decoder
+
 import sigrokdecode as srd
 
 # Key: (CPOL, CPHA). Value: SPI mode.

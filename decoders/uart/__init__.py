@@ -19,6 +19,8 @@
 ##
 
 '''
+UART protocol decoder.
+
 Universal Asynchronous Receiver Transmitter (UART) is a simple serial
 communication protocol which allows two devices to talk to each other.
 

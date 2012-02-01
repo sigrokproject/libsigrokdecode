@@ -18,5 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+Generic I2C demultiplexing protocol decoder.
+
+Takes an I2C stream as input and outputs multiple I2C streams, each stream
+containing only I2C packets for one specific I2C slave.
+'''
+
 from .i2cdemux import *
 

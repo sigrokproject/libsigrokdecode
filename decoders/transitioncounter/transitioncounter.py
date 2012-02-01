@@ -18,6 +18,8 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+# Transition counter protocol decoder
+
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):

@@ -18,17 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-#
 # DCF77 protocol decoder
-#
-# More information:
-# http://en.wikipedia.org/wiki/DCF77
-#
-
-#
-# Protocol output format:
-# TODO
-#
 
 import sigrokdecode as srd
 import calendar

@@ -18,19 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-#
 # TrekStor EBR30-a I2C demux protocol decoder
-#
-# Takes an I2C stream as input and outputs 3 different I2C streams, for the
-# 3 different I2C devices on the TrekStor EBR30-a eBook reader (which are all
-# physically connected to the same SCL/SDA lines).
-#
-# I2C slave addresses:
-#
-#  - AXP199 battery management chip: 0x69/0x68 (8bit R/W), 0x34 (7bit)
-#  - H8563S RTC chip: 0xa3/0xa2 (8bit R/W), 0x51 (7bit)
-#  - Unknown accelerometer chip: 0x2b/0x2a (8bit R/W), 0x15 (7bit)
-#
 
 import sigrokdecode as srd
 

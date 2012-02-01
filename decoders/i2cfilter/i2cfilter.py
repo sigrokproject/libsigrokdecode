@@ -17,8 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-import sigrokdecode as srd
+# Generic I2C filtering protocol decoder
 
+import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
     api_version = 1

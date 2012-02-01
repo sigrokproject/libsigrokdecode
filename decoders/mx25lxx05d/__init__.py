@@ -18,5 +18,16 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+Macronix MX25Lxx05D SPI (NOR) flash chip decoder.
+
+Works for MX25L1605D/MX25L3205D/MX25L6405D.
+
+TODO: Description.
+
+Details:
+http://www.macronix.com/QuickPlace/hq/PageLibrary4825740B00298A3B.nsf/h_Index/3F21BAC2E121E17848257639003A3146/$File/MX25L1605D-3205D-6405D-1.5.pdf
+'''
+
 from .mx25lxx05d import *
 

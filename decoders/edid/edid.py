@@ -17,6 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+# EDID protocol decoder
+
 # TODO:
 #    - EDID < 1.3
 #    - add short annotations

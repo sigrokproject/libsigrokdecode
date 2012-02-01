@@ -18,17 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-#
-# Nintendo Wii Nunchuk decoder
-#
-
-#
-# TODO: Description
-#
-# http://wiibrew.org/wiki/Wiimote/Extension_Controllers/Nunchuck
-# http://todbot.com/blog/2008/02/18/wiichuck-wii-nunchuck-adapter-available/
-# https://www.sparkfun.com/products/9281
-#
+# Nintendo Wii Nunchuk protocol decoder
 
 import sigrokdecode as srd
 
