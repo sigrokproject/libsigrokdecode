@@ -35,23 +35,6 @@ GET_STOP_BITS = 4
 RX = 0
 TX = 1
 
-# Parity options
-PARITY_NONE = 0
-PARITY_ODD = 1
-PARITY_EVEN = 2
-PARITY_ZERO = 3
-PARITY_ONE = 4
-
-# Stop bit options
-STOP_BITS_0_5 = 0
-STOP_BITS_1 = 1
-STOP_BITS_1_5 = 2
-STOP_BITS_2 = 3
-
-# Bit order options
-LSB_FIRST = 0
-MSB_FIRST = 1
-
 # Annotation feed formats
 ANN_ASCII = 0
 ANN_DEC = 1
@@ -62,22 +45,22 @@ ANN_BITS = 4
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
 # usually 8 bits) return True if the parity is correct, False otherwise.
-# PARITY_NONE is _not_ allowed as value for 'parity_type'.
+# 'none' is _not_ allowed as value for 'parity_type'.
 def parity_ok(parity_type, parity_bit, data, num_data_bits):
 
     # Handle easy cases first (parity bit is always 1 or 0).
-    if parity_type == PARITY_ZERO:
+    if parity_type == 'zero':
         return parity_bit == 0
-    elif parity_type == PARITY_ONE:
+    elif parity_type == 'one':
         return parity_bit == 1
 
     # Count number of 1 (high) bits in the data (and the parity bit itself!).
     ones = bin(data).count('1') + parity_bit
 
     # Check for odd/even parity.
-    if parity_type == PARITY_ODD:
+    if parity_type == 'odd':
         return (ones % 2) == 1
-    elif parity_type == PARITY_EVEN:
+    elif parity_type == 'even':
         return (ones % 2) == 0
     else:
         raise Exception('Invalid parity type: %d' % parity_type)
@@ -102,10 +85,10 @@ class Decoder(srd.Decoder):
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
-        'parity_type': ['Parity type', PARITY_NONE],
-        'parity_check': ['Check parity?', True], # TODO: Bool supported?
-        'num_stop_bits': ['Stop bit(s)', STOP_BITS_1],
-        'bit_order': ['Bit order', LSB_FIRST],
+        'parity_type': ['Parity type', 'none'],
+        'parity_check': ['Check parity?', 'yes'], # TODO: Bool supported?
+        'num_stop_bits': ['Stop bit(s)', '1'], # String! 0, 0.5, 1, 1.5.
+        'bit_order': ['Bit order', 'lsb-first'],
         # TODO: Options to invert the signal(s).
     }
     annotations = [
@@ -208,15 +191,15 @@ class Decoder(srd.Decoder):
             self.startsample[rxtx] = self.samplenum
 
         # Get the next data bit in LSB-first or MSB-first fashion.
-        if self.options['bit_order'] == LSB_FIRST:
+        if self.options['bit_order'] == 'lsb-first':
             self.databyte[rxtx] >>= 1
             self.databyte[rxtx] |= \
                 (signal << (self.options['num_data_bits'] - 1))
-        elif self.options['bit_order'] == MSB_FIRST:
+        elif self.options['bit_order'] == 'msb-first':
             self.databyte[rxtx] <<= 1
             self.databyte[rxtx] |= (signal << 0)
         else:
-            raise Exception('Invalid bit order value: %d',
+            raise Exception('Invalid bit order value: %s',
                             self.options['bit_order'])
 
         # Return here, unless we already received all data bits.
@@ -242,7 +225,7 @@ class Decoder(srd.Decoder):
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
-        if self.options['parity_type'] == PARITY_NONE:
+        if self.options['parity_type'] == 'none':
             self.state[rxtx] = GET_STOP_BITS
             return
 
@@ -272,7 +255,7 @@ class Decoder(srd.Decoder):
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the stop bit(s).
-        skip_parity = 0 if self.options['parity_type'] == PARITY_NONE else 1
+        skip_parity = 0 if self.options['parity_type'] == 'none' else 1
         b = self.options['num_data_bits'] + 1 + skip_parity
         if not self.reached_bit(rxtx, b):
             return
