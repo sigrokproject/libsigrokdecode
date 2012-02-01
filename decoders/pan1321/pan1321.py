@@ -29,9 +29,6 @@ import sigrokdecode as srd
 # Annotation feed formats
 ANN_ASCII = 0
 
-# UART 'data' packet type.
-T_DATA = 1
-
 # ...
 RX = 0
 TX = 1
@@ -97,7 +94,7 @@ class Decoder(srd.Decoder):
         ptype, rxtx, pdata = data
 
         # For now, ignore all UART packets except the actual data packets.
-        if ptype != T_DATA:
+        if ptype != 'DATA':
             return
 
         # Append a new (ASCII) byte to the currently built/parsed command.

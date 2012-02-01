@@ -101,15 +101,18 @@
 # [<packet-type>, <rxtx>, <packet-data>]
 #
 # This is the list of <packet-types>s and their respective <packet-data>:
-#  - T_START: The data is the (integer) value of the start bit (0 or 1).
-#  - T_DATA: The data is the (integer) value of the UART data. Valid values
+#  - 'STARTBIT': The data is the (integer) value of the start bit (0 or 1).
+#  - 'DATA': The data is the (integer) value of the UART data. Valid values
 #    range from 0 to 512 (as the data can be up to 9 bits in size).
-#  - T_PARITY: The data is the (integer) value of the parity bit (0 or 1).
-#  - T_STOP: The data is the (integer) value of the stop bit (0 or 1).
-#  - T_INVALID_START: The data is the (integer) value of the start bit (0 or 1).
-#  - T_INVALID_STOP: The data is the (integer) value of the stop bit (0 or 1).
-#  - T_PARITY_ERROR: The data is a tuple with two entries. The first one is
+#  - 'PARITYBIT': The data is the (integer) value of the parity bit (0 or 1).
+#  - 'STOPBIT': The data is the (integer) value of the stop bit (0 or 1).
+#  - 'INVALID STARTBIT': The data is the (integer) value of the start bit
+#    (0 or 1).
+#  - 'INVALID STOPBIT': The data is the (integer) value of the stop bit
+#    (0 or 1).
+#  - 'PARITY ERROR': The data is a tuple with two entries. The first one is
 #    the expected parity value, the second is the actual parity value.
+#  - TODO: Frame error?
 #
 # The <rxtx> field is 0 for RX packets, 1 for TX packets.
 #
@@ -150,15 +153,6 @@ ANN_DEC = 1
 ANN_HEX = 2
 ANN_OCT = 3
 ANN_BITS = 4
-
-# Protocol output packet types
-T_START = 0
-T_DATA = 1
-T_PARITY = 2
-T_STOP = 3
-T_INVALID_START = 4
-T_INVALID_STOP = 5
-T_PARITY_ERROR = 6
 
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
@@ -284,7 +278,7 @@ class Decoder(srd.Decoder):
         # The startbit must be 0. If not, we report an error.
         if self.startbit[rxtx] != 0:
             self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                     [T_INVALID_START, rxtx, self.startbit[rxtx]])
+                     ['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
             # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit[rxtx] = 0
@@ -294,7 +288,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = GET_DATA_BITS
 
         self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                 [T_START, rxtx, self.startbit[rxtx]])
+                 ['STARTBIT', rxtx, self.startbit[rxtx]])
         self.put(self.frame_start[rxtx], self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Start bit', 'Start', 'S']])
 
@@ -328,7 +322,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = GET_PARITY_BIT
 
         self.put(self.startsample[rxtx], self.samplenum - 1, self.out_proto,
-                 [T_DATA, rxtx, self.databyte[rxtx]])
+                 ['DATA', rxtx, self.databyte[rxtx]])
 
         s = 'RX: ' if (rxtx == RX) else 'TX: '
         self.putx(rxtx, [ANN_ASCII, [s + chr(self.databyte[rxtx])]])
@@ -358,14 +352,14 @@ class Decoder(srd.Decoder):
                      self.databyte[rxtx], self.options['num_data_bits']):
             # TODO: Fix range.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     [T_PARITY_BIT, rxtx, self.paritybit[rxtx]])
+                     ['PARITYBIT', rxtx, self.paritybit[rxtx]])
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Fix range.
             # TODO: Return expected/actual parity values.
             self.put(self.samplenum, self.samplenum, self.out_proto,
-                     [T_PARITY_ERROR, rxtx, (0, 1)]) # FIXME: Dummy tuple...
+                     ['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
             self.put(self.samplenum, self.samplenum, self.out_ann,
                      [ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
 
@@ -382,14 +376,14 @@ class Decoder(srd.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
             self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                     [T_INVALID_STOP, rxtx, self.stopbit1[rxtx]])
+                     ['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
             # TODO: Abort? Ignore the frame? Other?
 
         self.state[rxtx] = WAIT_FOR_START_BIT
 
         # TODO: Fix range.
         self.put(self.samplenum, self.samplenum, self.out_proto,
-                 [T_STOP, rxtx, self.stopbit1[rxtx]])
+                 ['STOPBIT', rxtx, self.stopbit1[rxtx]])
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
