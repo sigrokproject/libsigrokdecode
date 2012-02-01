@@ -21,23 +21,9 @@
 
 import sigrokdecode as srd
 
-# Chip-select options
-ACTIVE_LOW = 0
-ACTIVE_HIGH = 1
-
-# Clock polarity options
-CPOL_0 = 0 # Clock is low when inactive
-CPOL_1 = 1 # Clock is high when inactive
-
-# Clock phase options
-CPHA_0 = 0 # Data is valid on the leading clock edge
-CPHA_1 = 1 # Data is valid on the trailing clock edge
-
-# Bit order options
-MSB_FIRST = 0
-LSB_FIRST = 1
-
 # Key: (CPOL, CPHA). Value: SPI mode.
+# Clock polarity (CPOL) = 0/1: Clock is low/high when inactive.
+# Clock phase (CPHA) = 0/1: Data is valid on the leading/trailing clock edge.
 spi_mode = {
     (0, 0): 0, # Mode 0
     (0, 1): 1, # Mode 1
@@ -68,10 +54,10 @@ class Decoder(srd.Decoder):
     ]
     optional_probes = [] # TODO
     options = {
-        'cs_polarity': ['CS# polarity', ACTIVE_LOW],
-        'cpol': ['Clock polarity', CPOL_0],
-        'cpha': ['Clock phase', CPHA_0],
-        'bitorder': ['Bit order within the SPI data', MSB_FIRST],
+        'cs_polarity': ['CS# polarity', 'active-low'],
+        'cpol': ['Clock polarity', 0],
+        'cpha': ['Clock phase', 0],
+        'bitorder': ['Bit order within the SPI data', 'msb-first'],
         'wordsize': ['Word size of SPI data', 8], # 1-64?
     }
     annotations = [
@@ -120,7 +106,7 @@ class Decoder(srd.Decoder):
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
                 self.start_sample = samplenum
-                active_low = (self.options['cs_polarity'] == ACTIVE_LOW)
+                active_low = (self.options['cs_polarity'] == 'active-low')
                 deasserted = cs if active_low else not cs
                 if deasserted:
                     self.cs_was_deasserted_during_data_word = 1
@@ -128,13 +114,13 @@ class Decoder(srd.Decoder):
             ws = self.options['wordsize']
 
             # Receive MOSI bit into our shift register.
-            if self.options['bitorder'] == MSB_FIRST:
+            if self.options['bitorder'] == 'msb-first':
                 self.mosidata |= mosi << (ws - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
 
             # Receive MISO bit into our shift register.
-            if self.options['bitorder'] == MSB_FIRST:
+            if self.options['bitorder'] == 'msb-first':
                 self.misodata |= miso << (ws - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
