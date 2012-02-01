@@ -220,6 +220,7 @@ class Decoder(srd.Decoder):
         self.startbit = [-1, -1]
         self.cur_data_bit = [0, 0]
         self.databyte = [0, 0]
+        self.paritybit = [-1, -1]
         self.stopbit1 = [-1, -1]
         self.startsample = [-1, -1]
 
