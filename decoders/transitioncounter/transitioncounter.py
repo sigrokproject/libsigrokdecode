@@ -96,7 +96,8 @@ class Decoder(srd.Decoder):
         # TODO: How to only output something after the last chunk of data?
         outdata = []
         for i in range(self.channels):
-            outdata += [[self.transitions[i], self.rising[i], self.falling[i]]]
+            outdata.append([self.transitions[i], self.rising[i],
+                            self.falling[i]])
 
         if outdata != []:
             # self.put(0, 0, self.out_proto, out_proto)

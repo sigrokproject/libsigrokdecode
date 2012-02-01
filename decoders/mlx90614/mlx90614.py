@@ -69,10 +69,10 @@ class Decoder(srd.Decoder):
             self.state = 'GET TEMPERATURE'
         elif self.state == 'GET TEMPERATURE':
             if len(self.data) == 0:
-                self.data += [databyte]
+                self.data.append(databyte)
                 self.ss = ss
             elif len(self.data) == 1:
-                self.data += [databyte]
+                self.data.append(databyte)
                 self.es = es
             else:
                 kelvin = (self.data[0] | (self.data[1] << 8)) * 0.02

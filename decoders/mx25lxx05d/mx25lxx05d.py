@@ -210,7 +210,7 @@ class Decoder(srd.Decoder):
             self.putx([0, ['%s ID' % d]])
         elif self.cmdstate == 6:
             # Byte 6: Slave sends device ID (or manufacturer ID).
-            self.ids += [miso]
+            self.ids.append(miso)
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
             self.putx([0, ['%s ID' % d]])
         else:

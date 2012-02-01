@@ -67,7 +67,7 @@ class Decoder(srd.Decoder):
         cmd, databyte, ack_bit = data
 
         # Add the I2C packet to our local cache.
-        self.packets += [[ss, es, data]]
+        self.packets.append([ss, es, data])
 
         if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
             # print(hex(databyte))
