@@ -690,8 +690,7 @@ int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen
 	return SRD_OK;
 }
 
-
-int srd_register_callback(int output_type, void *cb)
+int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
 {
 	struct srd_pd_callback *pd_cb;
 

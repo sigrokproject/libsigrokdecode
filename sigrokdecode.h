@@ -198,7 +198,8 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
 int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen);
 int pd_add(struct srd_decoder_instance *di, int output_type, char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
-int srd_register_callback(int output_type, void *cb);
+typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
+int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
 void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
