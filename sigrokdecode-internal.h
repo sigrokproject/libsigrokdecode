@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef SIGROKDECODE_SIGROKDECODE_INTERNAL_H
-#define SIGROKDECODE_SIGROKDECODE_INTERNAL_H
+#ifndef LIBSIGROKDECODE_SIGROKDECODE_INTERNAL_H
+#define LIBSIGROKDECODE_SIGROKDECODE_INTERNAL_H
 
 // #include <stdarg.h>
 // #include <glib.h>
