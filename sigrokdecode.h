@@ -223,12 +223,12 @@ int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 /*--- log.c -----------------------------------------------------------------*/
 typedef int (*srd_log_handler_t)(void *data, int loglevel, const char *format,
 				 va_list args);
-int srd_set_loglevel(int loglevel);
-int srd_get_loglevel(void);
-int srd_log_set_handler(srd_log_handler_t handler, void *data);
-int srd_log_set_default_handler(void);
-int srd_log_set_logdomain(const char *logdomain);
-char *srd_log_get_logdomain(void);
+int srd_log_loglevel_set(int loglevel);
+int srd_log_loglevel_get(void);
+int srd_log_handler_set(srd_log_handler_t handler, void *data);
+int srd_log_handler_set_default(void);
+int srd_log_logdomain_set(const char *logdomain);
+char *srd_log_logdomain_get(void);
 
 #ifdef __cplusplus
 }

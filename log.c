@@ -18,7 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include "sigrokdecode.h"
+#include "sigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "sigrokdecode-internal.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,13 +30,13 @@ static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 static int srd_logv(void *data, int loglevel, const char *format, va_list args);
 
 /* Pointer to the currently selected log handler. Default: srd_logv(). */
-static srd_log_handler_t srd_handler = srd_logv;
+static srd_log_handler_t srd_log_handler = srd_logv;
 
 /*
  * Pointer to private data that can be passed to the log handler.
  * This can be used (for example) by C++ GUIs to pass a "this" pointer.
  */
-static void *srd_handler_data = NULL;
+static void *srd_log_handler_data = NULL;
 
 /* Log domain (a short string that is used as prefix for all messages). */
 #define LOGDOMAIN_MAXLEN 30
@@ -50,11 +50,15 @@ static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
  * and so on) libsigrokdecode will output. Using SRD_LOG_NONE disables all
  * messages.
  *
+ * Note that this function itself will also output log messages. After the
+ * loglevel has changed, it will output a debug message with SRD_LOG_DBG for
+ * example. Whether this message is shown depends on the (new) loglevel.
+ *
  * @param loglevel The loglevel to set (SRD_LOG_NONE, SRD_LOG_ERR,
  *                 SRD_LOG_WARN, SRD_LOG_INFO, SRD_LOG_DBG, or SRD_LOG_SPEW).
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid loglevel.
  */
-int srd_set_loglevel(int loglevel)
+int srd_log_loglevel_set(int loglevel)
 {
 	if (loglevel < SRD_LOG_NONE || loglevel > SRD_LOG_SPEW) {
 		srd_err("Invalid loglevel %d.", loglevel);
@@ -73,18 +77,25 @@ int srd_set_loglevel(int loglevel)
  *
  * @return The currently configured libsigrokdecode loglevel.
  */
-int srd_get_loglevel(void)
+int srd_log_loglevel_get(void)
 {
 	return srd_loglevel;
 }
 
 /**
- * TODO.
+ * Set the libsigrokdecode logdomain string.
  *
- * @param logdomain TODO
- * @return TODO.
+ * @param logdomain The string to use as logdomain for libsigrokdecode log
+ *                  messages from now on. Must not be NULL. The maximum
+ *                  length of the string is 30 characters (this does not
+ *                  include the trailing NUL-byte). Longer strings are
+ *                  silently truncated.
+ *                  In order to not use a logdomain, pass an empty string.
+ *                  The function makes its own copy of the input string, i.e.
+ *                  the caller does not need to keep it around.
+ * @return SRD_OK upon success, SRD_ERR_ARG upon invalid logdomain.
  */
-int srd_log_set_logdomain(const char *logdomain)
+int srd_log_logdomain_set(const char *logdomain)
 {
 	if (!logdomain) {
 		srd_err("log: %s: logdomain was NULL", __func__);
@@ -94,19 +105,21 @@ int srd_log_set_logdomain(const char *logdomain)
 	/* TODO: Error handling. */
 	snprintf((char *)&srd_log_domain, LOGDOMAIN_MAXLEN, "%s", logdomain);
 
-	srd_dbg("log domain set to '%s'", (const char *)&srd_log_domain);
+	srd_dbg("Log domain set to '%s'.", (const char *)&srd_log_domain);
 
 	return SRD_OK;
 }
 
 /**
- * TODO.
+ * Get the currently configured libsigrokdecode logdomain.
  *
- * @return TODO.
+ * @return A copy of the currently configured libsigrokdecode logdomain
+ *         string. The caller is responsible for g_free()ing the string when
+ *         it is no longer needed.
  */
-char *srd_log_get_logdomain(void)
+char *srd_log_logdomain_get(void)
 {
-	return g_strdup((char *)srd_log_domain);
+	return g_strdup((const char *)&srd_log_domain);
 }
 
 /**
@@ -115,12 +128,13 @@ char *srd_log_get_logdomain(void)
  * @param handler Function pointer to the log handler function to use.
  *                Must not be NULL.
  * @param data Pointer to private data to be passed on. This can be used by
- *             the caller pass arbitrary data to the log functions. This
+ *             the caller to pass arbitrary data to the log functions. This
  *             pointer is only stored or passed on by libsigrokdecode, and
- *             is never used or interpreted in any way.
+ *             is never used or interpreted in any way. The pointer is allowed
+ *             to be NULL if the caller doesn't need/want to pass any data.
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  */
-int srd_log_set_handler(srd_log_handler_t handler, void *data)
+int srd_log_handler_set(srd_log_handler_t handler, void *data)
 {
 	if (!handler) {
 		srd_err("log: %s: handler was NULL", __func__);
@@ -129,8 +143,8 @@ int srd_log_set_handler(srd_log_handler_t handler, void *data)
 
 	/* Note: 'data' is allowed to be NULL. */
 
-	srd_handler = handler;
-	srd_handler_data = data;
+	srd_log_handler = handler;
+	srd_log_handler_data = data;
 
 	return SRD_OK;
 }
@@ -138,18 +152,18 @@ int srd_log_set_handler(srd_log_handler_t handler, void *data)
 /**
  * Set the libsigrokdecode log handler to the default built-in one.
  *
- * Additionally, the internal 'srd_handler_data' pointer is set to NULL.
+ * Additionally, the internal 'srd_log_handler_data' pointer is set to NULL.
  *
  * @return SRD_OK upon success, a negative error code otherwise.
  */
-int srd_log_set_default_handler(void)
+int srd_log_handler_set_default(void)
 {
 	/*
 	 * Note: No log output in this function, as it should safely work
 	 * even if the currently set log handler is buggy/broken.
 	 */
-	srd_handler = srd_logv;
-	srd_handler_data = NULL;
+	srd_log_handler = srd_logv;
+	srd_log_handler_data = NULL;
 
 	return SRD_OK;
 }
@@ -179,7 +193,7 @@ int srd_log(int loglevel, const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, loglevel, format, args);
+	ret = srd_log_handler(srd_log_handler_data, loglevel, format, args);
 	va_end(args);
 
 	return ret;
@@ -191,7 +205,7 @@ int srd_spew(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, SRD_LOG_SPEW, format, args);
+	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_SPEW, format, args);
 	va_end(args);
 
 	return ret;
@@ -203,7 +217,7 @@ int srd_dbg(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, SRD_LOG_DBG, format, args);
+	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_DBG, format, args);
 	va_end(args);
 
 	return ret;
@@ -215,7 +229,7 @@ int srd_info(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, SRD_LOG_INFO, format, args);
+	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_INFO, format, args);
 	va_end(args);
 
 	return ret;
@@ -227,7 +241,7 @@ int srd_warn(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, SRD_LOG_WARN, format, args);
+	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_WARN, format, args);
 	va_end(args);
 
 	return ret;
@@ -239,7 +253,7 @@ int srd_err(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_handler(srd_handler_data, SRD_LOG_ERR, format, args);
+	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_ERR, format, args);
 	va_end(args);
 
 	return ret;
