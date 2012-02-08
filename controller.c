@@ -25,22 +25,20 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-
 /* List of decoder instances. */
 static GSList *di_list = NULL;
 
 /* List of frontend callbacks to receive PD output. */
 static GSList *callbacks = NULL;
 
-/* lives in decoder.c */
+/* decoder.c */
 extern GSList *pd_list;
 
-/* lives in module_sigrokdecode.c */
+/* module_sigrokdecode.c */
 extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
-/* lives in type_logic.c */
+/* type_logic.c */
 extern PyTypeObject srd_logic_type;
-
 
 /**
  * Initialize libsigrokdecode.
@@ -89,7 +87,6 @@ int srd_init(void)
 	return SRD_OK;
 }
 
-
 /**
  * Shutdown libsigrokdecode.
  *
@@ -104,7 +101,6 @@ int srd_init(void)
  */
 int srd_exit(void)
 {
-
 	srd_dbg("Exiting libsigrokdecode.");
 
 	srd_unload_all_decoders();
@@ -115,7 +111,6 @@ int srd_exit(void)
 
 	return SRD_OK;
 }
-
 
 /**
  * Add an additional search directory for the protocol decoders.
@@ -163,7 +158,6 @@ int set_modulepath(void)
 	return ret;
 }
 
-
 /**
  * Set options in a decoder instance.
  *
@@ -175,7 +169,7 @@ int set_modulepath(void)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_instance_set_options(struct srd_decoder_instance *di,
-		GHashTable *options)
+			     GHashTable * options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
@@ -184,7 +178,7 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 	int num_optkeys, ret, size, i;
 	char *key, *value;
 
-	if(!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
+	if (!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
 		/* Decoder has no options. */
 		if (g_hash_table_size(options) == 0) {
 			/* No options provided. */
@@ -215,7 +209,8 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 		if (!(py_classval = PyList_GetItem(py_optlist, 1)))
 			goto err_out;
 		if (!PyUnicode_Check(py_classval) && !PyLong_Check(py_classval)) {
-			srd_err("Options of type %s are not yet supported.", Py_TYPE(py_classval)->tp_name);
+			srd_err("Options of type %s are not yet supported.",
+				Py_TYPE(py_classval)->tp_name);
 			goto err_out;
 		}
 
@@ -231,8 +226,9 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 				if (!(py_optval = PyLong_FromString(value, NULL, 0))) {
 					/* ValueError Exception */
 					PyErr_Clear();
-					srd_err("Option %s has invalid value %s: expected integer.",
-							key, value);
+					srd_err("Option %s has invalid value "
+						"%s: expected integer.",
+						key, value);
 					goto err_out;
 				}
 			}
@@ -250,7 +246,8 @@ int srd_instance_set_options(struct srd_decoder_instance *di,
 				if (val_ull == (unsigned long long)-1) {
 					/* OverFlowError exception */
 					PyErr_Clear();
-					srd_err("Invalid integer value for %s: expected integer.", key);
+					srd_err("Invalid integer value for %s: "
+						"expected integer.", key);
 					goto err_out;
 				}
 				if (!(py_optval = PyLong_FromUnsignedLongLong(val_ull)))
@@ -282,7 +279,6 @@ err_out:
 /* Helper GComparefunc for g_slist_find_custom() in srd_instance_set_probes() */
 static gint compare_probe_id(struct srd_probe *a, char *probe_id)
 {
-
 	return strcmp(a->id, probe_id);
 }
 
@@ -291,13 +287,12 @@ static gint compare_probe_id(struct srd_probe *a, char *probe_id)
  *
  * @param di Decoder instance.
  * @param probes A GHashTable of probes to set. Key is probe name, value is
- * the probe number. Samples passed to this instance will be arranged in this
- * order.
- *
+ *               the probe number. Samples passed to this instance will be
+ *               arranged in this order.
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_instance_set_probes(struct srd_decoder_instance *di,
-		GHashTable *new_probes)
+			    GHashTable * new_probes)
 {
 	GList *l;
 	GSList *sl;
@@ -306,16 +301,16 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 	char *probe_id, *probenum_str;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
-			di->instance_id, g_hash_table_size(new_probes));
+		di->instance_id, g_hash_table_size(new_probes));
 
 	if (g_hash_table_size(new_probes) == 0)
 		/* No probes provided. */
 		return SRD_OK;
 
-	if(di->dec_num_probes == 0) {
+	if (di->dec_num_probes == 0) {
 		/* Decoder has no probes. */
 		srd_err("Protocol decoder %s has no probes to define.",
-				di->decoder->name);
+			di->decoder->name);
 		return SRD_ERR_ARG;
 	}
 
@@ -331,7 +326,8 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 		probenum_str = g_hash_table_lookup(new_probes, probe_id);
 		if (!probenum_str) {
 			/* Probe name was specified without a value. */
-			srd_err("No probe number was specified for %s.", probe_id);
+			srd_err("No probe number was specified for %s.",
+				probe_id);
 			g_free(new_probemap);
 			return SRD_ERR_ARG;
 		}
@@ -340,16 +336,17 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
 				(GCompareFunc)compare_probe_id))) {
 			/* Fall back on optional probes. */
 			if (!(sl = g_slist_find_custom(di->decoder->opt_probes,
-					probe_id, (GCompareFunc)compare_probe_id))) {
-				srd_err("Protocol decoder %s has no probe '%s'.",
-						di->decoder->name, probe_id);
+			     probe_id, (GCompareFunc) compare_probe_id))) {
+				srd_err("Protocol decoder %s has no probe "
+					"'%s'.", di->decoder->name, probe_id);
 				g_free(new_probemap);
 				return SRD_ERR_ARG;
 			}
 		}
 		p = sl->data;
 		new_probemap[p->order] = new_probenum;
-		srd_dbg("setting probe mapping for %d = probe %d", p->order, new_probenum);
+		srd_dbg("setting probe mapping for %d = probe %d", p->order,
+			new_probenum);
 	}
 	g_free(di->dec_probemap);
 	di->dec_probemap = new_probemap;
@@ -362,16 +359,16 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
  *
  * @param id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
- * 	    the decoder class.
+ *                the decoder class.
  * @return Pointer to a newly allocated struct srd_decoder_instance, or
- * 		NULL in case of failure.
+ *         NULL in case of failure.
  */
 struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
-		GHashTable *options)
+					      GHashTable *options)
 {
+	int i;
 	struct srd_decoder *dec;
 	struct srd_decoder_instance *di;
-	int i;
 	char *instance_id;
 
 	srd_dbg("Creating new %s instance.", decoder_id);
@@ -395,9 +392,10 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	 * order in which the decoder class defined them.
 	 */
 	di->dec_num_probes = g_slist_length(di->decoder->probes) +
-			g_slist_length(di->decoder->opt_probes);
+			     g_slist_length(di->decoder->opt_probes);
 	if (di->dec_num_probes) {
-		if (!(di->dec_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
+		if (!(di->dec_probemap =
+		     g_try_malloc(sizeof(int) * di->dec_num_probes))) {
 			srd_err("Failed to malloc probe map.");
 			g_free(di);
 			return NULL;
@@ -409,7 +407,8 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_instance = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
-			catch_exception("failed to create %s instance: ", decoder_id);
+			catch_exception("failed to create %s instance: ",
+					decoder_id);
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -428,9 +427,8 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 }
 
 int srd_instance_stack(struct srd_decoder_instance *di_from,
-		struct srd_decoder_instance *di_to)
+		       struct srd_decoder_instance *di_to)
 {
-
 	if (!di_from || !di_to) {
 		srd_err("Invalid from/to instance pair.");
 		return SRD_ERR_ARG;
@@ -486,7 +484,7 @@ struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
  * @return Pointer to struct srd_decoder_instance, or NULL if not found.
  */
 struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
-		PyObject *obj)
+						      PyObject *obj)
 {
 	GSList *l;
 	struct srd_decoder_instance *tmp, *di;
@@ -514,13 +512,15 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 
 	if (!(py_name = PyUnicode_FromString("start"))) {
 		srd_err("Unable to build python object for 'start'.");
-		catch_exception("Protocol decoder instance %s: ", di->instance_id);
+		catch_exception("Protocol decoder instance %s: ",
+				di->instance_id);
 		return SRD_ERR_PYTHON;
 	}
 
 	if (!(py_res = PyObject_CallMethodObjArgs(di->py_instance,
-			py_name, args, NULL))) {
-		catch_exception("Protocol decoder instance %s: ", di->instance_id);
+						  py_name, args, NULL))) {
+		catch_exception("Protocol decoder instance %s: ",
+				di->instance_id);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -551,7 +551,8 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 int srd_instance_decode(uint64_t start_samplenum,
-	struct srd_decoder_instance *di, uint8_t *inbuf, uint64_t inbuflen)
+			struct srd_decoder_instance *di, uint8_t *inbuf,
+			uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
@@ -590,8 +591,10 @@ int srd_instance_decode(uint64_t start_samplenum,
 	Py_IncRef(di->py_instance);
 	end_samplenum = start_samplenum + inbuflen / di->data_unitsize;
 	if (!(py_res = PyObject_CallMethod(di->py_instance, "decode",
-			"KKO", logic->start_samplenum, end_samplenum, logic))) {
-		catch_exception("Protocol decoder instance %s: ", di->instance_id);
+					   "KKO", logic->start_samplenum,
+					   end_samplenum, logic))) {
+		catch_exception("Protocol decoder instance %s: ",
+				di->instance_id);
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 	Py_DecRef(py_res);
@@ -616,7 +619,6 @@ void srd_instance_free(struct srd_decoder_instance *di)
 		g_free(pdo);
 	}
 	g_slist_free(di->pd_output);
-
 }
 
 void srd_instance_free_all(GSList *stack)
@@ -635,7 +637,6 @@ void srd_instance_free_all(GSList *stack)
 		g_slist_free(di_list);
 		di_list = NULL;
 	}
-
 }
 
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
@@ -672,18 +673,19 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 }
 
 /* Feed logic samples to decoder session. */
-int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen)
+int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
+		     uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
 
 	srd_dbg("Calling decode() on all instances with starting sample "
-		"number %"PRIu64", %"PRIu64" bytes at 0x%p", start_samplenum,
-		inbuflen, inbuf);
+		"number %" PRIu64 ", %" PRIu64 " bytes at 0x%p",
+		start_samplenum, inbuflen, inbuf);
 
 	for (d = di_list; d; d = d->next) {
 		if ((ret = srd_instance_decode(start_samplenum, d->data, inbuf,
-				inbuflen)) != SRD_OK)
+					       inbuflen)) != SRD_OK)
 			return ret;
 	}
 
@@ -724,7 +726,6 @@ void *srd_find_callback(int output_type)
 	return cb;
 }
 
-
 /* This is the backend function to python sigrokdecode.add() call. */
 int pd_add(struct srd_decoder_instance *di, int output_type, char *proto_id)
 {
@@ -745,4 +746,3 @@ int pd_add(struct srd_decoder_instance *di, int output_type, char *proto_id)
 
 	return pdo->pdo_id;
 }
-

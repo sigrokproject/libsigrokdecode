@@ -21,15 +21,14 @@
 #include "sigrokdecode-internal.h"
 #include "config.h"
 
-
-/* lives in type_decoder.c */
+/* type_decoder.c */
 extern PyTypeObject srd_Decoder_type;
 
-/* lives in type_logic.c */
+/* type_logic.c */
 extern PyTypeObject srd_logic_type;
 
-
-/* When initialized, a reference to this module inside the python interpreter
+/*
+ * When initialized, a reference to this module inside the python interpreter
  * lives here.
  */
 PyObject *mod_sigrokdecode = NULL;
@@ -40,7 +39,6 @@ static struct PyModuleDef sigrokdecode_module = {
 	.m_doc = "sigrokdecode module",
 	.m_size = -1,
 };
-
 
 PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
@@ -57,22 +55,25 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 
 	mod = PyModule_Create(&sigrokdecode_module);
 	Py_INCREF(&srd_Decoder_type);
-	if (PyModule_AddObject(mod, "Decoder", (PyObject *)&srd_Decoder_type) == -1)
+	if (PyModule_AddObject(mod, "Decoder",
+	    (PyObject *)&srd_Decoder_type) == -1)
 		return NULL;
 	Py_INCREF(&srd_logic_type);
-	if (PyModule_AddObject(mod, "srd_logic", (PyObject *)&srd_logic_type) == -1)
+	if (PyModule_AddObject(mod, "srd_logic",
+	    (PyObject *)&srd_logic_type) == -1)
 		return NULL;
 
 	/* expose output types as symbols in the sigrokdecode module */
-	if(PyModule_AddIntConstant(mod, "OUTPUT_ANN", SRD_OUTPUT_ANN) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_ANN", SRD_OUTPUT_ANN) == -1)
 		return NULL;
-	if(PyModule_AddIntConstant(mod, "OUTPUT_PROTO", SRD_OUTPUT_PROTO) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_PROTO",
+	    SRD_OUTPUT_PROTO) == -1)
 		return NULL;
-	if(PyModule_AddIntConstant(mod, "OUTPUT_BINARY", SRD_OUTPUT_BINARY) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_BINARY",
+	    SRD_OUTPUT_BINARY) == -1)
 		return NULL;
 
 	mod_sigrokdecode = mod;
 
 	return mod;
 }
-

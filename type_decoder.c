@@ -22,7 +22,6 @@
 #include "config.h"
 #include <inttypes.h>
 
-
 /* This is only used for nicer srd_dbg() output. */
 char *OUTPUT_TYPES[] = {
 	"OUTPUT_ANN",
@@ -30,9 +29,8 @@ char *OUTPUT_TYPES[] = {
 	"OUTPUT_BINARY",
 };
 
-
 static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
-		int *ann_format, char ***ann)
+			 int *ann_format, char ***ann)
 {
 	PyObject *py_tmp;
 	struct srd_pd_output *pdo;
@@ -41,30 +39,33 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	/* Should be a list of [annotation format, [string, ...]] */
 	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
 		srd_err("Protocol decoder %s submitted %s instead of list.",
-				di->decoder->name, obj->ob_type->tp_name);
+			di->decoder->name, obj->ob_type->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
 	/* Should have 2 elements... */
 	if (PyList_Size(obj) != 2) {
-		srd_err("Protocol decoder %s submitted annotation list with %d elements "
-				"instead of 2", di->decoder->name, PyList_Size(obj));
+		srd_err("Protocol decoder %s submitted annotation list with "
+			"%d elements instead of 2", di->decoder->name,
+			PyList_Size(obj));
 		return SRD_ERR_PYTHON;
 	}
 
-	/* First element should be an integer matching a previously
-	 * registered annotation format. */
+	/*
+	 * The first element should be an integer matching a previously
+	 * registered annotation format.
+	 */
 	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted annotation list, but first "
-				"element was not an integer.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but "
+			"first element was not an integer.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
 	ann_id = PyLong_AsLong(py_tmp);
 	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_id))) {
 		srd_err("Protocol decoder %s submitted data to unregistered "
-				"annotation format %d.", di->decoder->name, ann_id);
+			"annotation format %d.", di->decoder->name, ann_id);
 		return SRD_ERR_PYTHON;
 	}
 	*ann_format = ann_id;
@@ -73,12 +74,12 @@ static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
 	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyList_Check(py_tmp)) {
 		srd_err("Protocol decoder %s submitted annotation list, but "
-				"second element was not a list.", di->decoder->name);
+			"second element was not a list.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 	if (py_strlist_to_char(py_tmp, ann) != SRD_OK) {
 		srd_err("Protocol decoder %s submitted annotation list, but "
-				"second element was malformed.", di->decoder->name);
+			"second element was malformed.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -102,15 +103,19 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample, &output_id, &data))
-		/* This throws an exception, but by returning NULL here we let python
-		 * raise it. This results in a much better trace in controller.c
-		 * on the decode() method call. */
+	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample,
+	    &output_id, &data)) {
+		/*
+		 * This throws an exception, but by returning NULL here we let
+		 * Python raise it. This results in a much better trace in
+		 * controller.c on the decode() method call.
+		 */
 		return NULL;
+	}
 
 	if (!(l = g_slist_nth(di->pd_output, output_id))) {
 		srd_err("Protocol decoder %s submitted invalid output ID %d.",
-				di->decoder->name, output_id);
+			di->decoder->name, output_id);
 		return NULL;
 	}
 	pdo = l->data;
@@ -131,7 +136,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		if ((cb = srd_find_callback(pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
 			if (convert_pyobj(di, data, &pdata->ann_format,
-					(char ***)&pdata->data) != SRD_OK) {
+					  (char ***)&pdata->data) != SRD_OK) {
 				/* An error was already logged. */
 				break;
 			}
@@ -144,10 +149,13 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			/* TODO: is this needed? */
 			Py_XINCREF(next_di->py_instance);
 			srd_spew("Sending %d-%d to instance %s",
-				 start_sample, end_sample, next_di->instance_id);
-			if (!(py_res = PyObject_CallMethod(next_di->py_instance, "decode",
-					"KKO", start_sample, end_sample, data))) {
-				catch_exception("calling %s decode(): ", next_di->instance_id);
+				 start_sample, end_sample,
+				 next_di->instance_id);
+			if (!(py_res = PyObject_CallMethod(
+			    next_di->py_instance, "decode", "KKO", start_sample,
+			    end_sample, data))) {
+				catch_exception("calling %s decode(): ",
+						next_di->instance_id);
 			}
 			Py_XDECREF(py_res);
 		}
@@ -157,7 +165,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		break;
 	default:
 		srd_err("Protocol decoder %s submitted invalid output type %d.",
-				di->decoder->name, pdo->output_type);
+			di->decoder->name, pdo->output_type);
 		break;
 	}
 
@@ -165,7 +173,6 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 
 	Py_RETURN_NONE;
 }
-
 
 static PyObject *Decoder_add(PyObject *self, PyObject *args)
 {
@@ -200,7 +207,6 @@ static PyMethodDef Decoder_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-
 PyTypeObject srd_Decoder_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "sigrokdecode.Decoder",
@@ -209,4 +215,3 @@ PyTypeObject srd_Decoder_type = {
 	.tp_doc = "Sigrok Decoder base class",
 	.tp_methods = Decoder_methods,
 };
-

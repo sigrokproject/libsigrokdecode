@@ -26,9 +26,8 @@
 /* The list of protocol decoders. */
 GSList *pd_list = NULL;
 
-/* lives in module_sigrokdecode.c */
+/* module_sigrokdecode.c */
 extern PyObject *mod_sigrokdecode;
-
 
 /**
  * Returns the list of supported/loaded protocol decoders.
@@ -39,10 +38,8 @@ extern PyObject *mod_sigrokdecode;
  */
 GSList *srd_list_decoders(void)
 {
-
 	return pd_list;
 }
-
 
 /**
  * Get the decoder with the specified ID.
@@ -64,7 +61,6 @@ struct srd_decoder *srd_get_decoder_by_id(const char *id)
 	return NULL;
 }
 
-
 static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
 {
 	PyObject *py_probelist, *py_entry;
@@ -81,7 +77,7 @@ static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
 	py_probelist = PyObject_GetAttrString(d->py_dec, attr);
 	if (!PyList_Check(py_probelist)) {
 		srd_err("Protocol decoder %s %s attribute is not "
-				"a list.", d->name, attr);
+			"a list.", d->name, attr);
 		goto err_out;
 	}
 
@@ -94,7 +90,7 @@ static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
 		py_entry = PyList_GetItem(py_probelist, i);
 		if (!PyDict_Check(py_entry)) {
 			srd_err("Protocol decoder %s %s attribute is not "
-					"a list with dict elements.", d->name, attr);
+				"a list with dict elements.", d->name, attr);
 			goto err_out;
 		}
 
@@ -170,7 +166,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 	if (!PyObject_IsSubclass(d->py_dec, py_basedec)) {
 		srd_err("Decoder class in protocol decoder module %s is not "
-				"a subclass of sigrokdecode.Decoder.", name);
+			"a subclass of sigrokdecode.Decoder.", name);
 		goto err_out;
 	}
 	Py_CLEAR(py_basedec);
@@ -178,13 +174,13 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Check for a proper start() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "start")) {
 		srd_err("Protocol decoder %s has no start() method Decoder "
-				"class.", name);
+			"class.", name);
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "start");
 	if (!PyFunction_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'start' "
-				"is not a method.", name);
+			"is not a method.", name);
 		goto err_out;
 	}
 	Py_CLEAR(py_method);
@@ -192,13 +188,13 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Check for a proper decode() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "decode")) {
 		srd_err("Protocol decoder %s has no decode() method Decoder "
-				"class.", name);
+			"class.", name);
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "decode");
 	if (!PyFunction_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'decode' "
-				"is not a method.", name);
+			"is not a method.", name);
 		goto err_out;
 	}
 	Py_CLEAR(py_method);
@@ -208,7 +204,7 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		py_attr = PyObject_GetAttrString(d->py_dec, "options");
 		if (!PyDict_Check(py_attr)) {
 			srd_err("Protocol decoder %s options attribute is not "
-					"a dictionary.", d->name);
+				"a dictionary.", d->name);
 			Py_DecRef(py_attr);
 			goto err_out;
 		}
@@ -248,15 +244,17 @@ int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
 		if (!PyList_Check(py_annlist)) {
-			srd_err("Protocol decoder module %s annotations should be a list.", name);
+			srd_err("Protocol decoder module %s annotations "
+				"should be a list.", name);
 			goto err_out;
 		}
 		alen = PyList_Size(py_annlist);
 		for (i = 0; i < alen; i++) {
 			py_ann = PyList_GetItem(py_annlist, i);
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
-				srd_err("Protocol decoder module %s annotation %d should "
-						"be a list with two elements.", name, i+1);
+				srd_err("Protocol decoder module %s "
+					"annotation %d should be a list with "
+					"two elements.", name, i + 1);
 				goto err_out;
 			}
 
@@ -302,7 +300,6 @@ char *srd_decoder_doc(struct srd_decoder *dec)
 
 	return doc;
 }
-
 
 static void free_probes(GSList *probelist)
 {
@@ -407,6 +404,3 @@ int srd_unload_all_decoders(void)
 
 	return SRD_OK;
 }
-
-
-

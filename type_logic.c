@@ -22,40 +22,43 @@
 #include <inttypes.h>
 #include <string.h>
 
-
 PyObject *srd_logic_iter(PyObject *self)
 {
-
 	return self;
 }
 
 PyObject *srd_logic_iternext(PyObject *self)
 {
+	int i;
 	PyObject *py_samplenum, *py_samples;
 	srd_logic *logic;
 	uint64_t sample;
-	int i;
 	unsigned char probe_samples[SRD_MAX_NUM_PROBES];
 
-	logic = (srd_logic *) self;
+	logic = (srd_logic *)self;
 	if (logic->itercnt >= logic->inbuflen / logic->di->data_unitsize) {
 		/* End iteration loop. */
 		return NULL;
 	}
 
-	/* Convert the bit-packed sample to an array of bytes, with only 0x01
+	/*
+	 * Convert the bit-packed sample to an array of bytes, with only 0x01
 	 * and 0x00 values, so the PD doesn't need to do any bitshifting.
 	 */
-	memcpy(&sample, logic->inbuf + logic->itercnt * logic->di->data_unitsize,
-			logic->di->data_unitsize);
+	memcpy(&sample,
+	       logic->inbuf + logic->itercnt * logic->di->data_unitsize,
+	       logic->di->data_unitsize);
 	for (i = 0; i < logic->di->dec_num_probes; i++)
-		probe_samples[i] = sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
+		probe_samples[i] =
+		    sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
 
 	/* Prepare the next samplenum/sample list in this iteration. */
-	py_samplenum = PyLong_FromUnsignedLongLong(logic->start_samplenum + logic->itercnt);
+	py_samplenum =
+	    PyLong_FromUnsignedLongLong(logic->start_samplenum +
+					logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
 	py_samples = PyBytes_FromStringAndSize((const char *)probe_samples,
-			logic->di->dec_num_probes);
+					       logic->di->dec_num_probes);
 	PyList_SetItem(logic->sample, 1, py_samples);
 	Py_INCREF(logic->sample);
 	logic->itercnt++;
@@ -72,4 +75,3 @@ PyTypeObject srd_logic_type = {
 	.tp_iter = srd_logic_iter,
 	.tp_iternext = srd_logic_iternext,
 };
-

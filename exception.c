@@ -24,7 +24,6 @@
 #include <glib.h>
 #include <frameobject.h> /* Python header not pulled in by default. */
 
-
 void catch_exception(const char *format, ...)
 {
 	PyObject *etype, *evalue, *etb, *py_str;
@@ -70,8 +69,9 @@ void catch_exception(const char *format, ...)
 		tracestr = NULL;
 		py_tb = (PyTracebackObject *) etb;
 		py_str = PyUnicode_FromFormat("%U:%d in %U",
-				py_tb->tb_frame->f_code->co_filename, py_tb->tb_frame->f_lineno,
-				py_tb->tb_frame->f_code->co_name);
+					py_tb->tb_frame->f_code->co_filename,
+					py_tb->tb_frame->f_lineno,
+					py_tb->tb_frame->f_code->co_name);
 		py_str_as_str(py_str, &tracestr);
 		Py_DecRef(py_str);
 		g_string_printf(msg, "%s in %s: %s", ename, tracestr, str);
@@ -87,8 +87,4 @@ void catch_exception(const char *format, ...)
 
 	/* Just in case. */
 	PyErr_Clear();
-
-	return;
 }
-
-

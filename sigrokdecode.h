@@ -63,15 +63,16 @@ extern "C" {
 #define SRD_LOG_DBG    4 /**< Output debug messages. */
 #define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
 
+/*
+ * When adding an output type, don't forget to...
+ *   - expose it to PDs in controller.c:PyInit_sigrokdecode()
+ *   - add a check in module_sigrokdecode.c:Decoder_put()
+ *   - add a debug string in type_decoder.c:OUTPUT_TYPES
+ */
 enum {
 	SRD_OUTPUT_ANN,
 	SRD_OUTPUT_PROTO,
 	SRD_OUTPUT_BINARY,
-	/* When adding an output type, don't forget to...
-	 * 	  - expose it to PDs in controller.c:PyInit_sigrokdecode()
-	 * 	  - add a check in module_sigrokdecode.c:Decoder_put()
-	 *    - add a debug string in type_decoder.c:OUTPUT_TYPES
-	 */
 };
 
 #define SRD_MAX_NUM_PROBES   64
@@ -105,7 +106,8 @@ struct srd_decoder {
 	/** Optional probes */
 	GSList *opt_probes;
 
-	/* List of NULL-terminated char[], containing descriptions of the
+	/*
+	 * List of NULL-terminated char[], containing descriptions of the
 	 * supported annotation output.
 	 */
 	GSList *annotations;
@@ -157,7 +159,6 @@ struct srd_pd_callback {
 	void (*callback)(struct srd_proto_data *);
 };
 
-
 /* custom python types */
 typedef struct {
 	PyObject_HEAD
@@ -173,29 +174,31 @@ typedef struct {
 	PyObject *sample;
 } srd_logic;
 
-
 /*--- controller.c ----------------------------------------------------------*/
+
 int srd_init(void);
 int srd_exit(void);
 int set_modulepath(void);
 int srd_instance_set_options(struct srd_decoder_instance *di,
-		GHashTable *options);
+			     GHashTable *options);
 int srd_instance_set_probes(struct srd_decoder_instance *di,
-		GHashTable *probes);
+			    GHashTable *probes);
 struct srd_decoder_instance *srd_instance_new(const char *id,
-		GHashTable *options);
+					      GHashTable *options);
 int srd_instance_stack(struct srd_decoder_instance *di_from,
-		struct srd_decoder_instance *di_to);
+		       struct srd_decoder_instance *di_to);
 struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id);
 struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
-		PyObject *obj);
+						      PyObject *obj);
 int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
 int srd_instance_decode(uint64_t start_samplenum,
-		struct srd_decoder_instance *dec, uint8_t *inbuf, uint64_t inbuflen);
+			struct srd_decoder_instance *dec,
+			uint8_t *inbuf, uint64_t inbuflen);
 void srd_instance_free(struct srd_decoder_instance *di);
 void srd_instance_free_all(GSList *stack);
 int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
-int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf, uint64_t inbuflen);
+int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
+		     uint64_t inbuflen);
 int pd_add(struct srd_decoder_instance *di, int output_type, char *output_id);
 struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
@@ -203,6 +206,7 @@ int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
 void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
+
 GSList *srd_list_decoders(void);
 struct srd_decoder *srd_get_decoder_by_id(const char *id);
 int srd_load_decoder(const char *name, struct srd_decoder **dec);
@@ -212,17 +216,21 @@ int srd_unload_all_decoders(void);
 char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- exception.c -----------------------------------------------------------*/
+
 void catch_exception(const char *format, ...);
 
 /*--- util.c ----------------------------------------------------------------*/
+
 int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 int py_str_as_str(PyObject *py_str, char **outstr);
 int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
+
 typedef int (*srd_log_handler_t)(void *data, int loglevel, const char *format,
 				 va_list args);
+
 int srd_log_loglevel_set(int loglevel);
 int srd_log_loglevel_get(void);
 int srd_log_handler_set(srd_log_handler_t handler, void *data);

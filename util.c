@@ -22,7 +22,6 @@
 #include "sigrokdecode-internal.h"
 #include "config.h"
 
-
 /**
  * Get the value of a python object's attribute, returned as a newly
  * allocated char *.
@@ -63,7 +62,6 @@ int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 	return ret;
 }
 
-
 /**
  * Get the value of a python dictionary item, returned as a newly
  * allocated char *.
@@ -81,7 +79,8 @@ int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr)
 	int ret;
 
 	if (!PyDict_Check(py_obj)) {
-		srd_dbg("Object is a %s, not a dictionary.", Py_TYPE(py_obj)->tp_name);
+		srd_dbg("Object is a %s, not a dictionary.",
+			Py_TYPE(py_obj)->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -91,8 +90,8 @@ int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr)
 	}
 
 	if (!PyUnicode_Check(py_value)) {
-		srd_dbg("Dictionary value for %s should be a string, but is a %s.",
-			key, Py_TYPE(py_value)->tp_name);
+		srd_dbg("Dictionary value for %s should be a string, but is "
+			"a %s.", key, Py_TYPE(py_value)->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -100,7 +99,6 @@ int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr)
 
 	return SRD_OK;
 }
-
 
 /**
  * Get the value of a python unicode string object, returned as a newly
@@ -123,7 +121,8 @@ int py_str_as_str(PyObject *py_str, char **outstr)
 	ret = SRD_OK;
 
 	if (!PyUnicode_Check(py_str)) {
-		srd_dbg("Object is a %s, not a string object.", Py_TYPE(py_str)->tp_name);
+		srd_dbg("Object is a %s, not a string object.",
+			Py_TYPE(py_str)->tp_name);
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
@@ -154,7 +153,6 @@ err_out:
 	return ret;
 }
 
-
 /**
  * Convert a python list of unicode strings to a NULL-terminated UTF8-encoded
  * char * array. The caller must free each string when finished.
@@ -176,7 +174,7 @@ int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 		return SRD_ERR_MALLOC;
 	for (i = 0; i < list_len; i++) {
 		if (!(py_str = PyUnicode_AsEncodedString(
-				PyList_GetItem(py_strlist, i), "utf-8", NULL)))
+		    PyList_GetItem(py_strlist, i), "utf-8", NULL)))
 			return SRD_ERR_PYTHON;
 		if (!(str = PyBytes_AS_STRING(py_str)))
 			return SRD_ERR_PYTHON;
@@ -187,4 +185,3 @@ int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 
 	return SRD_OK;
 }
-
