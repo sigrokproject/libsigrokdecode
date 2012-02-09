@@ -64,6 +64,25 @@ extern "C" {
 #define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
 
 /*
+ * Use SRD_API to mark public API symbols, and SRD_PRIV for private symbols.
+ *
+ * Variables and functions marked 'static' are private already and don't
+ * need SR_PRIV. However, functions which are not static (because they need
+ * to be used in other libsigrokdecode-internal files) but are also not
+ * meant to be part of the public libsigrokdecode API, must use SRD_PRIV.
+ *
+ * This uses the 'visibility' feature of gcc (requires gcc >= 4.0).
+ *
+ * Details: http://gcc.gnu.org/wiki/Visibility
+ */
+
+/* Marks public libsigrokdecode API symbols. */
+#define SRD_API __attribute__((visibility("default")))
+
+/* Marks private, non-public libsigrokdecode symbols (not part of the API). */
+#define SRD_PRIV __attribute__((visibility("hidden")))
+
+/*
  * When adding an output type, don't forget to...
  *   - expose it to PDs in controller.c:PyInit_sigrokdecode()
  *   - add a check in module_sigrokdecode.c:Decoder_put()
@@ -176,67 +195,69 @@ typedef struct {
 
 /*--- controller.c ----------------------------------------------------------*/
 
-int srd_init(void);
-int srd_exit(void);
-int set_modulepath(void);
-int srd_instance_set_options(struct srd_decoder_instance *di,
-			     GHashTable *options);
-int srd_instance_set_probes(struct srd_decoder_instance *di,
-			    GHashTable *probes);
-struct srd_decoder_instance *srd_instance_new(const char *id,
-					      GHashTable *options);
-int srd_instance_stack(struct srd_decoder_instance *di_from,
-		       struct srd_decoder_instance *di_to);
-struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id);
-struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
-						      PyObject *obj);
-int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
-int srd_instance_decode(uint64_t start_samplenum,
-			struct srd_decoder_instance *dec,
-			uint8_t *inbuf, uint64_t inbuflen);
-void srd_instance_free(struct srd_decoder_instance *di);
-void srd_instance_free_all(GSList *stack);
-int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
-int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
-		     uint64_t inbuflen);
-int pd_add(struct srd_decoder_instance *di, int output_type, char *output_id);
-struct srd_decoder_instance *get_di_by_decobject(void *decobject);
+SRD_API int srd_init(void);
+SRD_API int srd_exit(void);
+SRD_API int set_modulepath(void);
+SRD_API int srd_instance_set_options(struct srd_decoder_instance *di,
+				     GHashTable *options);
+SRD_API int srd_instance_set_probes(struct srd_decoder_instance *di,
+				    GHashTable *probes);
+SRD_API struct srd_decoder_instance *srd_instance_new(const char *id,
+						      GHashTable *options);
+SRD_API int srd_instance_stack(struct srd_decoder_instance *di_from,
+			       struct srd_decoder_instance *di_to);
+SRD_API struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id);
+SRD_API struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
+							      PyObject *obj);
+SRD_API int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
+SRD_API int srd_instance_decode(uint64_t start_samplenum,
+				struct srd_decoder_instance *dec,
+				uint8_t *inbuf, uint64_t inbuflen);
+SRD_API void srd_instance_free(struct srd_decoder_instance *di);
+SRD_API void srd_instance_free_all(GSList *stack);
+SRD_API int srd_session_start(int num_probes, int unitsize,
+			      uint64_t samplerate);
+SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
+			     uint64_t inbuflen);
+SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
+		    char *output_id);
+SRD_API struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
-int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
-void *srd_find_callback(int output_type);
+SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
+SRD_API void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
 
-GSList *srd_list_decoders(void);
-struct srd_decoder *srd_get_decoder_by_id(const char *id);
-int srd_load_decoder(const char *name, struct srd_decoder **dec);
-int srd_unload_decoder(struct srd_decoder *dec);
-int srd_load_all_decoders(void);
-int srd_unload_all_decoders(void);
-char *srd_decoder_doc(struct srd_decoder *dec);
+SRD_API GSList *srd_list_decoders(void);
+SRD_API struct srd_decoder *srd_get_decoder_by_id(const char *id);
+SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec);
+SRD_API int srd_unload_decoder(struct srd_decoder *dec);
+SRD_API int srd_load_all_decoders(void);
+SRD_API int srd_unload_all_decoders(void);
+SRD_API char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- exception.c -----------------------------------------------------------*/
 
-void catch_exception(const char *format, ...);
+SRD_PRIV void catch_exception(const char *format, ...);
 
 /*--- util.c ----------------------------------------------------------------*/
 
-int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
-int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
-int py_str_as_str(PyObject *py_str, char **outstr);
-int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
+SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
+SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
+SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
 
 typedef int (*srd_log_handler_t)(void *data, int loglevel, const char *format,
 				 va_list args);
 
-int srd_log_loglevel_set(int loglevel);
-int srd_log_loglevel_get(void);
-int srd_log_handler_set(srd_log_handler_t handler, void *data);
-int srd_log_handler_set_default(void);
-int srd_log_logdomain_set(const char *logdomain);
-char *srd_log_logdomain_get(void);
+SRD_API int srd_log_loglevel_set(int loglevel);
+SRD_API int srd_log_loglevel_get(void);
+SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *data);
+SRD_API int srd_log_handler_set_default(void);
+SRD_API int srd_log_logdomain_set(const char *logdomain);
+SRD_API char *srd_log_logdomain_get(void);
 
 #ifdef __cplusplus
 }

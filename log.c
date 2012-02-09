@@ -58,7 +58,7 @@ static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
  *                 SRD_LOG_WARN, SRD_LOG_INFO, SRD_LOG_DBG, or SRD_LOG_SPEW).
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid loglevel.
  */
-int srd_log_loglevel_set(int loglevel)
+SRD_API int srd_log_loglevel_set(int loglevel)
 {
 	if (loglevel < SRD_LOG_NONE || loglevel > SRD_LOG_SPEW) {
 		srd_err("Invalid loglevel %d.", loglevel);
@@ -77,7 +77,7 @@ int srd_log_loglevel_set(int loglevel)
  *
  * @return The currently configured libsigrokdecode loglevel.
  */
-int srd_log_loglevel_get(void)
+SRD_API int srd_log_loglevel_get(void)
 {
 	return srd_loglevel;
 }
@@ -95,7 +95,7 @@ int srd_log_loglevel_get(void)
  *                  the caller does not need to keep it around.
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid logdomain.
  */
-int srd_log_logdomain_set(const char *logdomain)
+SRD_API int srd_log_logdomain_set(const char *logdomain)
 {
 	if (!logdomain) {
 		srd_err("log: %s: logdomain was NULL", __func__);
@@ -117,7 +117,7 @@ int srd_log_logdomain_set(const char *logdomain)
  *         string. The caller is responsible for g_free()ing the string when
  *         it is no longer needed.
  */
-char *srd_log_logdomain_get(void)
+SRD_API char *srd_log_logdomain_get(void)
 {
 	return g_strdup((const char *)&srd_log_domain);
 }
@@ -134,7 +134,7 @@ char *srd_log_logdomain_get(void)
  *             to be NULL if the caller doesn't need/want to pass any data.
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  */
-int srd_log_handler_set(srd_log_handler_t handler, void *data)
+SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *data)
 {
 	if (!handler) {
 		srd_err("log: %s: handler was NULL", __func__);
@@ -156,7 +156,7 @@ int srd_log_handler_set(srd_log_handler_t handler, void *data)
  *
  * @return SRD_OK upon success, a negative error code otherwise.
  */
-int srd_log_handler_set_default(void)
+SRD_API int srd_log_handler_set_default(void)
 {
 	/*
 	 * Note: No log output in this function, as it should safely work
@@ -187,7 +187,7 @@ static int srd_logv(void *data, int loglevel, const char *format, va_list args)
 	return ret;
 }
 
-int srd_log(int loglevel, const char *format, ...)
+SRD_PRIV int srd_log(int loglevel, const char *format, ...)
 {
 	int ret;
 	va_list args;
@@ -199,7 +199,7 @@ int srd_log(int loglevel, const char *format, ...)
 	return ret;
 }
 
-int srd_spew(const char *format, ...)
+SRD_PRIV int srd_spew(const char *format, ...)
 {
 	int ret;
 	va_list args;
@@ -211,7 +211,7 @@ int srd_spew(const char *format, ...)
 	return ret;
 }
 
-int srd_dbg(const char *format, ...)
+SRD_PRIV int srd_dbg(const char *format, ...)
 {
 	int ret;
 	va_list args;
@@ -223,7 +223,7 @@ int srd_dbg(const char *format, ...)
 	return ret;
 }
 
-int srd_info(const char *format, ...)
+SRD_PRIV int srd_info(const char *format, ...)
 {
 	int ret;
 	va_list args;
@@ -235,7 +235,7 @@ int srd_info(const char *format, ...)
 	return ret;
 }
 
-int srd_warn(const char *format, ...)
+SRD_PRIV int srd_warn(const char *format, ...)
 {
 	int ret;
 	va_list args;
@@ -247,7 +247,7 @@ int srd_warn(const char *format, ...)
 	return ret;
 }
 
-int srd_err(const char *format, ...)
+SRD_PRIV int srd_err(const char *format, ...)
 {
 	int ret;
 	va_list args;

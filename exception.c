@@ -24,7 +24,7 @@
 #include <glib.h>
 #include <frameobject.h> /* Python header not pulled in by default. */
 
-void catch_exception(const char *format, ...)
+SRD_PRIV void catch_exception(const char *format, ...)
 {
 	PyObject *etype, *evalue, *etb, *py_str;
 	PyTracebackObject *py_tb;

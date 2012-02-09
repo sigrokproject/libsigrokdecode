@@ -22,16 +22,16 @@
 #include "config.h"
 
 /* type_decoder.c */
-extern PyTypeObject srd_Decoder_type;
+extern SRD_PRIV PyTypeObject srd_Decoder_type;
 
 /* type_logic.c */
-extern PyTypeObject srd_logic_type;
+extern SRD_PRIV PyTypeObject srd_logic_type;
 
 /*
  * When initialized, a reference to this module inside the python interpreter
  * lives here.
  */
-PyObject *mod_sigrokdecode = NULL;
+SRD_PRIV PyObject *mod_sigrokdecode = NULL;
 
 static struct PyModuleDef sigrokdecode_module = {
 	PyModuleDef_HEAD_INIT,
@@ -40,7 +40,7 @@ static struct PyModuleDef sigrokdecode_module = {
 	.m_size = -1,
 };
 
-PyMODINIT_FUNC PyInit_sigrokdecode(void)
+SRD_PRIV PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
 	PyObject *mod;
 

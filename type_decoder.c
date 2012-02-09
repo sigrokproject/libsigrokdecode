@@ -207,7 +207,7 @@ static PyMethodDef Decoder_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-PyTypeObject srd_Decoder_type = {
+SRD_PRIV PyTypeObject srd_Decoder_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "sigrokdecode.Decoder",
 	.tp_basicsize = sizeof(srd_Decoder),

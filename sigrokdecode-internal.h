@@ -21,6 +21,7 @@
 #ifndef LIBSIGROKDECODE_SIGROKDECODE_INTERNAL_H
 #define LIBSIGROKDECODE_SIGROKDECODE_INTERNAL_H
 
+#include "sigrokdecode.h"
 // #include <stdarg.h>
 // #include <glib.h>
 
@@ -36,11 +37,11 @@
 
 /*--- log.c -----------------------------------------------------------------*/
 
-int srd_log(int loglevel, const char *format, ...);
-int srd_spew(const char *format, ...);
-int srd_dbg(const char *format, ...);
-int srd_info(const char *format, ...);
-int srd_warn(const char *format, ...);
-int srd_err(const char *format, ...);
+SRD_PRIV int srd_log(int loglevel, const char *format, ...);
+SRD_PRIV int srd_spew(const char *format, ...);
+SRD_PRIV int srd_dbg(const char *format, ...);
+SRD_PRIV int srd_info(const char *format, ...);
+SRD_PRIV int srd_warn(const char *format, ...);
+SRD_PRIV int srd_err(const char *format, ...);
 
 #endif

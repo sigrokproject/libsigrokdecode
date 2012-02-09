@@ -32,13 +32,13 @@ static GSList *di_list = NULL;
 static GSList *callbacks = NULL;
 
 /* decoder.c */
-extern GSList *pd_list;
+extern SRD_PRIV GSList *pd_list;
 
 /* module_sigrokdecode.c */
-extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
+extern SRD_PRIV PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* type_logic.c */
-extern PyTypeObject srd_logic_type;
+extern SRD_PRIV PyTypeObject srd_logic_type;
 
 /**
  * Initialize libsigrokdecode.
@@ -62,7 +62,7 @@ extern PyTypeObject srd_logic_type;
  *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
  *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
  */
-int srd_init(void)
+SRD_API int srd_init(void)
 {
 	int ret;
 
@@ -99,7 +99,7 @@ int srd_init(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_exit(void)
+SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
@@ -127,7 +127,7 @@ int srd_exit(void)
  *
  * @return TODO.
  */
-int set_modulepath(void)
+SRD_API int set_modulepath(void)
 {
 	int ret;
 	gchar *path, *s;
@@ -168,8 +168,8 @@ int set_modulepath(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_instance_set_options(struct srd_decoder_instance *di,
-			     GHashTable * options)
+SRD_API int srd_instance_set_options(struct srd_decoder_instance *di,
+				     GHashTable *options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
@@ -291,8 +291,8 @@ static gint compare_probe_id(struct srd_probe *a, char *probe_id)
  *               arranged in this order.
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_instance_set_probes(struct srd_decoder_instance *di,
-			    GHashTable * new_probes)
+SRD_API int srd_instance_set_probes(struct srd_decoder_instance *di,
+				    GHashTable *new_probes)
 {
 	GList *l;
 	GSList *sl;
@@ -363,8 +363,8 @@ int srd_instance_set_probes(struct srd_decoder_instance *di,
  * @return Pointer to a newly allocated struct srd_decoder_instance, or
  *         NULL in case of failure.
  */
-struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
-					      GHashTable *options)
+SRD_API struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
+						      GHashTable *options)
 {
 	int i;
 	struct srd_decoder *dec;
@@ -426,8 +426,8 @@ struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	return di;
 }
 
-int srd_instance_stack(struct srd_decoder_instance *di_from,
-		       struct srd_decoder_instance *di_to)
+SRD_API int srd_instance_stack(struct srd_decoder_instance *di_from,
+			       struct srd_decoder_instance *di_to)
 {
 	if (!di_from || !di_to) {
 		srd_err("Invalid from/to instance pair.");
@@ -454,7 +454,7 @@ int srd_instance_stack(struct srd_decoder_instance *di_from,
  *
  * @return Pointer to struct srd_decoder_instance, or NULL if not found.
  */
-struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
+SRD_API struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
 {
 	GSList *l;
 	struct srd_decoder_instance *tmp, *di;
@@ -483,8 +483,8 @@ struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
  *
  * @return Pointer to struct srd_decoder_instance, or NULL if not found.
  */
-struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
-						      PyObject *obj)
+SRD_API struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
+							      PyObject *obj)
 {
 	GSList *l;
 	struct srd_decoder_instance *tmp, *di;
@@ -501,7 +501,7 @@ struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
 	return di;
 }
 
-int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
+SRD_API int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 {
 	PyObject *py_name, *py_res;
 	GSList *l;
@@ -550,9 +550,9 @@ int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-int srd_instance_decode(uint64_t start_samplenum,
-			struct srd_decoder_instance *di, uint8_t *inbuf,
-			uint64_t inbuflen)
+SRD_API int srd_instance_decode(uint64_t start_samplenum,
+				struct srd_decoder_instance *di,
+				uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
@@ -602,7 +602,7 @@ int srd_instance_decode(uint64_t start_samplenum,
 	return SRD_OK;
 }
 
-void srd_instance_free(struct srd_decoder_instance *di)
+SRD_API void srd_instance_free(struct srd_decoder_instance *di)
 {
 	GSList *l;
 	struct srd_pd_output *pdo;
@@ -621,7 +621,7 @@ void srd_instance_free(struct srd_decoder_instance *di)
 	g_slist_free(di->pd_output);
 }
 
-void srd_instance_free_all(GSList *stack)
+SRD_API void srd_instance_free_all(GSList *stack)
 {
 	GSList *l;
 	struct srd_decoder_instance *di;
@@ -639,7 +639,7 @@ void srd_instance_free_all(GSList *stack)
 	}
 }
 
-int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
+SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {
 	PyObject *args;
 	GSList *d;
@@ -673,8 +673,8 @@ int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 }
 
 /* Feed logic samples to decoder session. */
-int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
-		     uint64_t inbuflen)
+SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
+			     uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
@@ -692,7 +692,7 @@ int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
 	return SRD_OK;
 }
 
-int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
+SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
 {
 	struct srd_pd_callback *pd_cb;
 
@@ -708,7 +708,7 @@ int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
 	return SRD_OK;
 }
 
-void *srd_find_callback(int output_type)
+SRD_API void *srd_find_callback(int output_type)
 {
 	GSList *l;
 	struct srd_pd_callback *pd_cb;
@@ -727,7 +727,8 @@ void *srd_find_callback(int output_type)
 }
 
 /* This is the backend function to python sigrokdecode.add() call. */
-int pd_add(struct srd_decoder_instance *di, int output_type, char *proto_id)
+SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
+		    char *proto_id)
 {
 	struct srd_pd_output *pdo;
 

@@ -22,12 +22,12 @@
 #include <inttypes.h>
 #include <string.h>
 
-PyObject *srd_logic_iter(PyObject *self)
+static PyObject *srd_logic_iter(PyObject *self)
 {
 	return self;
 }
 
-PyObject *srd_logic_iternext(PyObject *self)
+static PyObject *srd_logic_iternext(PyObject *self)
 {
 	int i;
 	PyObject *py_samplenum, *py_samples;
@@ -66,7 +66,7 @@ PyObject *srd_logic_iternext(PyObject *self)
 	return logic->sample;
 }
 
-PyTypeObject srd_logic_type = {
+SRD_PRIV PyTypeObject srd_logic_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "srd_logic",
 	.tp_basicsize = sizeof(srd_logic),
