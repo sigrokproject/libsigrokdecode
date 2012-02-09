@@ -35,6 +35,15 @@
 #define ARRAY_AND_SIZE(a) (a), ARRAY_SIZE(a)
 #endif
 
+/*--- controller.c ----------------------------------------------------------*/
+
+SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
+		    char *output_id);
+
+/*--- exception.c -----------------------------------------------------------*/
+
+SRD_PRIV void catch_exception(const char *format, ...);
+
 /*--- log.c -----------------------------------------------------------------*/
 
 SRD_PRIV int srd_log(int loglevel, const char *format, ...);
@@ -43,5 +52,12 @@ SRD_PRIV int srd_dbg(const char *format, ...);
 SRD_PRIV int srd_info(const char *format, ...);
 SRD_PRIV int srd_warn(const char *format, ...);
 SRD_PRIV int srd_err(const char *format, ...);
+
+/*--- util.c ----------------------------------------------------------------*/
+
+SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
+SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
+SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 #endif

@@ -219,8 +219,6 @@ SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);
 SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen);
-SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
-		    char *output_id);
 SRD_API struct srd_decoder_instance *get_di_by_decobject(void *decobject);
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
 SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
@@ -235,17 +233,6 @@ SRD_API int srd_unload_decoder(struct srd_decoder *dec);
 SRD_API int srd_load_all_decoders(void);
 SRD_API int srd_unload_all_decoders(void);
 SRD_API char *srd_decoder_doc(struct srd_decoder *dec);
-
-/*--- exception.c -----------------------------------------------------------*/
-
-SRD_PRIV void catch_exception(const char *format, ...);
-
-/*--- util.c ----------------------------------------------------------------*/
-
-SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
-SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
-SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
-SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
 
 /*--- log.c -----------------------------------------------------------------*/
 
