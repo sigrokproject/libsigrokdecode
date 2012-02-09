@@ -124,8 +124,10 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		 di->instance_id, start_sample, end_sample,
 		 OUTPUT_TYPES[pdo->output_type], output_id);
 
-	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data))))
+	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data)))) {
+		srd_err("Failed to g_malloc() struct srd_proto_data.");
 		return NULL;
+	}
 	pdata->start_sample = start_sample;
 	pdata->end_sample = end_sample;
 	pdata->pdo = pdo;

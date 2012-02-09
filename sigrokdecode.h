@@ -94,7 +94,7 @@ enum {
 	SRD_OUTPUT_BINARY,
 };
 
-#define SRD_MAX_NUM_PROBES   64
+#define SRD_MAX_NUM_PROBES 64
 
 /* TODO: Documentation. */
 struct srd_decoder {

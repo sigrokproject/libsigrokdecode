@@ -95,6 +95,7 @@ static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
 		}
 
 		if (!(p = g_try_malloc(sizeof(struct srd_probe)))) {
+			srd_err("Failed to g_malloc() struct srd_probe.");
 			ret = SRD_ERR_MALLOC;
 			goto err_out;
 		}
@@ -138,7 +139,7 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	py_basedec = py_method = py_attr = NULL;
 
 	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
-		srd_dbg("Failed to malloc struct srd_decoder.");
+		srd_dbg("Failed to g_malloc() struct srd_decoder.");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}

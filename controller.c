@@ -317,7 +317,7 @@ SRD_API int srd_instance_set_probes(struct srd_decoder_instance *di,
 	new_probemap = NULL;
 
 	if (!(new_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
-		srd_err("Failed to malloc new probe map.");
+		srd_err("Failed to g_malloc() new probe map.");
 		return SRD_ERR_MALLOC;
 	}
 
@@ -378,8 +378,8 @@ SRD_API struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 		return NULL;
 	}
 
-	if (!(di = g_try_malloc0(sizeof(*di)))) {
-		srd_err("Failed to malloc instance.");
+	if (!(di = g_try_malloc0(sizeof(struct srd_decoder_instance)))) {
+		srd_err("Failed to g_malloc() instance.");
 		return NULL;
 	}
 
@@ -396,7 +396,7 @@ SRD_API struct srd_decoder_instance *srd_instance_new(const char *decoder_id,
 	if (di->dec_num_probes) {
 		if (!(di->dec_probemap =
 		     g_try_malloc(sizeof(int) * di->dec_num_probes))) {
-			srd_err("Failed to malloc probe map.");
+			srd_err("Failed to g_malloc() probe map.");
 			g_free(di);
 			return NULL;
 		}
@@ -698,8 +698,10 @@ SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
 
 	srd_dbg("Registering new callback for output type %d.", output_type);
 
-	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback))))
+	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback)))) {
+		srd_err("Failed to g_malloc() struct srd_pd_callback.");
 		return SRD_ERR_MALLOC;
+	}
 
 	pd_cb->output_type = output_type;
 	pd_cb->callback = cb;
@@ -735,8 +737,10 @@ SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
 	srd_dbg("Instance %s creating new output type %d for %s.",
 		di->instance_id, output_type, proto_id);
 
-	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output))))
+	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output)))) {
+		srd_err("Failed to g_malloc() struct srd_pd_output.");
 		return -1;
+	}
 
 	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
 	pdo->pdo_id = g_slist_length(di->pd_output);

@@ -138,7 +138,7 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 	}
 
 	if (!(*outstr = g_strdup(str))) {
-		srd_dbg("outstr malloc failed");
+		srd_dbg("Failed to g_malloc() outstr.");
 		ret = SRD_ERR_MALLOC;
 		goto err_out;
 	}
@@ -162,7 +162,7 @@ err_out:
  * @param outstr ptr to char ** storage to be filled in.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
- *         The 'outstr' argument points to a malloc()ed char ** upon success.
+ *         The 'outstr' argument points to a g_malloc()ed char** upon success.
  */
 SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 {
@@ -171,8 +171,10 @@ SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
 	char **out, *str;
 
 	list_len = PyList_Size(py_strlist);
-	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1))))
+	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1)))) {
+		srd_err("Failed to g_malloc() 'out'.");
 		return SRD_ERR_MALLOC;
+	}
 	for (i = 0; i < list_len; i++) {
 		if (!(py_str = PyUnicode_AsEncodedString(
 		    PyList_GetItem(py_strlist, i), "utf-8", NULL)))
