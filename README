@@ -27,14 +27,14 @@ Requirements
 ------------
 
  - git
- - gcc
+ - gcc (>= 4.0)
  - make
  - autoconf >= 2.63
  - automake >= 1.11
  - libtool
  - pkg-config >= 0.22
  - libglib >= 2.22.0
- - Python >= 3.x (for protocol decoders)
+ - Python >= 3.0
 
 
 Building and installing
