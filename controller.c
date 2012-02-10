@@ -71,7 +71,7 @@ SRD_API int srd_init(void)
 	/* Add our own module to the list of built-in modules. */
 	PyImport_AppendInittab("sigrokdecode", PyInit_sigrokdecode);
 
-	/* Initialize the python interpreter. */
+	/* Initialize the Python interpreter. */
 	Py_Initialize();
 
 	if ((ret = set_modulepath()) != SRD_OK) {
@@ -472,14 +472,14 @@ SRD_API struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id)
 }
 
 /**
- * Finds a decoder instance by its python object, i.e. that instance's
+ * Finds a decoder instance by its Python object, i.e. that instance's
  * instantiation of the sigrokdecode.Decoder class. This will recurse
  * to find the instance anywhere in the stack tree.
  *
  * @param stack Pointer to a GSList of struct srd_decoder_instance,
  * 		indicating the stack to search. To start searching at the bottom
  * 		level of decoder instances, pass NULL.
- * @param obj The python class instantiation.
+ * @param obj The Python class instantiation.
  *
  * @return Pointer to struct srd_decoder_instance, or NULL if not found.
  */
@@ -511,7 +511,7 @@ SRD_API int srd_instance_start(struct srd_decoder_instance *di, PyObject *args)
 		di->instance_id);
 
 	if (!(py_name = PyUnicode_FromString("start"))) {
-		srd_err("Unable to build python object for 'start'.");
+		srd_err("Unable to build Python object for 'start'.");
 		catch_exception("Protocol decoder instance %s: ",
 				di->instance_id);
 		return SRD_ERR_PYTHON;
@@ -653,7 +653,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	 * samplerate. This can be extended as needed.
 	 */
 	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)samplerate))) {
-		srd_err("Unable to build python object for metadata.");
+		srd_err("Unable to build Python object for metadata.");
 		return SRD_ERR_PYTHON;
 	}
 
@@ -728,7 +728,7 @@ SRD_API void *srd_find_callback(int output_type)
 	return cb;
 }
 
-/* This is the backend function to python sigrokdecode.add() call. */
+/* This is the backend function to Python sigrokdecode.add() call. */
 SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
 		    char *proto_id)
 {

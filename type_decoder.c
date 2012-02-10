@@ -189,7 +189,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 	}
 
 	if (!PyArg_ParseTuple(args, "is", &output_type, &proto_id)) {
-		/* Let python raise this exception. */
+		/* Let Python raise this exception. */
 		return NULL;
 	}
 

@@ -28,7 +28,7 @@ extern SRD_PRIV PyTypeObject srd_Decoder_type;
 extern SRD_PRIV PyTypeObject srd_logic_type;
 
 /*
- * When initialized, a reference to this module inside the python interpreter
+ * When initialized, a reference to this module inside the Python interpreter
  * lives here.
  */
 SRD_PRIV PyObject *mod_sigrokdecode = NULL;

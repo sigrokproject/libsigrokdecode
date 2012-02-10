@@ -23,7 +23,7 @@
 #include "config.h"
 
 /**
- * Get the value of a python object's attribute, returned as a newly
+ * Get the value of a Python object's attribute, returned as a newly
  * allocated char *.
  *
  * @param py_obj The object to probe.
@@ -63,7 +63,7 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 }
 
 /**
- * Get the value of a python dictionary item, returned as a newly
+ * Get the value of a Python dictionary item, returned as a newly
  * allocated char *.
  *
  * @param py_obj The dictionary to probe.
@@ -102,7 +102,7 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
 }
 
 /**
- * Get the value of a python unicode string object, returned as a newly
+ * Get the value of a Python unicode string object, returned as a newly
  * allocated char *.
  *
  * @param py_str The unicode string object.
@@ -155,7 +155,7 @@ err_out:
 }
 
 /**
- * Convert a python list of unicode strings to a NULL-terminated UTF8-encoded
+ * Convert a Python list of unicode strings to a NULL-terminated UTF8-encoded
  * char * array. The caller must free each string when finished.
  *
  * @param py_strlist The list object.
