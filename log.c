@@ -27,7 +27,8 @@
 static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 
 /* Function prototype. */
-static int srd_logv(void *data, int loglevel, const char *format, va_list args);
+static int srd_logv(void *user_data, int loglevel, const char *format,
+		    va_list args);
 
 /* Pointer to the currently selected log handler. Default: srd_logv(). */
 static srd_log_handler_t srd_log_handler = srd_logv;
@@ -127,24 +128,25 @@ SRD_API char *srd_log_logdomain_get(void)
  *
  * @param handler Function pointer to the log handler function to use.
  *                Must not be NULL.
- * @param data Pointer to private data to be passed on. This can be used by
- *             the caller to pass arbitrary data to the log functions. This
- *             pointer is only stored or passed on by libsigrokdecode, and
- *             is never used or interpreted in any way. The pointer is allowed
- *             to be NULL if the caller doesn't need/want to pass any data.
+ * @param user_data Pointer to private data to be passed on. This can be used
+ *                  by the caller to pass arbitrary data to the log functions.
+ *                  This pointer is only stored or passed on by libsigrokdecode,
+ *                  and is never used or interpreted in any way. The pointer
+ *                  is allowed to be NULL if the caller doesn't need/want to
+ *                  pass any data.
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  */
-SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *data)
+SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *user_data)
 {
 	if (!handler) {
 		srd_err("log: %s: handler was NULL", __func__);
 		return SRD_ERR_ARG;
 	}
 
-	/* Note: 'data' is allowed to be NULL. */
+	/* Note: 'user_data' is allowed to be NULL. */
 
 	srd_log_handler = handler;
-	srd_log_handler_data = data;
+	srd_log_handler_data = user_data;
 
 	return SRD_OK;
 }
@@ -168,12 +170,13 @@ SRD_API int srd_log_handler_set_default(void)
 	return SRD_OK;
 }
 
-static int srd_logv(void *data, int loglevel, const char *format, va_list args)
+static int srd_logv(void *user_data, int loglevel, const char *format,
+		    va_list args)
 {
 	int ret;
 
 	/* This specific log handler doesn't need the void pointer data. */
-	(void)data;
+	(void)user_data;
 
 	/* Only output messages of at least the selected loglevel(s). */
 	if (loglevel > srd_loglevel)

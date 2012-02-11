@@ -174,12 +174,12 @@ struct srd_proto_data {
 };
 
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata,
-					 void *data);
+					 void *user_data);
 
 struct srd_pd_callback {
 	int output_type;
 	srd_pd_output_callback_t callback;
-	void *data;
+	void *user_data;
 };
 
 /* custom python types */
@@ -225,7 +225,7 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen);
 SRD_API struct srd_decoder_inst *get_di_by_decobject(void *decobject);
 SRD_API int srd_register_callback(int output_type,
-				  srd_pd_output_callback_t cb, void *data);
+				  srd_pd_output_callback_t cb, void *user_data);
 SRD_API void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
@@ -240,12 +240,12 @@ SRD_API char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- log.c -----------------------------------------------------------------*/
 
-typedef int (*srd_log_handler_t)(void *data, int loglevel, const char *format,
-				 va_list args);
+typedef int (*srd_log_handler_t)(void *user_data, int loglevel,
+				 const char *format, va_list args);
 
 SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
-SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *data);
+SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *user_data);
 SRD_API int srd_log_handler_set_default(void);
 SRD_API int srd_log_logdomain_set(const char *logdomain);
 SRD_API char *srd_log_logdomain_get(void);
