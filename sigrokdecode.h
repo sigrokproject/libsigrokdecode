@@ -173,9 +173,13 @@ struct srd_proto_data {
 	void *data;
 };
 
+typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata,
+					 void *data);
+
 struct srd_pd_callback {
 	int output_type;
-	void (*callback)(struct srd_proto_data *);
+	srd_pd_output_callback_t callback;
+	void *data;
 };
 
 /* custom python types */
@@ -220,8 +224,8 @@ SRD_API int srd_session_start(int num_probes, int unitsize,
 SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen);
 SRD_API struct srd_decoder_inst *get_di_by_decobject(void *decobject);
-typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
-SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
+SRD_API int srd_register_callback(int output_type,
+				  srd_pd_output_callback_t cb, void *data);
 SRD_API void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/

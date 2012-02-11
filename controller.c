@@ -692,7 +692,8 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
 	return SRD_OK;
 }
 
-SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
+SRD_API int srd_register_callback(int output_type,
+				  srd_pd_output_callback_t cb, void *data)
 {
 	struct srd_pd_callback *pd_cb;
 
@@ -705,6 +706,7 @@ SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb)
 
 	pd_cb->output_type = output_type;
 	pd_cb->callback = cb;
+	pd_cb->data = data;
 	callbacks = g_slist_append(callbacks, pd_cb);
 
 	return SRD_OK;
