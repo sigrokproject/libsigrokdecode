@@ -336,7 +336,7 @@ SRD_API int srd_unload_decoder(struct srd_decoder *dec)
 	 * but they could be anywhere in the stack, just free the entire
 	 * stack. A frontend reloading a decoder thus has to restart all
 	 * instances, and rebuild the stack. */
-	srd_instance_free_all(NULL);
+	srd_inst_free_all(NULL);
 
 	free_probes(dec->probes);
 	free_probes(dec->opt_probes);

@@ -29,7 +29,7 @@ char *OUTPUT_TYPES[] = {
 	"OUTPUT_BINARY",
 };
 
-static int convert_pyobj(struct srd_decoder_instance *di, PyObject *obj,
+static int convert_pyobj(struct srd_decoder_inst *di, PyObject *obj,
 			 int *ann_format, char ***ann)
 {
 	PyObject *py_tmp;
@@ -90,14 +90,14 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
 	PyObject *data, *py_res;
-	struct srd_decoder_instance *di, *next_di;
+	struct srd_decoder_inst *di, *next_di;
 	struct srd_pd_output *pdo;
 	struct srd_proto_data *pdata;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	void (*cb)();
 
-	if (!(di = srd_instance_find_by_obj(NULL, self))) {
+	if (!(di = srd_inst_find_by_obj(NULL, self))) {
 		/* Shouldn't happen. */
 		srd_dbg("put(): self instance not found.");
 		return NULL;
@@ -121,7 +121,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	pdo = l->data;
 
 	srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on oid %d.",
-		 di->instance_id, start_sample, end_sample,
+		 di->inst_id, start_sample, end_sample,
 		 OUTPUT_TYPES[pdo->output_type], output_id);
 
 	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data)))) {
@@ -149,15 +149,15 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
 			/* TODO: is this needed? */
-			Py_XINCREF(next_di->py_instance);
+			Py_XINCREF(next_di->py_inst);
 			srd_spew("Sending %d-%d to instance %s",
 				 start_sample, end_sample,
-				 next_di->instance_id);
+				 next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
-			    next_di->py_instance, "decode", "KKO", start_sample,
+			    next_di->py_inst, "decode", "KKO", start_sample,
 			    end_sample, data))) {
 				catch_exception("calling %s decode(): ",
-						next_di->instance_id);
+						next_di->inst_id);
 			}
 			Py_XDECREF(py_res);
 		}
@@ -179,11 +179,11 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 static PyObject *Decoder_add(PyObject *self, PyObject *args)
 {
 	PyObject *ret;
-	struct srd_decoder_instance *di;
+	struct srd_decoder_inst *di;
 	char *proto_id;
 	int output_type, pdo_id;
 
-	if (!(di = srd_instance_find_by_obj(NULL, self))) {
+	if (!(di = srd_inst_find_by_obj(NULL, self))) {
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}

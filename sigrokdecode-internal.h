@@ -37,7 +37,7 @@
 
 /*--- controller.c ----------------------------------------------------------*/
 
-SRD_PRIV int pd_add(struct srd_decoder_instance *di, int output_type,
+SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
 		    char *output_id);
 
 /*--- exception.c -----------------------------------------------------------*/

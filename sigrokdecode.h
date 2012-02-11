@@ -145,10 +145,10 @@ struct srd_probe {
 	int order;
 };
 
-struct srd_decoder_instance {
+struct srd_decoder_inst {
 	struct srd_decoder *decoder;
-	PyObject *py_instance;
-	char *instance_id;
+	PyObject *py_inst;
+	char *inst_id;
 	GSList *pd_output;
 	int dec_num_probes;
 	int *dec_probemap;
@@ -161,7 +161,7 @@ struct srd_decoder_instance {
 struct srd_pd_output {
 	int pdo_id;
 	int output_type;
-	struct srd_decoder_instance *di;
+	struct srd_decoder_inst *di;
 	char *proto_id;
 };
 
@@ -185,7 +185,7 @@ typedef struct {
 
 typedef struct {
 	PyObject_HEAD
-	struct srd_decoder_instance *di;
+	struct srd_decoder_inst *di;
 	uint64_t start_samplenum;
 	unsigned int itercnt;
 	uint8_t *inbuf;
@@ -198,28 +198,28 @@ typedef struct {
 SRD_API int srd_init(void);
 SRD_API int srd_exit(void);
 SRD_API int set_modulepath(void);
-SRD_API int srd_instance_set_options(struct srd_decoder_instance *di,
+SRD_API int srd_inst_set_options(struct srd_decoder_inst *di,
 				     GHashTable *options);
-SRD_API int srd_instance_set_probes(struct srd_decoder_instance *di,
+SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
 				    GHashTable *probes);
-SRD_API struct srd_decoder_instance *srd_instance_new(const char *id,
+SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
 						      GHashTable *options);
-SRD_API int srd_instance_stack(struct srd_decoder_instance *di_from,
-			       struct srd_decoder_instance *di_to);
-SRD_API struct srd_decoder_instance *srd_instance_find_by_id(char *instance_id);
-SRD_API struct srd_decoder_instance *srd_instance_find_by_obj(GSList *stack,
+SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
+			       struct srd_decoder_inst *di_to);
+SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id);
+SRD_API struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
 							      PyObject *obj);
-SRD_API int srd_instance_start(struct srd_decoder_instance *di, PyObject *args);
-SRD_API int srd_instance_decode(uint64_t start_samplenum,
-				struct srd_decoder_instance *dec,
+SRD_API int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
+SRD_API int srd_inst_decode(uint64_t start_samplenum,
+				struct srd_decoder_inst *dec,
 				uint8_t *inbuf, uint64_t inbuflen);
-SRD_API void srd_instance_free(struct srd_decoder_instance *di);
-SRD_API void srd_instance_free_all(GSList *stack);
+SRD_API void srd_inst_free(struct srd_decoder_inst *di);
+SRD_API void srd_inst_free_all(GSList *stack);
 SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);
 SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen);
-SRD_API struct srd_decoder_instance *get_di_by_decobject(void *decobject);
+SRD_API struct srd_decoder_inst *get_di_by_decobject(void *decobject);
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata);
 SRD_API int srd_register_callback(int output_type, srd_pd_output_callback_t cb);
 SRD_API void *srd_find_callback(int output_type);
