@@ -156,7 +156,7 @@ err_out:
 
 /**
  * Convert a Python list of unicode strings to a NULL-terminated UTF8-encoded
- * char * array. The caller must free each string when finished.
+ * char * array. The caller must g_free() each string when finished.
  *
  * @param py_strlist The list object.
  * @param outstr ptr to char ** storage to be filled in.
