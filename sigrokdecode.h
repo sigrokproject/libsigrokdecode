@@ -217,7 +217,6 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 SRD_API struct srd_decoder_inst *get_di_by_decobject(void *decobject);
 SRD_API int srd_register_callback(int output_type,
 				  srd_pd_output_callback_t cb, void *user_data);
-SRD_API void *srd_find_callback(int output_type);
 
 /*--- decoder.c -------------------------------------------------------------*/
 

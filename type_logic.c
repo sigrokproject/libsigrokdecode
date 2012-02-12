@@ -49,8 +49,7 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	       logic->inbuf + logic->itercnt * logic->di->data_unitsize,
 	       logic->di->data_unitsize);
 	for (i = 0; i < logic->di->dec_num_probes; i++)
-		probe_samples[i] =
-		    sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
+		probe_samples[i] = sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
 
 	/* Prepare the next samplenum/sample list in this iteration. */
 	py_samplenum =

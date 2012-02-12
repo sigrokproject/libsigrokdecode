@@ -471,6 +471,14 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	return di;
 }
 
+/**
+ * Stack a decoder instance on top of another.
+ *
+ * @param di_from The instance to move.
+ * @param di_to The instance on top of which di_from will be stacked.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 			       struct srd_decoder_inst *di_to)
 {
@@ -684,6 +692,17 @@ SRD_PRIV void srd_inst_free_all(GSList *stack)
 	}
 }
 
+/**
+ * Start a decoding session.
+ *
+ * Decoders, instances and stack must have been prepared beforehand.
+ *
+ * @param num_probes The number of probes which the incoming feed will contain.
+ * @param unitsize The number of bytes per sample in the incoming feed.
+ * @param The samplerate of the incoming feed.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
 SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {
 	PyObject *args;
@@ -717,8 +736,16 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	return ret;
 }
 
-/* Feed logic samples to decoder session. */
-SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
+/**
+ * Feed a chunk of logic sample data to a running decoder session.
+ *
+ * @param start_samplenum The sample number of the first sample in this chunk.
+ * @param inbuf Pointer to sample data.
+ * @param inbuf Length in bytes of the buffer.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
+SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen)
 {
 	GSList *d;
@@ -737,6 +764,18 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t * inbuf,
 	return SRD_OK;
 }
 
+/**
+ * Register a decoder output callback function.
+ *
+ * The function will be called when a protocol decoder sends output back
+ * to the PD controller (except for Python objects, which only go up the
+ * stack).
+ *
+ * @param output_type The output type this callback will receive. Only one
+ * callback per output type can be registered.
+ * @param cb The function to call.
+ * @param user_data Unused.
+ */
 SRD_API int srd_register_callback(int output_type,
 				  srd_pd_output_callback_t cb, void *user_data)
 {
@@ -757,7 +796,7 @@ SRD_API int srd_register_callback(int output_type,
 	return SRD_OK;
 }
 
-SRD_API void *srd_find_callback(int output_type)
+SRD_PRIV void *srd_find_callback(int output_type)
 {
 	GSList *l;
 	struct srd_pd_callback *pd_cb;

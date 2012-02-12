@@ -57,6 +57,7 @@ static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
  *
  * @param loglevel The loglevel to set (SRD_LOG_NONE, SRD_LOG_ERR,
  *                 SRD_LOG_WARN, SRD_LOG_INFO, SRD_LOG_DBG, or SRD_LOG_SPEW).
+ *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid loglevel.
  */
 SRD_API int srd_log_loglevel_set(int loglevel)
@@ -94,6 +95,7 @@ SRD_API int srd_log_loglevel_get(void)
  *                  In order to not use a logdomain, pass an empty string.
  *                  The function makes its own copy of the input string, i.e.
  *                  the caller does not need to keep it around.
+ *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid logdomain.
  */
 SRD_API int srd_log_logdomain_set(const char *logdomain)
@@ -134,6 +136,7 @@ SRD_API char *srd_log_logdomain_get(void)
  *                  and is never used or interpreted in any way. The pointer
  *                  is allowed to be NULL if the caller doesn't need/want to
  *                  pass any data.
+ *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  */
 SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *user_data)
@@ -156,7 +159,7 @@ SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *user_data)
  *
  * Additionally, the internal 'srd_log_handler_data' pointer is set to NULL.
  *
- * @return SRD_OK upon success, a negative error code otherwise.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_log_handler_set_default(void)
 {

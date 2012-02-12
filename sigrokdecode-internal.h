@@ -46,6 +46,9 @@ SRD_PRIV void srd_inst_free_all(GSList *stack);
 SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
 		    char *output_id);
 
+/*--- decoder.c -------------------------------------------------------------*/
+SRD_PRIV void *srd_find_callback(int output_type);
+
 /*--- exception.c -----------------------------------------------------------*/
 
 SRD_PRIV void catch_exception(const char *format, ...);

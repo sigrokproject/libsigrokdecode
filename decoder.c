@@ -45,6 +45,7 @@ SRD_API GSList *srd_list_decoders(void)
  * Get the decoder with the specified ID.
  *
  * @param id The ID string of the decoder to return.
+ *
  * @return The decoder with the specified ID, or NULL if not found.
  */
 SRD_API struct srd_decoder *srd_get_decoder_by_id(const char *id)
@@ -281,6 +282,14 @@ err_out:
 	return ret;
 }
 
+/**
+ * Return a protocol decoder's docstring.
+ *
+ * @param dec The loaded protocol decoder.
+ *
+ * @return A newly allocated buffer containing the docstring. The caller should
+ * free this after use.
+ */
 SRD_API char *srd_decoder_doc(struct srd_decoder *dec)
 {
 	PyObject *py_str;
@@ -362,6 +371,11 @@ SRD_API int srd_unload_decoder(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
+/**
+ * Load all protocol decoders libsigrokdecode knows about.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ */
 SRD_API int srd_load_all_decoders(void)
 {
 	GDir *dir;
@@ -390,7 +404,9 @@ SRD_API int srd_load_all_decoders(void)
 }
 
 /**
- * TODO
+ * Unload all loaded protocol decoders.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_unload_all_decoders(void)
 {
