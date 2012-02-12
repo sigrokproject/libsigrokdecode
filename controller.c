@@ -57,14 +57,18 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * Multiple calls to srd_init(), without calling srd_exit() in between,
  * are not allowed.
  *
+ * @param path Path to an extra directory containing protocol decoders
+ * 		which will be added to the python sys.path, or NULL.
+ *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         Upon Python errors, return SRD_ERR_PYTHON. If the sigrok decoders
  *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
  *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
  */
-SRD_API int srd_init(void)
+SRD_API int srd_init(char *path)
 {
 	int ret;
+	char *env_path;
 
 	srd_dbg("Initializing libsigrokdecode.");
 
@@ -74,9 +78,26 @@ SRD_API int srd_init(void)
 	/* Initialize the Python interpreter. */
 	Py_Initialize();
 
-	if ((ret = set_modulepath()) != SRD_OK) {
+	/* Installed decoders. */
+	if ((ret = add_modulepath(DECODERS_DIR)) != SRD_OK) {
 		Py_Finalize();
 		return ret;
+	}
+
+	/* Path specified by the user. */
+	if (path) {
+		if ((ret = add_modulepath(path)) != SRD_OK) {
+			Py_Finalize();
+			return ret;
+		}
+	}
+
+	/* Environment variable overrides everything, for debugging. */
+	if ((env_path = getenv("SIGROKDECODE_DIR"))) {
+		if ((ret = add_modulepath(path)) != SRD_OK) {
+			Py_Finalize();
+			return ret;
+		}
 	}
 
 	if ((ret = srd_load_all_decoders()) != SRD_OK) {
@@ -122,40 +143,62 @@ SRD_API int srd_exit(void)
  * Python modules which have the same name as a sigrok protocol decoder in
  * sys.path or in the current working directory.
  *
- * TODO: add path from env var SIGROKDECODE_PATH, config etc
- * TODO: Should take directoryname/path as input.
+ * @param path Path to an extra directory containing protocol decoders
+ * 		which will be added to the python sys.path, or NULL.
  *
- * @return TODO.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int set_modulepath(void)
+SRD_PRIV int add_modulepath(const char *path)
 {
-	int ret;
-	gchar *path, *s;
+	PyObject *py_cur_path, *py_item;
+	GString *new_path;
+	int wc_len, i;
+	wchar_t *wc_new_path;
+	char *item;
 
-#ifdef _WIN32
-	gchar **splitted;
+	srd_dbg("adding %s to module path", path);
 
-	/*
-	 * On Windows/MinGW, Python's sys.path needs entries of the form
-	 * 'C:\\foo\\bar' instead of '/foo/bar'.
-	 */
+	new_path = g_string_sized_new(256);
+	g_string_assign(new_path, g_strdup(path));
+	py_cur_path = PySys_GetObject("path");
+	for (i = 0; i < PyList_Size(py_cur_path); i++) {
+		g_string_append(new_path, g_strdup(G_SEARCHPATH_SEPARATOR_S));
+		py_item = PyList_GetItem(py_cur_path, i);
+		if (!PyUnicode_Check(py_item))
+			/* Shouldn't happen. */
+			continue;
+		if (py_str_as_str(py_item, &item) != SRD_OK)
+			continue;
+		g_string_append(new_path, item);
+	}
 
-	splitted = g_strsplit(DECODERS_DIR, "/", 0);
-	path = g_build_pathv("\\\\", splitted);
-	g_strfreev(splitted);
-#else
-	path = g_strdup(DECODERS_DIR);
-#endif
+	/* Convert to wide chars. */
+	wc_len = sizeof(wchar_t) * (new_path->len + 1);
+	if (!(wc_new_path = g_try_malloc(wc_len))) {
+		srd_dbg("malloc failed");
+		return SRD_ERR_MALLOC;
+	}
+	mbstowcs(wc_new_path, new_path->str, wc_len);
+	PySys_SetPath(wc_new_path);
+	g_string_free(new_path, TRUE);
+	g_free(wc_new_path);
 
-	/* TODO: Sanity check on 'path' (length, escape special chars, ...). */
-	s = g_strdup_printf("import sys; sys.path.insert(0, r'%s')", path);
+//#ifdef _WIN32
+//	gchar **splitted;
+//
+//	/*
+//	 * On Windows/MinGW, Python's sys.path needs entries of the form
+//	 * 'C:\\foo\\bar' instead of '/foo/bar'.
+//	 */
+//
+//	splitted = g_strsplit(DECODERS_DIR, "/", 0);
+//	path = g_build_pathv("\\\\", splitted);
+//	g_strfreev(splitted);
+//#else
+//	path = g_strdup(DECODERS_DIR);
+//#endif
 
-	ret = PyRun_SimpleString(s);
-
-	g_free(path);
-	g_free(s);
-
-	return ret;
+	return SRD_OK;
 }
 
 /**

@@ -199,9 +199,9 @@ typedef struct {
 
 /*--- controller.c ----------------------------------------------------------*/
 
-SRD_API int srd_init(void);
+SRD_API int srd_init(char *path);
 SRD_API int srd_exit(void);
-SRD_API int set_modulepath(void);
+SRD_PRIV int add_modulepath(const char *path);
 SRD_API int srd_inst_set_options(struct srd_decoder_inst *di,
 				     GHashTable *options);
 SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
