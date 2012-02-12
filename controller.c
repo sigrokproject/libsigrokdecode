@@ -332,6 +332,7 @@ static gint compare_probe_id(struct srd_probe *a, char *probe_id)
  * @param probes A GHashTable of probes to set. Key is probe name, value is
  *               the probe number. Samples passed to this instance will be
  *               arranged in this order.
+ *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
@@ -403,6 +404,7 @@ SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
  * @param id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
  *                the decoder class.
+ *
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
  */
@@ -593,7 +595,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_inst_decode(uint64_t start_samplenum,
+SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 				struct srd_decoder_inst *di,
 				uint8_t *inbuf, uint64_t inbuflen)
 {
@@ -645,7 +647,7 @@ SRD_API int srd_inst_decode(uint64_t start_samplenum,
 	return SRD_OK;
 }
 
-SRD_API void srd_inst_free(struct srd_decoder_inst *di)
+SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 {
 	GSList *l;
 	struct srd_pd_output *pdo;
@@ -664,7 +666,7 @@ SRD_API void srd_inst_free(struct srd_decoder_inst *di)
 	g_slist_free(di->pd_output);
 }
 
-SRD_API void srd_inst_free_all(GSList *stack)
+SRD_PRIV void srd_inst_free_all(GSList *stack)
 {
 	GSList *l;
 	struct srd_decoder_inst *di;

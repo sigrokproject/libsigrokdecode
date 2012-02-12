@@ -201,7 +201,6 @@ typedef struct {
 
 SRD_API int srd_init(char *path);
 SRD_API int srd_exit(void);
-SRD_PRIV int add_modulepath(const char *path);
 SRD_API int srd_inst_set_options(struct srd_decoder_inst *di,
 				     GHashTable *options);
 SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
@@ -211,12 +210,6 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 			       struct srd_decoder_inst *di_to);
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id);
-SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
-SRD_API int srd_inst_decode(uint64_t start_samplenum,
-				struct srd_decoder_inst *dec,
-				uint8_t *inbuf, uint64_t inbuflen);
-SRD_API void srd_inst_free(struct srd_decoder_inst *di);
-SRD_API void srd_inst_free_all(GSList *stack);
 SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);
 SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
