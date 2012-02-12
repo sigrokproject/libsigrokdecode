@@ -526,7 +526,7 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id)
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  */
-SRD_API struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
+SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
 							      PyObject *obj)
 {
 	GSList *l;
@@ -544,7 +544,7 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
 	return di;
 }
 
-SRD_API int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
+SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
 {
 	PyObject *py_name, *py_res;
 	GSList *l;

@@ -22,8 +22,6 @@
 #define LIBSIGROKDECODE_SIGROKDECODE_INTERNAL_H
 
 #include "sigrokdecode.h"
-// #include <stdarg.h>
-// #include <glib.h>
 
 /*--- Macros ----------------------------------------------------------------*/
 
@@ -59,5 +57,7 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
 SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
+SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
+							      PyObject *obj);
 
 #endif

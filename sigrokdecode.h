@@ -211,9 +211,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 			       struct srd_decoder_inst *di_to);
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id);
-SRD_API struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
-							      PyObject *obj);
-SRD_API int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
+SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
 SRD_API int srd_inst_decode(uint64_t start_samplenum,
 				struct srd_decoder_inst *dec,
 				uint8_t *inbuf, uint64_t inbuflen);
