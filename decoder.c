@@ -124,18 +124,17 @@ err_out:
  * Load a protocol decoder module into the embedded Python interpreter.
  *
  * @param name The module name to be loaded.
- * @param dec Pointer to the struct srd_decoder filled with the loaded module.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
+SRD_API int srd_load_decoder(const char *module_name)
 {
 	PyObject *py_basedec, *py_method, *py_attr, *py_annlist, *py_ann;
 	struct srd_decoder *d;
 	int alen, ret, i;
 	char **ann;
 
-	srd_dbg("Loading module '%s'.", name);
+	srd_dbg("Loading module '%s'.", module_name);
 
 	py_basedec = py_method = py_attr = NULL;
 
@@ -148,8 +147,8 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	ret = SRD_ERR_PYTHON;
 
 	/* Import the Python module. */
-	if (!(d->py_mod = PyImport_ImportModule(name))) {
-		catch_exception("import of '%s' failed.", name);
+	if (!(d->py_mod = PyImport_ImportModule(module_name))) {
+		catch_exception("import of '%s' failed.", module_name);
 		goto err_out;
 	}
 
@@ -157,7 +156,7 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	if (!(d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder"))) {
 		/* This generated an AttributeError exception. */
 		PyErr_Clear();
-		srd_err("Decoder class not found in protocol decoder %s.", name);
+		srd_err("Decoder class not found in protocol decoder %s.", module_name);
 		goto err_out;
 	}
 
@@ -168,7 +167,7 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 
 	if (!PyObject_IsSubclass(d->py_dec, py_basedec)) {
 		srd_err("Decoder class in protocol decoder module %s is not "
-			"a subclass of sigrokdecode.Decoder.", name);
+			"a subclass of sigrokdecode.Decoder.", module_name);
 		goto err_out;
 	}
 	Py_CLEAR(py_basedec);
@@ -176,13 +175,13 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Check for a proper start() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "start")) {
 		srd_err("Protocol decoder %s has no start() method Decoder "
-			"class.", name);
+			"class.", module_name);
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "start");
 	if (!PyFunction_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'start' "
-			"is not a method.", name);
+			"is not a method.", module_name);
 		goto err_out;
 	}
 	Py_CLEAR(py_method);
@@ -190,13 +189,13 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 	/* Check for a proper decode() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "decode")) {
 		srd_err("Protocol decoder %s has no decode() method Decoder "
-			"class.", name);
+			"class.", module_name);
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "decode");
 	if (!PyFunction_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'decode' "
-			"is not a method.", name);
+			"is not a method.", module_name);
 		goto err_out;
 	}
 	Py_CLEAR(py_method);
@@ -247,7 +246,7 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
 		if (!PyList_Check(py_annlist)) {
 			srd_err("Protocol decoder module %s annotations "
-				"should be a list.", name);
+				"should be a list.", module_name);
 			goto err_out;
 		}
 		alen = PyList_Size(py_annlist);
@@ -256,7 +255,7 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
 				srd_err("Protocol decoder module %s "
 					"annotation %d should be a list with "
-					"two elements.", name, i + 1);
+					"two elements.", module_name, i + 1);
 				goto err_out;
 			}
 
@@ -267,7 +266,9 @@ SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec)
 		}
 	}
 
-	*dec = d;
+	/* Append it to the list of supported/loaded decoders. */
+	pd_list = g_slist_append(pd_list, d);
+
 	ret = SRD_OK;
 
 err_out:
@@ -372,7 +373,7 @@ SRD_API int srd_unload_decoder(struct srd_decoder *dec)
 }
 
 /**
- * Load all protocol decoders libsigrokdecode knows about.
+ * Load all installed protocol decoders.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -380,23 +381,16 @@ SRD_API int srd_load_all_decoders(void)
 {
 	GDir *dir;
 	GError *error;
-	struct srd_decoder *dec;
-	int ret;
 	const gchar *direntry;
-	char *decodername;
 
 	if (!(dir = g_dir_open(DECODERS_DIR, 0, &error))) {
+		srd_err("Unable to open %s for reading.", DECODERS_DIR);
 		return SRD_ERR_DECODERS_DIR;
 	}
 
 	while ((direntry = g_dir_read_name(dir)) != NULL) {
-		/* The decoder name is the PD directory name (e.g. "i2c"). */
-		decodername = g_strdup(direntry);
-
-		if ((ret = srd_load_decoder(decodername, &dec)) == SRD_OK) {
-			/* Append it to the list of supported/loaded decoders. */
-			pd_list = g_slist_append(pd_list, dec);
-		}
+		/* The directory name is the module name (e.g. "i2c"). */
+		srd_load_decoder(direntry);
 	}
 	g_dir_close(dir);
 

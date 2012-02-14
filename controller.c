@@ -100,11 +100,6 @@ SRD_API int srd_init(char *path)
 		}
 	}
 
-	if ((ret = srd_load_all_decoders()) != SRD_OK) {
-		Py_Finalize();
-		return ret;
-	}
-
 	return SRD_OK;
 }
 

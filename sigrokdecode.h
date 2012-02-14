@@ -222,7 +222,7 @@ SRD_API int srd_register_callback(int output_type,
 
 SRD_API GSList *srd_list_decoders(void);
 SRD_API struct srd_decoder *srd_get_decoder_by_id(const char *id);
-SRD_API int srd_load_decoder(const char *name, struct srd_decoder **dec);
+SRD_API int srd_load_decoder(const char *name);
 SRD_API int srd_unload_decoder(struct srd_decoder *dec);
 SRD_API int srd_load_all_decoders(void);
 SRD_API int srd_unload_all_decoders(void);
