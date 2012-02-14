@@ -36,7 +36,7 @@ extern SRD_PRIV PyObject *mod_sigrokdecode;
  *
  * @return List of decoders, NULL if none are supported or loaded.
  */
-SRD_API GSList *srd_list_decoders(void)
+SRD_API GSList *srd_decoders_list(void)
 {
 	return pd_list;
 }
@@ -48,12 +48,12 @@ SRD_API GSList *srd_list_decoders(void)
  *
  * @return The decoder with the specified ID, or NULL if not found.
  */
-SRD_API struct srd_decoder *srd_get_decoder_by_id(const char *id)
+SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 {
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_list_decoders(); l; l = l->next) {
+	for (l = srd_decoders_list(); l; l = l->next) {
 		dec = l->data;
 		if (!strcmp(dec->id, id))
 			return dec;
@@ -127,7 +127,7 @@ err_out:
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_load_decoder(const char *module_name)
+SRD_API int srd_decoder_load(const char *module_name)
 {
 	PyObject *py_basedec, *py_method, *py_attr, *py_annlist, *py_ann;
 	struct srd_decoder *d;
@@ -338,7 +338,7 @@ static void free_probes(GSList *probelist)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_unload_decoder(struct srd_decoder *dec)
+SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
 	srd_dbg("unloading decoder %s", dec->name);
 
@@ -377,7 +377,7 @@ SRD_API int srd_unload_decoder(struct srd_decoder *dec)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_load_all_decoders(void)
+SRD_API int srd_decoders_load_all(void)
 {
 	GDir *dir;
 	GError *error;
@@ -390,7 +390,7 @@ SRD_API int srd_load_all_decoders(void)
 
 	while ((direntry = g_dir_read_name(dir)) != NULL) {
 		/* The directory name is the module name (e.g. "i2c"). */
-		srd_load_decoder(direntry);
+		srd_decoder_load(direntry);
 	}
 	g_dir_close(dir);
 
@@ -402,14 +402,14 @@ SRD_API int srd_load_all_decoders(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_unload_all_decoders(void)
+SRD_API int srd_decoders_unload_all(void)
 {
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_list_decoders(); l; l = l->next) {
+	for (l = srd_decoders_list(); l; l = l->next) {
 		dec = l->data;
-		srd_unload_decoder(dec);
+		srd_decoder_unload(dec);
 	}
 
 	return SRD_OK;

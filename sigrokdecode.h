@@ -201,9 +201,9 @@ typedef struct {
 
 SRD_API int srd_init(char *path);
 SRD_API int srd_exit(void);
-SRD_API int srd_inst_set_options(struct srd_decoder_inst *di,
+SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
 				     GHashTable *options);
-SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
+SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
 				    GHashTable *probes);
 SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
 						      GHashTable *options);
@@ -214,18 +214,17 @@ SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);
 SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 			     uint64_t inbuflen);
-SRD_API struct srd_decoder_inst *get_di_by_decobject(void *decobject);
 SRD_API int srd_register_callback(int output_type,
 				  srd_pd_output_callback_t cb, void *user_data);
 
 /*--- decoder.c -------------------------------------------------------------*/
 
-SRD_API GSList *srd_list_decoders(void);
-SRD_API struct srd_decoder *srd_get_decoder_by_id(const char *id);
-SRD_API int srd_load_decoder(const char *name);
-SRD_API int srd_unload_decoder(struct srd_decoder *dec);
-SRD_API int srd_load_all_decoders(void);
-SRD_API int srd_unload_all_decoders(void);
+SRD_API GSList *srd_decoders_list(void);
+SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id);
+SRD_API int srd_decoder_load(const char *name);
+SRD_API int srd_decoder_unload(struct srd_decoder *dec);
+SRD_API int srd_decoders_load_all(void);
+SRD_API int srd_decoders_unload_all(void);
 SRD_API char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- log.c -----------------------------------------------------------------*/

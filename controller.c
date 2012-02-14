@@ -49,7 +49,7 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * Then, it searches for sigrok protocol decoder files (*.py) in the
  * "decoders" subdirectory of the the sigrok installation directory.
  * All decoders that are found are loaded into memory and added to an
- * internal list of decoders, which can be queried via srd_list_decoders().
+ * internal list of decoders, which can be queried via srd_decoders_list().
  *
  * The caller is responsible for calling the clean-up function srd_exit(),
  * which will properly shut down libsigrokdecode and free its allocated memory.
@@ -119,7 +119,7 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	srd_unload_all_decoders();
+	srd_decoders_unload_all();
 	g_slist_free(pd_list);
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
@@ -206,7 +206,7 @@ SRD_PRIV int add_modulepath(const char *path)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_inst_set_options(struct srd_decoder_inst *di,
+SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
 				     GHashTable *options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
@@ -314,7 +314,7 @@ err_out:
 	return ret;
 }
 
-/* Helper GComparefunc for g_slist_find_custom() in srd_inst_set_probes() */
+/* Helper GComparefunc for g_slist_find_custom() in srd_inst_probes_set() */
 static gint compare_probe_id(struct srd_probe *a, char *probe_id)
 {
 	return strcmp(a->id, probe_id);
@@ -330,7 +330,7 @@ static gint compare_probe_id(struct srd_probe *a, char *probe_id)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_inst_set_probes(struct srd_decoder_inst *di,
+SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
 				    GHashTable *new_probes)
 {
 	GList *l;
@@ -413,7 +413,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 
 	srd_dbg("Creating new %s instance.", decoder_id);
 
-	if (!(dec = srd_get_decoder_by_id(decoder_id))) {
+	if (!(dec = srd_decoder_get_by_id(decoder_id))) {
 		srd_err("Protocol decoder %s not found.", decoder_id);
 		return NULL;
 	}
@@ -454,7 +454,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	if (srd_inst_set_options(di, options) != SRD_OK) {
+	if (srd_inst_options_set(di, options) != SRD_OK) {
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
