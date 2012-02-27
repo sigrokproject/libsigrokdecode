@@ -74,4 +74,3 @@ class Decoder(srd.Decoder):
         else:
             raise Exception('Invalid state: %s' % self.state)
 
-

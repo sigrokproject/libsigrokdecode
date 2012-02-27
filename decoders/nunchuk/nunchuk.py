@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
     optional_probes = [] # TODO
     options = {}
     annotations = [
-        ['TODO', 'TODO'], 
+        ['TODO', 'TODO'],
     ]
 
     def __init__(self, **kwargs):
@@ -121,7 +121,7 @@ class Decoder(srd.Decoder):
             if self.state == IDLE:
                 self.state = INITIALIZED
             return
-    
+
             if databyte == 0x40 and self.state == START:
                 self.state = INIT
             elif databyte == 0x00 and self.state == INIT:

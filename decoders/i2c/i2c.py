@@ -33,9 +33,9 @@
 import sigrokdecode as srd
 
 # Annotation feed formats
-ANN_SHIFTED       = 0
+ANN_SHIFTED = 0
 ANN_SHIFTED_SHORT = 1
-ANN_RAW           = 2
+ANN_RAW = 2
 
 # Values are verbose and short annotation, respectively.
 protocol = {

@@ -30,7 +30,6 @@
 import sigrokdecode as srd
 import os
 
-
 EDID_HEADER = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00]
 OFF_VENDOR = 8
 OFF_VERSION = 18
@@ -60,7 +59,7 @@ est_modes = [
     "1024x768@70Hz",
     "1024x768@75Hz",
     "1280x1024@75Hz",
-    "1152x870@75Hz"
+    "1152x870@75Hz",
 ]
 
 # X:Y display aspect ratios, as used in standard timing modes
@@ -68,13 +67,12 @@ xy_ratio = [
     (16, 10),
     (4, 3),
     (5, 4),
-    (16, 9)
+    (16, 9),
 ]
 
 # Annotation types
 ANN_FIELDS = 0
 ANN_SECTIONS = 1
-
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -107,7 +105,7 @@ class Decoder(srd.Decoder):
         if type(data) != int:
             raise Exception('malformed ddc2 input: expected 1 byte')
         self.cnt += 1
-        self.sn.append( [ss, es] )
+        self.sn.append([ss, es])
         self.cache.append(data)
         # debug
 #        self.put(ss, es, self.out_ann, [0, ["%d: [%.2x]" % (self.cnt, data)]])
@@ -258,7 +256,7 @@ class Decoder(srd.Decoder):
         elif dt == 1:
             dtstr = 'RGB color'
         elif dt == 2:
-            dtstr = 'non-RGB multicolor' 
+            dtstr = 'non-RGB multicolor'
         if dtstr:
             self.ann_field(offset+4, offset+4, "Display type: %s" % dtstr)
         if fs & 0x04:
@@ -430,15 +428,15 @@ class Decoder(srd.Decoder):
             # Monitor range limits
             self.put(self.sn[offset][0], self.sn[offset+17][1], self.out_ann,
                      [ANN_SECTIONS, ["Monitor range limits"]])
-            self.ann_field(offset+5, offset+5, "Minimum vertical rate: %dHz" % 
+            self.ann_field(offset+5, offset+5, "Minimum vertical rate: %dHz" %
                            self.cache[offset+5])
-            self.ann_field(offset+6, offset+6, "Maximum vertical rate: %dHz" % 
+            self.ann_field(offset+6, offset+6, "Maximum vertical rate: %dHz" %
                            self.cache[offset+6])
-            self.ann_field(offset+7, offset+7, "Minimum horizontal rate: %dkHz" % 
+            self.ann_field(offset+7, offset+7, "Minimum horizontal rate: %dkHz" %
                            self.cache[offset+7])
-            self.ann_field(offset+8, offset+8, "Maximum horizontal rate: %dkHz" % 
+            self.ann_field(offset+8, offset+8, "Maximum horizontal rate: %dkHz" %
                            self.cache[offset+8])
-            self.ann_field(offset+9, offset+9, "Maximum pixel clock: %dMHz" % 
+            self.ann_field(offset+9, offset+9, "Maximum pixel clock: %dMHz" %
                            (self.cache[offset+9] * 10))
             if self.cache[offset+10] == 0x02:
                 # Secondary GTF curve supported
@@ -463,7 +461,4 @@ class Decoder(srd.Decoder):
             else:
                 if self.cache[i+2] == 0 or self.cache[i+4] == 0:
                     self.decode_descriptor(i)
-
-
-
 

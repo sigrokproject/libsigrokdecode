@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['TODO', 'TODO'], 
+        ['TODO', 'TODO'],
     ]
 
     def __init__(self, **kwargs):
@@ -205,7 +205,7 @@ class Decoder(srd.Decoder):
                 self.state = READ_RTC_REGS2
                 return
             else:
-               pass # TODO
+                pass # TODO
         elif self.state == READ_RTC_REGS2:
             if cmd == 'DATA READ':
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
