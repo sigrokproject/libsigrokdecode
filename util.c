@@ -98,7 +98,7 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
 
 	ret = py_str_as_str(py_value, outstr);
 
-	return SRD_OK;
+	return ret;
 }
 
 /**
