@@ -94,7 +94,7 @@ SRD_API int srd_init(char *path)
 
 	/* Environment variable overrides everything, for debugging. */
 	if ((env_path = getenv("SIGROKDECODE_DIR"))) {
-		if ((ret = add_modulepath(path)) != SRD_OK) {
+		if ((ret = add_modulepath(env_path)) != SRD_OK) {
 			Py_Finalize();
 			return ret;
 		}
