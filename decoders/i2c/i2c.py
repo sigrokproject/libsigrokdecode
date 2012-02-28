@@ -54,6 +54,7 @@ protocol = {
 FIND_START = 0
 FIND_ADDRESS = 1
 FIND_DATA = 2
+FIND_ACK = 3
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -61,7 +62,6 @@ class Decoder(srd.Decoder):
     name = 'I2C'
     longname = 'Inter-Integrated Circuit'
     desc = 'I2C is a two-wire, multi-master, serial bus.'
-    longdesc = '...'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']
@@ -124,7 +124,7 @@ class Decoder(srd.Decoder):
         self.startsample = self.samplenum
 
         cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
-        self.put(self.out_proto, [cmd, None, None])
+        self.put(self.out_proto, [cmd, None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1]]])
 
@@ -144,15 +144,15 @@ class Decoder(srd.Decoder):
 
         # Return if we haven't collected all 8 + 1 bits, yet.
         self.bitcount += 1
-        if self.bitcount != 9:
+        if self.bitcount != 8:
             return
 
-        # Send raw output annotation before we start shifting out
-        # read/write and ack/nack bits.
-        self.put(self.out_ann, [ANN_RAW, ['0x%.2x' % self.databyte]])
+        # We triggered on the ACK/NACK bit, but won't report that until later.
+        self.startsample -= 1
 
-        # We received 8 address/data bits and the ACK/NACK bit.
-        self.databyte >>= 1 # Shift out unwanted ACK/NACK bit here.
+        # Send raw output annotation before we start shifting out
+        # read/write and ACK/NACK bits.
+        self.put(self.out_ann, [ANN_RAW, ['0x%.2x' % self.databyte]])
 
         if self.state == FIND_ADDRESS:
             # The READ/WRITE bit is only in address bytes, not data bytes.
@@ -160,12 +160,6 @@ class Decoder(srd.Decoder):
             d = self.databyte >> 1
         elif self.state == FIND_DATA:
             d = self.databyte
-        else:
-            # TODO: Error?
-            pass
-
-        # Last bit that came in was the ACK/NACK bit (1 = NACK).
-        ack_bit = 'NACK' if (sda == 1) else 'ACK'
 
         if self.state == FIND_ADDRESS and self.wr == 1:
             cmd = 'ADDRESS WRITE'
@@ -176,26 +170,28 @@ class Decoder(srd.Decoder):
         elif self.state == FIND_DATA and self.wr == 0:
             cmd = 'DATA READ'
 
-        self.put(self.out_proto, [cmd, d, ack_bit])
-        self.put(self.out_ann, [ANN_SHIFTED,
-                 [protocol[cmd][0], '0x%02x' % d, protocol[ack_bit][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT,
-                 [protocol[cmd][1], '0x%02x' % d, protocol[ack_bit][1]]])
+        self.put(self.out_proto, [cmd, d])
+        self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0], '0x%02x' % d]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1], '0x%02x' % d]])
 
-        self.bitcount = self.databyte = 0
+        # Done with this packet.
         self.startsample = -1
+        self.bitcount = self.databyte = 0
+        self.state = FIND_ACK
 
-        if self.state == FIND_ADDRESS:
-            self.state = FIND_DATA
-        elif self.state == FIND_DATA:
-            # There could be multiple data bytes in a row.
-            # So, either find a STOP condition or another data byte next.
-            pass
+    def get_ack(self, scl, sda):
+        self.startsample = self.samplenum
+        ack_bit = 'NACK' if (sda == 1) else 'ACK'
+        self.put(self.out_proto, [ack_bit, None])
+        self.put(self.out_ann, [ANN_SHIFTED, [protocol[ack_bit][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[ack_bit][1]]])
+        # There could be multiple data bytes in a row, so either find
+        # another data byte or a STOP condition next.
+        self.state = FIND_DATA
 
     def found_stop(self, scl, sda):
         self.startsample = self.samplenum
-
-        self.put(self.out_proto, ['STOP', None, None])
+        self.put(self.out_proto, ['STOP', None])
         self.put(self.out_ann, [ANN_SHIFTED, [protocol['STOP'][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol['STOP'][1]]])
 
@@ -233,6 +229,9 @@ class Decoder(srd.Decoder):
                     self.found_start(scl, sda)
                 elif self.is_stop_condition(scl, sda):
                     self.found_stop(scl, sda)
+            elif self.state == FIND_ACK:
+                if self.is_data_bit(scl, sda):
+                    self.get_ack(scl, sda)
             else:
                 raise Exception('Invalid state %d' % self.STATE)
 

@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
 
-        cmd, databyte, ack_bit = data
+        cmd, databyte = data
 
         if cmd == 'START': # TODO: Handle 'Sr' here, too?
             self.state = START

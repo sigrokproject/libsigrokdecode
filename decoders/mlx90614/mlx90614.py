@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
 
     # Quick hack implementation! This needs to be improved a lot!
     def decode(self, ss, es, data):
-        cmd, databyte, ack = data
+        cmd, databyte = data
 
         # State machine.
         if self.state == 'IGNORE START REPEAT':

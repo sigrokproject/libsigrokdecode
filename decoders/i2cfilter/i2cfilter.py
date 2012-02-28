@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         try:
-            cmd, data, ack_bit = data
+            cmd, data = data
         except Exception as e:
             raise Exception('Malformed I2C input: %s' % str(e)) from e
 
@@ -56,6 +56,9 @@ class Decoder(srd.Decoder):
             return
         if cmd == 'STOP':
             self.state = None
+            return
+        if cmd in ('ACK', 'NACK'):
+            # Don't care, we just want data.
             return
 
         if self.state == 'start':

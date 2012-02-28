@@ -154,7 +154,7 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        cmd, databyte, ack = data
+        cmd, databyte = data
 
         # Store the start/end samples of this I2C packet.
         self.ss, self.es = ss, es

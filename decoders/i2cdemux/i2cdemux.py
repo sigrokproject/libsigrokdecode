@@ -57,7 +57,7 @@ class Decoder(srd.Decoder):
     # get the whole chunk of packets (from START to STOP).
     def decode(self, ss, es, data):
 
-        cmd, databyte, ack = data
+        cmd, databyte = data
 
         # Add the I2C packet to our local cache.
         self.packets.append([ss, es, data])
