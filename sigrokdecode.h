@@ -178,7 +178,7 @@ typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata,
 
 struct srd_pd_callback {
 	int output_type;
-	srd_pd_output_callback_t callback;
+	srd_pd_output_callback_t cb;
 	void *user_data;
 };
 

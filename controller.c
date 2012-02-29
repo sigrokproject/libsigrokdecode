@@ -767,7 +767,7 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
  * stack).
  *
  * @param output_type The output type this callback will receive. Only one
- * callback per output type can be registered.
+ *                    callback per output type can be registered.
  * @param cb The function to call.
  * @param user_data Unused.
  */
@@ -784,7 +784,7 @@ SRD_API int srd_register_callback(int output_type,
 	}
 
 	pd_cb->output_type = output_type;
-	pd_cb->callback = cb;
+	pd_cb->cb = cb;
 	pd_cb->user_data = user_data;
 	callbacks = g_slist_append(callbacks, pd_cb);
 
@@ -801,7 +801,7 @@ SRD_PRIV void *srd_find_callback(int output_type)
 	for (l = callbacks; l; l = l->next) {
 		pd_cb = l->data;
 		if (pd_cb->output_type == output_type) {
-			cb = pd_cb->callback;
+			cb = pd_cb->cb;
 			break;
 		}
 	}
