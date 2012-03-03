@@ -229,13 +229,13 @@ SRD_API char *srd_decoder_doc(struct srd_decoder *dec);
 
 /*--- log.c -----------------------------------------------------------------*/
 
-typedef int (*srd_log_handler_t)(void *cb_data, int loglevel,
-				 const char *format, va_list args);
+typedef int (*srd_log_callback_t)(void *cb_data, int loglevel,
+				  const char *format, va_list args);
 
 SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
-SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *cb_data);
-SRD_API int srd_log_handler_set_default(void);
+SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data);
+SRD_API int srd_log_callback_set_default(void);
 SRD_API int srd_log_logdomain_set(const char *logdomain);
 SRD_API char *srd_log_logdomain_get(void);
 

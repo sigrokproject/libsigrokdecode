@@ -30,14 +30,14 @@ static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 static int srd_logv(void *cb_data, int loglevel, const char *format,
 		    va_list args);
 
-/* Pointer to the currently selected log handler. Default: srd_logv(). */
-static srd_log_handler_t srd_log_handler = srd_logv;
+/* Pointer to the currently selected log callback. Default: srd_logv(). */
+static srd_log_callback_t srd_log_callback = srd_logv;
 
 /*
- * Pointer to private data that can be passed to the log handler.
+ * Pointer to private data that can be passed to the log callback.
  * This can be used (for example) by C++ GUIs to pass a "this" pointer.
  */
-static void *srd_log_handler_data = NULL;
+static void *srd_log_callback_data = NULL;
 
 /* Log domain (a short string that is used as prefix for all messages). */
 #define LOGDOMAIN_MAXLEN 30
@@ -126,10 +126,10 @@ SRD_API char *srd_log_logdomain_get(void)
 }
 
 /**
- * Set the libsigrokdecode log handler to the specified function.
+ * Set the libsigrokdecode log callback to the specified function.
  *
- * @param handler Function pointer to the log handler function to use.
- *                Must not be NULL.
+ * @param cb Function pointer to the log callback function to use.
+ *           Must not be NULL.
  * @param cb_data Pointer to private data to be passed on. This can be used
  *                by the caller to pass arbitrary data to the log functions.
  *                This pointer is only stored or passed on by libsigrokdecode,
@@ -139,36 +139,36 @@ SRD_API char *srd_log_logdomain_get(void)
  *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  */
-SRD_API int srd_log_handler_set(srd_log_handler_t handler, void *cb_data)
+SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data)
 {
-	if (!handler) {
-		srd_err("log: %s: handler was NULL", __func__);
+	if (!cb) {
+		srd_err("log: %s: cb was NULL", __func__);
 		return SRD_ERR_ARG;
 	}
 
 	/* Note: 'cb_data' is allowed to be NULL. */
 
-	srd_log_handler = handler;
-	srd_log_handler_data = cb_data;
+	srd_log_callback = cb;
+	srd_log_callback_data = cb_data;
 
 	return SRD_OK;
 }
 
 /**
- * Set the libsigrokdecode log handler to the default built-in one.
+ * Set the libsigrokdecode log callback to the default built-in one.
  *
- * Additionally, the internal 'srd_log_handler_data' pointer is set to NULL.
+ * Additionally, the internal 'srd_log_callback_data' pointer is set to NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_log_handler_set_default(void)
+SRD_API int srd_log_callback_set_default(void)
 {
 	/*
 	 * Note: No log output in this function, as it should safely work
-	 * even if the currently set log handler is buggy/broken.
+	 * even if the currently set log callback is buggy/broken.
 	 */
-	srd_log_handler = srd_logv;
-	srd_log_handler_data = NULL;
+	srd_log_callback = srd_logv;
+	srd_log_callback_data = NULL;
 
 	return SRD_OK;
 }
@@ -178,7 +178,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 {
 	int ret;
 
-	/* This specific log handler doesn't need the void pointer data. */
+	/* This specific log callback doesn't need the void pointer data. */
 	(void)cb_data;
 
 	/* Only output messages of at least the selected loglevel(s). */
@@ -199,7 +199,7 @@ SRD_PRIV int srd_log(int loglevel, const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, loglevel, format, args);
+	ret = srd_log_callback(srd_log_callback_data, loglevel, format, args);
 	va_end(args);
 
 	return ret;
@@ -211,7 +211,8 @@ SRD_PRIV int srd_spew(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_SPEW, format, args);
+	ret = srd_log_callback(srd_log_callback_data, SRD_LOG_SPEW,
+			       format, args);
 	va_end(args);
 
 	return ret;
@@ -223,7 +224,8 @@ SRD_PRIV int srd_dbg(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_DBG, format, args);
+	ret = srd_log_callback(srd_log_callback_data, SRD_LOG_DBG,
+			       format, args);
 	va_end(args);
 
 	return ret;
@@ -235,7 +237,8 @@ SRD_PRIV int srd_info(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_INFO, format, args);
+	ret = srd_log_callback(srd_log_callback_data, SRD_LOG_INFO,
+			       format, args);
 	va_end(args);
 
 	return ret;
@@ -247,7 +250,8 @@ SRD_PRIV int srd_warn(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_WARN, format, args);
+	ret = srd_log_callback(srd_log_callback_data, SRD_LOG_WARN,
+			       format, args);
 	va_end(args);
 
 	return ret;
@@ -259,7 +263,8 @@ SRD_PRIV int srd_err(const char *format, ...)
 	va_list args;
 
 	va_start(args, format);
-	ret = srd_log_handler(srd_log_handler_data, SRD_LOG_ERR, format, args);
+	ret = srd_log_callback(srd_log_callback_data, SRD_LOG_ERR,
+			       format, args);
 	va_end(args);
 
 	return ret;
