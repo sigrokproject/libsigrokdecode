@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2cdata')
         if self.options['direction'] not in ('', 'read', 'write'):
-            raise Exception("Invalid direction: expected 'read' or 'write'")
+            raise Exception('Invalid direction: expected "read" or "write"')
 
     def decode(self, ss, es, data):
         try:
