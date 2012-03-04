@@ -22,13 +22,6 @@
 
 import sigrokdecode as srd
 
-# States
-WAIT_FOR_START_BIT = 0
-GET_START_BIT = 1
-GET_DATA_BITS = 2
-GET_PARITY_BIT = 3
-GET_STOP_BITS = 4
-
 # Used for differentiating between the two data directions.
 RX = 0
 TX = 1
@@ -111,7 +104,7 @@ class Decoder(srd.Decoder):
         self.startsample = [-1, -1]
 
         # Initial state.
-        self.state = [WAIT_FOR_START_BIT, WAIT_FOR_START_BIT]
+        self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
 
         self.oldbit = [None, None]
 
@@ -153,7 +146,7 @@ class Decoder(srd.Decoder):
         # Save the sample number where the start bit begins.
         self.frame_start[rxtx] = self.samplenum
 
-        self.state[rxtx] = GET_START_BIT
+        self.state[rxtx] = 'GET START BIT'
 
     def get_start_bit(self, rxtx, signal):
         # Skip samples until we're in the middle of the start bit.
@@ -172,7 +165,7 @@ class Decoder(srd.Decoder):
         self.databyte[rxtx] = 0
         self.startsample[rxtx] = -1
 
-        self.state[rxtx] = GET_DATA_BITS
+        self.state[rxtx] = 'GET DATA BITS'
 
         self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
                  ['STARTBIT', rxtx, self.startbit[rxtx]])
@@ -206,7 +199,7 @@ class Decoder(srd.Decoder):
             self.cur_data_bit[rxtx] += 1
             return
 
-        self.state[rxtx] = GET_PARITY_BIT
+        self.state[rxtx] = 'GET PARITY BIT'
 
         self.put(self.startsample[rxtx], self.samplenum - 1, self.out_proto,
                  ['DATA', rxtx, self.databyte[rxtx]])
@@ -224,7 +217,7 @@ class Decoder(srd.Decoder):
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
         if self.options['parity_type'] == 'none':
-            self.state[rxtx] = GET_STOP_BITS
+            self.state[rxtx] = 'GET STOP BITS'
             return
 
         # Skip samples until we're in the middle of the parity bit.
@@ -233,7 +226,7 @@ class Decoder(srd.Decoder):
 
         self.paritybit[rxtx] = signal
 
-        self.state[rxtx] = GET_STOP_BITS
+        self.state[rxtx] = 'GET STOP BITS'
 
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.databyte[rxtx], self.options['num_data_bits']):
@@ -266,7 +259,7 @@ class Decoder(srd.Decoder):
                      ['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
             # TODO: Abort? Ignore the frame? Other?
 
-        self.state[rxtx] = WAIT_FOR_START_BIT
+        self.state[rxtx] = 'WAIT FOR START BIT'
 
         # TODO: Fix range.
         self.put(self.samplenum, self.samplenum, self.out_proto,
@@ -293,15 +286,15 @@ class Decoder(srd.Decoder):
             for rxtx in (RX, TX):
                 signal = rx if (rxtx == RX) else tx
 
-                if self.state[rxtx] == WAIT_FOR_START_BIT:
+                if self.state[rxtx] == 'WAIT FOR START BIT':
                     self.wait_for_start_bit(rxtx, self.oldbit[rxtx], signal)
-                elif self.state[rxtx] == GET_START_BIT:
+                elif self.state[rxtx] == 'GET START BIT':
                     self.get_start_bit(rxtx, signal)
-                elif self.state[rxtx] == GET_DATA_BITS:
+                elif self.state[rxtx] == 'GET DATA BITS':
                     self.get_data_bits(rxtx, signal)
-                elif self.state[rxtx] == GET_PARITY_BIT:
+                elif self.state[rxtx] == 'GET PARITY BIT':
                     self.get_parity_bit(rxtx, signal)
-                elif self.state[rxtx] == GET_STOP_BITS:
+                elif self.state[rxtx] == 'GET STOP BITS':
                     self.get_stop_bits(rxtx, signal)
                 else:
                     raise Exception('Invalid state: %d' % self.state[rxtx])

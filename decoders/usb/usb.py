@@ -22,15 +22,12 @@
 
 import sigrokdecode as srd
 
-# States
-SE0, J, K, SE1 = 0, 1, 2, 3
-
-# ...
+# Symbols (used as states of our state machine, too)
 syms = {
-        (0, 0): SE0,
-        (1, 0): J,
-        (0, 1): K,
-        (1, 1): SE1,
+        (0, 0): 'SE0',
+        (1, 0): 'J',
+        (0, 1): 'K',
+        (1, 1): 'SE1',
 }
 
 # ...
@@ -118,7 +115,7 @@ class Decoder(srd.Decoder):
                             'decoding, need at least 48MHz' % self.rate)
 
         # Initialise decoder state.
-        self.sym = J
+        self.sym = 'J'
         self.scount = 0
         self.packet = ''
 
@@ -144,12 +141,12 @@ class Decoder(srd.Decoder):
                 continue
 
             # How many bits since the last transition?
-            if self.packet != '' or self.sym != J:
+            if self.packet != '' or self.sym != 'J':
                 bitcount = int((self.scount - 1) * 12000000 / self.rate)
             else:
                 bitcount = 0
 
-            if self.sym == SE0:
+            if self.sym == 'SE0':
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
                     self.put(0, 0, self.out_ann,
@@ -166,7 +163,7 @@ class Decoder(srd.Decoder):
             self.packet += '1' * bitcount
 
             # Handle bit stuffing.
-            if bitcount < 6 and sym != SE0:
+            if bitcount < 6 and sym != 'SE0':
                 self.packet += '0'
             elif bitcount > 6:
                 self.put(0, 0, self.out_ann, [0, ['BIT STUFF ERROR']])

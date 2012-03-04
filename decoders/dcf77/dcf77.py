@@ -23,10 +23,6 @@
 import sigrokdecode as srd
 import calendar
 
-# States
-WAIT_FOR_RISING_EDGE = 0
-GET_BIT = 1
-
 # Annotation feed formats
 ANN_ASCII = 0
 
@@ -57,7 +53,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.state = WAIT_FOR_RISING_EDGE
+        self.state = 'WAIT FOR RISING EDGE'
         self.oldval = None
         self.samplenum = 0
         self.bit_start = 0
@@ -208,7 +204,7 @@ class Decoder(srd.Decoder):
 
             self.samplenum += 1 # FIXME. Use samplenum. Off-by-one?
 
-            if self.state == WAIT_FOR_RISING_EDGE:
+            if self.state == 'WAIT FOR RISING EDGE':
                 # Wait until the next rising edge occurs.
                 if not (self.oldval == 0 and val == 1):
                     self.oldval = val
@@ -262,7 +258,7 @@ class Decoder(srd.Decoder):
                     self.handle_dcf77_bit(bit)
                     self.bitcount += 1
 
-                self.state = WAIT_FOR_RISING_EDGE
+                self.state = 'WAIT FOR RISING EDGE'
 
             else:
                 raise Exception('Invalid state: %d' % self.state)

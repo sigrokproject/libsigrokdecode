@@ -22,13 +22,6 @@
 
 import sigrokdecode as srd
 
-# States
-IDLE = 0
-START = 1
-NUNCHUK_SLAVE = 2
-INIT = 3
-INITIALIZED = 4
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'nunchuk'
@@ -47,7 +40,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.state = IDLE # TODO: Can we assume a certain initial state?
+        self.state = 'IDLE' # TODO: Can we assume a certain initial state?
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
         self.databytecount = 0
 
@@ -63,7 +56,7 @@ class Decoder(srd.Decoder):
         cmd, databyte = data
 
         if cmd == 'START': # TODO: Handle 'Sr' here, too?
-            self.state = START
+            self.state = 'START'
 
         elif cmd == 'START REPEAT':
             pass # FIXME
@@ -80,7 +73,7 @@ class Decoder(srd.Decoder):
             else:
                 pass # TODO: What to do here? Ignore? Error?
 
-        elif cmd == 'DATA READ' and self.state == INITIALIZED:
+        elif cmd == 'DATA READ' and self.state == 'INITIALIZED':
             if self.databytecount == 0:
                 self.sx = databyte
             elif self.databytecount == 1:
@@ -114,23 +107,23 @@ class Decoder(srd.Decoder):
             # TODO: If 6 bytes read -> save and reset
 
         # TODO
-        elif cmd == 'DATA READ' and self.state != INITIALIZED:
+        elif cmd == 'DATA READ' and self.state != 'INITIALIZED':
             pass
 
         elif cmd == 'DATA WRITE':
-            if self.state == IDLE:
-                self.state = INITIALIZED
+            if self.state == 'IDLE':
+                self.state = 'INITIALIZED'
             return
 
-            if databyte == 0x40 and self.state == START:
-                self.state = INIT
-            elif databyte == 0x00 and self.state == INIT:
+            if databyte == 0x40 and self.state == 'START':
+                self.state = 'INIT'
+            elif databyte == 0x00 and self.state == 'INIT':
                 self.put(ss, es, self.out_ann, [0, ['Initialize nunchuk']])
-                self.state = INITIALIZED
+                self.state = 'INITIALIZED'
             else:
                 pass # TODO
 
         elif cmd == 'STOP':
-            self.state = INITIALIZED
+            self.state = 'INITIALIZED'
             self.databytecount = 0
 

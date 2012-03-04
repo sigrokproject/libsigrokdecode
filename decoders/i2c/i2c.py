@@ -50,12 +50,6 @@ protocol = {
     'DATA WRITE':      ['DATA WRITE',    'DW'],
 }
 
-# States
-FIND_START = 0
-FIND_ADDRESS = 1
-FIND_DATA = 2
-FIND_ACK = 3
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2c'
@@ -91,7 +85,7 @@ class Decoder(srd.Decoder):
         self.databyte = 0
         self.wr = -1
         self.is_repeat_start = 0
-        self.state = FIND_START
+        self.state = 'FIND START'
         self.oldscl = None
         self.oldsda = None
 
@@ -128,7 +122,7 @@ class Decoder(srd.Decoder):
         self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1]]])
 
-        self.state = FIND_ADDRESS
+        self.state = 'FIND ADDRESS'
         self.bitcount = self.databyte = 0
         self.is_repeat_start = 1
         self.wr = -1
@@ -154,20 +148,20 @@ class Decoder(srd.Decoder):
         # read/write and ACK/NACK bits.
         self.put(self.out_ann, [ANN_RAW, ['0x%.2x' % self.databyte]])
 
-        if self.state == FIND_ADDRESS:
+        if self.state == 'FIND ADDRESS':
             # The READ/WRITE bit is only in address bytes, not data bytes.
             self.wr = 0 if (self.databyte & 1) else 1
             d = self.databyte >> 1
-        elif self.state == FIND_DATA:
+        elif self.state == 'FIND DATA':
             d = self.databyte
 
-        if self.state == FIND_ADDRESS and self.wr == 1:
+        if self.state == 'FIND ADDRESS' and self.wr == 1:
             cmd = 'ADDRESS WRITE'
-        elif self.state == FIND_ADDRESS and self.wr == 0:
+        elif self.state == 'FIND ADDRESS' and self.wr == 0:
             cmd = 'ADDRESS READ'
-        elif self.state == FIND_DATA and self.wr == 1:
+        elif self.state == 'FIND DATA' and self.wr == 1:
             cmd = 'DATA WRITE'
-        elif self.state == FIND_DATA and self.wr == 0:
+        elif self.state == 'FIND DATA' and self.wr == 0:
             cmd = 'DATA READ'
 
         self.put(self.out_proto, [cmd, d])
@@ -177,7 +171,7 @@ class Decoder(srd.Decoder):
         # Done with this packet.
         self.startsample = -1
         self.bitcount = self.databyte = 0
-        self.state = FIND_ACK
+        self.state = 'FIND ACK'
 
     def get_ack(self, scl, sda):
         self.startsample = self.samplenum
@@ -187,7 +181,7 @@ class Decoder(srd.Decoder):
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[ack_bit][1]]])
         # There could be multiple data bytes in a row, so either find
         # another data byte or a STOP condition next.
-        self.state = FIND_DATA
+        self.state = 'FIND DATA'
 
     def found_stop(self, scl, sda):
         self.startsample = self.samplenum
@@ -195,7 +189,7 @@ class Decoder(srd.Decoder):
         self.put(self.out_ann, [ANN_SHIFTED, [protocol['STOP'][0]]])
         self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol['STOP'][1]]])
 
-        self.state = FIND_START
+        self.state = 'FIND START'
         self.is_repeat_start = 0
         self.wr = -1
 
@@ -216,20 +210,20 @@ class Decoder(srd.Decoder):
             # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
             # State machine.
-            if self.state == FIND_START:
+            if self.state == 'FIND START':
                 if self.is_start_condition(scl, sda):
                     self.found_start(scl, sda)
-            elif self.state == FIND_ADDRESS:
+            elif self.state == 'FIND ADDRESS':
                 if self.is_data_bit(scl, sda):
                     self.found_address_or_data(scl, sda)
-            elif self.state == FIND_DATA:
+            elif self.state == 'FIND DATA':
                 if self.is_data_bit(scl, sda):
                     self.found_address_or_data(scl, sda)
                 elif self.is_start_condition(scl, sda):
                     self.found_start(scl, sda)
                 elif self.is_stop_condition(scl, sda):
                     self.found_stop(scl, sda)
-            elif self.state == FIND_ACK:
+            elif self.state == 'FIND ACK':
                 if self.is_data_bit(scl, sda):
                     self.get_ack(scl, sda)
             else:

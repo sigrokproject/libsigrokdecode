@@ -22,14 +22,6 @@
 
 import sigrokdecode as srd
 
-# States
-IDLE = 0
-GET_SLAVE_ADDR = 1
-GET_REG_ADDR = 2
-READ_RTC_REGS = 3
-READ_RTC_REGS2 = 4
-WRITE_RTC_REGS = 5
-
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
@@ -56,7 +48,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.state = IDLE
+        self.state = 'IDLE'
         self.hours = -1
         self.minutes = -1
         self.seconds = -1
@@ -160,28 +152,28 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         # State machine.
-        if self.state == IDLE:
+        if self.state == 'IDLE':
             # Wait for an I2C START condition.
             if cmd != 'START':
                 return
-            self.state = GET_SLAVE_ADDR
+            self.state = 'GET SLAVE ADDR'
             self.block_start_sample = ss
-        elif self.state == GET_SLAVE_ADDR:
+        elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
             # TODO: We should only handle packets to the RTC slave (0xa2/0xa3).
             if cmd != 'ADDRESS WRITE':
                 return
-            self.state = GET_REG_ADDR
-        elif self.state == GET_REG_ADDR:
+            self.state = 'GET REG ADDR'
+        elif self.state == 'GET REG ADDR':
             # Wait for a data write (master selects the slave register).
             if cmd != 'DATA WRITE':
                 return
             self.reg = databyte
-            self.state = WRITE_RTC_REGS
-        elif self.state == WRITE_RTC_REGS:
+            self.state = 'WRITE RTC REGS'
+        elif self.state == 'WRITE RTC REGS':
             # If we see a Repeated Start here, it's probably an RTC read.
             if cmd == 'START REPEAT':
-                self.state = READ_RTC_REGS
+                self.state = 'READ RTC REGS'
                 return
             # Otherwise: Get data bytes until a STOP condition occurs.
             if cmd == 'DATA WRITE':
@@ -195,18 +187,18 @@ class Decoder(srd.Decoder):
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
                          [0, ['Written date/time: %s' % d]])
-                self.state = IDLE
+                self.state = 'IDLE'
             else:
                 pass # TODO
-        elif self.state == READ_RTC_REGS:
+        elif self.state == 'READ RTC REGS':
             # Wait for an address read operation.
             # TODO: We should only handle packets to the RTC slave (0xa2/0xa3).
             if cmd == 'ADDRESS READ':
-                self.state = READ_RTC_REGS2
+                self.state = 'READ RTC REGS2'
                 return
             else:
                 pass # TODO
-        elif self.state == READ_RTC_REGS2:
+        elif self.state == 'READ RTC REGS2':
             if cmd == 'DATA READ':
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
                 handle_reg(databyte)
@@ -217,7 +209,7 @@ class Decoder(srd.Decoder):
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
                          [0, ['Read date/time: %s' % d]])
-                self.state = IDLE
+                self.state = 'IDLE'
             else:
                 pass # TODO?
         else:
