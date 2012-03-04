@@ -19,7 +19,7 @@
 ##
 
 '''
-Nintendo Wii Nunchuk decoder.
+Nintendo Wii Nunchuk protocol decoder.
 
 TODO: Description.
 

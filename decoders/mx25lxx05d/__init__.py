@@ -19,7 +19,7 @@
 ##
 
 '''
-Macronix MX25Lxx05D SPI (NOR) flash chip decoder.
+Macronix MX25Lxx05D SPI (NOR) flash chip protocol decoder.
 
 Works for MX25L1605D/MX25L3205D/MX25L6405D.
 

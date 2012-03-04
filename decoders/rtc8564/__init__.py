@@ -18,5 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+Epson RTC-8564 JE/NB protocol decoder.
+
+Details:
+TODO
+'''
+
 from .rtc8564 import *
 

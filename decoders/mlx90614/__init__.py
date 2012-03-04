@@ -18,5 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+Melexis MLX90614 protocol decoder.
+
+Details:
+TODO
+'''
+
 from .mlx90614 import *
 

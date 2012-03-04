@@ -97,15 +97,13 @@ UART packet:
 [<packet-type>, <rxtx>, <packet-data>]
 
 This is the list of <packet-types>s and their respective <packet-data>:
- - 'STARTBIT': The data is the (integer) value of the start bit (0 or 1).
+ - 'STARTBIT': The data is the (integer) value of the start bit (0/1).
  - 'DATA': The data is the (integer) value of the UART data. Valid values
    range from 0 to 512 (as the data can be up to 9 bits in size).
- - 'PARITYBIT': The data is the (integer) value of the parity bit (0 or 1).
+ - 'PARITYBIT': The data is the (integer) value of the parity bit (0/1).
  - 'STOPBIT': The data is the (integer) value of the stop bit (0 or 1).
- - 'INVALID STARTBIT': The data is the (integer) value of the start bit
-   (0 or 1).
- - 'INVALID STOPBIT': The data is the (integer) value of the stop bit
-   (0 or 1).
+ - 'INVALID STARTBIT': The data is the (integer) value of the start bit (0/1).
+ - 'INVALID STOPBIT': The data is the (integer) value of the stop bit (0/1).
  - 'PARITY ERROR': The data is a tuple with two entries. The first one is
    the expected parity value, the second is the actual parity value.
  - TODO: Frame error?

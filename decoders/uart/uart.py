@@ -102,10 +102,7 @@ class Decoder(srd.Decoder):
         self.paritybit = [-1, -1]
         self.stopbit1 = [-1, -1]
         self.startsample = [-1, -1]
-
-        # Initial state.
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
-
         self.oldbit = [None, None]
 
     def start(self, metadata):

@@ -18,5 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+'''
+Serial Peripheral Interface protocol decoder.
+
+Details:
+TODO
+'''
+
 from .spi import *
 

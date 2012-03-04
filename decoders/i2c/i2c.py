@@ -38,7 +38,7 @@ ANN_SHIFTED_SHORT = 1
 ANN_RAW = 2
 
 # Values are verbose and short annotation, respectively.
-protocol = {
+proto = {
     'START':           ['START',         'S'],
     'START REPEAT':    ['START REPEAT',  'Sr'],
     'STOP':            ['STOP',          'P'],
@@ -119,8 +119,8 @@ class Decoder(srd.Decoder):
 
         cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
         self.put(self.out_proto, [cmd, None])
-        self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1]]])
+        self.put(self.out_ann, [ANN_SHIFTED, [proto[cmd][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[cmd][1]]])
 
         self.state = 'FIND ADDRESS'
         self.bitcount = self.databyte = 0
@@ -165,8 +165,8 @@ class Decoder(srd.Decoder):
             cmd = 'DATA READ'
 
         self.put(self.out_proto, [cmd, d])
-        self.put(self.out_ann, [ANN_SHIFTED, [protocol[cmd][0], '0x%02x' % d]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[cmd][1], '0x%02x' % d]])
+        self.put(self.out_ann, [ANN_SHIFTED, [proto[cmd][0], '0x%02x' % d]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[cmd][1], '0x%02x' % d]])
 
         # Done with this packet.
         self.startsample = -1
@@ -177,8 +177,8 @@ class Decoder(srd.Decoder):
         self.startsample = self.samplenum
         ack_bit = 'NACK' if (sda == 1) else 'ACK'
         self.put(self.out_proto, [ack_bit, None])
-        self.put(self.out_ann, [ANN_SHIFTED, [protocol[ack_bit][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol[ack_bit][1]]])
+        self.put(self.out_ann, [ANN_SHIFTED, [proto[ack_bit][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[ack_bit][1]]])
         # There could be multiple data bytes in a row, so either find
         # another data byte or a STOP condition next.
         self.state = 'FIND DATA'
@@ -186,8 +186,8 @@ class Decoder(srd.Decoder):
     def found_stop(self, scl, sda):
         self.startsample = self.samplenum
         self.put(self.out_proto, ['STOP', None])
-        self.put(self.out_ann, [ANN_SHIFTED, [protocol['STOP'][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [protocol['STOP'][1]]])
+        self.put(self.out_ann, [ANN_SHIFTED, [proto['STOP'][0]]])
+        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto['STOP'][1]]])
 
         self.state = 'FIND START'
         self.is_repeat_start = 0
