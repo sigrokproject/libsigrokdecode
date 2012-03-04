@@ -59,21 +59,24 @@ http://en.wikipedia.org/wiki/I2C
 Protocol output format:
 
 I2C packet:
-[<i2c_command>, <data>, <ack_bit>]
+[<cmd>, <data>]
 
-<i2c_command> is one of:
+<cmd> is one of:
   - 'START' (START condition)
-  - 'START REPEAT' (Repeated START)
-  - 'ADDRESS READ' (Address, read)
-  - 'ADDRESS WRITE' (Address, write)
+  - 'START REPEAT' (Repeated START condition)
+  - 'ADDRESS READ' (Slave address, read)
+  - 'ADDRESS WRITE' (Slave address, write)
   - 'DATA READ' (Data, read)
   - 'DATA WRITE' (Data, write)
   - 'STOP' (STOP condition)
+  - 'ACK' (ACK bit)
+  - 'NACK' (NACK bit)
 
 <data> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
-command. For 'START', 'START REPEAT' and 'STOP', this is None.
+command. Slave addresses do not include bit 0 (the READ/WRITE indication bit).
+For example, a slave address field could be 0x51 (instead of 0xa2).
+For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <data> is None.
 
-<ack_bit> is either 'ACK' or 'NACK', but may also be None.
 '''
 
 from .i2c import *
