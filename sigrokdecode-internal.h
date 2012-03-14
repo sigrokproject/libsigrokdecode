@@ -24,16 +24,6 @@
 
 #include "sigrokdecode.h"
 
-/*--- Macros ----------------------------------------------------------------*/
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-#endif
-
-#ifndef ARRAY_AND_SIZE
-#define ARRAY_AND_SIZE(a) (a), ARRAY_SIZE(a)
-#endif
-
 /*--- controller.c ----------------------------------------------------------*/
 
 SRD_PRIV int add_modulepath(const char *path);
