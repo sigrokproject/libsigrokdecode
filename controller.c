@@ -28,7 +28,7 @@
 /* List of decoder instances. */
 static GSList *di_list = NULL;
 
-/* List of frontend callbacks to receive PD output. */
+/* List of frontend callbacks to receive decoder output. */
 static GSList *callbacks = NULL;
 
 /* decoder.c */
@@ -44,7 +44,7 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * Initialize libsigrokdecode.
  *
  * This initializes the Python interpreter, and creates and initializes
- * a "sigrok" Python module with a single put() method.
+ * a "sigrokdecode" Python module.
  *
  * Then, it searches for sigrok protocol decoder files (*.py) in the
  * "decoders" subdirectory of the the sigrok installation directory.
@@ -58,7 +58,7 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * are not allowed.
  *
  * @param path Path to an extra directory containing protocol decoders
- * 		which will be added to the python sys.path, or NULL.
+ *             which will be added to the Python sys.path, or NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         Upon Python errors, return SRD_ERR_PYTHON. If the sigrok decoders
@@ -138,8 +138,8 @@ SRD_API int srd_exit(void)
  * Python modules which have the same name as a sigrok protocol decoder in
  * sys.path or in the current working directory.
  *
- * @param path Path to an extra directory containing protocol decoders
- * 		which will be added to the python sys.path, or NULL.
+ * @param path Path to the directory containing protocol decoders which shall
+ *             be added to the Python sys.path, or NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -199,15 +199,15 @@ SRD_PRIV int add_modulepath(const char *path)
 /**
  * Set options in a decoder instance.
  *
+ * Handled options are removed from the hash.
+ *
  * @param di Decoder instance.
  * @param options A GHashTable of options to set.
- *
- * Handled options are removed from the hash.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
-				     GHashTable *options)
+				 GHashTable *options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
@@ -293,7 +293,8 @@ SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
 			}
 		}
 
-		/* If we got here, py_optval holds a known good new reference
+		/*
+		 * If we got here, py_optval holds a known good new reference
 		 * to the instance option to set.
 		 */
 		if (PyDict_SetItemString(py_di_options, key, py_optval) == -1)
@@ -331,7 +332,7 @@ static gint compare_probe_id(struct srd_probe *a, char *probe_id)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
-				    GHashTable *new_probes)
+			        GHashTable *new_probes)
 {
 	GList *l;
 	GSList *sl;
@@ -404,7 +405,7 @@ SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
  *         NULL in case of failure.
  */
 SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
-						      GHashTable *options)
+					      GHashTable *options)
 {
 	int i;
 	struct srd_decoder *dec;
@@ -428,7 +429,8 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
 	g_hash_table_remove(options, "id");
 
-	/* Prepare a default probe map, where samples come in the
+	/*
+	 * Prepare a default probe map, where samples come in the
 	 * order in which the decoder class defined them.
 	 */
 	di->dec_num_probes = g_slist_length(di->decoder->probes) +
@@ -494,9 +496,10 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 }
 
 /**
- * Finds a decoder instance by its instance ID, but only in the bottom
- * level of instances -- instances already stacked on top of another one
- * will not be found.
+ * Find a decoder instance by its instance ID.
+ *
+ * Only the bottom level of instances are searched -- instances already stacked
+ * on top of another one will not be found.
  *
  * @param inst_id The instance ID to be found.
  *
@@ -520,19 +523,20 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id)
 }
 
 /**
- * Finds a decoder instance by its Python object, i.e. that instance's
- * instantiation of the sigrokdecode.Decoder class. This will recurse
- * to find the instance anywhere in the stack tree.
+ * Find a decoder instance by its Python object.
  *
- * @param stack Pointer to a GSList of struct srd_decoder_inst,
- * 		indicating the stack to search. To start searching at the bottom
- * 		level of decoder instances, pass NULL.
+ * I.e. find that instance's instantiation of the sigrokdecode.Decoder class.
+ * This will recurse to find the instance anywhere in the stack tree.
+ *
+ * @param stack Pointer to a GSList of struct srd_decoder_inst, indicating the
+ *              stack to search. To start searching at the bottom level of
+ *              decoder instances, pass NULL.
  * @param obj The Python class instantiation.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  */
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
-							      PyObject *obj)
+						      PyObject *obj)
 {
 	GSList *l;
 	struct srd_decoder_inst *tmp, *di;
@@ -575,7 +579,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
 	Py_DecRef(py_res);
 	Py_DecRef(py_name);
 
-	/* Start all the PDs stacked on top of this one. Pass along the
+	/*
+	 * Start all the PDs stacked on top of this one. Pass along the
 	 * metadata all the way from the bottom PD, even though it's only
 	 * applicable to logic data for now.
 	 */
@@ -623,7 +628,8 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 		return SRD_ERR_ARG;
 	}
 
-	/* Create new srd_logic object. Each iteration around the PD's loop
+	/*
+	 * Create new srd_logic object. Each iteration around the PD's loop
 	 * will fill one sample into this object.
 	 */
 	logic = PyObject_New(srd_logic, &srd_logic_type);
@@ -694,7 +700,7 @@ SRD_PRIV void srd_inst_free_all(GSList *stack)
  *
  * @param num_probes The number of probes which the incoming feed will contain.
  * @param unitsize The number of bytes per sample in the incoming feed.
- * @param The samplerate of the incoming feed.
+ * @param samplerate The samplerate of the incoming feed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -708,7 +714,8 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	srd_dbg("Calling start() on all instances with %d probes, "
 		"unitsize %d samplerate %d.", num_probes, unitsize, samplerate);
 
-	/* Currently only one item of metadata is passed along to decoders,
+	/*
+	 * Currently only one item of metadata is passed along to decoders,
 	 * samplerate. This can be extended as needed.
 	 */
 	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)samplerate))) {
@@ -752,7 +759,7 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
 
 	for (d = di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(start_samplenum, d->data, inbuf,
-					       inbuflen)) != SRD_OK)
+					   inbuflen)) != SRD_OK)
 			return ret;
 	}
 
@@ -768,8 +775,8 @@ SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
  *
  * @param output_type The output type this callback will receive. Only one
  *                    callback per output type can be registered.
- * @param cb The function to call.
- * @param cb_data Unused.
+ * @param cb The function to call. Must not be NULL.
+ * @param cb_data Private data for the callback function. Can be NULL.
  */
 SRD_API int srd_register_callback(int output_type,
 				  srd_pd_output_callback_t cb, void *cb_data)

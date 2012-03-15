@@ -101,16 +101,19 @@ struct srd_decoder {
 	/** The decoder ID. Must be non-NULL and unique for all decoders. */
 	char *id;
 
-	/** The (short) decoder name. */
+	/** The (short) decoder name. Must be non-NULL. */
 	char *name;
 
 	/** The (long) decoder name. May be NULL. */
 	char *longname;
 
-	/** A (short, one-line) description of the decoder. */
+	/** A (short, one-line) description of the decoder. Must be non-NULL. */
 	char *desc;
 
-	/** The license of the decoder. Valid values: "gplv2+", "gplv3+". */
+	/**
+	 * The license of the decoder. Valid values: "gplv2+", "gplv3+".
+	 * Other values are currently not allowed. Must be non-NULL.
+	 */
 	char *license;
 
 	/** TODO */
@@ -119,29 +122,37 @@ struct srd_decoder {
 	/** TODO */
 	GSList *outputformats;
 
-	/** Probes */
+	/** List of probes required by this decoder. */
 	GSList *probes;
 
-	/** Optional probes */
+	/** List of optional probes for this decoder. */
 	GSList *opt_probes;
 
-	/*
+	/**
 	 * List of NULL-terminated char[], containing descriptions of the
 	 * supported annotation output.
 	 */
 	GSList *annotations;
 
-	/** Python module */
+	/** Python module. */
 	PyObject *py_mod;
 
-	/** sigrokdecode.Decoder class */
+	/** sigrokdecode.Decoder class. */
 	PyObject *py_dec;
 };
 
+/**
+ * Structure which contains information about one protocol decoder probe.
+ * For example, I2C has two probes, SDA and SCL.
+ */
 struct srd_probe {
+	/** The ID of the probe. Must be non-NULL. */
 	char *id;
+	/** The name of the probe. Must not be NULL. */
 	char *name;
+	/** The description of the probe. Must not be NULL. */
 	char *desc;
+	/** The index of the probe, i.e. its order in the list of probes. */
 	int order;
 };
 
@@ -182,7 +193,8 @@ struct srd_pd_callback {
 	void *cb_data;
 };
 
-/* custom python types */
+/* Custom Python types: */
+
 typedef struct {
 	PyObject_HEAD
 } srd_Decoder;
@@ -202,13 +214,13 @@ typedef struct {
 SRD_API int srd_init(char *path);
 SRD_API int srd_exit(void);
 SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
-				     GHashTable *options);
+				 GHashTable *options);
 SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
-				    GHashTable *probes);
+				GHashTable *probes);
 SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
-						      GHashTable *options);
+					      GHashTable *options);
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
-			       struct srd_decoder_inst *di_to);
+			   struct srd_decoder_inst *di_to);
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id);
 SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);

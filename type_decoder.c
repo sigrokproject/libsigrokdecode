@@ -36,14 +36,14 @@ static int convert_pyobj(struct srd_decoder_inst *di, PyObject *obj,
 	struct srd_pd_output *pdo;
 	int ann_id;
 
-	/* Should be a list of [annotation format, [string, ...]] */
+	/* Should be a list of [annotation format, [string, ...]]. */
 	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
 		srd_err("Protocol decoder %s submitted %s instead of list.",
 			di->decoder->name, obj->ob_type->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
-	/* Should have 2 elements... */
+	/* Should have 2 elements. */
 	if (PyList_Size(obj) != 2) {
 		srd_err("Protocol decoder %s submitted annotation list with "
 			"%d elements instead of 2", di->decoder->name,
@@ -70,7 +70,7 @@ static int convert_pyobj(struct srd_decoder_inst *di, PyObject *obj,
 	}
 	*ann_format = ann_id;
 
-	/* Second element must be a list */
+	/* Second element must be a list. */
 	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyList_Check(py_tmp)) {
 		srd_err("Protocol decoder %s submitted annotation list, but "
@@ -148,7 +148,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_PROTO:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
-			/* TODO: is this needed? */
+			/* TODO: Is this needed? */
 			Py_XINCREF(next_di->py_inst);
 			srd_spew("Sending %d-%d to instance %s",
 				 start_sample, end_sample,
@@ -156,7 +156,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			if (!(py_res = PyObject_CallMethod(
 			    next_di->py_inst, "decode", "KKO", start_sample,
 			    end_sample, data))) {
-				catch_exception("calling %s decode(): ",
+				catch_exception("Calling %s decode(): ",
 						next_di->inst_id);
 			}
 			Py_XDECREF(py_res);
@@ -214,6 +214,6 @@ SRD_PRIV PyTypeObject srd_Decoder_type = {
 	.tp_name = "sigrokdecode.Decoder",
 	.tp_basicsize = sizeof(srd_Decoder),
 	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	.tp_doc = "Sigrok Decoder base class",
+	.tp_doc = "sigrok Decoder base class",
 	.tp_methods = Decoder_methods,
 };

@@ -148,7 +148,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(module_name))) {
-		catch_exception("import of '%s' failed.", module_name);
+		catch_exception("Import of '%s' failed.", module_name);
 		goto err_out;
 	}
 
@@ -156,7 +156,8 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (!(d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder"))) {
 		/* This generated an AttributeError exception. */
 		PyErr_Clear();
-		srd_err("Decoder class not found in protocol decoder %s.", module_name);
+		srd_err("Decoder class not found in protocol decoder %s.",
+			module_name);
 		goto err_out;
 	}
 
@@ -240,7 +241,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	d->inputformats = NULL;
 	d->outputformats = NULL;
 
-	/* Convert class annotation attribute to GSList of **char */
+	/* Convert class annotation attribute to GSList of **char. */
 	d->annotations = NULL;
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
@@ -288,8 +289,8 @@ err_out:
  *
  * @param dec The loaded protocol decoder.
  *
- * @return A newly allocated buffer containing the docstring. The caller should
- * free this after use.
+ * @return A newly allocated buffer containing the protocol decoder's
+ *         documentation. The caller is responsible for free'ing this after use.
  */
 SRD_API char *srd_decoder_doc(struct srd_decoder *dec)
 {
@@ -328,7 +329,6 @@ static void free_probes(GSList *probelist)
 		g_free(p);
 	}
 	g_slist_free(probelist);
-
 }
 
 /**
@@ -340,12 +340,14 @@ static void free_probes(GSList *probelist)
  */
 SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
-	srd_dbg("unloading decoder %s", dec->name);
+	srd_dbg("Unloading decoder '%s'.", dec->name);
 
-	/* Since any instances of this decoder need to be released as well,
+	/*
+	 * Since any instances of this decoder need to be released as well,
 	 * but they could be anywhere in the stack, just free the entire
 	 * stack. A frontend reloading a decoder thus has to restart all
-	 * instances, and rebuild the stack. */
+	 * instances, and rebuild the stack.
+	 */
 	srd_inst_free_all(NULL);
 
 	free_probes(dec->probes);

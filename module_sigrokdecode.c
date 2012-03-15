@@ -44,7 +44,7 @@ SRD_PRIV PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
 	PyObject *mod;
 
-	/* tp_new needs to be assigned here for compiler portability */
+	/* tp_new needs to be assigned here for compiler portability. */
 	srd_Decoder_type.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&srd_Decoder_type) < 0)
 		return NULL;

@@ -67,7 +67,7 @@ SRD_PRIV void catch_exception(const char *format, ...)
 	/* Send a more precise error location to srd_dbg(), if we have it. */
 	if (etb && etb != Py_None) {
 		tracestr = NULL;
-		py_tb = (PyTracebackObject *) etb;
+		py_tb = (PyTracebackObject *)etb;
 		py_str = PyUnicode_FromFormat("%U:%d in %U",
 					py_tb->tb_frame->f_code->co_filename,
 					py_tb->tb_frame->f_lineno,
