@@ -36,7 +36,7 @@ extern SRD_PRIV PyObject *mod_sigrokdecode;
  *
  * @return List of decoders, NULL if none are supported or loaded.
  */
-SRD_API GSList *srd_decoders_list(void)
+SRD_API GSList *srd_decoder_list(void)
 {
 	return pd_list;
 }
@@ -53,7 +53,7 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_decoders_list(); l; l = l->next) {
+	for (l = srd_decoder_list(); l; l = l->next) {
 		dec = l->data;
 		if (!strcmp(dec->id, id))
 			return dec;
@@ -134,7 +134,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	int alen, ret, i;
 	char **ann;
 
-	srd_dbg("Loading module '%s'.", module_name);
+	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
 	py_basedec = py_method = py_attr = NULL;
 
@@ -340,7 +340,7 @@ static void free_probes(GSList *probelist)
  */
 SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
-	srd_dbg("Unloading decoder '%s'.", dec->name);
+	srd_dbg("Unloading protocol decoder '%s'.", dec->name);
 
 	/*
 	 * Since any instances of this decoder need to be released as well,
@@ -379,7 +379,7 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_decoders_load_all(void)
+SRD_API int srd_decoder_load_all(void)
 {
 	GDir *dir;
 	GError *error;
@@ -404,12 +404,12 @@ SRD_API int srd_decoders_load_all(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_decoders_unload_all(void)
+SRD_API int srd_decoder_unload_all(void)
 {
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_decoders_list(); l; l = l->next) {
+	for (l = srd_decoder_list(); l; l = l->next) {
 		dec = l->data;
 		srd_decoder_unload(dec);
 	}

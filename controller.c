@@ -119,7 +119,7 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	srd_decoders_unload_all();
+	srd_decoder_unload_all();
 	g_slist_free(pd_list);
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
@@ -151,7 +151,7 @@ SRD_PRIV int add_modulepath(const char *path)
 	wchar_t *wc_new_path;
 	char *item;
 
-	srd_dbg("adding %s to module path", path);
+	srd_dbg("Adding '%s' to module path.", path);
 
 	new_path = g_string_sized_new(256);
 	g_string_assign(new_path, g_strdup(path));
