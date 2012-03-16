@@ -65,7 +65,7 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
  *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
  */
-SRD_API int srd_init(char *path)
+SRD_API int srd_init(const char *path)
 {
 	int ret;
 	char *env_path;
@@ -316,7 +316,7 @@ err_out:
 }
 
 /* Helper GComparefunc for g_slist_find_custom() in srd_inst_probes_set() */
-static gint compare_probe_id(struct srd_probe *a, char *probe_id)
+static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
 {
 	return strcmp(a->id, probe_id);
 }
@@ -477,7 +477,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
-			       struct srd_decoder_inst *di_to)
+			   struct srd_decoder_inst *di_to)
 {
 	if (!di_from || !di_to) {
 		srd_err("Invalid from/to instance pair.");
@@ -505,7 +505,7 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  */
-SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id)
+SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
 {
 	GSList *l;
 	struct srd_decoder_inst *tmp, *di;
@@ -535,10 +535,11 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(char *inst_id)
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  */
-SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
-						      PyObject *obj)
+SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
+						       const PyObject *obj)
 {
-	GSList *l;
+// TODO?
+	const GSList *l;
 	struct srd_decoder_inst *tmp, *di;
 
 	di = NULL;
@@ -604,8 +605,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
-				struct srd_decoder_inst *di,
-				uint8_t *inbuf, uint64_t inbuflen)
+			     const struct srd_decoder_inst *di,
+			     const uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
@@ -634,10 +635,10 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 	 */
 	logic = PyObject_New(srd_logic, &srd_logic_type);
 	Py_INCREF(logic);
-	logic->di = di;
+	logic->di = (struct srd_decoder_inst *)di;
 	logic->start_samplenum = start_samplenum;
 	logic->itercnt = 0;
-	logic->inbuf = inbuf;
+	logic->inbuf = (uint8_t *)inbuf;
 	logic->inbuflen = inbuflen;
 	logic->sample = PyList_New(2);
 	Py_INCREF(logic->sample);
@@ -747,7 +748,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_session_feed(uint64_t start_samplenum, uint8_t *inbuf,
+SRD_API int srd_session_feed(uint64_t start_samplenum, const uint8_t *inbuf,
 			     uint64_t inbuflen)
 {
 	GSList *d;
@@ -818,7 +819,7 @@ SRD_PRIV void *srd_find_callback(int output_type)
 
 /* This is the backend function to Python sigrokdecode.add() call. */
 SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
-		    char *proto_id)
+		    const char *proto_id)
 {
 	struct srd_pd_output *pdo;
 

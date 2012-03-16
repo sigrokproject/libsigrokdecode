@@ -29,12 +29,12 @@
 SRD_PRIV int add_modulepath(const char *path);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
-			     struct srd_decoder_inst *dec,
-			     uint8_t *inbuf, uint64_t inbuflen);
+			     const struct srd_decoder_inst *dec,
+			     const uint8_t *inbuf, uint64_t inbuflen);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(GSList *stack);
 SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
-		    char *output_id);
+		    const char *output_id);
 
 /*--- decoder.c -------------------------------------------------------------*/
 
@@ -55,11 +55,13 @@ SRD_PRIV int srd_err(const char *format, ...);
 
 /*--- util.c ----------------------------------------------------------------*/
 
-SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
-SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
-SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
-SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr);
-SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(GSList *stack,
-						       PyObject *obj);
+SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
+			    char **outstr);
+SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
+				char **outstr);
+SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr);
+SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr);
+SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
+						       const PyObject *obj);
 
 #endif

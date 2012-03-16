@@ -33,18 +33,19 @@
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
+SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
+			    char **outstr)
 {
 	PyObject *py_str;
 	int ret;
 
-	if (!PyObject_HasAttrString(py_obj, attr)) {
+	if (!PyObject_HasAttrString((PyObject *)py_obj, attr)) {
 		srd_dbg("%s object has no attribute '%s'.",
 			Py_TYPE(py_obj)->tp_name, attr);
 		return SRD_ERR_PYTHON;
 	}
 
-	if (!(py_str = PyObject_GetAttrString(py_obj, attr))) {
+	if (!(py_str = PyObject_GetAttrString((PyObject *)py_obj, attr))) {
 		catch_exception("");
 		return SRD_ERR_PYTHON;
 	}
@@ -73,19 +74,19 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
+SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
 				char **outstr)
 {
 	PyObject *py_value;
 	int ret;
 
-	if (!PyDict_Check(py_obj)) {
+	if (!PyDict_Check((PyObject *)py_obj)) {
 		srd_dbg("Object is a %s, not a dictionary.",
-			Py_TYPE(py_obj)->tp_name);
+			Py_TYPE((PyObject *)py_obj)->tp_name);
 		return SRD_ERR_PYTHON;
 	}
 
-	if (!(py_value = PyDict_GetItemString(py_obj, key))) {
+	if (!(py_value = PyDict_GetItemString((PyObject *)py_obj, key))) {
 		srd_dbg("Dictionary has no attribute '%s'.", key);
 		return SRD_ERR_PYTHON;
 	}
@@ -111,7 +112,7 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
  */
-SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
+SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr)
 {
 	PyObject *py_encstr;
 	int ret;
@@ -121,14 +122,15 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 	str = NULL;
 	ret = SRD_OK;
 
-	if (!PyUnicode_Check(py_str)) {
+	if (!PyUnicode_Check((PyObject *)py_str)) {
 		srd_dbg("Object is a %s, not a string object.",
-			Py_TYPE(py_str)->tp_name);
+			Py_TYPE((PyObject *)py_str)->tp_name);
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
 
-	if (!(py_encstr = PyUnicode_AsEncodedString(py_str, "utf-8", NULL))) {
+	if (!(py_encstr = PyUnicode_AsEncodedString((PyObject *)py_str,
+	    "utf-8", NULL))) {
 		ret = SRD_ERR_PYTHON;
 		goto err_out;
 	}
@@ -164,20 +166,20 @@ err_out:
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a g_malloc()ed char** upon success.
  */
-SRD_PRIV int py_strlist_to_char(PyObject *py_strlist, char ***outstr)
+SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr)
 {
 	PyObject *py_str;
 	int list_len, i;
 	char **out, *str;
 
-	list_len = PyList_Size(py_strlist);
+	list_len = PyList_Size((PyObject *)py_strlist);
 	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1)))) {
 		srd_err("Failed to g_malloc() 'out'.");
 		return SRD_ERR_MALLOC;
 	}
 	for (i = 0; i < list_len; i++) {
 		if (!(py_str = PyUnicode_AsEncodedString(
-		    PyList_GetItem(py_strlist, i), "utf-8", NULL)))
+		    PyList_GetItem((PyObject *)py_strlist, i), "utf-8", NULL)))
 			return SRD_ERR_PYTHON;
 		if (!(str = PyBytes_AS_STRING(py_str)))
 			return SRD_ERR_PYTHON;

@@ -23,7 +23,7 @@
 #include <inttypes.h>
 
 /* This is only used for nicer srd_dbg() output. */
-char *OUTPUT_TYPES[] = {
+static const char *OUTPUT_TYPES[] = {
 	"OUTPUT_ANN",
 	"OUTPUT_PROTO",
 	"OUTPUT_BINARY",
