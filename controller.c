@@ -494,11 +494,11 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 }
 
 /**
- * Finds a decoder instance by its instance id, but only in the bottom
+ * Finds a decoder instance by its instance ID, but only in the bottom
  * level of instances -- instances already stacked on top of another one
  * will not be found.
  *
- * @param inst_id The instance id to be found.
+ * @param inst_id The instance ID to be found.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  */
