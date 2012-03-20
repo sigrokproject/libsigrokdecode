@@ -224,7 +224,7 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id);
 SRD_API int srd_session_start(int num_probes, int unitsize,
 			      uint64_t samplerate);
-SRD_API int srd_session_feed(uint64_t start_samplenum, const uint8_t *inbuf,
+SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
 			     uint64_t inbuflen);
 SRD_API int srd_register_callback(int output_type,
 				  srd_pd_output_callback_t cb, void *cb_data);

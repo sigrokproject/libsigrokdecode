@@ -740,7 +740,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 }
 
 /**
- * Feed a chunk of logic sample data to a running decoder session.
+ * Send a chunk of logic sample data to a running decoder session.
  *
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param inbuf Pointer to sample data.
@@ -748,7 +748,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_session_feed(uint64_t start_samplenum, const uint8_t *inbuf,
+SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
 			     uint64_t inbuflen)
 {
 	GSList *d;
