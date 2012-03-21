@@ -116,12 +116,6 @@ struct srd_decoder {
 	 */
 	char *license;
 
-	/** TODO */
-	GSList *inputformats;
-
-	/** TODO */
-	GSList *outputformats;
-
 	/** List of probes required by this decoder. */
 	GSList *probes;
 

@@ -238,10 +238,6 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK)
 		goto err_out;
 
-	/* TODO: Handle inputformats, outputformats. */
-	d->inputformats = NULL;
-	d->outputformats = NULL;
-
 	/* Convert class annotation attribute to GSList of **char. */
 	d->annotations = NULL;
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
@@ -358,12 +354,6 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	g_free(dec->longname);
 	g_free(dec->desc);
 	g_free(dec->license);
-
-	/* TODO: Free everything in inputformats and outputformats. */
-	if (dec->inputformats != NULL)
-		g_slist_free(dec->inputformats);
-	if (dec->outputformats != NULL)
-		g_slist_free(dec->outputformats);
 
 	/* The module's Decoder class. */
 	Py_XDECREF(dec->py_dec);
