@@ -153,7 +153,6 @@ AC_CONFIG_FILES([Makefile
 		 libsigrokdecode.pc
 		 decoders/Makefile
 		 decoders/dcf77/Makefile
-		 decoders/ebr30a_i2c_demux/Makefile
 		 decoders/edid/Makefile
 		 decoders/i2c/Makefile
 		 decoders/i2cdemux/Makefile

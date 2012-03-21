@@ -21,7 +21,6 @@
 # Please keep this list in alphabetical order.
 SUBDIRS = \
 	dcf77 \
-	ebr30a_i2c_demux \
 	edid \
 	i2c \
 	i2cdemux \
