@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2cdemux'
     name = 'I2C demux'
-    longname = 'Generic I2C demultiplexer'
+    longname = 'I2C demultiplexer'
     desc = 'TODO.'
     longdesc = 'TODO.'
     license = 'gplv2+'

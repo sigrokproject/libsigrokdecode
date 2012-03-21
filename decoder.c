@@ -62,7 +62,8 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 	return NULL;
 }
 
-static int get_probes(struct srd_decoder *d, char *attr, GSList **pl)
+static int get_probes(const struct srd_decoder *d, const char *attr,
+		      GSList **pl)
 {
 	PyObject *py_probelist, *py_entry;
 	struct srd_probe *p;

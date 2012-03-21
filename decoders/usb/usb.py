@@ -105,14 +105,14 @@ class Decoder(srd.Decoder):
         pass
 
     def start(self, metadata):
-        self.rate = metadata['samplerate']
+        self.samplerate = metadata['samplerate']
 
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
 
-        if self.rate < 48000000:
-            raise Exception('Sample rate (%d) not sufficient for USB '
-                            'decoding, need at least 48MHz' % self.rate)
+        if self.samplerate < 48000000:
+            raise Exception('Samplerate (%d) not sufficient for USB '
+                            'decoding, need at least 48MHz' % self.samplerate)
 
         # Initialise decoder state.
         self.sym = 'J'
@@ -142,7 +142,7 @@ class Decoder(srd.Decoder):
 
             # How many bits since the last transition?
             if self.packet != '' or self.sym != 'J':
-                bitcount = int((self.scount - 1) * 12000000 / self.rate)
+                bitcount = int((self.scount - 1) * 12000000 / self.samplerate)
             else:
                 bitcount = 0
 
