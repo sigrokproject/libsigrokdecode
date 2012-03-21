@@ -11,18 +11,6 @@ API for running sigrok protocol decoders. The protocol decoders themselves
 are written in Python.
 
 
-Status and API
---------------
-
-The libsigrokdecode project is currently work in progress.
-
-IMPORTANT: The API of libsigrokdecode is NOT yet considered stable! Please do
-           not rely on it, yet! Changes to function names, macro names etc.
-           can happen at any time without prior notice!
-
-           The same applies for the API of the Python protocol decoders!
-
-
 Requirements
 ------------
 
