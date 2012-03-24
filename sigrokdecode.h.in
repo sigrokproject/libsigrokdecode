@@ -31,6 +31,38 @@ extern "C" {
 #endif
 
 /*
+ * Package version macros (can be used for conditional compilation).
+ */
+
+/** The libsigrokdecode package 'major' version number. */
+#define LIBSIGROKDECODE_MAJOR_VERSION @LIBSIGROKDECODE_MAJOR_VERSION@
+
+/** The libsigrokdecode package 'minor' version number. */
+#define LIBSIGROKDECODE_MINOR_VERSION @LIBSIGROKDECODE_MINOR_VERSION@
+
+/** The libsigrokdecode package 'micro' version number. */
+#define LIBSIGROKDECODE_MICRO_VERSION @LIBSIGROKDECODE_MICRO_VERSION@
+
+/** The libsigrokdecode package version ("major.minor.micro") as string. */
+#define LIBSIGROKDECODE_VERSION_STRING "@LIBSIGROKDECODE_VERSION@"
+
+/*
+ * Library/libtool version macros (can be used for conditional compilation).
+ */
+
+/** The libsigrokdecode libtool 'current' version number. */
+#define LIBSIGROKDECODE_LT_CURRENT @LIBSIGROKDECODE_LT_CURRENT@
+
+/** The libsigrokdecode libtool 'revision' version number. */
+#define LIBSIGROKDECODE_LT_REVISION @LIBSIGROKDECODE_LT_REVISION@
+
+/** The libsigrokdecode libtool 'age' version number. */
+#define LIBSIGROKDECODE_LT_AGE @LIBSIGROKDECODE_LT_AGE@
+
+/** The libsigrokdecode libtool version ("current:revision:age") as string. */
+#define LIBSIGROKDECODE_LT_VERSION_STRING "@LIBSIGROKDECODE_LT_VERSION@"
+
+/*
  * Status/error codes returned by libsigrokdecode functions.
  *
  * All possible return codes of libsigrokdecode functions must be listed here.

@@ -67,6 +67,10 @@ LIBSIGROKDECODE_LT_REVISION=0
 LIBSIGROKDECODE_LT_AGE=0
 LIBSIGROKDECODE_LT_VERSION="$LIBSIGROKDECODE_LT_CURRENT:$LIBSIGROKDECODE_LT_REVISION:$LIBSIGROKDECODE_LT_AGE"
 LIBSIGROKDECODE_LT_LDFLAGS="-version-info $LIBSIGROKDECODE_LT_VERSION"
+AC_SUBST(LIBSIGROKDECODE_LT_CURRENT)
+AC_SUBST(LIBSIGROKDECODE_LT_REVISION)
+AC_SUBST(LIBSIGROKDECODE_LT_AGE)
+AC_SUBST(LIBSIGROKDECODE_LT_VERSION)
 AC_SUBST(LIBSIGROKDECODE_LT_LDFLAGS)
 
 # Checks for libraries.
@@ -140,16 +144,8 @@ AC_SUBST(LIBSIGROKDECODE_MINOR_VERSION)
 AC_SUBST(LIBSIGROKDECODE_MICRO_VERSION)
 AC_SUBST(LIBSIGROKDECODE_VERSION)
 
-AC_DEFINE(LIBSIGROKDECODE_MAJOR_VERSION, [libsigrokdecode_major_version],
-	  [Define to the libsigrokdecode major package version])
-AC_DEFINE(LIBSIGROKDECODE_MINOR_VERSION, [libsigrokdecode_minor_version],
-	  [Define to the libsigrokdecode minor package version])
-AC_DEFINE(LIBSIGROKDECODE_MICRO_VERSION, [libsigrokdecode_micro_version],
-	  [Define to the libsigrokdecode micro package version])
-AC_DEFINE(LIBSIGROKDECODE_VERSION, [libsigrokdecode_version],
-	  [Define to the libsigrokdecode package version])
-
 AC_CONFIG_FILES([Makefile
+		 sigrokdecode.h
 		 libsigrokdecode.pc
 		 decoders/Makefile
 		 decoders/dcf77/Makefile
