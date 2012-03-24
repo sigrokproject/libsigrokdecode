@@ -43,6 +43,9 @@ class Decoder(srd.Decoder):
         if self.options['direction'] not in ('', 'read', 'write'):
             raise Exception('Invalid direction: expected "read" or "write"')
 
+    def report(self):
+        pass
+
     def decode(self, ss, es, data):
         try:
             cmd, data = data

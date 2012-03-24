@@ -101,6 +101,9 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'edid')
 
+    def report(self):
+        pass
+
     def decode(self, ss, es, data):
         if type(data) != int:
             raise Exception('malformed ddc2 input: expected 1 byte')
