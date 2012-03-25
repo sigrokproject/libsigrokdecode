@@ -198,7 +198,7 @@ SRD_PRIV int add_modulepath(const char *path)
 }
 
 /**
- * Set options in a decoder instance.
+ * Set one or more options in a decoder instance.
  *
  * Handled options are removed from the hash.
  *
@@ -207,8 +207,8 @@ SRD_PRIV int add_modulepath(const char *path)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_inst_options_set(struct srd_decoder_inst *di,
-				 GHashTable *options)
+SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
+				GHashTable *options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
@@ -316,14 +316,17 @@ err_out:
 	return ret;
 }
 
-/* Helper GComparefunc for g_slist_find_custom() in srd_inst_probes_set() */
+/* Helper GComparefunc for g_slist_find_custom() in srd_inst_probe_set_all() */
 static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
 {
 	return strcmp(a->id, probe_id);
 }
 
 /**
- * Set probes in a decoder instance.
+ * Set all probes in a decoder instance.
+ *
+ * This function sets _all_ probes for the specified decoder instance, i.e.,
+ * it overwrites any probes that were already defined (if any).
  *
  * @param di Decoder instance.
  * @param probes A GHashTable of probes to set. Key is probe name, value is
@@ -332,8 +335,8 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_API int srd_inst_probes_set(struct srd_decoder_inst *di,
-			        GHashTable *new_probes)
+SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
+			           GHashTable *new_probes)
 {
 	GList *l;
 	GSList *sl;
@@ -457,7 +460,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	if (srd_inst_options_set(di, options) != SRD_OK) {
+	if (srd_inst_option_set(di, options) != SRD_OK) {
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -769,7 +772,7 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
 }
 
 /**
- * Register a decoder output callback function.
+ * Register/add a decoder output callback function.
  *
  * The function will be called when a protocol decoder sends output back
  * to the PD controller (except for Python objects, which only go up the
@@ -780,8 +783,8 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
  * @param cb The function to call. Must not be NULL.
  * @param cb_data Private data for the callback function. Can be NULL.
  */
-SRD_API int srd_register_callback(int output_type,
-				  srd_pd_output_callback_t cb, void *cb_data)
+SRD_API int srd_pd_output_callback_add(int output_type,
+				srd_pd_output_callback_t cb, void *cb_data)
 {
 	struct srd_pd_callback *pd_cb;
 
@@ -800,7 +803,7 @@ SRD_API int srd_register_callback(int output_type,
 	return SRD_OK;
 }
 
-SRD_PRIV void *srd_find_callback(int output_type)
+SRD_PRIV void *srd_pd_output_callback_find(int output_type)
 {
 	GSList *l;
 	struct srd_pd_callback *pd_cb;

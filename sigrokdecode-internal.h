@@ -38,7 +38,7 @@ SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
 
 /*--- decoder.c -------------------------------------------------------------*/
 
-SRD_PRIV void *srd_find_callback(int output_type);
+SRD_PRIV void *srd_pd_output_callback_find(int output_type);
 
 /*--- exception.c -----------------------------------------------------------*/
 
