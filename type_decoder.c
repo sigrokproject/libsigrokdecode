@@ -156,8 +156,8 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			if (!(py_res = PyObject_CallMethod(
 			    next_di->py_inst, "decode", "KKO", start_sample,
 			    end_sample, data))) {
-				catch_exception("Calling %s decode(): ",
-						next_di->inst_id);
+				srd_exception_catch("Calling %s decode(): ",
+						    next_di->inst_id);
 			}
 			Py_XDECREF(py_res);
 		}
@@ -193,7 +193,7 @@ static PyObject *Decoder_add(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	pdo_id = pd_add(di, output_type, proto_id);
+	pdo_id = srd_inst_pd_output_add(di, output_type, proto_id);
 	if (pdo_id < 0)
 		Py_RETURN_NONE;
 	else

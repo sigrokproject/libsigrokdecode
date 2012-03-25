@@ -79,14 +79,14 @@ SRD_API int srd_init(const char *path)
 	Py_Initialize();
 
 	/* Installed decoders. */
-	if ((ret = add_modulepath(DECODERS_DIR)) != SRD_OK) {
+	if ((ret = srd_decoder_searchpath_add(DECODERS_DIR)) != SRD_OK) {
 		Py_Finalize();
 		return ret;
 	}
 
 	/* Path specified by the user. */
 	if (path) {
-		if ((ret = add_modulepath(path)) != SRD_OK) {
+		if ((ret = srd_decoder_searchpath_add(path)) != SRD_OK) {
 			Py_Finalize();
 			return ret;
 		}
@@ -94,7 +94,7 @@ SRD_API int srd_init(const char *path)
 
 	/* Environment variable overrides everything, for debugging. */
 	if ((env_path = getenv("SIGROKDECODE_DIR"))) {
-		if ((ret = add_modulepath(env_path)) != SRD_OK) {
+		if ((ret = srd_decoder_searchpath_add(env_path)) != SRD_OK) {
 			Py_Finalize();
 			return ret;
 		}
@@ -144,7 +144,7 @@ SRD_API int srd_exit(void)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
-SRD_PRIV int add_modulepath(const char *path)
+SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
 	PyObject *py_cur_path, *py_item;
 	GString *new_path;
@@ -311,7 +311,7 @@ err_out:
 	Py_XDECREF(py_dec_options);
 	g_free(key);
 	if (PyErr_Occurred())
-		catch_exception("Stray exception in srd_inst_set_options().");
+		srd_exception_catch("Stray exception in srd_inst_option_set().");
 
 	return ret;
 }
@@ -453,8 +453,8 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
-			catch_exception("failed to create %s instance: ",
-					decoder_id);
+			srd_exception_catch("failed to create %s instance: ",
+					    decoder_id);
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -569,15 +569,15 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
 
 	if (!(py_name = PyUnicode_FromString("start"))) {
 		srd_err("Unable to build Python object for 'start'.");
-		catch_exception("Protocol decoder instance %s: ",
-				di->inst_id);
+		srd_exception_catch("Protocol decoder instance %s: ",
+				    di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
 
 	if (!(py_res = PyObject_CallMethodObjArgs(di->py_inst,
 						  py_name, args, NULL))) {
-		catch_exception("Protocol decoder instance %s: ",
-				di->inst_id);
+		srd_exception_catch("Protocol decoder instance %s: ",
+				    di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -652,8 +652,8 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
 					   "KKO", logic->start_samplenum,
 					   end_samplenum, logic))) {
-		catch_exception("Protocol decoder instance %s: ",
-				di->inst_id);
+		srd_exception_catch("Protocol decoder instance %s: ",
+				    di->inst_id);
 		return SRD_ERR_PYTHON; /* TODO: More specific error? */
 	}
 	Py_DecRef(py_res);
@@ -822,8 +822,8 @@ SRD_PRIV void *srd_pd_output_callback_find(int output_type)
 }
 
 /* This is the backend function to Python sigrokdecode.add() call. */
-SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
-		    const char *proto_id)
+SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
+				    int output_type, const char *proto_id)
 {
 	struct srd_pd_output *pdo;
 

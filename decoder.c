@@ -149,7 +149,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(module_name))) {
-		catch_exception("Import of '%s' failed.", module_name);
+		srd_exception_catch("Import of '%s' failed.", module_name);
 		goto err_out;
 	}
 
@@ -298,7 +298,7 @@ SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 		return NULL;
 
 	if (!(py_str = PyObject_GetAttrString(dec->py_mod, "__doc__"))) {
-		catch_exception("");
+		srd_exception_catch("");
 		return NULL;
 	}
 

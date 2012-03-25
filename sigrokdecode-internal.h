@@ -26,15 +26,15 @@
 
 /*--- controller.c ----------------------------------------------------------*/
 
-SRD_PRIV int add_modulepath(const char *path);
+SRD_PRIV int srd_decoder_searchpath_add(const char *path);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 			     const struct srd_decoder_inst *dec,
 			     const uint8_t *inbuf, uint64_t inbuflen);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(GSList *stack);
-SRD_PRIV int pd_add(struct srd_decoder_inst *di, int output_type,
-		    const char *output_id);
+SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
+				    int output_type, const char *output_id);
 
 /*--- decoder.c -------------------------------------------------------------*/
 
@@ -42,7 +42,7 @@ SRD_PRIV void *srd_pd_output_callback_find(int output_type);
 
 /*--- exception.c -----------------------------------------------------------*/
 
-SRD_PRIV void catch_exception(const char *format, ...);
+SRD_PRIV void srd_exception_catch(const char *format, ...);
 
 /*--- log.c -----------------------------------------------------------------*/
 

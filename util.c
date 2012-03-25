@@ -46,7 +46,7 @@ SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
 	}
 
 	if (!(py_str = PyObject_GetAttrString((PyObject *)py_obj, attr))) {
-		catch_exception("");
+		srd_exception_catch("");
 		return SRD_ERR_PYTHON;
 	}
 
@@ -150,7 +150,7 @@ err_out:
 		Py_XDECREF(py_encstr);
 
 	if (PyErr_Occurred()) {
-		catch_exception("string conversion failed");
+		srd_exception_catch("string conversion failed");
 	}
 
 	return ret;
