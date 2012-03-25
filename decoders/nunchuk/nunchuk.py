@@ -28,7 +28,6 @@ class Decoder(srd.Decoder):
     name = 'Nunchuk'
     longname = 'Nintendo Wii Nunchuk'
     desc = 'Decodes the Nintendo Wii Nunchuk I2C-based protocol.'
-    longdesc = '...'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['nunchuck']

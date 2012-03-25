@@ -136,7 +136,7 @@ struct srd_decoder {
 	/** The (short) decoder name. Must be non-NULL. */
 	char *name;
 
-	/** The (long) decoder name. May be NULL. */
+	/** The (long) decoder name. Must be non-NULL. */
 	char *longname;
 
 	/** A (short, one-line) description of the decoder. Must be non-NULL. */

@@ -28,7 +28,6 @@ class Decoder(srd.Decoder):
     name = 'Transition counter'
     longname = 'Pin transition counter'
     desc = 'Counts rising/falling edges in the signal.'
-    longdesc = '...'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['transitioncounts']

@@ -36,7 +36,6 @@ class Decoder(srd.Decoder):
     name = 'DCF77'
     longname = 'DCF77 time protocol'
     desc = 'TODO.'
-    longdesc = 'TODO.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dcf77']

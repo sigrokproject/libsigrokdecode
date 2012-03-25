@@ -28,7 +28,6 @@ class Decoder(srd.Decoder):
     name = 'MLX90614'
     longname = 'Melexis MLX90614'
     desc = 'TODO.'
-    longdesc = 'TODO.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mlx90614']

@@ -35,7 +35,6 @@ class Decoder(srd.Decoder):
     name = 'PAN1321'
     longname = 'Panasonic PAN1321'
     desc = 'TODO.'
-    longdesc = 'TODO.'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']

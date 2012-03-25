@@ -62,7 +62,6 @@ class Decoder(srd.Decoder):
     name = 'UART'
     longname = 'Universal Asynchronous Receiver/Transmitter'
     desc = 'Universal Asynchronous Receiver/Transmitter (UART)'
-    longdesc = 'TODO.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']

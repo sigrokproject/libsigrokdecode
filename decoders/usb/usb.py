@@ -87,7 +87,6 @@ class Decoder(srd.Decoder):
     name = 'USB'
     longname = 'Universal Serial Bus'
     desc = 'Universal Serial Bus'
-    longdesc = '...longdesc...'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb']
