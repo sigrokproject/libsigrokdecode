@@ -265,10 +265,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
-        for (samplenum, (rx, tx)) in data:
-
-            # TODO: Start counting at 0 or 1? Increase before or after?
-            self.samplenum += 1
+        for (self.samplenum, (rx, tx)) in data:
 
             # First sample: Save RX/TX value.
             if self.oldbit[RX] == None:

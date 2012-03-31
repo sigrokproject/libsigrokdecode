@@ -83,9 +83,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         # TODO: Either MISO or MOSI could be optional. CS# is optional.
-        for (samplenum, (miso, mosi, sck, cs)) in data:
-
-            self.samplenum += 1 # FIXME
+        for (self.samplenum, (miso, mosi, sck, cs)) in data:
 
             # Ignore sample if the clock pin hasn't changed.
             if sck == self.oldsck:
@@ -106,7 +104,7 @@ class Decoder(srd.Decoder):
 
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
-                self.start_sample = samplenum
+                self.start_sample = self.samplenum
                 active_low = (self.options['cs_polarity'] == 'active-low')
                 deasserted = cs if active_low else not cs
                 if deasserted:

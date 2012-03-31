@@ -199,9 +199,7 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
-        for samplenum, (val) in data: # TODO: Handle optional PON.
-
-            self.samplenum += 1 # FIXME. Use samplenum. Off-by-one?
+        for (self.samplenum, (val)) in data: # TODO: Handle optional PON.
 
             if self.state == 'WAIT FOR RISING EDGE':
                 # Wait until the next rising edge occurs.

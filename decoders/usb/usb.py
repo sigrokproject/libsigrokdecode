@@ -115,16 +115,14 @@ class Decoder(srd.Decoder):
 
         # Initialise decoder state.
         self.sym = 'J'
-        self.scount = 0
+        self.samplenum = 0
         self.packet = ''
 
     def report(self):
         pass
 
     def decode(self, ss, es, data):
-        for (samplenum, (dm, dp)) in data:
-
-            self.scount += 1
+        for (self.samplenum, (dm, dp)) in data:
 
             sym = syms[dp, dm]
 
@@ -132,16 +130,16 @@ class Decoder(srd.Decoder):
             if sym == self.sym:
                 continue
 
-            if self.scount == 1:
+            if self.samplenum == 1:
                 # We ignore single sample width pulses.
                 # I sometimes get these with the OLS.
                 self.sym = sym
-                self.scount = 0
+                self.samplenum = 0
                 continue
 
             # How many bits since the last transition?
             if self.packet != '' or self.sym != 'J':
-                bitcount = int((self.scount - 1) * 12000000 / self.samplerate)
+                bitcount = int((self.samplenum - 1) * 12000000 / self.samplerate)
             else:
                 bitcount = 0
 
@@ -153,7 +151,7 @@ class Decoder(srd.Decoder):
                 else:
                     # Longer than EOP, assume reset.
                     self.put(0, 0, self.out_ann, [0, ['RESET']])
-                self.scount = 0
+                self.samplenum = 0
                 self.sym = sym
                 self.packet = ''
                 continue
@@ -167,6 +165,6 @@ class Decoder(srd.Decoder):
             elif bitcount > 6:
                 self.put(0, 0, self.out_ann, [0, ['BIT STUFF ERROR']])
 
-            self.scount = 0
+            self.samplenum = 0
             self.sym = sym
 

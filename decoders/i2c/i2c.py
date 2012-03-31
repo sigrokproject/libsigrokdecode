@@ -198,8 +198,7 @@ class Decoder(srd.Decoder):
         super(Decoder, self).put(self.startsample, self.samplenum, output_id, data)
 
     def decode(self, ss, es, data):
-        for samplenum, (scl, sda) in data:
-            self.samplenum = samplenum
+        for (self.samplenum, (scl, sda)) in data:
 
             # First sample: Save SCL/SDA value.
             if self.oldscl == None:
