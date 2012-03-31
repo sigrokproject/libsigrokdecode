@@ -27,7 +27,6 @@ SUBDIRS = \
 	i2cfilter \
 	mlx90614 \
 	mx25lxx05d \
-	nunchuk \
 	pan1321 \
 	rtc8564 \
 	spi \
