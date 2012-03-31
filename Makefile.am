@@ -39,7 +39,7 @@ pkgconfig_DATA = libsigrokdecode.pc
 
 EXTRA_DIST = Doxyfile
 
-MAINTAINERCLEANFILES = ChangeLog
+DISTCLEANFILES = ChangeLog
 
 .PHONY: ChangeLog
 ChangeLog:
