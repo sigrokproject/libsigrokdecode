@@ -39,3 +39,11 @@ pkgconfig_DATA = libsigrokdecode.pc
 
 EXTRA_DIST = Doxyfile
 
+MAINTAINERCLEANFILES = ChangeLog
+
+.PHONY: ChangeLog
+ChangeLog:
+	git --git-dir $(top_srcdir)/../.git log > ChangeLog || touch ChangeLog
+
+dist-hook: ChangeLog
+
