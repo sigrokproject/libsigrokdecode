@@ -21,13 +21,12 @@
 AC_PREREQ([2.63])
 
 # libsigrokdecode package version number (NOT the same as shared lib version!).
-m4_define([libsigrokdecode_major_version], [0])
-m4_define([libsigrokdecode_minor_version], [1])
-m4_define([libsigrokdecode_micro_version], [0])
-m4_define([libsigrokdecode_version],
-	  [libsigrokdecode_major_version.libsigrokdecode_minor_version.libsigrokdecode_micro_version])
+m4_define([srd_package_version_major], [0])
+m4_define([srd_package_version_minor], [1])
+m4_define([srd_package_version_micro], [0])
+m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro])
 
-AC_INIT([libsigrokdecode], [libsigrokdecode_version],
+AC_INIT([libsigrokdecode], [srd_package_version],
 	[sigrok-devel@lists.sourceforge.net], [libsigrokdecode],
 	[http://www.sigrok.org])
 AC_CONFIG_HEADER([config.h])
@@ -38,9 +37,9 @@ AC_CONFIG_AUX_DIR([autostuff])
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign std-options])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-AH_TOP([#ifndef LIBSIGROKDECODE_CONFIG_H
-#define LIBSIGROKDECODE_CONFIG_H    /* To stop multiple inclusions. */])
-AH_BOTTOM([#endif /* LIBSIGROKDECODE_CONFIG_H */])
+AH_TOP([#ifndef SRD_CONFIG_H
+#define SRD_CONFIG_H    /* To stop multiple inclusions. */])
+AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
 CFLAGS="-g -Wall -Wextra"
 
@@ -62,16 +61,16 @@ PKG_PROG_PKG_CONFIG([0.22])
 # Carefully read the libtool docs before updating these numbers!
 # The algorithm for determining which number to change (and how) is nontrivial!
 # http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
-LIBSIGROKDECODE_LT_CURRENT=0
-LIBSIGROKDECODE_LT_REVISION=0
-LIBSIGROKDECODE_LT_AGE=0
-LIBSIGROKDECODE_LT_VERSION="$LIBSIGROKDECODE_LT_CURRENT:$LIBSIGROKDECODE_LT_REVISION:$LIBSIGROKDECODE_LT_AGE"
-LIBSIGROKDECODE_LT_LDFLAGS="-version-info $LIBSIGROKDECODE_LT_VERSION"
-AC_SUBST(LIBSIGROKDECODE_LT_CURRENT)
-AC_SUBST(LIBSIGROKDECODE_LT_REVISION)
-AC_SUBST(LIBSIGROKDECODE_LT_AGE)
-AC_SUBST(LIBSIGROKDECODE_LT_VERSION)
-AC_SUBST(LIBSIGROKDECODE_LT_LDFLAGS)
+SRD_LIB_VERSION_CURRENT=0
+SRD_LIB_VERSION_REVISION=0
+SRD_LIB_VERSION_AGE=0
+SRD_LIB_VERSION="$SRD_LIB_VERSION_CURRENT:$SRD_LIB_VERSION_REVISION:$SRD_LIB_VERSION_AGE"
+SRD_LIB_LDFLAGS="-version-info $SRD_LIB_VERSION"
+AC_SUBST(SRD_LIB_VERSION_CURRENT)
+AC_SUBST(SRD_LIB_VERSION_REVISION)
+AC_SUBST(SRD_LIB_VERSION_AGE)
+AC_SUBST(SRD_LIB_VERSION)
+AC_SUBST(SRD_LIB_LDFLAGS)
 
 # Checks for libraries.
 
@@ -134,15 +133,15 @@ AC_SUBST(DECODERS_DIR, "$datadir/libsigrokdecode/decoders")
 AC_SUBST(MAKEFLAGS, '--no-print-directory')
 AC_SUBST(AM_LIBTOOLFLAGS, '--silent')
 
-LIBSIGROKDECODE_MAJOR_VERSION=libsigrokdecode_major_version
-LIBSIGROKDECODE_MINOR_VERSION=libsigrokdecode_minor_version
-LIBSIGROKDECODE_MICRO_VERSION=libsigrokdecode_micro_version
-LIBSIGROKDECODE_VERSION=libsigrokdecode_version
+SRD_PACKAGE_VERSION_MAJOR=srd_package_version_major
+SRD_PACKAGE_VERSION_MINOR=srd_package_version_minor
+SRD_PACKAGE_VERSION_MICRO=srd_package_version_micro
+SRD_PACKAGE_VERSION=srd_package_version
 
-AC_SUBST(LIBSIGROKDECODE_MAJOR_VERSION)
-AC_SUBST(LIBSIGROKDECODE_MINOR_VERSION)
-AC_SUBST(LIBSIGROKDECODE_MICRO_VERSION)
-AC_SUBST(LIBSIGROKDECODE_VERSION)
+AC_SUBST(SRD_PACKAGE_VERSION_MAJOR)
+AC_SUBST(SRD_PACKAGE_VERSION_MINOR)
+AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
+AC_SUBST(SRD_PACKAGE_VERSION)
 
 AC_CONFIG_FILES([Makefile
 		 sigrokdecode.h
@@ -169,8 +168,8 @@ AC_OUTPUT
 echo
 echo "libsigrokdecode configuration summary:"
 echo
-echo "  - Package version (major.minor.micro):    $LIBSIGROKDECODE_VERSION"
-echo "  - Library version (current:revision:age): $LIBSIGROKDECODE_LT_VERSION"
+echo "  - Package version (major.minor.micro):    $SRD_PACKAGE_VERSION"
+echo "  - Library version (current:revision:age): $SRD_LIB_VERSION"
 echo "  - Prefix: $prefix"
 echo
 echo "Detected libraries:"

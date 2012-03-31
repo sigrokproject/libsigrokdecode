@@ -35,32 +35,32 @@ extern "C" {
  */
 
 /** The libsigrokdecode package 'major' version number. */
-#define LIBSIGROKDECODE_MAJOR_VERSION @LIBSIGROKDECODE_MAJOR_VERSION@
+#define SRD_PACKAGE_VERSION_MAJOR @SRD_PACKAGE_VERSION_MAJOR@
 
 /** The libsigrokdecode package 'minor' version number. */
-#define LIBSIGROKDECODE_MINOR_VERSION @LIBSIGROKDECODE_MINOR_VERSION@
+#define SRD_PACKAGE_VERSION_MINOR @SRD_PACKAGE_VERSION_MINOR@
 
 /** The libsigrokdecode package 'micro' version number. */
-#define LIBSIGROKDECODE_MICRO_VERSION @LIBSIGROKDECODE_MICRO_VERSION@
+#define SRD_PACKAGE_VERSION_MICRO @SRD_PACKAGE_VERSION_MICRO@
 
 /** The libsigrokdecode package version ("major.minor.micro") as string. */
-#define LIBSIGROKDECODE_VERSION_STRING "@LIBSIGROKDECODE_VERSION@"
+#define SRD_PACKAGE_VERSION_STRING "@SRD_PACKAGE_VERSION@"
 
 /*
  * Library/libtool version macros (can be used for conditional compilation).
  */
 
 /** The libsigrokdecode libtool 'current' version number. */
-#define LIBSIGROKDECODE_LT_CURRENT @LIBSIGROKDECODE_LT_CURRENT@
+#define SRD_LIB_VERSION_CURRENT @SRD_LIB_VERSION_CURRENT@
 
 /** The libsigrokdecode libtool 'revision' version number. */
-#define LIBSIGROKDECODE_LT_REVISION @LIBSIGROKDECODE_LT_REVISION@
+#define SRD_LIB_VERSION_REVISION @SRD_LIB_VERSION_REVISION@
 
 /** The libsigrokdecode libtool 'age' version number. */
-#define LIBSIGROKDECODE_LT_AGE @LIBSIGROKDECODE_LT_AGE@
+#define SRD_LIB_VERSION_AGE @SRD_LIB_VERSION_AGE@
 
 /** The libsigrokdecode libtool version ("current:revision:age") as string. */
-#define LIBSIGROKDECODE_LT_VERSION_STRING "@LIBSIGROKDECODE_LT_VERSION@"
+#define SRD_LIB_VERSION_STRING "@SRD_LIB_VERSION@"
 
 /*
  * Status/error codes returned by libsigrokdecode functions.
