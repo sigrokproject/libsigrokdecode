@@ -52,6 +52,7 @@ class Decoder(srd.Decoder):
         self.samplesreceived = 0
         self.start_sample = None
         self.samplenum = -1
+        self.wordlength = -1
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2s')
@@ -84,8 +85,17 @@ class Decoder(srd.Decoder):
                 self.put(self.start_sample, self.samplenum, self.out_proto,
                     ['data', self.data])
                 self.put(self.start_sample, self.samplenum, self.out_ann,
-                    [ANN_HEX, ['%s %d-bits: 0x%08x' % ('L' if self.oldws else 'R',
-                    self.bitcount, self.data)]])
+                    [ANN_HEX, ['%s: 0x%08x' % ('L' if self.oldws else 'R',
+                   self.data)]])
+
+                # Check that the data word was the correct length
+                if self.wordlength != -1 and self.wordlength != self.bitcount:
+                    self.put(self.start_sample, self.samplenum, self.out_ann,
+                        [ANN_HEX, ['WARNING: Received a %d-bit word, when a '
+                        '%d-bit word was expected' % (self.bitcount,
+                        self.wordlength)]])
+
+                self.wordlength = self.bitcount
 
             # Reset decoder state.
             self.data = 0
