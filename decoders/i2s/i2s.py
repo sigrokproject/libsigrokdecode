@@ -50,16 +50,29 @@ class Decoder(srd.Decoder):
         self.bitcount = 0
         self.data = 0
         self.samplesreceived = 0
+        self.first_sample = None
         self.start_sample = None
         self.samplenum = -1
         self.wordlength = -1
 
     def start(self, metadata):
+        self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2s')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2s')
 
     def report(self):
-        return 'I2S: %d samples received' % self.samplesreceived
+
+        # Calculate the sample rate
+        samplerate = '?'
+        if self.start_sample != None and \
+            self.first_sample != None and \
+            self.start_sample > self.first_sample:
+            samplerate = "%d" % (self.samplesreceived *
+                self.samplerate / (self.start_sample -
+                self.first_sample))
+
+        return 'I2S: %d %d-bit samples received at %sHz' % \
+            (self.samplesreceived, self.wordlength, samplerate)
 
     def decode(self, ss, es, data):
         for samplenum, (sck, ws, sd) in data:
@@ -101,6 +114,10 @@ class Decoder(srd.Decoder):
             self.data = 0
             self.bitcount = 0
             self.start_sample = self.samplenum
-                
+
+            # Save the first sample position
+            if self.first_sample == None:
+                self.first_sample = self.samplenum
+
             self.oldws = ws
             
