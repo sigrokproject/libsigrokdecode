@@ -21,8 +21,9 @@
 '''
 I2S protocol decoder.
 
-Details:
-TODO
+Documentation:
+http://www.nxp.com/acrobat_download/various/I2SBUS.pdf
+http://en.wikipedia.org/wiki/I2s
 '''
 
 from .i2s import *
