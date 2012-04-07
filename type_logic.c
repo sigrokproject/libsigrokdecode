@@ -33,7 +33,7 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	PyObject *py_samplenum, *py_samples;
 	srd_logic *logic;
 	uint64_t sample;
-	unsigned char probe_samples[SRD_MAX_NUM_PROBES];
+	uint8_t probe_samples[SRD_MAX_NUM_PROBES + 1];
 
 	logic = (srd_logic *)self;
 	if (logic->itercnt >= logic->inbuflen / logic->di->data_unitsize) {
