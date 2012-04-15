@@ -25,7 +25,7 @@ SUBDIRS = decoders
 lib_LTLIBRARIES = libsigrokdecode.la
 
 libsigrokdecode_la_SOURCES = controller.c decoder.c log.c util.c exception.c \
-	module_sigrokdecode.c type_decoder.c type_logic.c
+	module_sigrokdecode.c type_decoder.c type_logic.c version.c
 
 libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 			      -DDECODERS_DIR='"$(DECODERS_DIR)"'

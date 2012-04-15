@@ -277,6 +277,18 @@ SRD_API int srd_log_callback_set_default(void);
 SRD_API int srd_log_logdomain_set(const char *logdomain);
 SRD_API char *srd_log_logdomain_get(void);
 
+/*--- version.c -------------------------------------------------------------*/
+
+SRD_API int srd_package_version_major_get(void);
+SRD_API int srd_package_version_minor_get(void);
+SRD_API int srd_package_version_micro_get(void);
+SRD_API const char *srd_package_version_string_get(void);
+
+SRD_API int srd_lib_version_current_get(void);
+SRD_API int srd_lib_version_revision_get(void);
+SRD_API int srd_lib_version_age_get(void);
+SRD_API const char *srd_lib_version_string_get(void);
+
 #ifdef __cplusplus
 }
 #endif
