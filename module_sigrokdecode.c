@@ -40,7 +40,8 @@ static struct PyModuleDef sigrokdecode_module = {
 	.m_size = -1,
 };
 
-SRD_PRIV PyMODINIT_FUNC PyInit_sigrokdecode(void)
+/* FIXME: SRD_PRIV causes issues on MinGW. Investigate. */
+PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
 	PyObject *mod;
 

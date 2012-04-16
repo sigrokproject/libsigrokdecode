@@ -35,7 +35,8 @@ static GSList *callbacks = NULL;
 extern SRD_PRIV GSList *pd_list;
 
 /* module_sigrokdecode.c */
-extern SRD_PRIV PyMODINIT_FUNC PyInit_sigrokdecode(void);
+/* FIXME: SRD_PRIV causes issues on MinGW. Investigate. */
+extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* type_logic.c */
 extern SRD_PRIV PyTypeObject srd_logic_type;
