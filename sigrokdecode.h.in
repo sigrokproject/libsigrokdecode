@@ -105,14 +105,25 @@ extern "C" {
  *
  * This uses the 'visibility' feature of gcc (requires gcc >= 4.0).
  *
+ * This feature is not available on MinGW/Windows, as it is a feature of
+ * ELF files and MinGW/Windows uses PE files.
+ *
  * Details: http://gcc.gnu.org/wiki/Visibility
  */
 
 /* Marks public libsigrokdecode API symbols. */
+#ifndef _WIN32
 #define SRD_API __attribute__((visibility("default")))
+#else
+#define SRD_API
+#endif
 
 /* Marks private, non-public libsigrokdecode symbols (not part of the API). */
+#ifndef _WIN32
 #define SRD_PRIV __attribute__((visibility("hidden")))
+#else
+#define SRD_PRIV
+#endif
 
 /*
  * When adding an output type, don't forget to...
