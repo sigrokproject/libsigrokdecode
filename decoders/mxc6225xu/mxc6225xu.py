@@ -1,0 +1,193 @@
+##
+## This file is part of the sigrok project.
+##
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+##
+
+# MEMSIC MXC6225XU protocol decoder
+
+import sigrokdecode as srd
+
+# ...
+status = {
+    # SH[1:0]
+    'sh': {
+        0b00: 'no shake event',
+        0b01: 'shake left',
+        0b10: 'shake right',
+        0b11: 'undefined',
+    },
+    # ORI[1:0] and OR[1:0] (same format)
+    'ori': {
+        0b00: 'vertical in upright orientation',
+        0b01: 'rotated 90 degrees clockwise',
+        0b10: 'vertical in inverted orientation',
+        0b11: 'rotated 90 degrees counterclockwise',
+    },
+}
+
+class Decoder(srd.Decoder):
+    api_version = 1
+    id = 'mxc6225xu'
+    name = 'MXC6225XU'
+    longname = 'MEMSIC MXC6225XU'
+    desc = 'Digital Thermal Orientation Sensor (DTOS) protocol'
+    license = 'gplv2+'
+    inputs = ['i2c']
+    outputs = ['mxc6225xu']
+    probes = []
+    optional_probes = [
+        {'id': 'int', 'name': 'INT', 'desc': 'DTOS interrupt output pin'},
+    ]
+    options = {}
+    annotations = [
+        ['TODO', 'TODO'],
+    ]
+
+    def __init__(self, **kwargs):
+        self.state = 'IDLE'
+
+    def start(self, metadata):
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mxc6225xu')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'mxc6225xu')
+
+    def report(self):
+        pass
+
+    def putx(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
+    def handle_reg_0x00(self, b):
+        # XOUT: 8-bit x-axis acceleration output.
+        # Data is in 2's complement, values range from -128 to 127.
+        self.putx([0, ['XOUT: ' + str(b)]])
+
+    def handle_reg_0x01(self, b):
+        # YOUT: 8-bit y-axis acceleration output.
+        # Data is in 2's complement, values range from -128 to 127.
+        self.putx([0, ['YOUT: ' + str(b)]])
+
+    def handle_reg_0x02(self, b):
+        # STATUS: Orientation and shake status.
+
+        # Bits [7:7]: INT
+        int_val = (b >> 7) & 1
+        s = 'unchanged and no' if (int_val == 0) else 'changed or'
+        ann = 'INT = %d: Orientation %s shake event occured\n' % (int_val, s)
+
+        # Bits[6:5]: SH[1:0]
+        sh = (((b >> 6) & 1) << 1) | ((b >> 5) & 1)
+        ann += 'SH[1:0] = %s: %s\n' % (bin(sh)[2:], status['sh'][sh])
+
+        # Bits[4:4]: TILT
+        tilt = (b >> 7) & 1
+        s = '' if (tilt == 0) else 'not '
+        ann += 'TILT = %d: Orientation measurement is %svalid\n' % (tilt, s)
+
+        # Bits[3:2]: ORI[1:0]
+        ori = (((b >> 3) & 1) << 1) | ((b >> 2) & 1)
+        ann += 'ORI[1:0] = %s: %s\n' % (bin(ori)[2:], status['ori'][ori])
+
+        # Bits[1:0]: OR[1:0]
+        or_val = (((b >> 1) & 1) << 1) | ((b >> 0) & 1)
+        ann += 'OR[1:0] = %s: %s\n' % (bin(or_val)[2:], status['ori'][or_val])
+
+        # ann += 'b = %s\n' % (bin(b))
+
+        self.putx([0, [ann]])
+
+    def handle_reg_0x03(self, b):
+        # DETECTION: Powerdown, orientation and shake detection parameters.
+        # Note: This is a write-only register.
+
+        # Bits [7:7]: PD
+        pd = (b >> 7) & 1
+        s = 'Do not power down' if (int_val == 0) else 'Power down'
+        ann = 'PD = %d: %s the device\n' % (pd, s)
+
+        # Bits [6:6]: SHM
+        shm = (b >> 6) & 1
+        s = 'TODO' if (shm == 0) else 'TODO'
+        ann = 'SHM = %d: %s\n' % (pd, s)
+
+        # TODO
+        # self.putx([0, ['TODO: DETECTION']])
+
+    # TODO: Fixup, this is copy-pasted from another PD.
+    def decode(self, ss, es, data):
+        cmd, databyte = data
+
+        # Store the start/end samples of this I2C packet.
+        self.ss, self.es = ss, es
+
+        # State machine.
+        if self.state == 'IDLE':
+            # Wait for an I2C START condition.
+            if cmd != 'START':
+                return
+            self.state = 'GET SLAVE ADDR'
+            self.block_start_sample = ss
+        elif self.state == 'GET SLAVE ADDR':
+            # Wait for an address write operation.
+            # TODO: We should only handle packets to the slave (0x2a/TODO).
+            if cmd != 'ADDRESS WRITE':
+                return
+            self.state = 'GET REG ADDR'
+        elif self.state == 'GET REG ADDR':
+            # Wait for a data write (master selects the slave register).
+            if cmd != 'DATA WRITE':
+                return
+            self.reg = databyte
+            self.state = 'WRITE RTC REGS'
+        elif self.state == 'WRITE RTC REGS':
+            # If we see a Repeated Start here, it's probably an RTC read.
+            if cmd == 'START REPEAT':
+                self.state = 'READ RTC REGS'
+                return
+            # Otherwise: Get data bytes until a STOP condition occurs.
+            if cmd == 'DATA WRITE':
+                handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
+                handle_reg(databyte)
+                self.reg += 1
+                # TODO: Check for NACK!
+            elif cmd == 'STOP':
+                # TODO
+                self.state = 'IDLE'
+            else:
+                pass # TODO
+        elif self.state == 'READ RTC REGS':
+            # Wait for an address read operation.
+            # TODO: We should only handle packets to the RTC slave (0xa2/0xa3).
+            if cmd == 'ADDRESS READ':
+                self.state = 'READ RTC REGS2'
+                return
+            else:
+                pass # TODO
+        elif self.state == 'READ RTC REGS2':
+            if cmd == 'DATA READ':
+                handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
+                handle_reg(databyte)
+                self.reg += 1
+                # TODO: Check for NACK!
+            elif cmd == 'STOP':
+                # TODO
+                self.state = 'IDLE'
+            else:
+                pass # TODO?
+        else:
+            raise Exception('Invalid state: %d' % self.state)
+
