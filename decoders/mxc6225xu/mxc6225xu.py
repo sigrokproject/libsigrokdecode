@@ -22,11 +22,11 @@
 
 import sigrokdecode as srd
 
-# ...
+# Definitions of various bits in MXC6225XU registers.
 status = {
     # SH[1:0]
     'sh': {
-        0b00: 'no shake event',
+        0b00: 'none',
         0b01: 'shake left',
         0b10: 'shake right',
         0b11: 'undefined',
@@ -37,6 +37,27 @@ status = {
         0b01: 'rotated 90 degrees clockwise',
         0b10: 'vertical in inverted orientation',
         0b11: 'rotated 90 degrees counterclockwise',
+    },
+    # SHTH[1:0]
+    'shth': {
+        0b00: '0.5g',
+        0b01: '1.0g',
+        0b10: '1.5g',
+        0b11: '2.0g',
+    },
+    # SHC[1:0]
+    'shc': {
+        0b00: '16',
+        0b01: '32',
+        0b10: '64',
+        0b11: '128',
+    },
+    # ORC[1:0]
+    'orc': {
+        0b00: '16',
+        0b01: '32',
+        0b10: '64',
+        0b11: '128',
     },
 }
 
@@ -74,27 +95,28 @@ class Decoder(srd.Decoder):
     def handle_reg_0x00(self, b):
         # XOUT: 8-bit x-axis acceleration output.
         # Data is in 2's complement, values range from -128 to 127.
-        self.putx([0, ['XOUT: ' + str(b)]])
+        self.putx([0, ['XOUT: %d' % b]])
 
     def handle_reg_0x01(self, b):
         # YOUT: 8-bit y-axis acceleration output.
         # Data is in 2's complement, values range from -128 to 127.
-        self.putx([0, ['YOUT: ' + str(b)]])
+        self.putx([0, ['YOUT: %d' % b]])
 
     def handle_reg_0x02(self, b):
         # STATUS: Orientation and shake status.
 
-        # Bits [7:7]: INT
+        # Bits[7:7]: INT
         int_val = (b >> 7) & 1
         s = 'unchanged and no' if (int_val == 0) else 'changed or'
         ann = 'INT = %d: Orientation %s shake event occured\n' % (int_val, s)
 
         # Bits[6:5]: SH[1:0]
         sh = (((b >> 6) & 1) << 1) | ((b >> 5) & 1)
-        ann += 'SH[1:0] = %s: %s\n' % (bin(sh)[2:], status['sh'][sh])
+        ann += 'SH[1:0] = %s: Shake event: %s\n' % \
+               (bin(sh)[2:], status['sh'][sh])
 
         # Bits[4:4]: TILT
-        tilt = (b >> 7) & 1
+        tilt = (b >> 4) & 1
         s = '' if (tilt == 0) else 'not '
         ann += 'TILT = %d: Orientation measurement is %svalid\n' % (tilt, s)
 
@@ -114,20 +136,34 @@ class Decoder(srd.Decoder):
         # DETECTION: Powerdown, orientation and shake detection parameters.
         # Note: This is a write-only register.
 
-        # Bits [7:7]: PD
+        # Bits[7:7]: PD
         pd = (b >> 7) & 1
-        s = 'Do not power down' if (int_val == 0) else 'Power down'
-        ann = 'PD = %d: %s the device\n' % (pd, s)
+        s = 'Do not power down' if (pd == 0) else 'Power down'
+        ann = 'PD = %d: %s the device (into a low-power state)\n' % (pd, s)
 
-        # Bits [6:6]: SHM
+        # Bits[6:6]: SHM
         shm = (b >> 6) & 1
-        s = 'TODO' if (shm == 0) else 'TODO'
-        ann = 'SHM = %d: %s\n' % (pd, s)
+        ann = 'SHM = %d: Set shake mode to %d\n' % (shm, shm)
 
-        # TODO
-        # self.putx([0, ['TODO: DETECTION']])
+        # Bits[5:4]: SHTH[1:0]
+        shth = (((b >> 5) & 1) << 1) | ((b >> 4) & 1)
+        ann += 'SHTH[1:0] = %s: Set shake threshold to %s\n' \
+               % (bin(shth)[2:], status['shth'][shth])
+
+        # Bits[3:2]: SHC[1:0]
+        shc = (((b >> 3) & 1) << 1) | ((b >> 2) & 1)
+        ann += 'SHC[1:0] = %s: Set shake count to %s readings\n' \
+               % (bin(shc)[2:], status['shc'][shc])
+
+        # Bits[1:0]: ORC[1:0]
+        orc = (((b >> 1) & 1) << 1) | ((b >> 0) & 1)
+        ann += 'ORC[1:0] = %s: Set orientation count to %s readings\n' \
+               % (bin(orc)[2:], status['orc'][orc])
+
+        self.putx([0, [ann]])
 
     # TODO: Fixup, this is copy-pasted from another PD.
+    # TODO: Handle/check the ACKs/NACKs.
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -143,7 +179,7 @@ class Decoder(srd.Decoder):
             self.block_start_sample = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
-            # TODO: We should only handle packets to the slave (0x2a/TODO).
+            # TODO: We should only handle packets to the slave(?)
             if cmd != 'ADDRESS WRITE':
                 return
             self.state = 'GET REG ADDR'
@@ -152,11 +188,11 @@ class Decoder(srd.Decoder):
             if cmd != 'DATA WRITE':
                 return
             self.reg = databyte
-            self.state = 'WRITE RTC REGS'
-        elif self.state == 'WRITE RTC REGS':
-            # If we see a Repeated Start here, it's probably an RTC read.
+            self.state = 'WRITE REGS'
+        elif self.state == 'WRITE REGS':
+            # If we see a Repeated Start here, it's a multi-byte read.
             if cmd == 'START REPEAT':
-                self.state = 'READ RTC REGS'
+                self.state = 'READ REGS'
                 return
             # Otherwise: Get data bytes until a STOP condition occurs.
             if cmd == 'DATA WRITE':
@@ -169,15 +205,15 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
             else:
                 pass # TODO
-        elif self.state == 'READ RTC REGS':
+        elif self.state == 'READ REGS':
             # Wait for an address read operation.
-            # TODO: We should only handle packets to the RTC slave (0xa2/0xa3).
+            # TODO: We should only handle packets to the slave(?)
             if cmd == 'ADDRESS READ':
-                self.state = 'READ RTC REGS2'
+                self.state = 'READ REGS2'
                 return
             else:
                 pass # TODO
-        elif self.state == 'READ RTC REGS2':
+        elif self.state == 'READ REGS2':
             if cmd == 'DATA READ':
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
                 handle_reg(databyte)
