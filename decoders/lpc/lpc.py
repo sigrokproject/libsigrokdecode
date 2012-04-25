@@ -27,7 +27,8 @@ ANN_ASCII = 0
 
 # ...
 fields = {
-    'START': { # LAD[3:0] values that are not listed are reserved.
+    # START field (indicates start or stop of a transaction)
+    'START': {
         0b0000: 'Start of cycle for a target',
         0b0001: 'Reserved',
         0b0010: 'Grant for bus master 0',
@@ -43,18 +44,42 @@ fields = {
         0b1100: 'Reserved',
         0b1101: 'Start of cycle for a Firmware Memory Read cycle',
         0b1110: 'Start of cycle for a Firmware Memory Write cycle',
-        0b1111: 'Stop/Abort (end of a cycle for a target)',
+        0b1111: 'Stop/abort (end of a cycle for a target)',
     },
-    'CT_DR': { # Bit 0 (LAD[0]) is unused.
+    # Cycle type / direction field
+    # Bit 0 (LAD[0]) is unused, should always be 0.
+    # Neither host nor peripheral are allowed to drive 0b11x0.
+    'CT_DR': {
         0b0000: 'I/O read',
         0b0010: 'I/O write',
         0b0100: 'Memory read',
         0b0110: 'Memory write',
         0b1000: 'DMA read',
         0b1010: 'DMA write',
-        0b1100: 'Reserved',
-        0b1110: 'Reserved',
+        0b1100: 'Reserved / not allowed',
+        0b1110: 'Reserved / not allowed',
     },
+    # SIZE field (determines how many bytes are to be transferred)
+    # Bits[3:2] are reserved, must be driven to 0b00.
+    # Neither host nor peripheral are allowed to drive 0b0010.
+    'SIZE': {
+        0b0000: '8 bits (1 byte)',
+        0b0001: '16 bits (2 bytes)',
+        0b0010: 'Reserved / not allowed',
+        0b0011: '32 bits (4 bytes)',
+    },
+    # CHANNEL field (bits[2:0] contain the DMA channel number)
+    'CHANNEL': {
+        0b0000: '0',
+        0b0001: '1',
+        0b0010: '2',
+        0b0011: '3',
+        0b0100: '4',
+        0b0101: '5',
+        0b0110: '6',
+        0b0111: '7',
+    },
+    # SYNC field (used to add wait states)
     'SYNC': {
         0b0000: 'Ready',
         0b0001: 'Reserved',
@@ -294,7 +319,7 @@ class Decoder(srd.Decoder):
             ##     continue
 
             # Store LAD[3:0] bit values (one nibble) in local variables.
-            # Most (but not all states needs this).
+            # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
                 lad_bits = bin(lad)[2:]
