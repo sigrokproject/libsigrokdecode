@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     id = 'jtag'
     name = 'JTAG'
     longname = 'Joint Test Action Group'
-    desc = 'TODO.'
+    desc = 'Protocol for testing, debugging, and flashing ICs.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['jtag']
