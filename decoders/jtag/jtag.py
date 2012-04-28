@@ -36,9 +36,11 @@ class Decoder(srd.Decoder):
         {'id': 'tdo',  'name': 'TDO',  'desc': 'Test data output'},
         {'id': 'tck',  'name': 'TCK',  'desc': 'Test clock'},
         {'id': 'tms',  'name': 'TMS',  'desc': 'Test mode select'},
-        {'id': 'trst', 'name': 'TRST', 'desc': 'Test reset'},
     ]
-    optional_probes = [] # TODO? SRST?
+    optional_probes = [
+        # {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
+        # {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
+    ]
     options = {}
     annotations = [
         ['ASCII', 'TODO: description'],
@@ -48,7 +50,7 @@ class Decoder(srd.Decoder):
         # self.state = 'TEST-LOGIC-RESET'
         self.state = 'RUN-TEST/IDLE'
         self.oldstate = None
-        self.oldpins = (-1, -1, -1, -1, -1)
+        self.oldpins = (-1, -1, -1, -1)
         self.oldtck = -1
         self.bits_tdi = []
         self.bits_tdo = []
@@ -104,7 +106,7 @@ class Decoder(srd.Decoder):
         else:
             raise Exception('Invalid state: %s' % self.state)
 
-    def handle_rising_tck_edge(self, tdi, tdo, tck, tms, trst):
+    def handle_rising_tck_edge(self, tdi, tdo, tck, tms):
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
 
@@ -154,8 +156,8 @@ class Decoder(srd.Decoder):
             self.oldpins = pins
 
             # Get individual pin values into local variables.
-            # TODO: Handle optional pins.
-            (tdi, tdo, tck, tms, trst) = pins
+            # TODO: Handle optional pins (TRST, SRST).
+            (tdi, tdo, tck, tms) = pins
 
             # We only care about TCK edges (either rising or falling).
             if (self.oldtck == tck):
@@ -165,11 +167,11 @@ class Decoder(srd.Decoder):
             self.ss, self.es = ss, es
 
             # self.put(self.ss, self.es, self.out_ann,
-            #     [0, ['tdi:%s, tdo:%s, tck:%s, tms:%s, trst:%s' \
-            #          % (tdi, tdo, tck, tms, trst)]])
+            #     [0, ['tdi:%s, tdo:%s, tck:%s, tms:%s' \
+            #          % (tdi, tdo, tck, tms)]])
 
             if (self.oldtck == 0 and tck == 1):
-                self.handle_rising_tck_edge(tdi, tdo, tck, tms, trst)
+                self.handle_rising_tck_edge(tdi, tdo, tck, tms)
 
             self.oldtck = tck
 
