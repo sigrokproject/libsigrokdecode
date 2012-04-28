@@ -45,7 +45,9 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
-        self.state = 'TEST-LOGIC-RESET'
+        # self.state = 'TEST-LOGIC-RESET'
+        self.state = 'RUN-TEST/IDLE'
+        self.oldstate = None
         self.oldpins = (-1, -1, -1, -1, -1)
         self.oldtck = -1
         self.bits_tdi = []
@@ -59,6 +61,8 @@ class Decoder(srd.Decoder):
         pass
 
     def advance_state_machine(self, tms):
+        self.oldstate = self.state
+
         # Intro "tree"
         if self.state == 'TEST-LOGIC-RESET':
             self.state = 'TEST-LOGIC-RESET' if (tms) else 'RUN-TEST/IDLE'
@@ -101,34 +105,42 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid state: %s' % self.state)
 
     def handle_rising_tck_edge(self, tdi, tdo, tck, tms, trst):
-        # In SHIFT-DR/SHIFT-IR (on rising TCK edges) we collect TDI values.
-        if self.state in ('SHIFT-DR', 'SHIFT-IR'):
-            self.bits_tdi.append(tdi)
-
-        # Output all TDI bits.
-        elif self.state in ('EXIT1-DR', 'EXIT1-IR'):
-            s = self.state[-2:] + ' TDI: ' + ''.join(map(str, self.bits_tdi))
-            s += ', ' + str(len(self.bits_tdi)) + ' bits'
-            self.put(self.ss, self.es, self.out_ann, [0, [s]])
-            self.bits_tdi = []
-
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
 
         # Output the state we just switched to.
         self.put(self.ss, self.es, self.out_ann,
                  [0, ['New state: %s' % self.state]])
+        self.put(self.ss, self.es, self.out_proto,
+                 ['NEW STATE', self.state])
 
-    def handle_falling_tck_edge(self, tdi, tdo, tck, tms, trst):
-        # In SHIFT-DR/SHIFT-IR (on falling TCK edges) we collect TDO values.
-        if self.state in ('SHIFT-DR', 'SHIFT-IR'):
-            self.bits_tdo.append(tdo)
+        # If we went from SHIFT-IR to SHIFT-IR, or SHIFT-DR to SHIFT-DR,
+        # collect the current TDI/TDO values (upon rising TCK edge).
+        if self.state.startswith('SHIFT-') and self.oldstate == self.state:
+            self.bits_tdi.insert(0, tdi)
+            self.bits_tdo.insert(0, tdo)
+            # TODO: ANN/PROTO output.
+            # self.put(self.ss, self.es, self.out_ann,
+            #          [0, ['TDI add: ' + str(tdi)]])
+            # self.put(self.ss, self.es, self.out_ann,
+            #          [0, ['TDO add: ' + str(tdo)]])
 
-        # Output all TDO bits.
-        if self.state in ('EXIT1-DR', 'EXIT1-IR'):
-            s = self.state[-2:] + ' TDO: ' + ''.join(map(str, self.bits_tdo))
-            s += ', ' + str(len(self.bits_tdo)) + ' bits'
+        # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
+        if self.oldstate.startswith('SHIFT-') and \
+           self.state.startswith('EXIT1-'):
+
+            t = self.state[-2:] + ' TDI'
+            b = ''.join(map(str, self.bits_tdi))
+            s = t + ': ' + b + ', ' + str(len(self.bits_tdi)) + ' bits'
             self.put(self.ss, self.es, self.out_ann, [0, [s]])
+            self.put(self.ss, self.es, self.out_proto, [t, b])
+            self.bits_tdi = []
+
+            t = self.state[-2:] + ' TDO'
+            b = ''.join(map(str, self.bits_tdo))
+            s = t + ': ' + b + ', ' + str(len(self.bits_tdo)) + ' bits'
+            self.put(self.ss, self.es, self.out_ann, [0, [s]])
+            self.put(self.ss, self.es, self.out_proto, [t, b])
             self.bits_tdo = []
 
     def decode(self, ss, es, data):
@@ -152,10 +164,12 @@ class Decoder(srd.Decoder):
             # Store start/end sample for later usage.
             self.ss, self.es = ss, es
 
+            # self.put(self.ss, self.es, self.out_ann,
+            #     [0, ['tdi:%s, tdo:%s, tck:%s, tms:%s, trst:%s' \
+            #          % (tdi, tdo, tck, tms, trst)]])
+
             if (self.oldtck == 0 and tck == 1):
                 self.handle_rising_tck_edge(tdi, tdo, tck, tms, trst)
-            elif (self.oldtck == 1 and tck == 0):
-                self.handle_falling_tck_edge(tdi, tdo, tck, tms, trst)
 
             self.oldtck = tck
 
