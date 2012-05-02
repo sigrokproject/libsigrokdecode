@@ -28,7 +28,7 @@ ir = {
     '1110': ['IDCODE', 32], # ID code register
     '1010': ['DPACC', 35],  # Debug port access register
     '1011': ['APACC', 35],  # Access port access register
-    '1000': ['ABORT', 35],  # Abort register
+    '1000': ['ABORT', 35],  # Abort register # TODO: 32 bits? Datasheet typo?
 }
 
 # ARM Cortex-M3 r1p1-01rel0 ID code
@@ -64,6 +64,8 @@ reg = {
     '11': 'DP RDBUFF',
 }
 
+# TODO: All start/end sample values in self.put() calls are bogus.
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag_stm32'
@@ -77,11 +79,12 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['ASCII', 'TODO: description'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
+        # self.state = 'BYPASS'
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'jtag_stm32')
@@ -92,11 +95,12 @@ class Decoder(srd.Decoder):
 
     def handle_reg_bypass(self, bits):
         # TODO
-        pass
+        self.put(self.ss, self.es, self.out_ann, [0, ['BYPASS: ' + bits]])
 
     def handle_reg_idcode(self, bits):
         # TODO
-        pass
+        self.put(self.ss, self.es, self.out_ann,
+                 [0, ['IDCODE: 0x%x' % int('0b' + bits, 2)]])
 
     # When transferring data IN:
     #   Bits[34:3] = DATA[31:0]: 32bit data to transfer (write request)
@@ -106,23 +110,49 @@ class Decoder(srd.Decoder):
     #   Bits[34:3] = DATA[31:0]: 32bit data which is read (read request)
     #   Bits[2:0] = ACK[2:0]: 3-bit acknowledge
     def handle_reg_dpacc(self, bits):
-        self.put(self.ss, self.es, self.out_ann, [0, ['bits: ' + bits]])
+        self.put(self.ss, self.es, self.out_ann, [0, ['DPACC: ' + bits]])
+
+        # TODO: When to use Data IN / Data OUT?
 
         # Data IN
-        data, a, rnw = bits[:-3], bits[-4:-1], bits[-1]
+        data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
+        data_hex = '0x%x' % int('0b' + data, 2)
         r = 'Read request' if (rnw == '1') else 'Write request'
-        s = 'DATA: %s, A: %s, RnW: %s' % (data, ack_val[a], r)
+        s = 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
         self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
         # Data OUT
-        # data, ack = bits[:-3], bits[-3:]
-        # ack_meaning = ack_val[ack]
-        # s = 'DATA: %s, ACK: %s' % (data, ack_meaning)
-        # self.put(self.ss, self.es, self.out_ann, [0, [s]])
+        data, ack = bits[:-3], bits[-3:]
+        data_hex = '0x%x' % int('0b' + data, 2)
+        ack_meaning = ack_val[ack]
+        s = 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
+        self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
+    # When transferring data IN:
+    #   Bits[34:3] = DATA[31:0]: 32bit data to shift in (write request)
+    #   Bits[2:1] = A[3:2]: 2-bit address (sub-address AP register)
+    #   Bits[0:0] = RnW: Read request (1) or write request (0)
+    # When transferring data OUT:
+    #   Bits[34:3] = DATA[31:0]: 32bit data which is read (read request)
+    #   Bits[2:0] = ACK[2:0]: 3-bit acknowledge
     def handle_reg_apacc(self, bits):
-        # TODO
-        pass
+        self.put(self.ss, self.es, self.out_ann, [0, ['APACC: ' + bits]])
+
+        # TODO: When to use Data IN / Data OUT?
+
+        # Data IN
+        data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
+        data_hex = '0x%x' % int('0b' + data, 2)
+        r = 'Read request' if (rnw == '1') else 'Write request'
+        s = 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
+        self.put(self.ss, self.es, self.out_ann, [0, [s]])
+
+        # Data OUT
+        data, ack = bits[:-3], bits[-3:]
+        data_hex = '0x%x' % int('0b' + data, 2)
+        ack_meaning = ack_val[ack]
+        s = 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
+        self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
     def handle_reg_abort(self, bits):
         # Bits[31:1]: reserved. Bit[0]: DAPABORT.
@@ -130,8 +160,14 @@ class Decoder(srd.Decoder):
         s = 'DAPABORT = %s: %sDAP abort generated' % (bits[0], a)
         self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
+        # Warn if DAPABORT[31:1] contains non-zero bits.
         if (bits[:-1] != ('0' * 31)):
-            pass # TODO: Error
+            self.put(self.ss, self.es, self.out_ann,
+                     [0, ['WARNING: DAPABORT[31:1] reserved!']])
+
+    def handle_reg_unknown(self, bits):
+        self.put(self.ss, self.es, self.out_ann,
+                 [0, ['Unknown instruction: ' % bits]]) # TODO
 
     def decode(self, ss, es, data):
         # Assumption: The right-most char in the 'val' bitstring is the LSB.
@@ -139,8 +175,31 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = ss, es
 
-        self.put(self.ss, self.es, self.out_ann, [0, [cmd + ' / ' + val]])
+        # self.put(self.ss, self.es, self.out_ann, [0, [cmd + ' / ' + val]])
 
         # State machine
-        # TODO
+        if self.state == 'IDLE':
+            # Wait until a new instruction is shifted into the IR register.
+            if cmd != 'IR TDI':
+                return
+            # Switch to the state named after the instruction, or 'UNKNOWN'.
+            self.state = ir.get(val[-4:], ['UNKNOWN', 0])[0]
+            self.put(self.ss, self.es, self.out_ann, [0, ['IR: ' + self.state]])
+        elif self.state in ('BYPASS'):
+            # In these states we're interested in incoming bits (TDI).
+            if cmd != 'DR TDI':
+                return
+            handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
+            handle_reg(val)
+            self.state = 'IDLE'
+        elif self.state in ('IDCODE', 'DPACC', 'APACC', 'ABORT', 'UNKNOWN'):
+            # In these states we're interested in outgoing bits (TDO).
+            # if cmd != 'DR TDO':
+            if cmd not in ('DR TDI', 'DR TDO'):
+                return
+            handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
+            handle_reg(val)
+            self.state = 'IDLE'
+        else:
+            raise Exception('Invalid state: %s' % self.state)
 
