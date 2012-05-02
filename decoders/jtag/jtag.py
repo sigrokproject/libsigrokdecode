@@ -133,14 +133,16 @@ class Decoder(srd.Decoder):
 
             t = self.state[-2:] + ' TDI'
             b = ''.join(map(str, self.bits_tdi))
-            s = t + ': ' + b + ', ' + str(len(self.bits_tdi)) + ' bits'
+            h = ' (0x%x' % int('0b' + b, 2) + ')'
+            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
             self.put(self.ss, self.es, self.out_ann, [0, [s]])
             self.put(self.ss, self.es, self.out_proto, [t, b])
             self.bits_tdi = []
 
             t = self.state[-2:] + ' TDO'
             b = ''.join(map(str, self.bits_tdo))
-            s = t + ': ' + b + ', ' + str(len(self.bits_tdo)) + ' bits'
+            h = ' (0x%x' % int('0b' + b, 2) + ')'
+            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
             self.put(self.ss, self.es, self.out_ann, [0, [s]])
             self.put(self.ss, self.es, self.out_proto, [t, b])
             self.bits_tdo = []
