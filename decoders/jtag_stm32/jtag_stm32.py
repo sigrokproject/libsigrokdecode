@@ -23,6 +23,9 @@
 import sigrokdecode as srd
 
 # JTAG debug port data registers (in IR[3:0]) and their sizes (in bits)
+# Note: The ARM DAP-DP is not IEEE 1149.1 (JTAG) compliant (as per ARM docs),
+#       as it does not implement the EXTEST, SAMPLE, and PRELOAD instructions.
+#       Instead, BYPASS is decoded for any of these instructions.
 ir = {
     '1111': ['BYPASS', 1],  # Bypass register
     '1110': ['IDCODE', 32], # ID code register
@@ -66,6 +69,22 @@ reg = {
 
 # TODO: All start/end sample values in self.put() calls are bogus.
 
+# Bits[31:28]: Version (here: 0x3)
+#              JTAG-DP: 0x3, SW-DP: 0x2
+# Bits[27:12]: Part number (here: 0xba00)
+#              JTAG-DP: 0xba00, SW-DP: 0xba10
+# Bits[11:1]:  JEDEC (JEP-106) manufacturer ID (here: 0x23b)
+#              Bits[11:8]: Continuation code ('ARM Limited': 0x04)
+#              Bits[7:1]: Identity code ('ARM Limited': 0x3b)
+# Bits[0:0]:   Reserved (here: 0x1)
+def decode_device_id_code(bits):
+    id_hex = '0x%x' % int('0b' + bits, 2)
+    ver =    '0x%x' % int('0b' + bits[-32:-28], 2)
+    part =   '0x%x' % int('0b' + bits[-28:-12], 2)
+    manuf =  '0x%x' % int('0b' + bits[-12:-1], 2)
+    res =    '0x%x' % int('0b' + bits[-1], 2)
+    return (id_hex, ver, part, manuf, res)
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag_stm32'
@@ -100,7 +119,8 @@ class Decoder(srd.Decoder):
     def handle_reg_idcode(self, bits):
         # TODO
         self.put(self.ss, self.es, self.out_ann,
-                 [0, ['IDCODE: 0x%x' % int('0b' + bits, 2)]])
+                 [0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
+                 decode_device_id_code(bits)]])
 
     # When transferring data IN:
     #   Bits[34:3] = DATA[31:0]: 32bit data to transfer (write request)
@@ -194,8 +214,8 @@ class Decoder(srd.Decoder):
             self.state = 'IDLE'
         elif self.state in ('IDCODE', 'DPACC', 'APACC', 'ABORT', 'UNKNOWN'):
             # In these states we're interested in outgoing bits (TDO).
-            # if cmd != 'DR TDO':
-            if cmd not in ('DR TDI', 'DR TDO'):
+            if cmd != 'DR TDO':
+            # if cmd not in ('DR TDI', 'DR TDO'):
                 return
             handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
             handle_reg(val)
