@@ -85,6 +85,18 @@ def decode_device_id_code(bits):
     res =    '0x%x' % int('0b' + bits[-1], 2)
     return (id_hex, ver, part, manuf, res)
 
+def dpacc_data_in(bits):
+    data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
+    data_hex = '0x%x' % int('0b' + data, 2)
+    r = 'Read request' if (rnw == '1') else 'Write request'
+    return 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
+
+def dpacc_data_out(bits):
+    data, ack = bits[:-3], bits[-3:]
+    data_hex = '0x%x' % int('0b' + data, 2)
+    ack_meaning = ack_val[ack]
+    return 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag_stm32'
@@ -118,10 +130,13 @@ class Decoder(srd.Decoder):
 
     def handle_reg_idcode(self, bits):
         # TODO
+        # IDCODE is a read-only register which is always accessible.
+        # IR == IDCODE: The device ID code is shifted out via DR next.
         self.put(self.ss, self.es, self.out_ann,
                  [0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
                  decode_device_id_code(bits)]])
 
+    # DPACC is used to access debug port registers (CTRL/STAT, SELECT, RDBUFF).
     # When transferring data IN:
     #   Bits[34:3] = DATA[31:0]: 32bit data to transfer (write request)
     #   Bits[2:1] = A[3:2]: 2-bit address of a debug port register
@@ -133,21 +148,10 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, [0, ['DPACC: ' + bits]])
 
         # TODO: When to use Data IN / Data OUT?
+        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_in(bits)]])
+        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_out(bits)]])
 
-        # Data IN
-        data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
-        data_hex = '0x%x' % int('0b' + data, 2)
-        r = 'Read request' if (rnw == '1') else 'Write request'
-        s = 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
-
-        # Data OUT
-        data, ack = bits[:-3], bits[-3:]
-        data_hex = '0x%x' % int('0b' + data, 2)
-        ack_meaning = ack_val[ack]
-        s = 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
-
+    # APACC is used to access all Access Port (AHB-AP) registers.
     # When transferring data IN:
     #   Bits[34:3] = DATA[31:0]: 32bit data to shift in (write request)
     #   Bits[2:1] = A[3:2]: 2-bit address (sub-address AP register)
@@ -159,20 +163,8 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, [0, ['APACC: ' + bits]])
 
         # TODO: When to use Data IN / Data OUT?
-
-        # Data IN
-        data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
-        data_hex = '0x%x' % int('0b' + data, 2)
-        r = 'Read request' if (rnw == '1') else 'Write request'
-        s = 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
-
-        # Data OUT
-        data, ack = bits[:-3], bits[-3:]
-        data_hex = '0x%x' % int('0b' + data, 2)
-        ack_meaning = ack_val[ack]
-        s = 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
+        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_in(bits)]])
+        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_out(bits)]])
 
     def handle_reg_abort(self, bits):
         # Bits[31:1]: reserved. Bit[0]: DAPABORT.
