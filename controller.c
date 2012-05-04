@@ -735,7 +735,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 		di->data_num_probes = num_probes;
 		di->data_unitsize = unitsize;
 		di->data_samplerate = samplerate;
-		if ((ret = srd_inst_start(di, args) != SRD_OK))
+		if ((ret = srd_inst_start(di, args)) != SRD_OK)
 			break;
 	}
 
