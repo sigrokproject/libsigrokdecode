@@ -47,27 +47,37 @@ jtag_idcode = {
     0x06418041: 'Connectivity-line device, rev. A/Z',
 }
 
-# ACK[2:0] in the DPACC/APACC registers
+# ACK[2:0] in the DPACC/APACC registers (unlisted values are reserved)
 ack_val = {
-    '000': 'Reserved',
     '001': 'WAIT',
     '010': 'OK/FAULT',
-    '011': 'Reserved',
-    '100': 'Reserved',
-    '101': 'Reserved',
-    '110': 'Reserved',
-    '111': 'Reserved',
 }
 
 # 32bit debug port registers (addressed via A[3:2])
-reg = {
+dp_reg = {
     '00': 'Reserved', # Must be kept at reset value
     '01': 'DP CTRL/STAT',
     '10': 'DP SELECT',
     '11': 'DP RDBUFF',
 }
 
+# APB-AP registers (each of them 32 bits wide)
+apb_ap_reg = {
+    0x00: ['CSW', 'Control/status word'],
+    0x04: ['TAR', 'Transfer address'],
+    # 0x08: Reserved SBZ
+    0x0c: ['DRW', 'Data read/write'],
+    0x10: ['BD0', 'Banked data 0'],
+    0x14: ['BD1', 'Banked data 1'],
+    0x18: ['BD2', 'Banked data 2'],
+    0x1c: ['BD3', 'Banked data 3'],
+    # 0x20-0xf4: Reserved SBZ
+    0x800000000: ['ROM', 'Debug ROM address'],
+    0xfc: ['IDR', 'Identification register'],
+}
+
 # TODO: All start/end sample values in self.put() calls are bogus.
+# TODO: Split off generic ARM/Cortex-M3 parts into another protocol decoder?
 
 # Bits[31:28]: Version (here: 0x3)
 #              JTAG-DP: 0x3, SW-DP: 0x2
@@ -85,17 +95,30 @@ def decode_device_id_code(bits):
     res =    '0x%x' % int('0b' + bits[-1], 2)
     return (id_hex, ver, part, manuf, res)
 
-def dpacc_data_in(bits):
+# DPACC is used to access debug port registers (CTRL/STAT, SELECT, RDBUFF).
+# APACC is used to access all Access Port (AHB-AP) registers.
+
+# APACC/DPACC, when transferring data IN:
+# Bits[34:3] = DATA[31:0]: 32bit data to transfer (write request)
+# Bits[2:1] = A[3:2]: 2-bit address (debug/access port register)
+# Bits[0:0] = RnW: Read request (1) or write request (0)
+def data_in(instruction, bits):
     data, a, rnw = bits[:-3], bits[-3:-1], bits[-1]
     data_hex = '0x%x' % int('0b' + data, 2)
     r = 'Read request' if (rnw == '1') else 'Write request'
-    return 'DATA: %s, A: %s, RnW: %s' % (data_hex, reg[a], r)
+    # reg = dp_reg[a] if (instruction == 'DPACC') else apb_ap_reg[a]
+    reg = dp_reg[a] if (instruction == 'DPACC') else a # TODO
+    return 'New transaction: DATA: %s, A: %s, RnW: %s' % (data_hex, reg, r)
 
-def dpacc_data_out(bits):
+# APACC/DPACC, when transferring data OUT:
+# Bits[34:3] = DATA[31:0]: 32bit data which is read (read request)
+# Bits[2:0] = ACK[2:0]: 3-bit acknowledge
+def data_out(bits):
     data, ack = bits[:-3], bits[-3:]
     data_hex = '0x%x' % int('0b' + data, 2)
-    ack_meaning = ack_val[ack]
-    return 'DATA: %s, ACK: %s' % (data_hex, ack_meaning)
+    ack_meaning = ack_val.get(ack, 'Reserved')
+    return 'Previous transaction result: DATA: %s, ACK: %s' \
+           % (data_hex, ack_meaning)
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -124,11 +147,11 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def handle_reg_bypass(self, bits):
+    def handle_reg_bypass(self, cmd, bits):
         # TODO
         self.put(self.ss, self.es, self.out_ann, [0, ['BYPASS: ' + bits]])
 
-    def handle_reg_idcode(self, bits):
+    def handle_reg_idcode(self, cmd, bits):
         # TODO
         # IDCODE is a read-only register which is always accessible.
         # IR == IDCODE: The device ID code is shifted out via DR next.
@@ -136,37 +159,19 @@ class Decoder(srd.Decoder):
                  [0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
                  decode_device_id_code(bits)]])
 
-    # DPACC is used to access debug port registers (CTRL/STAT, SELECT, RDBUFF).
-    # When transferring data IN:
-    #   Bits[34:3] = DATA[31:0]: 32bit data to transfer (write request)
-    #   Bits[2:1] = A[3:2]: 2-bit address of a debug port register
-    #   Bits[0:0] = RnW: Read request (1) or write request (0)
-    # When transferring data OUT:
-    #   Bits[34:3] = DATA[31:0]: 32bit data which is read (read request)
-    #   Bits[2:0] = ACK[2:0]: 3-bit acknowledge
-    def handle_reg_dpacc(self, bits):
-        self.put(self.ss, self.es, self.out_ann, [0, ['DPACC: ' + bits]])
+    def handle_reg_dpacc(self, cmd, bits):
+        # self.put(self.ss, self.es, self.out_ann,
+        #          [0, ['DPACC/%s: %s' % (cmd, bits)]])
+        s = data_in('DPACC', bits) if (cmd == 'DR TDI') else data_out(bits)
+        self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
-        # TODO: When to use Data IN / Data OUT?
-        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_in(bits)]])
-        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_out(bits)]])
+    def handle_reg_apacc(self, cmd, bits):
+        # self.put(self.ss, self.es, self.out_ann,
+        #          [0, ['APACC/%s: %s' % (cmd, bits)]])
+        s = data_in('APACC', bits) if (cmd == 'DR TDI') else data_out(bits)
+        self.put(self.ss, self.es, self.out_ann, [0, [s]])
 
-    # APACC is used to access all Access Port (AHB-AP) registers.
-    # When transferring data IN:
-    #   Bits[34:3] = DATA[31:0]: 32bit data to shift in (write request)
-    #   Bits[2:1] = A[3:2]: 2-bit address (sub-address AP register)
-    #   Bits[0:0] = RnW: Read request (1) or write request (0)
-    # When transferring data OUT:
-    #   Bits[34:3] = DATA[31:0]: 32bit data which is read (read request)
-    #   Bits[2:0] = ACK[2:0]: 3-bit acknowledge
-    def handle_reg_apacc(self, bits):
-        self.put(self.ss, self.es, self.out_ann, [0, ['APACC: ' + bits]])
-
-        # TODO: When to use Data IN / Data OUT?
-        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_in(bits)]])
-        self.put(self.ss, self.es, self.out_ann, [0, [dpacc_data_out(bits)]])
-
-    def handle_reg_abort(self, bits):
+    def handle_reg_abort(self, cmd, bits):
         # Bits[31:1]: reserved. Bit[0]: DAPABORT.
         a = '' if (bits[0] == '1') else 'No '
         s = 'DAPABORT = %s: %sDAP abort generated' % (bits[0], a)
@@ -177,7 +182,7 @@ class Decoder(srd.Decoder):
             self.put(self.ss, self.es, self.out_ann,
                      [0, ['WARNING: DAPABORT[31:1] reserved!']])
 
-    def handle_reg_unknown(self, bits):
+    def handle_reg_unknown(self, cmd, bits):
         self.put(self.ss, self.es, self.out_ann,
                  [0, ['Unknown instruction: ' % bits]]) # TODO
 
@@ -195,23 +200,33 @@ class Decoder(srd.Decoder):
             if cmd != 'IR TDI':
                 return
             # Switch to the state named after the instruction, or 'UNKNOWN'.
+            # Ignore bits other than IR[3:0]. While the IR register is only
+            # 4 bits in size, some programs (e.g. OpenOCD) might fill in a
+            # few more (dummy) bits. OpenOCD makes IR at least 8 bits long.
             self.state = ir.get(val[-4:], ['UNKNOWN', 0])[0]
             self.put(self.ss, self.es, self.out_ann, [0, ['IR: ' + self.state]])
-        elif self.state in ('BYPASS'):
-            # In these states we're interested in incoming bits (TDI).
+        elif self.state == 'BYPASS':
+            # Here we're interested in incoming bits (TDI).
             if cmd != 'DR TDI':
                 return
             handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
-            handle_reg(val)
+            handle_reg(cmd, val)
             self.state = 'IDLE'
-        elif self.state in ('IDCODE', 'DPACC', 'APACC', 'ABORT', 'UNKNOWN'):
-            # In these states we're interested in outgoing bits (TDO).
+        elif self.state in ('IDCODE', 'ABORT', 'UNKNOWN'):
+            # Here we're interested in outgoing bits (TDO).
             if cmd != 'DR TDO':
-            # if cmd not in ('DR TDI', 'DR TDO'):
                 return
             handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
-            handle_reg(val)
+            handle_reg(cmd, val)
             self.state = 'IDLE'
+        elif self.state in ('DPACC', 'APACC'):
+            # Here we're interested in incoming and outgoing bits (TDI/TDO).
+            if cmd not in ('DR TDI', 'DR TDO'):
+                return
+            handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
+            handle_reg(cmd, val)
+            if cmd == 'DR TDO': # TODO: Assumes 'DR TDI' comes before 'DR TDO'
+                self.state = 'IDLE'
         else:
             raise Exception('Invalid state: %s' % self.state)
 
