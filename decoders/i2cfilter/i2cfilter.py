@@ -30,10 +30,13 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = []
+    probes = []
+    optional_probes = []
     options = {
         'address': ['Address to filter out of the I2C stream', 0],
         'direction': ['Direction to filter (read/write)', '']
     }
+    annotations = []
 
     def __init__(self, **kwargs):
         self.state = None

@@ -35,7 +35,7 @@ class Decoder(srd.Decoder):
     optional_probes = [] # TODO
     options = {}
     annotations = [
-        ['TODO', 'TODO'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):

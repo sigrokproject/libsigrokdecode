@@ -24,7 +24,7 @@ import sigrokdecode as srd
 import calendar
 
 # Annotation feed formats
-ANN_ASCII = 0
+ANN_TEXT = 0
 
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
@@ -47,8 +47,8 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        # ANN_ASCII
-        ['ASCII', 'TODO: description'],
+        # ANN_TEXT
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):

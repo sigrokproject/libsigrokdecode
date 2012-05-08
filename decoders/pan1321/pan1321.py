@@ -22,9 +22,6 @@
 
 import sigrokdecode as srd
 
-# Annotation feed formats
-ANN_ASCII = 0
-
 # ...
 RX = 0
 TX = 1
@@ -42,7 +39,7 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['ASCII', 'TODO: description'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):

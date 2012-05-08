@@ -22,9 +22,6 @@
 
 import sigrokdecode as srd
 
-# Annotation feed formats
-ANN_ASCII = 0
-
 # ...
 fields = {
     # START field (indicates start or stop of a transaction)
@@ -128,7 +125,7 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['ASCII', 'TODO: description'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):

@@ -38,10 +38,12 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'sck', 'name': 'SCK', 'desc': 'Bit clock line'},
         {'id': 'ws', 'name': 'WS', 'desc': 'Word select line'},
-        {'id': 'sd', 'name': 'SD', 'desc': 'Serial Data line'},
+        {'id': 'sd', 'name': 'SD', 'desc': 'Serial data line'},
     ]
+    optional_probes = []
+    options = {}
     annotations = [
-        ['ASCII', 'Annotations in ASCII format'],
+        ['Hex', 'Annotations in hex format'],
     ]
 
     def __init__(self, **kwargs):
@@ -62,12 +64,12 @@ class Decoder(srd.Decoder):
 
     def report(self):
 
-        # Calculate the sample rate
+        # Calculate the sample rate.
         samplerate = '?'
         if self.start_sample != None and \
             self.first_sample != None and \
             self.start_sample > self.first_sample:
-            samplerate = "%d" % (self.samplesreceived *
+            samplerate = '%d' % (self.samplesreceived *
                 self.samplerate / (self.start_sample -
                 self.first_sample))
 
@@ -82,26 +84,26 @@ class Decoder(srd.Decoder):
                 continue
 
             self.oldsck = sck
-            if sck == 0:   # Ignore the falling clock edge
+            if sck == 0:   # Ignore the falling clock edge.
                 continue
 
             self.data = (self.data << 1) | sd
             self.bitcount += 1
 
-            # This was not the LSB unless WS has flipped
+            # This was not the LSB unless WS has flipped.
             if ws == self.oldws:
                 continue
 
-            # Only submit the sample, if we received the beginning of it
+            # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
                 self.samplesreceived += 1
                 self.put(self.start_sample, self.samplenum, self.out_proto,
-                    ['data', self.data])
+                         ['data', self.data])
                 self.put(self.start_sample, self.samplenum, self.out_ann,
-                    [ANN_HEX, ['%s: 0x%08x' % ('L' if self.oldws else 'R',
-                   self.data)]])
+                         [ANN_HEX, ['%s: 0x%08x' % ('L' if self.oldws else 'R',
+                         self.data)]])
 
-                # Check that the data word was the correct length
+                # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
                     self.put(self.start_sample, self.samplenum, self.out_ann,
                         [ANN_HEX, ['WARNING: Received a %d-bit word, when a '
@@ -115,9 +117,9 @@ class Decoder(srd.Decoder):
             self.bitcount = 0
             self.start_sample = self.samplenum
 
-            # Save the first sample position
+            # Save the first sample position.
             if self.first_sample == None:
                 self.first_sample = self.samplenum
 
             self.oldws = ws
-            
+

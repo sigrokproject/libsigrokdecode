@@ -109,7 +109,7 @@ class Decoder(srd.Decoder):
     ]
     options = {} # TODO
     annotations = [
-        ['TODO', 'TODO'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
@@ -124,7 +124,7 @@ class Decoder(srd.Decoder):
         pass
 
     def putx(self, data):
-        # Simplification, most annotations span extactly one SPI byte/packet.
+        # Simplification, most annotations span exactly one SPI byte/packet.
         self.put(self.ss, self.es, self.out_ann, data)
 
     def handle_wren(self, mosi, miso):
