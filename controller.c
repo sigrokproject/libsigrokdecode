@@ -330,9 +330,9 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  * it overwrites any probes that were already defined (if any).
  *
  * @param di Decoder instance.
- * @param probes A GHashTable of probes to set. Key is probe name, value is
- *               the probe number. Samples passed to this instance will be
- *               arranged in this order.
+ * @param new_probes A GHashTable of probes to set. Key is probe name, value is
+ *                   the probe number. Samples passed to this instance will be
+ *                   arranged in this order.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -402,7 +402,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 /**
  * Create a new protocol decoder instance.
  *
- * @param id Decoder 'id' field.
+ * @param decoder_id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
  *                the decoder class.
  *
@@ -749,7 +749,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param inbuf Pointer to sample data.
- * @param inbuf Length in bytes of the buffer.
+ * @param inbuflen Length in bytes of the buffer.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */

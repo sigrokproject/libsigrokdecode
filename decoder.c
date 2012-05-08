@@ -124,7 +124,7 @@ err_out:
 /**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
- * @param name The module name to be loaded.
+ * @param module_name The module name to be loaded.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */

@@ -68,8 +68,8 @@ SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
  * allocated char *.
  *
  * @param py_obj The dictionary to probe.
- * @param attr Key of the item to retrieve.
- * @param outstr ptr to char * storage to be filled in.
+ * @param key Key of the item to retrieve.
+ * @param outstr Pointer to char * storage to be filled in.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
