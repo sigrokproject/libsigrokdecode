@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
     id = 'spi'
     name = 'SPI'
     longname = 'Serial Peripheral Interface'
-    desc = '...desc...'
+    desc = 'Full-duplex, synchronous, serial bus.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']

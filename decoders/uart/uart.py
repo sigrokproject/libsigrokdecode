@@ -61,7 +61,7 @@ class Decoder(srd.Decoder):
     id = 'uart'
     name = 'UART'
     longname = 'Universal Asynchronous Receiver/Transmitter'
-    desc = 'Universal Asynchronous Receiver/Transmitter (UART)'
+    desc = 'Asynchronous, serial bus.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']

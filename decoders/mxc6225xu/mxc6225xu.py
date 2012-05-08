@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
     id = 'mxc6225xu'
     name = 'MXC6225XU'
     longname = 'MEMSIC MXC6225XU'
-    desc = 'Digital Thermal Orientation Sensor (DTOS) protocol'
+    desc = 'Digital Thermal Orientation Sensor (DTOS) protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mxc6225xu']

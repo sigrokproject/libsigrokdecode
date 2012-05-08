@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     id = 'i2cfilter'
     name = 'I2C filter'
     longname = 'I2C filter'
-    desc = 'Filter out specific addresses/directions in an I2C stream.'
+    desc = 'Filter out addresses/directions in an I2C stream.'
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = []

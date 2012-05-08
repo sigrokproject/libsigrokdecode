@@ -35,7 +35,7 @@ class Decoder(srd.Decoder):
     id = 'dcf77'
     name = 'DCF77'
     longname = 'DCF77 time protocol'
-    desc = 'TODO.'
+    desc = 'European longwave time signal (77.5kHz carrier signal).'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dcf77']

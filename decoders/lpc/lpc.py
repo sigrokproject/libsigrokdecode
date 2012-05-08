@@ -102,7 +102,7 @@ class Decoder(srd.Decoder):
     id = 'lpc'
     name = 'LPC'
     longname = 'Low-Pin-Count'
-    desc = 'TODO.'
+    desc = 'Protocol for low-bandwidth devices on PC mainboards.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['lpc']

@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     id = 'rtc8564'
     name = 'RTC-8564'
     longname = 'Epson RTC-8564 JE/NB'
-    desc = 'TODO.'
+    desc = 'Realtime clock module protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['rtc8564']

@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     id = 'mlx90614'
     name = 'MLX90614'
     longname = 'Melexis MLX90614'
-    desc = 'TODO.'
+    desc = 'Infrared Thermometer protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mlx90614']

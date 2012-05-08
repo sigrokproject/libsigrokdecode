@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     id = 'i2cdemux'
     name = 'I2C demux'
     longname = 'I2C demultiplexer'
-    desc = 'TODO.'
+    desc = 'Demux I2C packets into per-slave-address streams.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.

@@ -98,7 +98,7 @@ class Decoder(srd.Decoder):
     id = 'mx25lxx05d'
     name = 'MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D'
-    desc = 'Macronix MX25Lxx05D SPI flash chip decoder'
+    desc = 'SPI (NOR) flash chip protocol.'
     license = 'gplv2+'
     inputs = ['spi', 'logic']
     outputs = ['mx25lxx05d']

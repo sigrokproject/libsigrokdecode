@@ -30,8 +30,7 @@ class Decoder(srd.Decoder):
     id = 'i2s'
     name = 'I2S'
     longname = 'Integrated Interchip Sound'
-    desc = 'I2S is an electrical serial bus interface standard used ' \
-        'for connecting digital audio devices together.'
+    desc = 'Serial bus for connecting digital audio devices.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2s']

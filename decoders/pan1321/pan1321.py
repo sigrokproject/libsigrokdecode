@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     id = 'pan1321'
     name = 'PAN1321'
     longname = 'Panasonic PAN1321'
-    desc = 'TODO.'
+    desc = 'Bluetooth RF module with Serial Port Profile (SPP).'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']

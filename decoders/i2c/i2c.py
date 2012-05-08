@@ -55,7 +55,7 @@ class Decoder(srd.Decoder):
     id = 'i2c'
     name = 'I2C'
     longname = 'Inter-Integrated Circuit'
-    desc = 'I2C is a two-wire, multi-master, serial bus.'
+    desc = 'Two-wire, multi-master, serial bus.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']
