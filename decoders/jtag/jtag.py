@@ -38,8 +38,9 @@ class Decoder(srd.Decoder):
         {'id': 'tms',  'name': 'TMS',  'desc': 'Test mode select'},
     ]
     optional_probes = [
-        # {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
-        # {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
+        {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
+        {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
+        {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     ]
     options = {}
     annotations = [
@@ -158,8 +159,8 @@ class Decoder(srd.Decoder):
             self.oldpins = pins
 
             # Get individual pin values into local variables.
-            # TODO: Handle optional pins (TRST, SRST).
-            (tdi, tdo, tck, tms) = pins
+            # Unused probes will have a value of > 1.
+            (tdi, tdo, tck, tms, trst, srst, rtck) = pins
 
             # We only care about TCK edges (either rising or falling).
             if (self.oldtck == tck):
