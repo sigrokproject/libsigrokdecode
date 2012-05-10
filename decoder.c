@@ -134,6 +134,8 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_decoder *d;
 	int alen, ret, i;
 	char **ann;
+	struct srd_probe *p;
+	GSList *l;
 
 	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
@@ -221,6 +223,19 @@ SRD_API int srd_decoder_load(const char *module_name)
 	/* Check and import optional probes. */
 	if (get_probes(d, "optional_probes", &d->opt_probes) != SRD_OK)
 		goto err_out;
+
+	/*
+	 * Fix order numbers for the optional probes.
+	 *
+	 * Example:
+	 * Required probes: r1, r2, r3. Optional: o1, o2, o3, o4.
+	 * 'order' fields in the d->probes list = 0, 1, 2.
+	 * 'order' fields in the d->opt_probes list = 3, 4, 5, 6.
+	 */
+	for (l = d->opt_probes; l; l = l->next) {
+		p = l->data;
+		p->order += g_slist_length(d->probes);
+	}
 
 	/* Store required fields in newly allocated strings. */
 	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)

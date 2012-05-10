@@ -344,6 +344,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 	struct srd_probe *p;
 	int *new_probemap, new_probenum;
 	char *probe_id, *probenum_str;
+	int i, num_required_probes;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
 		di->inst_id, g_hash_table_size(new_probes));
@@ -365,6 +366,13 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		srd_err("Failed to g_malloc() new probe map.");
 		return SRD_ERR_MALLOC;
 	}
+
+	/*
+	 * For now, map all indexes to probe -1 (can be overridden later).
+	 * This -1 is interpreted as an unspecified probe later.
+	 */
+	for (i = 0; i < di->dec_num_probes; i++)
+		new_probemap[i] = -1;
 
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
@@ -390,9 +398,17 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		}
 		p = sl->data;
 		new_probemap[p->order] = new_probenum;
-		srd_dbg("setting probe mapping for %d = probe %d", p->order,
-			new_probenum);
+		srd_dbg("Setting probe mapping: %s (index %d) = probe %d.",
+			p->id, p->order, new_probenum);
 	}
+
+	srd_dbg("Final probe map:");
+	num_required_probes = g_slist_length(di->decoder->probes);
+	for (i = 0; i < di->dec_num_probes; i++) {
+		srd_dbg(" - index %d = probe %d (%s)", i, new_probemap[i],
+		        (i < num_required_probes) ? "required" : "optional");
+	}
+
 	g_free(di->dec_probemap);
 	di->dec_probemap = new_probemap;
 
