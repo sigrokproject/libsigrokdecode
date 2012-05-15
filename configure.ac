@@ -166,6 +166,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
 		 decoders/usb/Makefile
+		 decoders/onewire/Makefile
 		])
 
 AC_OUTPUT

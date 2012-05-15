@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,25 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Please keep this list in alphabetical order.
-SUBDIRS = \
-	dcf77 \
-	edid \
-	i2c \
-	i2cdemux \
-	i2cfilter \
-	i2s \
-	jtag \
-	jtag_stm32 \
-	lpc \
-	mlx90614 \
-	mx25lxx05d \
-	mxc6225xu \
-	pan1321 \
-	rtc8564 \
-	spi \
-	transitioncounter \
-	uart \
-	usb \
-	onewire
+pkgdatadir = $(DECODERS_DIR)/onewire
+
+dist_pkgdata_DATA = __init__.py onewire.py
+
+CLEANFILES = *.pyc
 
