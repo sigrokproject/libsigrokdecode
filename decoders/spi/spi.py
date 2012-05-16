@@ -73,6 +73,7 @@ class Decoder(srd.Decoder):
         self.bytesreceived = 0
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
+        self.oldcs = -1
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
@@ -84,6 +85,14 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         # TODO: Either MISO or MOSI could be optional. CS# is optional.
         for (self.samplenum, (miso, mosi, sck, cs)) in data:
+
+            if self.oldcs != cs:
+                # Send all CS# pin value changes.
+                self.put(self.samplenum, self.samplenum, self.out_proto,
+                         ['CS-CHANGE', self.oldcs, cs])
+                self.put(self.samplenum, self.samplenum, self.out_ann,
+                         [0, ['CS-CHANGE: %d->%d' % (self.oldcs, cs)]])
+                self.oldcs = cs
 
             # Ignore sample if the clock pin hasn't changed.
             if sck == self.oldsck:
@@ -131,7 +140,7 @@ class Decoder(srd.Decoder):
                 continue
 
             self.put(self.start_sample, self.samplenum, self.out_proto,
-                     ['data', self.mosidata, self.misodata])
+                     ['DATA', self.mosidata, self.misodata])
             self.put(self.start_sample, self.samplenum, self.out_ann,
                      [ANN_HEX, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
                      self.misodata)]])

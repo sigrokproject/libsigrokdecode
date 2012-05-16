@@ -232,7 +232,7 @@ class Decoder(srd.Decoder):
 
         ptype, mosi, miso = data
 
-        if ptype != 'data':
+        if ptype != 'DATA':
             return
 
         cmd = mosi
