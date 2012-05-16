@@ -62,7 +62,7 @@ class Decoder(srd.Decoder):
         # Common variables
         self.samplenum = 0
         # Link layer variables
-        self.lnk_state = 'WAIT FOR EVENT'
+        self.lnk_state = 'WAIT FOR NEGEDGE'
         self.lnk_event = 'NONE'
         self.lnk_start = -1
         self.lnk_bit   = -1
@@ -155,43 +155,83 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         for (self.samplenum, owr) in data:
 
-            # First sample: Save OWR value.
-            if self.oldbit == None:
-                self.oldbit = owr
-                continue
-
             # Data link layer
+
+            # Clear events.
+            self.lnk_event = "RESET"
+            # State machine.
             if self.lnk_state == 'WAIT FOR FALLING EDGE':
                 # The start of a cycle is a falling edge.
-                if (old_owr == 1 and owr == 0):
-                    # Save the sample number where the start bit begins.
-                    self.lnk_start = self.samplenum
+                if (owr == 0):
+                    # Save the sample number for the falling edge.
+                    self.lnk_fall = self.samplenum
                     # Go to waiting for sample time
-                    self.lnk_state = 'WAIT FOR SAMPLE'
-            elif self.lnk_state == 'WAIT FOR SAMPLE':
+                    self.lnk_state = 'WAIT FOR DATA SAMPLE'
+            elif self.lnk_state == 'WAIT FOR DATA SAMPLE':
                 # Data should be sample one 'time unit' after a falling edge
-                if (self.samplenum == self.lnk_start + self.time_base):
+                if (self.samplenum - self.lnk_fall == 1*self.time_base):
                     self.lnk_bit  = owr & 0x1
-                    self.lnk_cnt  = self.lnk_cnt + 1
-                    self.lnk_byte = (self.lnk_byte << 1) & self.lnk_bit
-                    self.lnk_state = 'WAIT FOR RISING EDGE'
+                    self.lnk_event = "DATA BIT"
+                    if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
+                    else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
             elif self.lnk_state == 'WAIT FOR RISING EDGE':
                 # The end of a cycle is a rising edge.
-                if (old_owr == 0 and owr == 1):
-                    # Data bit cycle length should be between 2*T and 
-                    if (self.samplenum < self.lnk_start + 2*self.time_base):
-                        if (self.lnk_cnt == 8)
-                            self.put(self.startsample, self.samplenum - 1, self.out_proto, ['BYTE', self.lnk_byte])
-                            self.lnk_cnt = 0
+                if (owr == 1):
+                    # A reset cycle is longer than 8T
+                    if (self.samplenum - self.lnk_fall > 8*self.time_base):
+                        # Save the sample number for the falling edge.
+                        self.lnk_rise = self.samplenum
+                        # Send a reset event to the next protocol layer
+                        self.lnk_event = "RESET"
+                        self.lnk_state = "WAIT FOR PRESENCE DETECT"
+            elif self.lnk_state == 'WAIT FOR PRESENCE DETECT':
+                # Data should be sample one 'time unit' after a falling edge
+                if (self.samplenum - self.lnk_rise == 2.5*self.time_base):
+                    self.lnk_bit  = owr & 0x1
+                    self.lnk_event = "PRESENCE DETECT"
+                    if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
+                    else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
+            else:
+                raise Exception('Invalid lnk_state: %d' % self.lnk_state)
+
+            # Network layer
+            
+            # Clear events.
+            self.net_event = "RESET"
+            # State machine.
+            if self.lnk_event == "RESET":
+                self.net_state = "WAIT FOR COMMAND"
+                self.net_cnt = 0
+                self.net_cmd = 0
+            elif self.lnk_event == "DATA BIT"
+                if self.net_state == "WAIT FOR COMMAND"
+                    self.net_cnt = self.net_cnt + 1
+                    self.net_cmd = (self.net_cmd << 1) & self.lnk_bit
+                    if (self.lnk_cnt == 8)
+                        self.put(self.startsample, self.samplenum - 1, self.out_proto, ['BYTE', self.lnk_byte])
+                        if self.net_cmd == 0x33:
+                            # READ ROM
+                        elif self.net_cmd == 0x0f
+                            # READ ROM
+                        elif self.net_cmd == 0xcc
+                            # SKIP ROM
+                        elif self.net_cmd == 0x55
+                            # MATCH ROM
+                        elif self.net_cmd == 0xf0
+                            # SEARCH ROM
+                        elif self.net_cmd == 0x3c
+                            # OVERDRIVE SKIP ROM
+                        elif self.net_cmd == 0x69
+                            # OVERDRIVE MATCH ROM
+                        self.lnk_cnt = 0
+                if self.net_state == "WAIT FOR ROM":
+                    #
+                else:
+                    raise Exception('Invalid net_state: %d' % self.net_state)
+            elif not (self.lnk_event == "NONE"):
+                raise Exception('Invalid net_event: %d' % self.net_event)
+
+
+
                     if (self.samplenum == self.lnk_start + 8*self.time_base):
                         self.put(self.startsample, self.samplenum - 1, self.out_proto, ['RESET'])
-                    
-                    # Go to waiting for sample time
-                    self.lnk_state = 'WAIT FOR SAMPLE'
-
-            elif self.state_lnk == 'GET DATA BITS'   : self.get_data_bits(owr)
-            else                                     : raise Exception('Invalid state: %d' % self.state)
-
-            # Save current RX/TX values for the next round.
-            self.oldbit = owr
-
