@@ -115,6 +115,8 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.state = IDLE
         self.cmdstate = 1 # TODO
+        self.addr = 0
+        self.data = []
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mx25lxx05d')
@@ -225,19 +227,77 @@ class Decoder(srd.Decoder):
             self.cmdstate += 1
 
     def handle_rdsr(self, mosi, miso):
-        self.putx([0, ['Command: %s (0x%02x)' % (cmds[self.cmd], miso)]])
-        self.state = IDLE
+        # Read status register: Master asserts CS#, sends RDSR command,
+        # reads status register byte. If CS# is kept asserted, the status
+        # register can be read continuously / multiple times in a row.
+        # When done, the master de-asserts CS# again.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
+        elif self.cmdstate >= 2:
+            # Bytes 2-x: Slave sends status register as long as master clocks.
+            if self.cmdstate <= 3: # TODO: While CS# asserted.
+                self.putx([0, ['Status register: 0x%02x' % miso]])
+                # TODO: Decode status register bits.
+
+            if self.cmdstate == 3: # TODO: If CS# got de-asserted.
+                self.state = IDLE
+                return
+
+        self.cmdstate += 1
+
+    def handle_pp(self, mosi, miso):
+        # Page program: Master asserts CS#, sends PP command, sends 3-byte
+        # page address, sends >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+            # self.putx([0, ['Page address, byte %d: 0x%02x' % \
+            #                (4 - self.cmdstate, mosi)]])
+            if self.cmdstate == 4:
+                self.putx([0, ['Page address: 0x%06x' % self.addr]])
+                self.addr = 0
+        elif self.cmdstate >= 5:
+            # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 256 bytes per page / PP command.
+            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
+                self.data.append(mosi)
+                # self.putx([0, ['New data byte: 0x%02x' % mosi]])
+
+            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
+                # s = ', '.join(map(hex, self.data))
+                s = ''.join(map(chr, self.data))
+                self.putx([0, ['Page data: %s' % s]])
+                self.data = []
+                self.state = IDLE
+                return
+
+        self.cmdstate += 1
 
     def decode(self, ss, es, data):
 
         ptype, mosi, miso = data
 
+        # if ptype == 'DATA':
+        #     s = 'MOSI: 0x%02x, MISO: 0x%02x' % (mosi, miso)
+        #     self.put(0, 0, self.out_ann, [0, [s]])
+        #     pass
+
+        # if ptype == 'CS-CHANGE':
+        #     if mosi == 1 and miso == 0:
+        #         self.put(0, 0, self.out_ann, [0, ['Asserting CS#']])
+        #     elif mosi == 0 and miso == 1:
+        #         self.put(0, 0, self.out_ann, [0, ['De-asserting CS#']])
+        #     return
+
         if ptype != 'DATA':
             return
 
         cmd = mosi
-        self.ss = ss
-        self.es = es
+        self.ss, self.es = ss, es
 
         # If we encountered a known chip command, enter the resp. state.
         if self.state == IDLE:
@@ -256,10 +316,12 @@ class Decoder(srd.Decoder):
             self.handle_se(mosi, miso)
         elif self.state == CMD_RDID:
             self.handle_rdid(mosi, miso)
-        if self.state == CMD_REMS:
+        elif self.state == CMD_REMS:
             self.handle_rems(mosi, miso)
-        if self.state == CMD_RDSR:
+        elif self.state == CMD_RDSR:
             self.handle_rdsr(mosi, miso)
+        elif self.state == CMD_PP:
+            self.handle_pp(mosi, miso)
         else:
             self.put(0, 0, self.out_ann, [0, ['Unknown command: 0x%02x' % cmd]])
             self.state = IDLE
