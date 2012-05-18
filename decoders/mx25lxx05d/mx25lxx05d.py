@@ -168,16 +168,13 @@ class Decoder(srd.Decoder):
             self.start_sample = self.ss
             self.putx([0, ['Command: %s' % cmds[self.cmd]]])
         elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends address of the sector to erase.
-            # Note: Assumes SPI data is 8 bits wide (it is for MX25Lxx05D).
-            # TODO: LSB-first of MSB-first?
-            self.addr <<= 8
-            self.addr |= mosi
-            self.putx([0, ['Address byte %d: 0x%02x' % (self.cmdstate - 1,
-                        miso)]]) # TODO: Count from 0 or 1?
+            # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+            # self.putx([0, ['Sector address, byte %d: 0x%02x' % \
+            #                (4 - self.cmdstate, mosi)]])
 
         if self.cmdstate == 4:
-            d = 'Erase sector %d' % self.addr
+            d = 'Erase sector %d (0x%06x)' % (self.addr, self.addr)
             self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
