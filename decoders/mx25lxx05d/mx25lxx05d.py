@@ -277,6 +277,37 @@ class Decoder(srd.Decoder):
 
         self.cmdstate += 1
 
+    def handle_read(self, mosi, miso):
+        # Read data bytes: Master asserts CS#, sends READ command, sends
+        # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.cmd]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+            # self.putx([0, ['Read address, byte %d: 0x%02x' % \
+            #                (4 - self.cmdstate, mosi)]])
+            if self.cmdstate == 4:
+                self.putx([0, ['Read address: 0x%06x' % self.addr]])
+                self.addr = 0
+        elif self.cmdstate >= 5:
+            # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 256 bytes per READ command.
+            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
+                self.data.append(miso)
+                # self.putx([0, ['New read byte: 0x%02x' % miso]])
+
+            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
+                # s = ', '.join(map(hex, self.data))
+                s = ''.join(map(chr, self.data))
+                self.putx([0, ['Read data: %s' % s]])
+                self.data = []
+                self.state = IDLE
+                return
+
+        self.cmdstate += 1
+
     def decode(self, ss, es, data):
 
         ptype, mosi, miso = data
@@ -322,6 +353,8 @@ class Decoder(srd.Decoder):
             self.handle_rdsr(mosi, miso)
         elif self.state == CMD_PP:
             self.handle_pp(mosi, miso)
+        elif self.state == CMD_READ:
+            self.handle_read(mosi, miso)
         else:
             self.put(0, 0, self.out_ann, [0, ['Unknown command: 0x%02x' % cmd]])
             self.state = IDLE
