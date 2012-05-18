@@ -93,6 +93,31 @@ device_name = {
     0x16: 'MX25L6405D',
 }
 
+def decode_status_reg(data):
+    # TODO: Additional per-bit(s) self.put() calls with correct start/end.
+
+    # Bits[0:0]: WIP (write in progress)
+    s = 'W' if (data & (1 << 0)) else 'No w'
+    ret = '%srite operation in progress.\n' % s
+
+    # Bits[1:1]: WEL (write enable latch)
+    s = '' if (data & (1 << 1)) else 'not '
+    ret += 'Internal write enable latch is %sset.\n' % s
+
+    # Bits[5:2]: Block protect bits
+    # TODO: More detailed decoding (chip-dependent).
+    ret += 'Block protection bits (BP3-BP0): 0x%x.\n' % ((data & 0x3c) >> 2)
+
+    # Bits[6:6]: Continuously program mode (CP mode)
+    s = '' if (data & (1 << 6)) else 'not '
+    ret += 'Device is %sin continuously program mode (CP mode).\n' % s
+
+    # Bits[7:7]: SRWD (status register write disable)
+    s = '' if (data & (1 << 7)) else 'not '
+    ret += 'Status register writes are %sallowed.\n' % s
+
+    return ret
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'mx25lxx05d'
@@ -235,7 +260,7 @@ class Decoder(srd.Decoder):
             # Bytes 2-x: Slave sends status register as long as master clocks.
             if self.cmdstate <= 3: # TODO: While CS# asserted.
                 self.putx([0, ['Status register: 0x%02x' % miso]])
-                # TODO: Decode status register bits.
+                self.putx([0, [decode_status_reg(miso)]])
 
             if self.cmdstate == 3: # TODO: If CS# got de-asserted.
                 self.state = IDLE
