@@ -113,7 +113,7 @@ def decode_status_reg(data):
     ret += 'Device is %sin continuously program mode (CP mode).\n' % s
 
     # Bits[7:7]: SRWD (status register write disable)
-    s = '' if (data & (1 << 7)) else 'not '
+    s = 'not ' if (data & (1 << 7)) else ''
     ret += 'Status register writes are %sallowed.\n' % s
 
     return ret
