@@ -84,7 +84,7 @@ class Decoder(srd.Decoder):
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'onewire')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'onewire')
+        self.out_ann   = self.add(srd.OUTPUT_ANN  , 'onewire')
 
         # The width of the 1-Wire time base (30us) in number of samples.
         # TODO: optimize this value
@@ -92,65 +92,6 @@ class Decoder(srd.Decoder):
 
     def report(self):
         pass
-
-    def get_data_sample(self, owr):
-        # Skip samples until we're in the middle of the start bit.
-        if not self.reached_data_sample():
-            return
-
-        self.data_sample = owr
-
-        self.cur_data_bit = 0
-        self.databyte = 0
-        self.startsample = -1
-
-        self.state = 'GET DATA BITS'
-
-        self.put(self.cycle_start, self.samplenum, self.out_proto,
-                 ['STARTBIT', self.startbit])
-        self.put(self.cycle_start, self.samplenum, self.out_ann,
-                 [ANN_ASCII, ['Start bit', 'Start', 'S']])
-
-    def get_data_bits(self, owr):
-        # Skip samples until we're in the middle of the desired data bit.
-        if not self.reached_bit(self.cur_data_bit + 1):
-            return
-
-        # Save the sample number where the data byte starts.
-        if self.startsample == -1:
-            self.startsample = self.samplenum
-
-        # Get the next data bit in LSB-first or MSB-first fashion.
-        if self.options['bit_order'] == 'lsb-first':
-            self.databyte >>= 1
-            self.databyte |= \
-                (owr << (self.options['num_data_bits'] - 1))
-        elif self.options['bit_order'] == 'msb-first':
-            self.databyte <<= 1
-            self.databyte |= (owr << 0)
-        else:
-            raise Exception('Invalid bit order value: %s',
-                            self.options['bit_order'])
-
-        # Return here, unless we already received all data bits.
-        # TODO? Off-by-one?
-        if self.cur_data_bit < self.options['num_data_bits'] - 1:
-            self.cur_data_bit += 1
-            return
-
-        self.state = 'GET PARITY BIT'
-
-        self.put(self.startsample, self.samplenum - 1, self.out_proto,
-                 ['DATA', self.databyte])
-
-        self.putx([ANN_ASCII, [chr(self.databyte)]])
-        self.putx([ANN_DEC,   [str(self.databyte)]])
-        self.putx([ANN_HEX,   [hex(self.databyte),
-                               hex(self.databyte)[2:]]])
-        self.putx([ANN_OCT,   [oct(self.databyte),
-                               oct(self.databyte)[2:]]])
-        self.putx([ANN_BITS,  [bin(self.databyte),
-                               bin(self.databyte)[2:]]])
 
     def decode(self, ss, es, data):
         for (self.samplenum, owr) in data:
@@ -199,33 +140,42 @@ class Decoder(srd.Decoder):
             # Clear events.
             self.net_event = "RESET"
             # State machine.
-            if self.lnk_event == "RESET":
+            if (self.lnk_event == "RESET"):
                 self.net_state = "WAIT FOR COMMAND"
                 self.net_cnt = 0
                 self.net_cmd = 0
-            elif self.lnk_event == "DATA BIT"
-                if self.net_state == "WAIT FOR COMMAND"
+            elif (self.lnk_event == "DATA BIT"):
+                if (self.net_state == "WAIT FOR COMMAND"):
                     self.net_cnt = self.net_cnt + 1
                     self.net_cmd = (self.net_cmd << 1) & self.lnk_bit
-                    if (self.lnk_cnt == 8)
-                        self.put(self.startsample, self.samplenum - 1, self.out_proto, ['BYTE', self.lnk_byte])
-                        if self.net_cmd == 0x33:
+                    if (self.lnk_cnt == 8):
+                        self.put(self.startsample, self.samplenum, self.out_proto, ['LNK: BYTE', self.lnk_byte])
+                        self.put(self.startsample, self.samplenum, self.out_ann  , ['LNK: BYTE', self.lnk_byte])
+                        if   (self.net_cmd == 0x33):
                             # READ ROM
-                        elif self.net_cmd == 0x0f
+                            break
+                        elif (self.net_cmd == 0x0f):
                             # READ ROM
-                        elif self.net_cmd == 0xcc
+                            break
+                        elif (self.net_cmd == 0xcc):
                             # SKIP ROM
-                        elif self.net_cmd == 0x55
+                            break
+                        elif (self.net_cmd == 0x55):
                             # MATCH ROM
-                        elif self.net_cmd == 0xf0
+                            break
+                        elif (self.net_cmd == 0xf0):
                             # SEARCH ROM
-                        elif self.net_cmd == 0x3c
+                            break
+                        elif (self.net_cmd == 0x3c):
                             # OVERDRIVE SKIP ROM
-                        elif self.net_cmd == 0x69
+                            break
+                        elif (self.net_cmd == 0x69):
                             # OVERDRIVE MATCH ROM
+                            break
                         self.lnk_cnt = 0
-                if self.net_state == "WAIT FOR ROM":
+                if (self.net_state == "WAIT FOR ROM"):
                     #
+                    break
                 else:
                     raise Exception('Invalid net_state: %d' % self.net_state)
             elif not (self.lnk_event == "NONE"):
@@ -233,5 +183,5 @@ class Decoder(srd.Decoder):
 
 
 
-                    if (self.samplenum == self.lnk_start + 8*self.time_base):
-                        self.put(self.startsample, self.samplenum - 1, self.out_proto, ['RESET'])
+#                    if (self.samplenum == self.lnk_start + 8*self.time_base):
+#                        self.put(self.startsample, self.samplenum - 1, self.out_proto, ['RESET'])
