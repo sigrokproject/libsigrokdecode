@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
                     if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
                     else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
             else:
-                raise Exception('Invalid lnk_state: %d' % self.lnk_state)
+                raise Exception('Invalid lnk_state: %s' % self.lnk_state)
 
             # Network layer
             
@@ -177,9 +177,9 @@ class Decoder(srd.Decoder):
                     #
                     break
                 else:
-                    raise Exception('Invalid net_state: %d' % self.net_state)
+                    raise Exception('Invalid net_state: %s' % self.net_state)
             elif not (self.lnk_event == "NONE"):
-                raise Exception('Invalid net_event: %d' % self.net_event)
+                raise Exception('Invalid net_event: %s' % self.net_event)
 
 
 
