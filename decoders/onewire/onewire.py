@@ -149,8 +149,10 @@ class Decoder(srd.Decoder):
                     self.net_cnt = self.net_cnt + 1
                     self.net_cmd = (self.net_cmd << 1) & self.lnk_bit
                     if (self.lnk_cnt == 8):
-                        self.put(self.startsample, self.samplenum, self.out_proto, ['LNK: BYTE', self.lnk_byte])
-                        self.put(self.startsample, self.samplenum, self.out_ann  , ['LNK: BYTE', self.lnk_byte])
+                        self.put(self.startsample, self.samplenum,
+                                 self.out_proto, ['LNK: BYTE', self.lnk_byte])
+                        self.put(self.startsample, self.samplenum, self.out_ann,
+                                 [ANN_DEC, ['LNK: BYTE: ' + self.lnk_byte]])
                         if   (self.net_cmd == 0x33):
                             # READ ROM
                             break
