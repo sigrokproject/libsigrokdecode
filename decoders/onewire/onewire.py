@@ -94,7 +94,7 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        for (self.samplenum, owr) in data:
+        for (self.samplenum, (owr, pwr)) in data:
 
             # Data link layer
 
