@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
-        self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
+        self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = -1
         self.databytecount = 0
         self.reg = 0x00
 
@@ -109,6 +109,20 @@ class Decoder(srd.Decoder):
         self.putx([0, ['Accelerometer Z value bits[1:0]: 0x%x' % az_rest]])
         self.putx([1, ['AZ[1:0]: 0x%x' % az_rest]])
 
+    def output_full_block_if_possible(self):
+
+        # For now, only output summary annotation if all values are available.
+        t = (self.sx, self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
+        if -1 in t:
+            return
+
+        # Note: Only works if host reads _all_ regs (0x00 - 0x05).
+        d = 'SX = 0x%02x, SY = 0x%02x, AX = 0x%02x, AY = 0x%02x, ' \
+            'AZ = 0x%02x, BZ = 0x%02x, BC = 0x%02x' % (self.sx, \
+            self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
+        self.put(self.block_start_sample, self.block_end_sample,
+                 self.out_ann, [0, [d]])
+
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -135,15 +149,10 @@ class Decoder(srd.Decoder):
             elif cmd == 'STOP':
                 self.block_end_sample = es
 
-                # TODO: Only works if host reads _all_ regs (0x00 - 0x05).
-                d = 'SX = 0x%02x, SY = 0x%02x, AX = 0x%02x, AY = 0x%02x, ' \
-                    'AZ = 0x%02x, BZ = 0x%02x, BC = 0x%02x' % (self.sx, \
-                    self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
-                self.put(self.block_start_sample, self.block_end_sample,
-                         self.out_ann, [0, [d]])
+                self.output_full_block_if_possible()
 
-                self.sx = self.sy = self.ax = self.ay = self.az = 0
-                self.bz = self.bc = 0
+                self.sx = self.sy = self.ax = self.ay = self.az = -1
+                self.bz = self.bc = -1
 
                 self.state = 'IDLE'
             else:
