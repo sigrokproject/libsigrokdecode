@@ -32,16 +32,18 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['nunchuck']
     probes = []
-    optional_probes = [] # TODO
+    optional_probes = []
     options = {}
     annotations = [
+        ['Text (verbose)', 'Human-readable text (verbose)'],
         ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
-        self.state = 'IDLE' # TODO: Can we assume a certain initial state?
+        self.state = 'IDLE'
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = 0
         self.databytecount = 0
+        self.reg = 0x00
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'nunchuk')
@@ -50,79 +52,108 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def decode(self, ss, es, data):
+    def handle_reg_0x00(self, databyte):
+        self.sx = databyte
+        self.put(0, 0, self.out_ann,
+                 [0, ['Analog stick X position: 0x%02x' % self.sx]])
+        self.put(0, 0, self.out_ann, [1, ['SX: 0x%02x' % self.sx]])
 
+    def handle_reg_0x01(self, databyte):
+        self.sy = databyte
+        self.put(0, 0, self.out_ann,
+                 [0, ['Analog stick Y position: 0x%02x' % self.sy]])
+        self.put(0, 0, self.out_ann, [1, ['SY: 0x%02x' % self.sy]])
+
+    def handle_reg_0x02(self, databyte):
+        self.ax = databyte << 2
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer X value bits[9:2]: 0x%03x' % self.ax]])
+        self.put(0, 0, self.out_ann, [1, ['AX[9:2]: 0x%03x' % self.ax]])
+
+    def handle_reg_0x03(self, databyte):
+        self.ay = databyte << 2
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer Y value bits[9:2]: 0x%03x' % self.ay]])
+        self.put(0, 0, self.out_ann, [1, ['AY[9:2]: 0x%x' % self.ay]])
+
+    def handle_reg_0x04(self, databyte):
+        self.az = databyte << 2
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer Z value bits[9:2]: 0x%03x' % self.az]])
+        self.put(0, 0, self.out_ann, [1, ['AZ[9:2]: 0x%x' % self.az]])
+
+    # TODO: Bit-exact annotations.
+    def handle_reg_0x05(self, databyte):
+        self.bz = (databyte & (1 << 0)) >> 0 # Bits[0:0]
+        self.bc = (databyte & (1 << 1)) >> 1 # Bits[1:1]
+        ax_rest = (databyte & (3 << 2)) >> 2 # Bits[3:2]
+        ay_rest = (databyte & (3 << 4)) >> 4 # Bits[5:4]
+        az_rest = (databyte & (3 << 6)) >> 6 # Bits[7:6]
+        self.ax |= ax_rest
+        self.ay |= ay_rest
+        self.az |= az_rest
+
+        s = '' if (self.bz == 0) else 'not '
+        self.put(0, 0, self.out_ann, [0, ['Z button: %spressed' % s]])
+        self.put(0, 0, self.out_ann, [1, ['BZ: %d' % self.bz]])
+
+        s = '' if (self.bc == 0) else 'not '
+        self.put(0, 0, self.out_ann, [0, ['C button: %spressed' % s]])
+        self.put(0, 0, self.out_ann, [1, ['BC: %d' % self.bc]])
+
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer X value bits[1:0]: 0x%03x' % ax_rest]])
+        self.put(0, 0, self.out_ann, [1, ['AX[1:0]: 0x%x' % ax_rest]])
+
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer Y value bits[1:0]: 0x%03x' % ay_rest]])
+        self.put(0, 0, self.out_ann, [1, ['AY[1:0]: 0x%x' % ay_rest]])
+
+        self.put(0, 0, self.out_ann,
+                 [0, ['Accelerometer Z value bits[1:0]: 0x%03x' % az_rest]])
+        self.put(0, 0, self.out_ann, [1, ['AZ[1:0]: 0x%x' % az_rest]])
+
+    def decode(self, ss, es, data):
         cmd, databyte = data
 
-        if cmd == 'START': # TODO: Handle 'Sr' here, too?
-            self.state = 'START'
+        # Store the start/end samples of this I2C packet.
+        self.ss, self.es = ss, es
 
-        elif cmd == 'START REPEAT':
-            pass # FIXME
+        # State machine.
+        if self.state == 'IDLE':
+            # Wait for an I2C START condition.
+            if cmd != 'START':
+                return
+            self.state = 'GET SLAVE ADDR'
+            self.block_start_sample = ss
+        elif self.state == 'GET SLAVE ADDR':
+            # Wait for an address read operation.
+            if cmd != 'ADDRESS READ':
+                return
+            self.state = 'READ REGS'
+        elif self.state == 'READ REGS':
+            if cmd == 'DATA READ':
+                handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
+                handle_reg(databyte)
+                self.reg += 1
+            elif cmd == 'STOP':
+                self.block_end_sample = es
 
-        elif cmd == 'ADDRESS READ':
-            # TODO: Error/Warning, not supported, I think.
-            pass
-
-        elif cmd == 'ADDRESS WRITE':
-            # The Wii Nunchuk always has slave address 0x54.
-            # TODO: Handle this stuff more correctly.
-            if databyte == 0x54:
-                pass # TODO
-            else:
-                pass # TODO: What to do here? Ignore? Error?
-
-        elif cmd == 'DATA READ' and self.state == 'INITIALIZED':
-            if self.databytecount == 0:
-                self.sx = databyte
-            elif self.databytecount == 1:
-                self.sy = databyte
-            elif self.databytecount == 2:
-                self.ax = databyte << 2
-            elif self.databytecount == 3:
-                self.ay = databyte << 2
-            elif self.databytecount == 4:
-                self.az = databyte << 2
-            elif self.databytecount == 5:
-                self.bz =  (databyte & (1 << 0)) >> 0
-                self.bc =  (databyte & (1 << 1)) >> 1
-                self.ax |= (databyte & (3 << 2)) >> 2
-                self.ay |= (databyte & (3 << 4)) >> 4
-                self.az |= (databyte & (3 << 6)) >> 6
-
-                d = 'sx = 0x%02x, sy = 0x%02x, ax = 0x%02x, ay = 0x%02x, ' \
-                    'az = 0x%02x, bz = 0x%02x, bc = 0x%02x' % (self.sx, \
+                # TODO: Only works if host reads _all_ regs (0x00 - 0x05).
+                d = 'SX = 0x%02x, SY = 0x%02x, AX = 0x%02x, AY = 0x%02x, ' \
+                    'AZ = 0x%02x, BZ = 0x%02x, BC = 0x%02x' % (self.sx, \
                     self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
-                self.put(ss, es, self.out_ann, [0, [d]])
+                self.put(self.block_start_sample, self.block_end_sample,
+                         self.out_ann, [0, [d]])
 
                 self.sx = self.sy = self.ax = self.ay = self.az = 0
                 self.bz = self.bc = 0
+
+                self.state = 'IDLE'
             else:
-                pass # TODO
-
-            if 0 <= self.databytecount <= 5:
-                self.databytecount += 1
-
-            # TODO: If 6 bytes read -> save and reset
-
-        # TODO
-        elif cmd == 'DATA READ' and self.state != 'INITIALIZED':
-            pass
-
-        elif cmd == 'DATA WRITE':
-            if self.state == 'IDLE':
-                self.state = 'INITIALIZED'
-            return
-
-            if databyte == 0x40 and self.state == 'START':
-                self.state = 'INIT'
-            elif databyte == 0x00 and self.state == 'INIT':
-                self.put(ss, es, self.out_ann, [0, ['Initialize nunchuk']])
-                self.state = 'INITIALIZED'
-            else:
-                pass # TODO
-
-        elif cmd == 'STOP':
-            self.state = 'INITIALIZED'
-            self.databytecount = 0
+                # self.put(0, 0, self.out_ann,
+                #          [0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
+                pass
+        else:
+            raise Exception('Invalid state: %s' % self.state)
 
