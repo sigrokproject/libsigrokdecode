@@ -37,6 +37,7 @@ class Decoder(srd.Decoder):
     annotations = [
         ['Text (verbose)', 'Human-readable text (verbose)'],
         ['Text', 'Human-readable text'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -44,6 +45,7 @@ class Decoder(srd.Decoder):
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = -1
         self.databytecount = 0
         self.reg = 0x00
+        self.init_seq = []
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'nunchuk')
@@ -55,6 +57,11 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         # Helper for annotations which span exactly one I2C packet.
         self.put(self.ss, self.es, self.out_ann, data)
+
+    def putb(self, data):
+        # Helper for annotations which span a block of I2C packets.
+        self.put(self.block_start_sample, self.block_end_sample,
+                 self.out_ann, data)
 
     def handle_reg_0x00(self, databyte):
         self.sx = databyte
@@ -131,6 +138,25 @@ class Decoder(srd.Decoder):
         self.put(self.block_start_sample, self.block_end_sample,
                  self.out_ann, [1, [s]])
 
+    def handle_reg_write(self, databyte):
+        self.putx([0, ['Nunchuk write: 0x%02x' % databyte]])
+        if len(self.init_seq) < 2:
+            self.init_seq.append(databyte)
+
+    def output_init_seq(self):
+        if len(self.init_seq) != 2:
+            self.putb([2, ['Init sequence was %d bytes long (2 expected)' % \
+                      len(self.init_seq)]])
+
+        if self.init_seq != (0x40, 0x00):
+            self.putb([2, ['Unknown init sequence (expected: 0x40 0x00)']])
+
+        # TODO: Detect Nunchuk clones (they have different init sequences).
+        s = 'Initialized Nintendo Wii Nunchuk'
+
+        self.putb([0, [s]])
+        self.putb([1, ['INIT']])
+
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -145,10 +171,11 @@ class Decoder(srd.Decoder):
             self.state = 'GET SLAVE ADDR'
             self.block_start_sample = ss
         elif self.state == 'GET SLAVE ADDR':
-            # Wait for an address read operation.
-            if cmd != 'ADDRESS READ':
-                return
-            self.state = 'READ REGS'
+            # Wait for an address read/write operation.
+            if cmd == 'ADDRESS READ':
+                self.state = 'READ REGS'
+            elif cmd == 'ADDRESS WRITE':
+                self.state = 'WRITE REGS'
         elif self.state == 'READ REGS':
             if cmd == 'DATA READ':
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
@@ -159,6 +186,17 @@ class Decoder(srd.Decoder):
                 self.output_full_block_if_possible()
                 self.sx = self.sy = self.ax = self.ay = self.az = -1
                 self.bz = self.bc = -1
+                self.state = 'IDLE'
+            else:
+                # self.putx([0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
+                pass
+        elif self.state == 'WRITE REGS':
+            if cmd == 'DATA WRITE':
+                self.handle_reg_write(databyte)
+            elif cmd == 'STOP':
+                self.block_end_sample = es
+                self.output_init_seq()
+                self.init_seq = []
                 self.state = 'IDLE'
             else:
                 # self.putx([0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
