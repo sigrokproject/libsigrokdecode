@@ -37,6 +37,5 @@ SUBDIRS = \
 	spi \
 	transitioncounter \
 	uart \
-	usb \
-	onewire
+	usb
 
