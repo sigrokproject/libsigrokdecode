@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag'
     name = 'JTAG'
-    longname = 'Joint Test Action Group'
+    longname = 'Joint Test Action Group (IEEE 1149.1)'
     desc = 'Protocol for testing, debugging, and flashing ICs.'
     license = 'gplv2+'
     inputs = ['logic']

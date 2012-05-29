@@ -78,7 +78,7 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'edid'
     name = 'EDID'
-    longname = 'Extended display identification data'
+    longname = 'Extended Display Identification Data'
     desc = 'Data structure describing display device capabilities.'
     license = 'gplv3+'
     inputs = ['ddc2']
