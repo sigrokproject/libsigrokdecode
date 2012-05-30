@@ -67,6 +67,8 @@ class Decoder(srd.Decoder):
                 return
             self.state = 'GET TEMPERATURE'
         elif self.state == 'GET TEMPERATURE':
+            if cmd != 'DATA WRITE':
+                return
             if len(self.data) == 0:
                 self.data.append(databyte)
                 self.ss = ss
