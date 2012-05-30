@@ -160,6 +160,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/mlx90614/Makefile
 		 decoders/mx25lxx05d/Makefile
 		 decoders/mxc6225xu/Makefile
+		 decoders/nunchuk/Makefile
 		 decoders/pan1321/Makefile
 		 decoders/rtc8564/Makefile
 		 decoders/spi/Makefile
