@@ -100,6 +100,8 @@ class Decoder(srd.Decoder):
     options = {}
     annotations = [
         ['Text', 'Human-readable text'],
+        ['Verbose decode', 'Decoded register bits, read/write data'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -164,7 +166,7 @@ class Decoder(srd.Decoder):
             # Bytes 2-x: Slave sends status register as long as master clocks.
             if self.cmdstate <= 3: # TODO: While CS# asserted.
                 self.putx([0, ['Status register: 0x%02x' % miso]])
-                self.putx([0, [decode_status_reg(miso)]])
+                self.putx([1, [decode_status_reg(miso)]])
 
             if self.cmdstate == 3: # TODO: If CS# got de-asserted.
                 self.state = None
@@ -199,7 +201,8 @@ class Decoder(srd.Decoder):
             if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
                 # s = ', '.join(map(hex, self.data))
                 s = ''.join(map(chr, self.data))
-                self.putx([0, ['Read data: %s' % s]])
+                self.putx([0, ['Read data']])
+                self.putx([1, ['Read data: %s' % s]])
                 self.data = []
                 self.state = None
                 return
@@ -232,8 +235,8 @@ class Decoder(srd.Decoder):
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
                 # Sector addresses must be 4K-aligned (same for all 3 chips).
-                d = 'Warning: Invalid sector address!' # TODO: type == WARN?
-                self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
+                d = 'Warning: Invalid sector address!'
+                self.put(self.start_sample, self.es, self.out_ann, [2, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -271,7 +274,8 @@ class Decoder(srd.Decoder):
             if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
                 # s = ', '.join(map(hex, self.data))
                 s = ''.join(map(chr, self.data))
-                self.putx([0, ['Page data: %s' % s]])
+                self.putx([0, ['Page data']])
+                self.putx([1, ['Page data: %s' % s]])
                 self.data = []
                 self.state = None
                 return
