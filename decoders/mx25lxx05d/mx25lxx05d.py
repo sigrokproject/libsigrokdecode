@@ -123,6 +123,9 @@ class Decoder(srd.Decoder):
         self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         self.state = None
 
+    def handle_wrdi(self, mosi, miso):
+        pass # TODO
+
     # TODO: Check/display device ID / name
     def handle_rdid(self, mosi, miso):
         if self.cmdstate == 1:
@@ -149,6 +152,66 @@ class Decoder(srd.Decoder):
         else:
             self.cmdstate += 1
 
+    def handle_rdsr(self, mosi, miso):
+        # Read status register: Master asserts CS#, sends RDSR command,
+        # reads status register byte. If CS# is kept asserted, the status
+        # register can be read continuously / multiple times in a row.
+        # When done, the master de-asserts CS# again.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate >= 2:
+            # Bytes 2-x: Slave sends status register as long as master clocks.
+            if self.cmdstate <= 3: # TODO: While CS# asserted.
+                self.putx([0, ['Status register: 0x%02x' % miso]])
+                self.putx([0, [decode_status_reg(miso)]])
+
+            if self.cmdstate == 3: # TODO: If CS# got de-asserted.
+                self.state = None
+                return
+
+        self.cmdstate += 1
+
+    def handle_wrsr(self, mosi, miso):
+        pass # TODO
+
+    def handle_read(self, mosi, miso):
+        # Read data bytes: Master asserts CS#, sends READ command, sends
+        # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+            # self.putx([0, ['Read address, byte %d: 0x%02x' % \
+            #                (4 - self.cmdstate, mosi)]])
+            if self.cmdstate == 4:
+                self.putx([0, ['Read address: 0x%06x' % self.addr]])
+                self.addr = 0
+        elif self.cmdstate >= 5:
+            # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 256 bytes per READ command.
+            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
+                self.data.append(miso)
+                # self.putx([0, ['New read byte: 0x%02x' % miso]])
+
+            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
+                # s = ', '.join(map(hex, self.data))
+                s = ''.join(map(chr, self.data))
+                self.putx([0, ['Read data: %s' % s]])
+                self.data = []
+                self.state = None
+                return
+
+        self.cmdstate += 1
+
+    def handle_fast_read(self, mosi, miso):
+        pass # TODO
+
+    def handle_2read(self, mosi, miso):
+        pass # TODO
+
     # TODO: Warn/abort if we don't see the necessary amount of bytes.
     # TODO: Warn if WREN was not seen before.
     def handle_se(self, mosi, miso):
@@ -174,6 +237,55 @@ class Decoder(srd.Decoder):
             self.state = None
         else:
             self.cmdstate += 1
+
+    def handle_be(self, mosi, miso):
+        pass # TODO
+
+    def handle_ce(self, mosi, miso):
+        pass # TODO
+
+    def handle_ce2(self, mosi, miso):
+        pass # TODO
+
+    def handle_pp(self, mosi, miso):
+        # Page program: Master asserts CS#, sends PP command, sends 3-byte
+        # page address, sends >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+            # self.putx([0, ['Page address, byte %d: 0x%02x' % \
+            #                (4 - self.cmdstate, mosi)]])
+            if self.cmdstate == 4:
+                self.putx([0, ['Page address: 0x%06x' % self.addr]])
+                self.addr = 0
+        elif self.cmdstate >= 5:
+            # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 256 bytes per page / PP command.
+            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
+                self.data.append(mosi)
+                # self.putx([0, ['New data byte: 0x%02x' % mosi]])
+
+            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
+                # s = ', '.join(map(hex, self.data))
+                s = ''.join(map(chr, self.data))
+                self.putx([0, ['Page data: %s' % s]])
+                self.data = []
+                self.state = None
+                return
+
+        self.cmdstate += 1
+
+    def handle_cp(self, mosi, miso):
+        pass # TODO
+
+    def handle_dp(self, mosi, miso):
+        pass # TODO
+
+    def handle_rdp_res(self, mosi, miso):
+        pass # TODO
 
     def handle_rems(self, mosi, miso):
         if self.cmdstate == 1:
@@ -210,87 +322,26 @@ class Decoder(srd.Decoder):
         else:
             self.cmdstate += 1
 
-    def handle_rdsr(self, mosi, miso):
-        # Read status register: Master asserts CS#, sends RDSR command,
-        # reads status register byte. If CS# is kept asserted, the status
-        # register can be read continuously / multiple times in a row.
-        # When done, the master de-asserts CS# again.
-        if self.cmdstate == 1:
-            # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
-        elif self.cmdstate >= 2:
-            # Bytes 2-x: Slave sends status register as long as master clocks.
-            if self.cmdstate <= 3: # TODO: While CS# asserted.
-                self.putx([0, ['Status register: 0x%02x' % miso]])
-                self.putx([0, [decode_status_reg(miso)]])
+    def handle_rems2(self, mosi, miso):
+        pass # TODO
 
-            if self.cmdstate == 3: # TODO: If CS# got de-asserted.
-                self.state = None
-                return
+    def handle_enso(self, mosi, miso):
+        pass # TODO
 
-        self.cmdstate += 1
+    def handle_exso(self, mosi, miso):
+        pass # TODO
 
-    def handle_pp(self, mosi, miso):
-        # Page program: Master asserts CS#, sends PP command, sends 3-byte
-        # page address, sends >= 1 data bytes, de-asserts CS#.
-        if self.cmdstate == 1:
-            # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
-            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
-            # self.putx([0, ['Page address, byte %d: 0x%02x' % \
-            #                (4 - self.cmdstate, mosi)]])
-            if self.cmdstate == 4:
-                self.putx([0, ['Page address: 0x%06x' % self.addr]])
-                self.addr = 0
-        elif self.cmdstate >= 5:
-            # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
-            # TODO: For now we hardcode 256 bytes per page / PP command.
-            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
-                self.data.append(mosi)
-                # self.putx([0, ['New data byte: 0x%02x' % mosi]])
+    def handle_rdscur(self, mosi, miso):
+        pass # TODO
 
-            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
-                # s = ', '.join(map(hex, self.data))
-                s = ''.join(map(chr, self.data))
-                self.putx([0, ['Page data: %s' % s]])
-                self.data = []
-                self.state = None
-                return
+    def handle_wrscur(self, mosi, miso):
+        pass # TODO
 
-        self.cmdstate += 1
+    def handle_esry(self, mosi, miso):
+        pass # TODO
 
-    def handle_read(self, mosi, miso):
-        # Read data bytes: Master asserts CS#, sends READ command, sends
-        # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
-        if self.cmdstate == 1:
-            # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
-            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
-            # self.putx([0, ['Read address, byte %d: 0x%02x' % \
-            #                (4 - self.cmdstate, mosi)]])
-            if self.cmdstate == 4:
-                self.putx([0, ['Read address: 0x%06x' % self.addr]])
-                self.addr = 0
-        elif self.cmdstate >= 5:
-            # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
-            # TODO: For now we hardcode 256 bytes per READ command.
-            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
-                self.data.append(miso)
-                # self.putx([0, ['New read byte: 0x%02x' % miso]])
-
-            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
-                # s = ', '.join(map(hex, self.data))
-                s = ''.join(map(chr, self.data))
-                self.putx([0, ['Read data: %s' % s]])
-                self.data = []
-                self.state = None
-                return
-
-        self.cmdstate += 1
+    def handle_dsry(self, mosi, miso):
+        pass # TODO
 
     def decode(self, ss, es, data):
 
