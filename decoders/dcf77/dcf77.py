@@ -23,9 +23,6 @@
 import sigrokdecode as srd
 import calendar
 
-# Annotation feed formats
-ANN_TEXT = 0
-
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
@@ -47,7 +44,6 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        # ANN_TEXT
         ['Text', 'Human-readable text'],
     ]
 
@@ -225,13 +221,13 @@ class Decoder(srd.Decoder):
                     self.bitcount = 0
                     self.bit_start_old = self.bit_start
                     self.dcf77_bitnumber_is_known = 1
-                    # Don't switch to GET_BIT state this time.
+                    # Don't switch to 'GET BIT' state this time.
                     continue
 
                 self.bit_start_old = self.bit_start
-                self.state = GET_BIT
+                self.state = 'GET BIT'
 
-            elif self.state == GET_BIT:
+            elif self.state == 'GET BIT':
                 # Wait until the next falling edge occurs.
                 if not (self.oldval == 1 and val == 0):
                     self.oldval = val
@@ -250,7 +246,7 @@ class Decoder(srd.Decoder):
                 else:
                     bit = -1 # TODO: Error?
 
-                # TODO: There's no bit 59, make sure none is decoded.
+                # There's no bit 59, make sure none is decoded.
                 if bit in (0, 1) and self.bitcount in range(0, 58 + 1):
                     self.handle_dcf77_bit(bit)
                     self.bitcount += 1
