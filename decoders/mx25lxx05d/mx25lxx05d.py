@@ -32,7 +32,7 @@ cmds = {
     0x05: ('RDSR', 'Read status register'),
     0x01: ('WRSR', 'Write status register'),
     0x03: ('READ', 'Read data'),
-    0x0b: ('FAST_READ', 'Fast read data'),
+    0x0b: ('FAST/READ', 'Fast read data'),
     0xbb: ('2READ', '2x I/O read'),
     0x20: ('SE', 'Sector erase'),
     0xd8: ('BE', 'Block erase'),
@@ -41,9 +41,7 @@ cmds = {
     0x02: ('PP', 'Page program'),
     0xad: ('CP', 'Continuously program mode'),
     0xb9: ('DP', 'Deep power down'),
-    # 0xab: ('RDP', 'Release from deep powerdown'),
-    # 0xab: ('RES', 'Read electronic ID'),
-    0xab: ('RDP_RES', 'Release from deep powerdown / Read electronic ID'),
+    0xab: ('RDP/RES', 'Release from deep powerdown / Read electronic ID'),
     0x90: ('REMS', 'Read electronic manufacturer & device ID'),
     0xef: ('REMS2', 'Read ID for 2x I/O mode'),
     0xb1: ('ENSO', 'Enter secured OTP'),
@@ -99,14 +97,14 @@ class Decoder(srd.Decoder):
         {'id': 'hold', 'name': 'HOLD#', 'desc': 'TODO.'},
         {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'TODO.'},
     ]
-    options = {} # TODO
+    options = {}
     annotations = [
         ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
         self.state = None
-        self.cmdstate = 1 # TODO
+        self.cmdstate = 1
         self.addr = 0
         self.data = []
 
@@ -122,7 +120,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def handle_wren(self, mosi, miso):
-        self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+        self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         self.state = None
 
     # TODO: Check/display device ID / name
@@ -130,7 +128,7 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
             self.putx([0, ['Manufacturer ID: 0x%02x' % miso]])
@@ -158,7 +156,7 @@ class Decoder(srd.Decoder):
             # Byte 1: Master sends command ID.
             self.addr = 0
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
@@ -181,7 +179,7 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
             # TODO: Check dummy bytes? Check reply from device?
@@ -203,9 +201,6 @@ class Decoder(srd.Decoder):
             self.ids.append(miso)
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
             self.putx([0, ['%s ID' % d]])
-        else:
-            # TODO: Error?
-            pass
 
         if self.cmdstate == 6:
             self.end_sample = self.es
@@ -222,7 +217,7 @@ class Decoder(srd.Decoder):
         # When done, the master de-asserts CS# again.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate >= 2:
             # Bytes 2-x: Slave sends status register as long as master clocks.
             if self.cmdstate <= 3: # TODO: While CS# asserted.
@@ -240,7 +235,7 @@ class Decoder(srd.Decoder):
         # page address, sends >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
@@ -271,7 +266,7 @@ class Decoder(srd.Decoder):
         # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.cmd][1]]])
+            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
@@ -302,37 +297,30 @@ class Decoder(srd.Decoder):
         ptype, mosi, miso = data
 
         # if ptype == 'DATA':
-        #     s = 'MOSI: 0x%02x, MISO: 0x%02x' % (mosi, miso)
-        #     self.put(0, 0, self.out_ann, [0, [s]])
-        #     pass
+        #     self.putx([0, ['MOSI: 0x%02x, MISO: 0x%02x' % (mosi, miso)]])
 
         # if ptype == 'CS-CHANGE':
         #     if mosi == 1 and miso == 0:
-        #         self.put(0, 0, self.out_ann, [0, ['Asserting CS#']])
+        #         self.putx([0, ['Asserting CS#']])
         #     elif mosi == 0 and miso == 1:
-        #         self.put(0, 0, self.out_ann, [0, ['De-asserting CS#']])
-        #     return
+        #         self.putx([0, ['De-asserting CS#']])
 
         if ptype != 'DATA':
             return
 
-        cmd = mosi
         self.ss, self.es = ss, es
 
         # If we encountered a known chip command, enter the resp. state.
         if self.state == None:
-            if cmd in cmds:
-                self.state = cmd
-                self.cmd = cmd # TODO: Eliminate?
-                self.cmdstate = 1
-            else:
-                pass # TODO
+            self.state = mosi
+            self.cmdstate = 1
 
         # Handle commands.
-        if self.state in cmds.keys():
-            handle_reg = getattr(self, 'handle_%s' % cmds[self.cmd][0].lower())
+        if self.state in cmds:
+            s = 'handle_%s' % cmds[self.state][0].lower().replace('/', '_')
+            handle_reg = getattr(self, s)
             handle_reg(mosi, miso)
         else:
-            self.put(0, 0, self.out_ann, [0, ['Unknown command: 0x%02x' % cmd]])
+            self.putx([0, ['Unknown command: 0x%02x' % mosi]])
             self.state = None
 
