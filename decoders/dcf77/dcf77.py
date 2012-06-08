@@ -40,16 +40,18 @@ class Decoder(srd.Decoder):
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
     ]
     optional_probes = [
-        {'id': 'pon', 'name': 'PON', 'desc': 'TODO'},
+        {'id': 'pon', 'name': 'PON', 'desc': 'Power on'},
     ]
     options = {}
     annotations = [
         ['Text', 'Human-readable text'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
         self.state = 'WAIT FOR RISING EDGE'
         self.oldval = None
+        self.oldpon = None
         self.samplenum = 0
         self.bit_start = 0
         self.bit_start_old = 0
@@ -195,7 +197,27 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (val)) in data: # TODO: Handle optional PON.
+        for (self.samplenum, (val, pon)) in data:
+
+            # Always remember the old PON state.
+            if self.oldpon != pon:
+                self.oldpon = pon
+
+            # Warn if PON goes low.
+            if self.oldpon == 1 and pon == 0:
+                self.pon_ss = self.samplenum
+                self.put(self.samplenum, self.samplenum, self.out_ann,
+                         [1, ['Warning: PON goes low, DCF77 reception '
+                         'no longer possible']])
+            elif self.oldpon == 0 and pon == 1:
+                self.put(self.samplenum, self.samplenum, self.out_ann,
+                         [0, ['PON goes high, DCF77 reception now possible']])
+                self.put(self.pon_ss, self.samplenum, self.out_ann,
+                         [1, ['Warning: PON low, DCF77 reception disabled']])
+
+            # Ignore samples where PON == 0, they can't contain DCF77 signals.
+            if pon == 0:
+                continue
 
             if self.state == 'WAIT FOR RISING EDGE':
                 # Wait until the next rising edge occurs.
