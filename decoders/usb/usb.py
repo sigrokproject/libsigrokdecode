@@ -24,6 +24,7 @@ import sigrokdecode as srd
 
 # Symbols (used as states of our state machine, too)
 syms = {
+        # (<dp>, <dm>): <state>
         (0, 0): 'SE0',
         (1, 0): 'J',
         (0, 1): 'K',
@@ -65,7 +66,6 @@ def packet_decode(packet):
             dev = bitstr_to_num(data[:7])
             ep = bitstr_to_num(data[7:])
             data = 'DEV %d EP %d' % (dev, ep)
-
     elif pid in ('DATA0', 'DATA1'):
         data = packet[16:-16]
         tmp = ''
@@ -101,45 +101,48 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self):
-        pass
+        self.sym = 'J'
+        self.samplenum = 0
+        self.scount = 0
+        self.packet = ''
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
 
         if self.samplerate < 48000000:
             raise Exception('Samplerate (%d) not sufficient for USB '
                             'decoding, need at least 48MHz' % self.samplerate)
 
-        # Initialise decoder state.
-        self.sym = 'J'
-        self.samplenum = 0
-        self.packet = ''
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
 
     def report(self):
         pass
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (dm, dp)) in data:
+        for (self.samplenum, (dp, dm)) in data:
+
+            # Note: self.samplenum is the absolute sample number, whereas
+            # self.scount only counts the number of samples since the
+            # last change in the D+/D- lines.
+            self.scount += 1
 
             sym = syms[dp, dm]
 
-            # ...
+            # Wait for a symbol change (i.e., change in D+/D- lines).
             if sym == self.sym:
                 continue
 
-            if self.samplenum == 1:
-                # We ignore single sample width pulses.
-                # I sometimes get these with the OLS.
+            if self.scount == 1:
+                # We ignore single sample width "pulses", i.e., symbol changes
+                # (D+/D- line changes). I sometimes get these with the OLS.
                 self.sym = sym
-                self.samplenum = 0
+                self.scount = 0
                 continue
 
             # How many bits since the last transition?
             if self.packet != '' or self.sym != 'J':
-                bitcount = int((self.samplenum - 1) * 12000000 / self.samplerate)
+                bitcount = int((self.scount - 1) * 12000000 / self.samplerate)
             else:
                 bitcount = 0
 
@@ -151,7 +154,7 @@ class Decoder(srd.Decoder):
                 else:
                     # Longer than EOP, assume reset.
                     self.put(0, 0, self.out_ann, [0, ['RESET']])
-                self.samplenum = 0
+                self.scount = 0
                 self.sym = sym
                 self.packet = ''
                 continue
@@ -165,6 +168,6 @@ class Decoder(srd.Decoder):
             elif bitcount > 6:
                 self.put(0, 0, self.out_ann, [0, ['BIT STUFF ERROR']])
 
-            self.samplenum = 0
+            self.scount = 0
             self.sym = sym
 
