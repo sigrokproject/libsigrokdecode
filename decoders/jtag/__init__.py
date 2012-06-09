@@ -27,7 +27,25 @@ and flashing various digital ICs.
 
 TODO: Protocol details.
 
-TODO: Protocol decoder output format description.
+Protocol output format (WORK IN PROGRESS!):
+
+JTAG packet:
+[<packet-type>, <data>]
+
+<packet-type> is one of:
+  - 'NEW STATE': <data> is the new state of the JTAG state machine.
+    Valid values: 'TEST-LOGIC-RESET', 'RUN-TEST/IDLE', 'SELECT-DR-SCAN',
+    'CAPTURE-DR', 'SHIFT-DR', 'EXIT1-DR', 'PAUSE-DR', 'EXIT2-DR', 'UPDATE-DR',
+    'SELECT-IR-SCAN', 'CAPTURE-IR', 'SHIFT-IR', 'EXIT1-IR', 'PAUSE-IR',
+    'EXIT2-IR', 'UPDATE-IR'.
+  - 'IR TDI': Bitstring that was clocked into the IR register.
+  - 'IR TDO': Bitstring that was clocked out of the IR register.
+  - 'DR TDI': Bitstring that was clocked into the DR register.
+  - 'DR TDO': Bitstring that was clocked out of the DR register.
+  - ...
+
+All bitstrings are a sequence of '1' and '0' characters. The right-most
+character in the bitstring is the LSB. Example: '01110001' (1 is LSB).
 
 Details:
 https://en.wikipedia.org/wiki/Joint_Test_Action_Group
