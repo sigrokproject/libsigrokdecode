@@ -36,11 +36,12 @@ Commands:
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings.
 
-Example:
+Examples:
  ['CS-CHANGE', 1, 0]
  ['DATA', 0xff, 0x3a]
  ['DATA', 0x65, 0x00]
  ['CS-CHANGE', 0, 1]
+
 '''
 
 from .spi import *

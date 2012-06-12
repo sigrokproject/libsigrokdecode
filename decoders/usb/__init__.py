@@ -35,6 +35,9 @@ transition. This is known as bit stuffing. Data is transferred at a rate
 of 12Mbit/s. The SE0 transmitted to signal an end-of-packet is two bit
 intervals long.
 
+Protocol output format:
+TODO
+
 Details:
 https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
