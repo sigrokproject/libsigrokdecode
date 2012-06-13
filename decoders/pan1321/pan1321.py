@@ -39,6 +39,7 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
+        ['Text (verbose)', 'Human-readable text (verbose)'],
         ['Text', 'Human-readable text'],
     ]
 
@@ -60,23 +61,30 @@ class Decoder(srd.Decoder):
         if s.startswith('AT+JSEC'):
             pin = s[-4:]
             self.putx([0, ['Host set the Bluetooth PIN to ' + pin]])
+            self.putx([1, ['PIN = ' + pin]])
         elif s.startswith('AT+JSLN'):
             name = s[s.find(',') + 1:]
             self.putx([0, ['Host set the Bluetooth name to ' + name]])
+            self.putx([1, ['BT name = ' + name]])
         else:
             self.putx([0, ['Host sent unsupported command: %s' % s]])
+            self.putx([1, ['Unsupported command: %s' % s]])
         self.cmd[rxtx] = ''
 
     def handle_device_reply(self, rxtx, s):
         if s == 'ROK':
             self.putx([0, ['Device initialized correctly']])
+            self.putx([1, ['Init']])
         elif s == 'OK':
             self.putx([0, ['Device acknowledged last command']])
+            self.putx([1, ['ACK']])
         elif s.startswith('ERR'):
             error = s[s.find('=') + 1:]
             self.putx([0, ['Device sent error code ' + error]])
+            self.putx([1, ['ERR = ' + error]])
         else:
             self.putx([0, ['Device sent an unknown reply: %s' % s]])
+            self.putx([1, ['Unknown reply: %s' % s]])
         self.cmd[rxtx] = ''
 
     def decode(self, ss, es, data):
