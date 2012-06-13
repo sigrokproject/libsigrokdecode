@@ -166,6 +166,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/spi/Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
+		 decoders/uart_dump/Makefile
 		 decoders/usb/Makefile
 		])
 
