@@ -18,20 +18,21 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# USB (full-speed) protocol decoder
+# USB (low-speed and full-speed) protocol decoder
 
 import sigrokdecode as srd
 
-# Symbols (used as states of our state machine, too)
+# Full-speed symbols (used as states of our state machine, too).
+# Note: Low-speed J and K are inverted compared to the full-speed J and K!
 syms = {
-        # (<dp>, <dm>): <state>
+        # (<dp>, <dm>): <symbol/state>
         (0, 0): 'SE0',
         (1, 0): 'J',
         (0, 1): 'K',
         (1, 1): 'SE1',
 }
 
-# ...
+# Packet IDs
 pids = {
     '10000111': 'OUT',      # Tokens
     '10010110': 'IN',
@@ -44,6 +45,19 @@ pids = {
     '01111000': 'STALL',
     '01101001': 'NYET',
 }
+
+def get_sym(signalling, dp, dm):
+    # Note: Low-speed J and K are inverted compared to the full-speed J and K!
+    if signalling == 'low-speed':
+        s = syms[dp, dm]
+        if s == 'J':
+            return 'K'
+        elif s == 'K':
+            return 'J'
+        else:
+            return s
+    elif signalling == 'full-speed':
+       return syms[dp, dm]
 
 def bitstr_to_num(bitstr):
     if not bitstr:
@@ -76,6 +90,7 @@ def packet_decode(packet):
     else:
         data = packet[16:]
 
+    # The SYNC pattern for low-speed/full-speed is KJKJKJKK (0001).
     if sync != '00000001':
         return 'SYNC INVALID!'
 
@@ -85,8 +100,8 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'usb'
     name = 'USB'
-    longname = 'Universal Serial Bus'
-    desc = 'USB 1.x (full-speed) serial protocol.'
+    longname = 'Universal Serial Bus (LS/FS)'
+    desc = 'USB 1.x (low-speed and full-speed) serial protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb']
@@ -95,7 +110,9 @@ class Decoder(srd.Decoder):
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
     optional_probes = []
-    options = {}
+    options = {
+        'signalling': ['Signalling', 'full-speed'],
+    }
     annotations = [
         ['Text', 'Human-readable text']
     ]
@@ -108,10 +125,6 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-
-        if self.samplerate < 48000000:
-            raise Exception('Samplerate (%d) not sufficient for USB '
-                            'decoding, need at least 48MHz' % self.samplerate)
 
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb')
@@ -127,7 +140,7 @@ class Decoder(srd.Decoder):
             # last change in the D+/D- lines.
             self.scount += 1
 
-            sym = syms[dp, dm]
+            sym = get_sym(self.options['signalling'], dp, dm)
 
             # Wait for a symbol change (i.e., change in D+/D- lines).
             if sym == self.sym:
@@ -142,7 +155,11 @@ class Decoder(srd.Decoder):
 
             # How many bits since the last transition?
             if self.packet != '' or self.sym != 'J':
-                bitcount = int((self.scount - 1) * 12000000 / self.samplerate)
+                if self.options['signalling'] == 'low-speed':
+                    bitrate = 1500000 # 1.5Mb/s (+/- 1.5%)
+                elif self.options['signalling'] == 'full-speed':
+                    bitrate = 12000000 # 12Mb/s (+/- 0.25%)
+                bitcount = int((self.scount - 1) * bitrate / self.samplerate)
             else:
                 bitcount = 0
 
