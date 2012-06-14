@@ -95,16 +95,20 @@ class Decoder(srd.Decoder):
         if self.f != None:
             if self.options['rx'] == 'yes' and rxtx == RX:
                 self.f.write(c)
+                self.f.flush()
             if self.options['tx'] == 'yes' and rxtx == TX:
                 self.f.write(c)
+                self.f.flush()
 
         # Output RX data to 'filename_rx'.
         if self.f_rx != None:
             if self.options['rx'] == 'yes' and rxtx == RX:
                 self.f_rx.write(c)
+                self.f_rx.flush()
 
         # Output TX data to 'filename_tx'.
         if self.f_tx != None:
             if self.options['tx'] == 'yes' and rxtx == TX:
                 self.f_tx.write(c)
+                self.f_tx.flush()
 
