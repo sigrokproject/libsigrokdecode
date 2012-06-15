@@ -21,6 +21,8 @@
 '''
 USB (low-speed and full-speed) protocol decoder.
 
+Electrical/signalling layer (USB spec, chapter 7):
+
 USB signalling consists of two signal lines, both driven at 3.3V
 logic levels. The signals are DP (D+) and DM (D-), and normally operate in
 differential mode.
@@ -40,6 +42,8 @@ Data is transferred at a rate of 1.5Mbit/s (low-speed) / 12Mbit/s (full-speed).
 
 The SE0 transmitted to signal an end-of-packet is two bit intervals long
 (low-speed: 1.25uS - 1.50uS, full-speed: 160ns - 175ns).
+
+Protocol layer (USB spec, chapter 8):
 
 Bit/byte ordering: Bits are sent onto the bus LSB-first. Multibyte fields
 are transmitted in little-endian order (i.e., LSB to MSB).

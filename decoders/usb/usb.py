@@ -32,18 +32,38 @@ syms = {
         (1, 1): 'SE1',
 }
 
-# Packet IDs
+# Packet IDs (PIDs).
+# The first 4 bits are the 'packet type' field, the last 4 bits are the
+# 'check field' (each bit in the check field must be the inverse of the resp.
+# bit in the 'packet type' field; if not, that's a 'PID error').
+# For the 4-bit strings, the left-most '1' or '0' is the LSB, i.e. it's sent
+# to the bus first.
 pids = {
-    '10000111': 'OUT',      # Tokens
-    '10010110': 'IN',
-    '10100101': 'SOF',
-    '10110100': 'SETUP',
-    '11000011': 'DATA0',    # Data
-    '11010010': 'DATA1',
-    '01001011': 'ACK',      # Handshake
-    '01011010': 'NAK',
-    '01111000': 'STALL',
-    '01101001': 'NYET',
+    # Tokens
+    '10000111': ['OUT', 'Address & EP number in host-to-function transaction'],
+    '10010110': ['IN', 'Address & EP number in function-to-host transaction'],
+    '10100101': ['SOF', 'Start-Of-Frame marker & frame number'],
+    '10110100': ['SETUP', 'Address & EP number in host-to-function transaction for SETUP to a control pipe'],
+
+    # Data
+    # Note: DATA2 and MDATA are HS-only.
+    '11000011': ['DATA0', 'Data packet PID even'],
+    '11010010': ['DATA1', 'Data packet PID odd'],
+    '11100001': ['DATA2', 'Data packet PID HS, high bandwidth isosynchronous transaction in a microframe'],
+    '11110000': ['MDATA', 'Data packet PID HS for split and high-bandwidth isosynchronous transactions'],
+
+    # Handshake
+    '01001011': ['ACK', 'Receiver accepts error-free packet'],
+    '01011010': ['NAK', 'Receiver cannot accept or transmitter cannot send'],
+    '01111000': ['STALL', 'EP halted or control pipe request unsupported'],
+    '01101001': ['NYET', 'No response yet from receiver'],
+
+    # Special
+    '00111100': ['PRE', 'Host-issued preamble; enables downstream bus traffic to low-speed devices'],
+    '00111100': ['ERR', 'Split transaction error handshake'],
+    '00011110': ['SPLIT', 'HS split transaction token'],
+    '00101101': ['PING', 'HS flow control probe for a bulk/control EP'],
+    '00001111': ['Reserved', 'Reserved PID'],
 }
 
 def get_sym(signalling, dp, dm):
@@ -69,7 +89,7 @@ def bitstr_to_num(bitstr):
 def packet_decode(packet):
     sync = packet[:8]
     pid = packet[8:16]
-    pid = pids.get(pid, pid)
+    pid = pids.get(pid, (pid, ''))[0]
 
     # Remove CRC.
     if pid in ('OUT', 'IN', 'SOF', 'SETUP'):
