@@ -169,8 +169,11 @@ class Decoder(srd.Decoder):
                         self.put(self.lnk_fall, self.samplenum, self.out_ann,
                                  [ANN_DEC, ['NET: ROM COMMAND: 0x' + hex(self.net_data)]])
                         print ("DEBUG: ROM_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
-                        if   (self.net_data in [0x33, 0x0f]):
+                        if   (self.net_data == 0x33):
                             # READ ROM
+                            self.net_state = "ADDRESS"
+                        elif (self.net_data == 0x0f):
+                            # READ ROM TODO
                             self.net_state = "ADDRESS"
                         elif (self.net_data == 0xcc):
                             # SKIP ROM
@@ -190,22 +193,12 @@ class Decoder(srd.Decoder):
                 elif (self.net_state == "ADDRESS"):
                     # family code (1B) + serial number (6B) + CRC (1B)
                     if (self.collect_data((1+6+1)*8)):
-                        self.net_family_code   = (self.net_data >> ((  0)*8)) & 0xff
-                        self.net_serial_number = (self.net_data >> ((  1)*8)) & 0xffffffffffff
-                        self.net_crc           = (self.net_data >> ((6+1)*8)) & 0xff
-                        print ("DEBUG: net_family_code  =0x%001x" % (self.net_family_code  ))
-                        print ("DEBUG: net_serial_number=0x%012x" % (self.net_serial_number))
-                        print ("DEBUG: net_crc          =0x%001x" % (self.net_crc          ))
+                        self.net_address = self.net_data & 0xffffffffffffffff
                         self.net_state = "CONTROL COMMAND"
                 elif (self.net_state == "SEARCH"):
                     # family code (1B) + serial number (6B) + CRC (1B)
                     if (self.collect_search((1+6+1)*8)):
-                        self.net_family_code   = (self.net_data >> ((  0)*8)) & 0xff
-                        self.net_serial_number = (self.net_data >> ((  1)*8)) & 0xffffffffffff
-                        self.net_crc           = (self.net_data >> ((6+1)*8)) & 0xff
-                        print ("DEBUG: net_family_code  =0x%001x" % (self.net_family_code  ))
-                        print ("DEBUG: net_serial_number=0x%012x" % (self.net_serial_number))
-                        print ("DEBUG: net_crc          =0x%001x" % (self.net_crc          ))
+                        self.net_address = self.net_data & 0xffffffffffffffff
                         self.net_state = "CONTROL COMMAND"
                 elif (self.net_state == "CONTROL COMMAND"):
                     if (self.collect_data(8)):
@@ -214,10 +207,7 @@ class Decoder(srd.Decoder):
                         self.put(self.lnk_fall, self.samplenum, self.out_ann,
                                  [ANN_DEC, ['NET: FUNCTION COMMAND: 0x' + hex(self.net_data)]])
                         print ("DEBUG: FUNCTION_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
-                        if   (self.net_data == 0x44):
-                            # CONVERT TEMPERATURE
-                            self.net_state = "TODO"
-                        elif (self.net_data == 0x48):
+                        if   (self.net_data == 0x48):
                             # COPY SCRATCHPAD
                             self.net_state = "TODO"
                         elif (self.net_data == 0x4e):
@@ -232,6 +222,11 @@ class Decoder(srd.Decoder):
                         elif (self.net_data == 0xb4):
                             # READ POWER SUPPLY
                             self.net_state = "TODO"
+                        else:
+                            # unsupported commands
+                            self.net_state = "UNDEFINED"
+                elif (self.net_state == "UNDEFINED"):
+                    pass
                 else:
                     raise Exception('Invalid net_state: %s' % self.net_state)
             elif (self.lnk_event != "NONE"):
