@@ -64,14 +64,14 @@ class Decoder(srd.Decoder):
         self.lnk_fall    = 0
         self.lnk_present = 0
         self.lnk_bit     = 0
-        self.lnk_cnt     = 0
-        self.lnk_byte    = 0x00
         # Network layer variables
-        self.net_mode    = 'WRITE'
-        self.net_state   = 'WAIT FOR COMMAND'
+        self.net_state   = 'ROM COMMAND'
         self.net_event   = 'NONE'
         self.net_cnt     = 0
-        self.net_cmd     = 0x00
+        self.net_search  = "P"
+        self.net_data_p  = 0x0
+        self.net_data_n  = 0x0
+        self.net_data    = 0x0
         # Transport layer variables
         self.trn_state   = 'WAIT FOR EVENT'
         self.trn_event   = 'NONE'
@@ -109,7 +109,7 @@ class Decoder(srd.Decoder):
                              [ANN_DEC, ['LNK: NEGEDGE: ']])
             elif self.lnk_state == 'WAIT FOR DATA SAMPLE':
                 # Data should be sample one 'time unit' after a falling edge
-                if (self.samplenum - self.lnk_fall == 1*self.time_base):
+                if (self.samplenum - self.lnk_fall == 0.5*self.time_base):
                     self.lnk_bit  = owr & 0x1
                     self.lnk_event = "DATA BIT"
                     if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
@@ -152,82 +152,127 @@ class Decoder(srd.Decoder):
             else:
                 raise Exception('Invalid lnk_state: %d' % self.lnk_state)
 
-            # Link layer (byte sized units)
-            
-            # State machine.
-            if (self.lnk_event == "RESET"):
-                self.lnk_cnt  = 0
-                self.lnk_byte = 0x00
-            elif (self.lnk_event == "DATA BIT"):
-                if (self.net_mode in ["WRITE", "READ"]):
-                    self.lnk_cnt  = self.lnk_cnt + 1
-                    self.lnk_byte = (self.lnk_byte << 1) | self.lnk_bit
-                    if (self.lnk_cnt == 8):
-                        print ("DEBUG: BYTE=0x%02x t0=%d t+=%d" % (self.lnk_byte, self.lnk_fall, self.samplenum))
-                        self.lnk_event = "DATA BYTE"
-                        self.lnk_cnt = 0
-                        self.lnk_byte = 0x00
-                elif (self.net_mode == "SEARCH"):
-                    self.lnk_cnt  = self.lnk_cnt + 1
-                    self.lnk_byte = (self.lnk_byte << 1) | self.lnk_bit
-                    if (self.lnk_cnt == 8):
-                        print ("DEBUG: BYTE=0x%02x t0=%d t+=%d" % (self.lnk_byte, self.lnk_fall, self.samplenum))
-                        self.lnk_event = "DATA BYTE"
-                        self.lnk_cnt = 0
-                        self.lnk_byte = 0x00
-                else:
-                    raise Exception('Invalid net_mode: %s' % self.net_mode)
-            elif not (self.lnk_event == "NONE"):
-                raise Exception('Invalid lnk_event: %s' % self.lnk_event)
-
             # Network layer
             
             # Clear events.
             self.net_event = "RESET"
             # State machine.
             if (self.lnk_event == "RESET"):
-                self.net_state = "WAIT FOR COMMAND"
-                self.net_cnt = 0
+                self.net_state = "ROM COMMAND"
+                self.net_search = "P"
+                self.net_cnt    = 0
             elif (self.lnk_event == "DATA BIT"):
-                pass
-            elif (self.lnk_event == "DATA BYTE"):
-                if (self.net_state == "WAIT FOR COMMAND"):
-                    self.net_cmd = self.lnk_byte
-#                    self.put(self.lnk_fall, self.samplenum,
-#                             self.out_proto, ['LNK: COMMAND', self.net_cmd])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                             [ANN_DEC, ['LNK: COMMAND: 0x' + hex(self.net_cmd)]])
-                    print ("DEBUG: CMD=0x%02x t0=%d t+=%d" % (self.net_cmd, self.lnk_fall, self.samplenum))
-                    if   (self.net_cmd == 0x33):
-                        # READ ROM
-                        pass
-                    elif (self.net_cmd == 0x0f):
-                        # READ ROM
-                        pass
-                    elif (self.net_cmd == 0xcc):
-                        # SKIP ROM
-                        pass
-                    elif (self.net_cmd == 0x55):
-                        # MATCH ROM
-                        pass
-                    elif (self.net_cmd == 0xf0):
-                        # SEARCH ROM
-                        pass
-                    elif (self.net_cmd == 0x3c):
-                        # OVERDRIVE SKIP ROM
-                        pass
-                    elif (self.net_cmd == 0x69):
-                        # OVERDRIVE MATCH ROM
-                        pass
-                    self.net_cnt = 0
-                elif (self.net_state == "WAIT FOR ROM"):
-                    #
-                    pass
+                if (self.net_state == "ROM COMMAND"):
+                    if (self.collect_data(8)):
+#                        self.put(self.lnk_fall, self.samplenum,
+#                                 self.out_proto, ['LNK: COMMAND', self.net_data])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann,
+                                 [ANN_DEC, ['NET: ROM COMMAND: 0x' + hex(self.net_data)]])
+                        print ("DEBUG: ROM_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
+                        if   (self.net_data in [0x33, 0x0f]):
+                            # READ ROM
+                            self.net_state = "ADDRESS"
+                        elif (self.net_data == 0xcc):
+                            # SKIP ROM
+                            self.net_state = "CONTROL COMMAND"
+                        elif (self.net_data == 0x55):
+                            # MATCH ROM
+                            self.net_state = "ADDRESS"
+                        elif (self.net_data == 0xf0):
+                            # SEARCH ROM
+                            self.net_state = "SEARCH"
+                        elif (self.net_data == 0x3c):
+                            # OVERDRIVE SKIP ROM
+                            self.net_state = "CONTROL COMMAND"
+                        elif (self.net_data == 0x69):
+                            # OVERDRIVE MATCH ROM
+                            self.net_state = "ADDRESS"
+                elif (self.net_state == "ADDRESS"):
+                    # family code (1B) + serial number (6B) + CRC (1B)
+                    if (self.collect_data((1+6+1)*8)):
+                        self.net_family_code   = (self.net_data >> ((  0)*8)) & 0xff
+                        self.net_serial_number = (self.net_data >> ((  1)*8)) & 0xffffffffffff
+                        self.net_crc           = (self.net_data >> ((6+1)*8)) & 0xff
+                        print ("DEBUG: net_family_code  =0x%001x" % (self.net_family_code  ))
+                        print ("DEBUG: net_serial_number=0x%012x" % (self.net_serial_number))
+                        print ("DEBUG: net_crc          =0x%001x" % (self.net_crc          ))
+                        self.net_state = "CONTROL COMMAND"
+                elif (self.net_state == "SEARCH"):
+                    # family code (1B) + serial number (6B) + CRC (1B)
+                    if (self.collect_search((1+6+1)*8)):
+                        self.net_family_code   = (self.net_data >> ((  0)*8)) & 0xff
+                        self.net_serial_number = (self.net_data >> ((  1)*8)) & 0xffffffffffff
+                        self.net_crc           = (self.net_data >> ((6+1)*8)) & 0xff
+                        print ("DEBUG: net_family_code  =0x%001x" % (self.net_family_code  ))
+                        print ("DEBUG: net_serial_number=0x%012x" % (self.net_serial_number))
+                        print ("DEBUG: net_crc          =0x%001x" % (self.net_crc          ))
+                        self.net_state = "CONTROL COMMAND"
+                elif (self.net_state == "CONTROL COMMAND"):
+                    if (self.collect_data(8)):
+#                        self.put(self.lnk_fall, self.samplenum,
+#                                 self.out_proto, ['LNK: COMMAND', self.net_data])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann,
+                                 [ANN_DEC, ['NET: FUNCTION COMMAND: 0x' + hex(self.net_data)]])
+                        print ("DEBUG: FUNCTION_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
+                        if   (self.net_data == 0x44):
+                            # CONVERT TEMPERATURE
+                            self.net_state = "TODO"
+                        elif (self.net_data == 0x48):
+                            # COPY SCRATCHPAD
+                            self.net_state = "TODO"
+                        elif (self.net_data == 0x4e):
+                            # WRITE SCRATCHPAD
+                            self.net_state = "TODO"
+                        elif (self.net_data == 0xbe):
+                            # READ SCRATCHPAD
+                            self.net_state = "TODO"
+                        elif (self.net_data == 0xb8):
+                            # RECALL E2
+                            self.net_state = "TODO"
+                        elif (self.net_data == 0xb4):
+                            # READ POWER SUPPLY
+                            self.net_state = "TODO"
                 else:
-                    raise Exception('Invalid net_state: %d' % self.net_state)
-            elif not (self.lnk_event == "NONE"):
+                    raise Exception('Invalid net_state: %s' % self.net_state)
+            elif (self.lnk_event != "NONE"):
                 raise Exception('Invalid lnk_event: %s' % self.lnk_event)
 
 
-#                    if (self.samplenum == self.lnk_start + 8*self.time_base):
-#                        self.put(self.lnk_fall, self.samplenum - 1, self.out_proto, ['RESET'])
+    # Link/Network layer data collector
+    def collect_data (self, length):
+        #print ("DEBUG: BIT=%d t0=%d t+=%d" % (self.lnk_bit, self.lnk_fall, self.samplenum))
+        self.net_data = self.net_data & ~(1 << self.net_cnt) | (self.lnk_bit << self.net_cnt)
+        self.net_cnt  = self.net_cnt + 1
+        if (self.net_cnt == length):
+            self.net_data = self.net_data & ((1<<length)-1)
+            self.net_cnt  = 0
+            print ("DEBUG: DATA=0x%0x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
+            return (1)
+        else:
+            return (0)
+
+    # Link/Network layer search collector
+    def collect_search (self, length):
+        #print ("DEBUG: SEARCH=%s BIT=%d t0=%d t+=%d" % (self.net_search, self.lnk_bit, self.lnk_fall, self.samplenum))
+        if   (self.net_search == "P"):
+          self.net_data_p = self.net_data_p & ~(1 << self.net_cnt) | (self.lnk_bit << self.net_cnt)
+          self.net_search = "N"
+        elif (self.net_search == "N"):
+          self.net_data_n = self.net_data_n & ~(1 << self.net_cnt) | (self.lnk_bit << self.net_cnt)
+          self.net_search = "D"
+        elif (self.net_search == "D"):
+          self.net_data   = self.net_data   & ~(1 << self.net_cnt) | (self.lnk_bit << self.net_cnt)
+          self.net_search = "P"
+          self.net_cnt    = self.net_cnt + 1
+        if (self.net_cnt == length):
+            self.net_data_p = self.net_data_p & ((1<<length)-1)
+            self.net_data_n = self.net_data_n & ((1<<length)-1)
+            self.net_data   = self.net_data   & ((1<<length)-1)
+            self.net_search = "P"
+            self.net_cnt    = 0
+            print ("DEBUG: SEARCH_P=0x%0x t0=%d t+=%d" % (self.net_data_p, self.lnk_fall, self.samplenum))
+            print ("DEBUG: SEARCH_N=0x%0x t0=%d t+=%d" % (self.net_data_n, self.lnk_fall, self.samplenum))
+            print ("DEBUG: SEARCH  =0x%0x t0=%d t+=%d" % (self.net_data  , self.lnk_fall, self.samplenum))
+            return (1)
+        else:
+            return (0)
