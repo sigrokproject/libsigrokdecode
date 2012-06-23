@@ -64,11 +64,14 @@ class Decoder(srd.Decoder):
         self.lnk_fall    = 0
         self.lnk_present = 0
         self.lnk_bit     = 0
+        self.lnk_cnt     = 0
+        self.lnk_byte    = 0x00
         # Network layer variables
+        self.net_mode    = 'WRITE'
         self.net_state   = 'WAIT FOR COMMAND'
         self.net_event   = 'NONE'
         self.net_cnt     = 0
-        self.net_cmd     = 0
+        self.net_cmd     = 0x00
         # Transport layer variables
         self.trn_state   = 'WAIT FOR EVENT'
         self.trn_event   = 'NONE'
@@ -104,7 +107,6 @@ class Decoder(srd.Decoder):
                     self.lnk_state = 'WAIT FOR DATA SAMPLE'
                     self.put(self.lnk_fall, self.samplenum, self.out_ann,
                              [ANN_DEC, ['LNK: NEGEDGE: ']])
-                    print ("DEBUG: NEGEDGE t0=%d t+=%d" % (self.lnk_fall, self.samplenum))
             elif self.lnk_state == 'WAIT FOR DATA SAMPLE':
                 # Data should be sample one 'time unit' after a falling edge
                 if (self.samplenum - self.lnk_fall == 1*self.time_base):
@@ -114,7 +116,6 @@ class Decoder(srd.Decoder):
                     else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
                     self.put(self.lnk_fall, self.samplenum, self.out_ann,
                              [ANN_DEC, ['LNK: BIT: ' + str(self.lnk_bit)]])
-                    print ("DEBUG: BIT=%d t0=%d t+=%d" % (self.lnk_bit, self.lnk_fall, self.samplenum))
             elif self.lnk_state == 'WAIT FOR RISING EDGE':
                 # The end of a cycle is a rising edge.
                 if (owr == 1):
@@ -139,14 +140,45 @@ class Decoder(srd.Decoder):
                 # Data should be sample one 'time unit' after a falling edge
                 if (self.samplenum - self.lnk_rise == 2.5*self.time_base):
                     self.lnk_present = owr & 0x1
+                    # Save the sample number for the falling edge.
+                    if not (self.lnk_present) :  self.lnk_fall = self.samplenum
+                    # create presence detect event
                     #self.lnk_event   = "PRESENCE DETECT"
-                    if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
-                    else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
+                    if (self.lnk_present) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
+                    else                  :  self.lnk_state = 'WAIT FOR RISING EDGE'
                     self.put(self.lnk_fall, self.samplenum, self.out_ann,
                              [ANN_DEC, ['LNK: PRESENCE: ' + str(self.lnk_present)]])
                     print ("DEBUG: PRESENCE=%d t0=%d t+=%d" % (self.lnk_present, self.lnk_fall, self.samplenum))
             else:
                 raise Exception('Invalid lnk_state: %d' % self.lnk_state)
+
+            # Link layer (byte sized units)
+            
+            # State machine.
+            if (self.lnk_event == "RESET"):
+                self.lnk_cnt  = 0
+                self.lnk_byte = 0x00
+            elif (self.lnk_event == "DATA BIT"):
+                if (self.net_mode in ["WRITE", "READ"]):
+                    self.lnk_cnt  = self.lnk_cnt + 1
+                    self.lnk_byte = (self.lnk_byte << 1) | self.lnk_bit
+                    if (self.lnk_cnt == 8):
+                        print ("DEBUG: BYTE=0x%02x t0=%d t+=%d" % (self.lnk_byte, self.lnk_fall, self.samplenum))
+                        self.lnk_event = "DATA BYTE"
+                        self.lnk_cnt = 0
+                        self.lnk_byte = 0x00
+                elif (self.net_mode == "SEARCH"):
+                    self.lnk_cnt  = self.lnk_cnt + 1
+                    self.lnk_byte = (self.lnk_byte << 1) | self.lnk_bit
+                    if (self.lnk_cnt == 8):
+                        print ("DEBUG: BYTE=0x%02x t0=%d t+=%d" % (self.lnk_byte, self.lnk_fall, self.samplenum))
+                        self.lnk_event = "DATA BYTE"
+                        self.lnk_cnt = 0
+                        self.lnk_byte = 0x00
+                else:
+                    raise Exception('Invalid net_mode: %s' % self.net_mode)
+            elif not (self.lnk_event == "NONE"):
+                raise Exception('Invalid lnk_event: %s' % self.lnk_event)
 
             # Network layer
             
@@ -156,41 +188,41 @@ class Decoder(srd.Decoder):
             if (self.lnk_event == "RESET"):
                 self.net_state = "WAIT FOR COMMAND"
                 self.net_cnt = 0
-                self.net_cmd = 0
             elif (self.lnk_event == "DATA BIT"):
+                pass
+            elif (self.lnk_event == "DATA BYTE"):
                 if (self.net_state == "WAIT FOR COMMAND"):
-                    self.net_cnt = self.net_cnt + 1
-                    self.net_cmd = (self.net_cmd << 1) & self.lnk_bit
-                    if (self.net_cnt == 8):
-                        self.put(self.lnk_fall, self.samplenum,
-                                 self.out_proto, ['LNK: COMMAND', self.net_cmd])
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                                 [ANN_DEC, ['LNK: COMMAND: ' + self.net_cmd]])
-                        if   (self.net_cmd == 0x33):
-                            # READ ROM
-                            break
-                        elif (self.net_cmd == 0x0f):
-                            # READ ROM
-                            break
-                        elif (self.net_cmd == 0xcc):
-                            # SKIP ROM
-                            break
-                        elif (self.net_cmd == 0x55):
-                            # MATCH ROM
-                            break
-                        elif (self.net_cmd == 0xf0):
-                            # SEARCH ROM
-                            break
-                        elif (self.net_cmd == 0x3c):
-                            # OVERDRIVE SKIP ROM
-                            break
-                        elif (self.net_cmd == 0x69):
-                            # OVERDRIVE MATCH ROM
-                            break
-                        self.net_cnt = 0
+                    self.net_cmd = self.lnk_byte
+#                    self.put(self.lnk_fall, self.samplenum,
+#                             self.out_proto, ['LNK: COMMAND', self.net_cmd])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann,
+                             [ANN_DEC, ['LNK: COMMAND: 0x' + hex(self.net_cmd)]])
+                    print ("DEBUG: CMD=0x%02x t0=%d t+=%d" % (self.net_cmd, self.lnk_fall, self.samplenum))
+                    if   (self.net_cmd == 0x33):
+                        # READ ROM
+                        pass
+                    elif (self.net_cmd == 0x0f):
+                        # READ ROM
+                        pass
+                    elif (self.net_cmd == 0xcc):
+                        # SKIP ROM
+                        pass
+                    elif (self.net_cmd == 0x55):
+                        # MATCH ROM
+                        pass
+                    elif (self.net_cmd == 0xf0):
+                        # SEARCH ROM
+                        pass
+                    elif (self.net_cmd == 0x3c):
+                        # OVERDRIVE SKIP ROM
+                        pass
+                    elif (self.net_cmd == 0x69):
+                        # OVERDRIVE MATCH ROM
+                        pass
+                    self.net_cnt = 0
                 elif (self.net_state == "WAIT FOR ROM"):
                     #
-                    break
+                    pass
                 else:
                     raise Exception('Invalid net_state: %d' % self.net_state)
             elif not (self.lnk_event == "NONE"):
