@@ -23,9 +23,9 @@
 import sigrokdecode as srd
 
 # Annotation feed formats
-ANN_LINK     = 0
-ANN_NETWORK  = 1
-ANN_TRANSFER = 2
+ANN_LINK      = 0
+ANN_NETWORK   = 1
+ANN_TRANSPORT = 2
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -48,7 +48,7 @@ class Decoder(srd.Decoder):
     annotations = [
         ['Link', 'Link layer events (reset, presence, bit slots)'],
         ['Network', 'Network layer events (device addressing)'],
-        ['Transfer', 'Transfer layer events'],
+        ['Transport', 'Transport layer events'],
     ]
 
     def __init__(self, **kwargs):
@@ -151,6 +151,9 @@ class Decoder(srd.Decoder):
                 self.net_cnt    = 0
             elif (self.net_state == "IDLE"):
                 pass
+            elif (self.net_state == "DONE"):
+                self.trn_state = "COMMAND"
+                self.net_state = "IDLE"
             elif (self.net_state == "COMMAND"):
                 if (self.collect_data(8)):
 #                    self.put(self.lnk_fall, self.samplenum,
@@ -161,14 +164,13 @@ class Decoder(srd.Decoder):
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'READ ROM\'']])
                         self.net_state = "GET ROM"
                     elif (self.net_data == 0x0f):
-                        # READ ROM TODO
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'READ ROM ???\'']])
+                        # CONDITIONAL READ ROM
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'CONDITIONAL READ ROM\'']])
                         self.net_state = "GET ROM"
                     elif (self.net_data == 0xcc):
                         # SKIP ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SKIP ROM\'']])
-                        self.net_state = "IDLE"
-                        self.trn_state = "COMMAND"
+                        self.net_state = "DONE"
                     elif (self.net_data == 0x55):
                         # MATCH ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'MATCH ROM\'']])
@@ -177,29 +179,30 @@ class Decoder(srd.Decoder):
                         # SEARCH ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SEARCH ROM\'']])
                         self.net_state = "SEARCH ROM"
+                    elif (self.net_data == 0xec):
+                        # CONDITIONAL SEARCH ROM
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'CONDITIONAL SEARCH ROM\'']])
+                        self.net_state = "SEARCH ROM"
                     elif (self.net_data == 0x3c):
                         # OVERDRIVE SKIP ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE SKIP ROM\'']])
-                        self.net_state = "IDLE"
-                        self.trn_state = "COMMAND"
+                        self.net_state = "DONE"
                     elif (self.net_data == 0x69):
                         # OVERDRIVE MATCH ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE MATCH ROM\'']])
                         self.net_state = "GET ROM"
             elif (self.net_state == "GET ROM"):
                 # family code (1B) + serial number (6B) + CRC (1B)
-                if (self.collect_data((1+6+1)*8)):
+                if (self.collect_data(64)):
                     self.net_rom = self.net_data & 0xffffffffffffffff
                     self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
-                    self.net_state = "IDLE"
-                    self.trn_state = "COMMAND"
+                    self.net_state = "DONE"
             elif (self.net_state == "SEARCH ROM"):
                 # family code (1B) + serial number (6B) + CRC (1B)
-                if (self.collect_search((1+6+1)*8)):
+                if (self.collect_search(64)):
                     self.net_rom = self.net_data & 0xffffffffffffffff
                     self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
-                    self.net_state = "IDLE"
-                    self.trn_state = "COMMAND"
+                    self.net_state = "DONE"
             else:
                 raise Exception('Invalid net_state: %s' % self.net_state)
 
@@ -213,8 +216,8 @@ class Decoder(srd.Decoder):
             elif (self.trn_state == "COMMAND"):
                 if (self.collect_data(8)):
 #                    self.put(self.lnk_fall, self.samplenum, self.out_proto, ['FUNCTION COMMAND', self.net_data])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK , ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSFER, ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
                     if   (self.net_data == 0x48):
                         # COPY SCRATCHPAD
                         self.trn_state = "TODO"
@@ -234,8 +237,11 @@ class Decoder(srd.Decoder):
                         # unsupported commands
                         self.trn_state = "TODO"
             elif (self.trn_state == "TODO"):
-#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK , ['TODO unsupported transfer state: %s' % self.trn_state]])
-#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSFER, ['TODO unsupported transfer state: %s' % self.trn_state]])
+                if (self.collect_data(8)):
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TRANSPORT DATA: 0x%02x' % self.net_data]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT DATA: 0x%02x' % self.net_data]])
+#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TODO unsupported transport state: %s' % self.trn_state]])
+#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TODO unsupported transport state: %s' % self.trn_state]])
                 pass
             else:
                 raise Exception('Invalid trn_state: %s' % self.trn_state)
