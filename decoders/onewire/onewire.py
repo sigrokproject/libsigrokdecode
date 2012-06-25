@@ -23,11 +23,9 @@
 import sigrokdecode as srd
 
 # Annotation feed formats
-ANN_ASCII = 0
-ANN_DEC = 1
-ANN_HEX = 2
-ANN_OCT = 3
-ANN_BITS = 4
+ANN_LINK     = 0
+ANN_NETWORK  = 1
+ANN_TRANSFER = 2
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -48,11 +46,9 @@ class Decoder(srd.Decoder):
         'overdrive': ['Overdrive', 0],
     }
     annotations = [
-        ['ASCII', 'Data bytes as ASCII characters'],
-        ['Decimal', 'Databytes as decimal, integer values'],
-        ['Hex', 'Data bytes in hex format'],
-        ['Octal', 'Data bytes as octal numbers'],
-        ['Bits', 'Data bytes in bit notation (sequence of 0/1 digits)'],
+        ['Link', 'Link layer events (reset, presence, bit slots)'],
+        ['Network', 'Network layer events (device addressing)'],
+        ['Transfer', 'Transfer layer events'],
     ]
 
     def __init__(self, **kwargs):
@@ -84,7 +80,7 @@ class Decoder(srd.Decoder):
         # The width of the 1-Wire time base (30us) in number of samples.
         # TODO: optimize this value
         self.time_base = float(self.samplerate) * float(0.000030)
-        print ("DEBUG: samplerate = %d, time_base = %d" % (self.samplerate, self.time_base))
+        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['time_base = %d' % self.time_base]])
 
     def report(self):
         pass
@@ -105,8 +101,6 @@ class Decoder(srd.Decoder):
                     self.lnk_fall = self.samplenum
                     # Go to waiting for sample time
                     self.lnk_state = 'WAIT FOR DATA SAMPLE'
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                             [ANN_DEC, ['LNK: NEGEDGE: ']])
             elif self.lnk_state == 'WAIT FOR DATA SAMPLE':
                 # Data should be sample one 'time unit' after a falling edge
                 if (self.samplenum - self.lnk_fall == 0.5*self.time_base):
@@ -114,8 +108,7 @@ class Decoder(srd.Decoder):
                     self.lnk_event = "DATA BIT"
                     if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
                     else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                             [ANN_DEC, ['LNK: BIT: ' + str(self.lnk_bit)]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['BIT: %01x' % self.lnk_bit]])
             elif self.lnk_state == 'WAIT FOR RISING EDGE':
                 # The end of a cycle is a rising edge.
                 if (owr == 1):
@@ -126,11 +119,9 @@ class Decoder(srd.Decoder):
                         # Send a reset event to the next protocol layer.
                         self.lnk_event = "RESET"
                         self.lnk_state = "WAIT FOR PRESENCE DETECT"
-                        self.put(self.lnk_fall, self.samplenum, self.out_proto,
-                                 ['RESET'])
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                                 [ANN_DEC, ['LNK: RESET: ']])
-                        print ("DEBUG: RESET t0=%d t+=%d" % (self.lnk_fall, self.samplenum))
+                        self.put(self.lnk_fall, self.samplenum, self.out_proto, ['RESET'])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK   , ['RESET']])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['RESET']])
                         # Reset the timer.
                         self.lnk_fall = self.samplenum
                     # Otherwise this is assumed to be a data bit.
@@ -146,9 +137,9 @@ class Decoder(srd.Decoder):
                     #self.lnk_event   = "PRESENCE DETECT"
                     if (self.lnk_present) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
                     else                  :  self.lnk_state = 'WAIT FOR RISING EDGE'
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                             [ANN_DEC, ['LNK: PRESENCE: ' + str(self.lnk_present)]])
-                    print ("DEBUG: PRESENCE=%d t0=%d t+=%d" % (self.lnk_present, self.lnk_fall, self.samplenum))
+                    present_str = "False" if self.lnk_present else "True"
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK   , ['PRESENCE: ' + present_str]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['PRESENCE: ' + present_str]])
             else:
                 raise Exception('Invalid lnk_state: %d' % self.lnk_state)
 
@@ -165,48 +156,54 @@ class Decoder(srd.Decoder):
                 if (self.net_state == "ROM COMMAND"):
                     if (self.collect_data(8)):
 #                        self.put(self.lnk_fall, self.samplenum,
-#                                 self.out_proto, ['LNK: COMMAND', self.net_data])
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                                 [ANN_DEC, ['NET: ROM COMMAND: 0x' + hex(self.net_data)]])
-                        print ("DEBUG: ROM_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
+#                                 self.out_proto, ['ROM COMMAND', self.net_data])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: 0x%02x' % self.net_data]])
                         if   (self.net_data == 0x33):
                             # READ ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'READ ROM\'']])
                             self.net_state = "ADDRESS"
                         elif (self.net_data == 0x0f):
                             # READ ROM TODO
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'READ ROM ???\'']])
                             self.net_state = "ADDRESS"
                         elif (self.net_data == 0xcc):
                             # SKIP ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SKIP ROM\'']])
                             self.net_state = "CONTROL COMMAND"
                         elif (self.net_data == 0x55):
                             # MATCH ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'MATCH ROM\'']])
                             self.net_state = "ADDRESS"
                         elif (self.net_data == 0xf0):
                             # SEARCH ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SEARCH ROM\'']])
                             self.net_state = "SEARCH"
                         elif (self.net_data == 0x3c):
                             # OVERDRIVE SKIP ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE SKIP ROM\'']])
                             self.net_state = "CONTROL COMMAND"
                         elif (self.net_data == 0x69):
                             # OVERDRIVE MATCH ROM
+                            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE MATCH ROM\'']])
                             self.net_state = "ADDRESS"
                 elif (self.net_state == "ADDRESS"):
                     # family code (1B) + serial number (6B) + CRC (1B)
                     if (self.collect_data((1+6+1)*8)):
                         self.net_address = self.net_data & 0xffffffffffffffff
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_address]])
                         self.net_state = "CONTROL COMMAND"
                 elif (self.net_state == "SEARCH"):
                     # family code (1B) + serial number (6B) + CRC (1B)
                     if (self.collect_search((1+6+1)*8)):
                         self.net_address = self.net_data & 0xffffffffffffffff
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_address]])
                         self.net_state = "CONTROL COMMAND"
                 elif (self.net_state == "CONTROL COMMAND"):
                     if (self.collect_data(8)):
 #                        self.put(self.lnk_fall, self.samplenum,
 #                                 self.out_proto, ['LNK: COMMAND', self.net_data])
                         self.put(self.lnk_fall, self.samplenum, self.out_ann,
-                                 [ANN_DEC, ['NET: FUNCTION COMMAND: 0x' + hex(self.net_data)]])
-                        print ("DEBUG: FUNCTION_COMMAND=0x%02x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
+                                 [ANN_TRANSFER, ['TRANSFER: FUNCTION COMMAND: 0x' + hex(self.net_data)]])
                         if   (self.net_data == 0x48):
                             # COPY SCRATCHPAD
                             self.net_state = "TODO"
@@ -241,7 +238,6 @@ class Decoder(srd.Decoder):
         if (self.net_cnt == length):
             self.net_data = self.net_data & ((1<<length)-1)
             self.net_cnt  = 0
-            print ("DEBUG: DATA=0x%0x t0=%d t+=%d" % (self.net_data, self.lnk_fall, self.samplenum))
             return (1)
         else:
             return (0)
@@ -265,9 +261,6 @@ class Decoder(srd.Decoder):
             self.net_data   = self.net_data   & ((1<<length)-1)
             self.net_search = "P"
             self.net_cnt    = 0
-            print ("DEBUG: SEARCH_P=0x%0x t0=%d t+=%d" % (self.net_data_p, self.lnk_fall, self.samplenum))
-            print ("DEBUG: SEARCH_N=0x%0x t0=%d t+=%d" % (self.net_data_n, self.lnk_fall, self.samplenum))
-            print ("DEBUG: SEARCH  =0x%0x t0=%d t+=%d" % (self.net_data  , self.lnk_fall, self.samplenum))
             return (1)
         else:
             return (0)
