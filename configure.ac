@@ -156,6 +156,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/i2s/Makefile
 		 decoders/jtag/Makefile
 		 decoders/jtag_stm32/Makefile
+		 decoders/lm75/Makefile
 		 decoders/lpc/Makefile
 		 decoders/mlx90614/Makefile
 		 decoders/mx25lxx05d/Makefile
