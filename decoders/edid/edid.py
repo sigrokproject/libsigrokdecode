@@ -105,8 +105,12 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        if type(data) != int:
-            raise Exception('malformed ddc2 input: expected 1 byte')
+        cmd, data = data
+
+        # We only care about actual data bytes that are read (for now).
+        if cmd != 'DATA READ':
+            return
+
         self.cnt += 1
         self.sn.append([ss, es])
         self.cache.append(data)

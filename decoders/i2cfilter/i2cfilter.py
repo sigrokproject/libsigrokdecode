@@ -2,6 +2,7 @@
 ## This file is part of the sigrok project.
 ##
 ## Copyright (C) 2012 Bert Vermeulen <bert@biot.com>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,6 +20,8 @@
 
 # Generic I2C filtering protocol decoder
 
+# TODO: Support for filtering out multiple slave/direction pairs?
+
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
@@ -29,57 +32,68 @@ class Decoder(srd.Decoder):
     desc = 'Filter out addresses/directions in an I2C stream.'
     license = 'gplv3+'
     inputs = ['i2c']
-    outputs = []
+    outputs = ['i2c']
     probes = []
     optional_probes = []
     options = {
         'address': ['Address to filter out of the I2C stream', 0],
-        'direction': ['Direction to filter (read/write)', '']
+        'direction': ['Direction to filter (read/write/both)', 'both']
     }
     annotations = []
 
     def __init__(self, **kwargs):
         self.state = None
+        self.curslave = -1
+        self.curdirection = None
+        self.packets = [] # Local cache of I2C packets
 
     def start(self, metadata):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2cdata')
-        if self.options['direction'] not in ('', 'read', 'write'):
-            raise Exception('Invalid direction: expected "read" or "write"')
+        self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
+        if self.options['address'] not in range(0, 127 + 1):
+            raise Exception('Invalid slave (must be 0..127).')
+        if self.options['direction'] not in ('both', 'read', 'write'):
+            raise Exception('Invalid direction (valid: read/write/both).')
 
     def report(self):
         pass
 
+    # Grab I2C packets into a local cache, until an I2C STOP condition
+    # packet comes along. At some point before that STOP condition, there
+    # will have been an ADDRESS READ or ADDRESS WRITE which contains the
+    # I2C address of the slave that the master wants to talk to.
+    # If that slave shall be filtered, output the cache (all packets from
+    # START to STOP) as proto 'i2c', otherwise drop it.
     def decode(self, ss, es, data):
-        try:
-            cmd, data = data
-        except Exception as e:
-            raise Exception('Malformed I2C input: %s' % str(e)) from e
 
-        # Whichever state we're in, these always reset the state machine.
-        # This should make it easier to deal with corrupt data etc.
-        if cmd in ('START', 'START REPEAT'):
-            self.state = 'start'
-            return
-        if cmd == 'STOP':
-            self.state = None
-            return
-        if cmd in ('ACK', 'NACK'):
-            # Don't care, we just want data.
-            return
+        cmd, databyte = data
 
-        if self.state == 'start':
-            # Start of a transfer, see if we want this one.
-            if cmd == 'ADDRESS READ' and self.options['direction'] == 'write':
+        # Add the I2C packet to our local cache.
+        self.packets.append([ss, es, data])
+
+        if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
+            self.curslave = databyte
+            self.curdirection = cmd[8:].lower()
+        elif cmd in ('STOP', 'START REPEAT'):
+            # If this chunk was not for the correct slave, drop it.
+            if self.options['address'] == 0:
+                pass
+            elif self.curslave != self.options['address']:
+                self.packets = []
                 return
-            elif cmd == 'ADDRESS WRITE' and self.options['direction'] == 'read':
+
+            # If this chunk was not in the right direction, drop it.
+            if self.options['direction'] == 'both':
+                pass
+            elif self.options['direction'] != self.curdirection:
+                self.packets = []
                 return
-            elif cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
-                if self.options['address'] in (0, data):
-                    # We want this tranfer.
-                    self.state = 'transfer'
-        elif self.state == 'transfer':
-            if cmd in ('DATA READ', 'DATA WRITE'):
-                self.put(ss, es, self.out_proto, data)
+
+            # TODO: START->STOP chunks with both read and write (Repeat START)
+            # Otherwise, send out the whole chunk of I2C packets.
+            for p in self.packets:
+                self.put(p[0], p[1], self.out_proto, p[2])
+
+            self.packets = []
         else:
-            raise Exception('Invalid state: %s' % self.state)
+            pass # Do nothing, only add the I2C packet to our cache.
 
