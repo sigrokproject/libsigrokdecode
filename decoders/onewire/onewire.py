@@ -43,7 +43,11 @@ class Decoder(srd.Decoder):
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power'},
     ]
     options = {
-        'overdrive': ['Overdrive', 0],
+        'overdrive' : ['Overdrive', 1],
+        'cnt_normal_bit'        : ['Time (in samplerate periods) for normal mode sample bit'     , 0],
+        'cnt_normal_presence'   : ['Time (in samplerate periods) for normal mode sample presence', 0],
+        'cnt_overdrive_bit'     : ['Time (in samplerate periods) for overdrive mode sample bit'     , 0],
+        'cnt_overdrive_presence': ['Time (in samplerate periods) for overdrive mode sample presence', 0],
     }
     annotations = [
         ['Link', 'Link layer events (reset, presence, bit slots)'],
@@ -68,16 +72,37 @@ class Decoder(srd.Decoder):
         self.net_data_n  = 0x0
         self.net_data    = 0x0
         self.net_rom     = 0x0000000000000000
-        # Transport layer variables
-        self.trn_state   = 'IDLE'
 
     def start(self, metadata):
-        self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'onewire')
         self.out_ann   = self.add(srd.OUTPUT_ANN  , 'onewire')
 
-        # The width of the 1-Wire time base (30us) in number of samples.
-        # TODO: optimize this value
+        # check if samplerate is appropriate
+        self.samplerate = metadata['samplerate']
+        if (self.options['overdrive']):
+            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['NOTE: Sample rate checks assume overdrive mode.']])
+            if   (self.samplerate < 2000000):
+                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['ERROR: Sampling rate is too low must be above 2MHz for proper overdrive mode decoding.']])
+            elif (self.samplerate < 5000000):
+                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['WARNING: Sampling rate is suggested to be above 5MHz for proper overdrive mode decoding.']])
+        else:
+            self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['NOTE: Sample rate checks assume normal mode only.']])
+            if   (self.samplerate <  400000):
+                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['ERROR: Sampling rate is too low must be above 400kHz for proper normal mode decoding.']])
+            elif (self.samplerate < 1000000):
+                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['WARNING: Sampling rate is suggested to be above 1MHz for proper normal mode decoding.']])
+
+        # The default 1-Wire time base is 30us, this is used to calculate sampling times.
+        if (self.options['cnt_normal_bit']):      self.cnt_normal_bit      = self.options['cnt_normal_bit']
+        else:                                     self.cnt_normal_bit      = float(self.samplerate) * 0.000015 # 15ns
+        if (self.options['cnt_normal_presence']): self.cnt_normal_presence = self.options['cnt_normal_presence']
+        else:                                     self.cnt_normal_presence = float(self.samplerate) * 0.000075 # 15ns
+        if (self.options['cnt_overdrive_bit']):      self.cnt_overdrive_bit      = self.options['cnt_overdrive_bit']
+        else:                                        self.cnt_overdrive_bit      = float(self.samplerate) * 0.000002 # 2ns
+        if (self.options['cnt_overdrive_presence']): self.cnt_overdrive_presence = self.options['cnt_overdrive_presence']
+        else:                                        self.cnt_overdrive_presence = float(self.samplerate) * 0.000010 # 10ns
+        # Check if sample times are in the allowed range
+        # TODO
         self.time_base = float(self.samplerate) * float(0.000030)
         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK, ['time_base = %d' % self.time_base]])
 
@@ -86,7 +111,6 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         for (self.samplenum, (owr, pwr)) in data:
-#            print ("DEBUG: sample = %d, owr = %d, pwr = %d, lnk_fall = %d, lnk_state = %s" % (self.samplenum, owr, pwr, self.lnk_fall, self.lnk_state))
 
             # Data link layer
 
@@ -119,8 +143,8 @@ class Decoder(srd.Decoder):
                         self.lnk_event = "RESET"
                         self.lnk_state = "WAIT FOR PRESENCE DETECT"
                         self.put(self.lnk_fall, self.samplenum, self.out_proto, ['RESET'])
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK   , ['RESET']])
-                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['RESET']])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_LINK     , ['RESET']])
+                        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['RESET']])
                         # Reset the timer.
                         self.lnk_fall = self.samplenum
                     # Otherwise this is assumed to be a data bit.
@@ -151,13 +175,13 @@ class Decoder(srd.Decoder):
                 self.net_cnt    = 0
             elif (self.net_state == "IDLE"):
                 pass
-            elif (self.net_state == "DONE"):
-                self.trn_state = "COMMAND"
-                self.net_state = "IDLE"
+            elif (self.net_state == "TRANSPORT"):
+                if (self.collect_data(8)):
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TRANSPORT: 0x%02x' % self.net_data]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT: 0x%02x' % self.net_data]])
+                    self.put(self.lnk_fall, self.samplenum, self.out_proto, ['transfer', self.net_data])
             elif (self.net_state == "COMMAND"):
                 if (self.collect_data(8)):
-#                    self.put(self.lnk_fall, self.samplenum,
-#                             self.out_proto, ['ROM COMMAND', self.net_data])
                     self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: 0x%02x' % self.net_data]])
                     if   (self.net_data == 0x33):
                         # READ ROM
@@ -170,7 +194,7 @@ class Decoder(srd.Decoder):
                     elif (self.net_data == 0xcc):
                         # SKIP ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SKIP ROM\'']])
-                        self.net_state = "DONE"
+                        self.net_state = "TRANSPORT"
                     elif (self.net_data == 0x55):
                         # MATCH ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'MATCH ROM\'']])
@@ -186,7 +210,7 @@ class Decoder(srd.Decoder):
                     elif (self.net_data == 0x3c):
                         # OVERDRIVE SKIP ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE SKIP ROM\'']])
-                        self.net_state = "DONE"
+                        self.net_state = "TRANSPORT"
                     elif (self.net_data == 0x69):
                         # OVERDRIVE MATCH ROM
                         self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE MATCH ROM\'']])
@@ -196,55 +220,16 @@ class Decoder(srd.Decoder):
                 if (self.collect_data(64)):
                     self.net_rom = self.net_data & 0xffffffffffffffff
                     self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
-                    self.net_state = "DONE"
+                    self.net_state = "TRANSPORT"
             elif (self.net_state == "SEARCH ROM"):
                 # family code (1B) + serial number (6B) + CRC (1B)
                 if (self.collect_search(64)):
                     self.net_rom = self.net_data & 0xffffffffffffffff
                     self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
-                    self.net_state = "DONE"
+                    self.net_state = "TRANSPORT"
             else:
                 raise Exception('Invalid net_state: %s' % self.net_state)
 
-            # Transport layer
-            
-            # State machine.
-            if (self.lnk_event == "RESET"):
-                self.trn_state = "IDLE"
-            elif (self.trn_state == "IDLE"):
-                pass
-            elif (self.trn_state == "COMMAND"):
-                if (self.collect_data(8)):
-#                    self.put(self.lnk_fall, self.samplenum, self.out_proto, ['FUNCTION COMMAND', self.net_data])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
-                    if   (self.net_data == 0x48):
-                        # COPY SCRATCHPAD
-                        self.trn_state = "TODO"
-                    elif (self.net_data == 0x4e):
-                        # WRITE SCRATCHPAD
-                        self.trn_state = "TODO"
-                    elif (self.net_data == 0xbe):
-                        # READ SCRATCHPAD
-                        self.trn_state = "TODO"
-                    elif (self.net_data == 0xb8):
-                        # RECALL E2
-                        self.trn_state = "TODO"
-                    elif (self.net_data == 0xb4):
-                        # READ POWER SUPPLY
-                        self.trn_state = "TODO"
-                    else:
-                        # unsupported commands
-                        self.trn_state = "TODO"
-            elif (self.trn_state == "TODO"):
-                if (self.collect_data(8)):
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TRANSPORT DATA: 0x%02x' % self.net_data]])
-                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT DATA: 0x%02x' % self.net_data]])
-#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TODO unsupported transport state: %s' % self.trn_state]])
-#                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TODO unsupported transport state: %s' % self.trn_state]])
-                pass
-            else:
-                raise Exception('Invalid trn_state: %s' % self.trn_state)
 
     # Link/Network layer data collector
     def collect_data (self, length):
@@ -286,3 +271,54 @@ class Decoder(srd.Decoder):
                 return (0)
         else:
             return (0)
+
+
+#            # Transport layer
+#            
+#            # State machine.
+#            if (self.lnk_event == "RESET"):
+#                self.trn_state = "IDLE"
+#            elif (self.trn_state == "IDLE"):
+#                pass
+#            elif (self.trn_state == "COMMAND"):
+#                if (self.collect_data(8)):
+##                    self.put(self.lnk_fall, self.samplenum, self.out_proto, ['FUNCTION COMMAND', self.net_data])
+#                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
+#                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['FUNCTION COMMAND: 0x%02x' % self.net_data]])
+#                    if   (self.net_data == 0x48):
+#                        # COPY SCRATCHPAD
+#                        self.trn_state = "TODO"
+#                    elif (self.net_data == 0x4e):
+#                        # WRITE SCRATCHPAD
+#                        self.trn_state = "TODO"
+#                    elif (self.net_data == 0xbe):
+#                        # READ SCRATCHPAD
+#                        self.trn_state = "TODO"
+#                    elif (self.net_data == 0xb8):
+#                        # RECALL E2
+#                        self.trn_state = "TODO"
+#                    elif (self.net_data == 0xb4):
+#                        # READ POWER SUPPLY
+#                        self.trn_state = "TODO"
+#                    else:
+#                        # unsupported commands
+#                        self.trn_state = "TODO"
+#            elif (self.trn_state == "TODO"):
+#                if (self.collect_data(8)):
+#                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TRANSPORT DATA: 0x%02x' % self.net_data]])
+#                    self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT DATA: 0x%02x' % self.net_data]])
+##                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TODO unsupported transport state: %s' % self.trn_state]])
+##                self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TODO unsupported transport state: %s' % self.trn_state]])
+#                pass
+#            else:
+#                raise Exception('Invalid trn_state: %s' % self.trn_state)
+
+
+#class onewire_device ():
+#    def __init__ (self, scratchpad_size = 8):
+#        pass
+#    def reset (self):
+#        pass
+#    def data (self, data):
+#        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_NETWORK  , ['TRANSPORT DATA: 0x%02x' % self.net_data]])
+#        self.put(self.lnk_fall, self.samplenum, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT DATA: 0x%02x' % self.net_data]])
