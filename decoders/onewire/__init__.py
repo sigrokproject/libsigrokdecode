@@ -21,7 +21,11 @@
 '''
 1-Wire protocol decoder.
 
-TODO.
+TODO:
+- fix annotations to have event duration instead of begin end time
+- add CRC checks for network layer
+- add transport layer code
+- review link layer code, to check for protocol correctness
 '''
 
 from .onewire import *
