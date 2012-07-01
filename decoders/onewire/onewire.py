@@ -27,6 +27,16 @@ ANN_LINK      = 0
 ANN_NETWORK   = 1
 ANN_TRANSPORT = 2
 
+# a dictionary of ROM commands and their names
+rom_command = {0x33: "READ ROM",
+               0x0f: "CONDITIONAL READ ROM",
+               0xcc: "SKIP ROM",
+               0x55: "MATCH ROM",
+               0xf0: "SEARCH ROM",
+               0xec: "CONDITIONAL SEARCH ROM",
+               0x3c: "OVERDRIVE SKIP ROM",
+               0x6d: "OVERDRIVE MATCH ROM"}
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'onewire'
@@ -207,7 +217,7 @@ class Decoder(srd.Decoder):
                 raise Exception('Invalid lnk_state: %d' % self.lnk_state)
 
             # Network layer
-            
+
             # State machine.
             if (self.lnk_event == "RESET"):
                 self.net_state = "COMMAND"
@@ -218,39 +228,23 @@ class Decoder(srd.Decoder):
             elif (self.net_state == "COMMAND"):
                 # Receiving and decoding a ROM command
                 if (self.onewire_collect(8)):
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: 0x%02x' % self.net_data]])
-                    if   (self.net_data == 0x33):
-                        # READ ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'READ ROM\'']])
+                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: 0x%02x \'%s\'' % (self.net_data, rom_command[self.net_data])]])
+                    if   (self.net_data == 0x33):  # READ ROM
                         self.net_state = "GET ROM"
-                    elif (self.net_data == 0x0f):
-                        # CONDITIONAL READ ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'CONDITIONAL READ ROM\'']])
+                    elif (self.net_data == 0x0f):  # CONDITIONAL READ ROM
                         self.net_state = "GET ROM"
-                    elif (self.net_data == 0xcc):
-                        # SKIP ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SKIP ROM\'']])
+                    elif (self.net_data == 0xcc):  # SKIP ROM
                         self.net_state = "TRANSPORT"
-                    elif (self.net_data == 0x55):
-                        # MATCH ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'MATCH ROM\'']])
+                    elif (self.net_data == 0x55):  # MATCH ROM
                         self.net_state = "GET ROM"
-                    elif (self.net_data == 0xf0):
-                        # SEARCH ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'SEARCH ROM\'']])
+                    elif (self.net_data == 0xf0):  # SEARCH ROM
                         self.net_state = "SEARCH ROM"
-                    elif (self.net_data == 0xec):
-                        # CONDITIONAL SEARCH ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'CONDITIONAL SEARCH ROM\'']])
+                    elif (self.net_data == 0xec):  # CONDITIONAL SEARCH ROM
                         self.net_state = "SEARCH ROM"
-                    elif (self.net_data == 0x3c):
-                        # OVERDRIVE SKIP ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE SKIP ROM\'']])
+                    elif (self.net_data == 0x3c):  # OVERDRIVE SKIP ROM
                         self.lnk_overdrive = 1
                         self.net_state = "TRANSPORT"
-                    elif (self.net_data == 0x69):
-                        # OVERDRIVE MATCH ROM
-                        self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM COMMAND: \'OVERDRIVE MATCH ROM\'']])
+                    elif (self.net_data == 0x69):  # OVERDRIVE MATCH ROM
                         self.lnk_overdrive = 1
                         self.net_state = "GET ROM"
             elif (self.net_state == "GET ROM"):
