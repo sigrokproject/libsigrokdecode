@@ -29,6 +29,13 @@ layered, the provided parser decodes the next layers:
 The higher layers (transport, presentation) are not decoded, since they are
 mostly device specific and it would take a lot of code to interpret them.
 
+Sample rate:
+A high enough sample rate is required to properly detect all the elements of
+the protocol. A lower sample rate can be used if the master does not use
+overdrive communication speed. The next minimal values should be used:
+- overdrive     available:   2MHz minimum, 5MHz suggested
+- overdrive not available: 400kHz minimum, 1MHz suggested
+
 Probes:
 1-Wire requires a single signal, but some master implementations might have a
 separate signal use to deliver power to the bus during temperature conversion
@@ -60,10 +67,10 @@ If link layer annotations are shown, possible issues with sample rate and sample
 timing are also shown.
 
 TODO:
-- fix annotations to have event duration instead of begin end time
 - add CRC checks for network layer
 - add transport layer code
 - review link layer code, to check for protocol correctness
+- define output protocol
 '''
 
 from .onewire import *
