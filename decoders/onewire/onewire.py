@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012 Iztok Jeras <iztok.jeras@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -41,8 +41,8 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'onewire'
     name = '1-Wire'
-    longname = ''
-    desc = '1-Wire bus and MicroLan'
+    longname = '1-Wire serial communication bus'
+    desc = 'Bidirectional, half-duplex, asynchronous serial bus.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['onewire']
