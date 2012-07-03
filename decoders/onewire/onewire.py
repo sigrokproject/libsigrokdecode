@@ -94,7 +94,7 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (owr, pwr)) in data:
+        for (self.samplenum, owr) in data:
 
             # Data link layer
 
@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
                     if (self.lnk_bit) :  self.lnk_state = 'WAIT FOR FALLING EDGE'
                     else              :  self.lnk_state = 'WAIT FOR RISING EDGE'
             else:
-                raise Exception('Invalid lnk_state: %s' % self.lnk_state)
+                raise Exception('Invalid lnk_state: %d' % self.lnk_state)
 
             # Network layer
             
@@ -149,10 +149,8 @@ class Decoder(srd.Decoder):
                     self.net_cnt = self.net_cnt + 1
                     self.net_cmd = (self.net_cmd << 1) & self.lnk_bit
                     if (self.lnk_cnt == 8):
-                        self.put(self.startsample, self.samplenum,
-                                 self.out_proto, ['LNK: BYTE', self.lnk_byte])
-                        self.put(self.startsample, self.samplenum, self.out_ann,
-                                 [ANN_DEC, ['LNK: BYTE: ' + self.lnk_byte]])
+                        self.put(self.startsample, self.samplenum, self.out_proto, ['LNK: BYTE', self.lnk_byte])
+                        self.put(self.startsample, self.samplenum, self.out_ann  , ['LNK: BYTE', self.lnk_byte])
                         if   (self.net_cmd == 0x33):
                             # READ ROM
                             break
@@ -179,9 +177,9 @@ class Decoder(srd.Decoder):
                     #
                     break
                 else:
-                    raise Exception('Invalid net_state: %s' % self.net_state)
+                    raise Exception('Invalid net_state: %d' % self.net_state)
             elif not (self.lnk_event == "NONE"):
-                raise Exception('Invalid net_event: %s' % self.net_event)
+                raise Exception('Invalid net_event: %d' % self.net_event)
 
 
 
