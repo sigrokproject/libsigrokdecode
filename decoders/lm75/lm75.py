@@ -75,15 +75,18 @@ class Decoder(srd.Decoder):
         self.databytes = []
         self.mintemp = 0
         self.maxtemp = 0
-        self.avgtemp = 0
+        self.avgvalues = []
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lm75')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'lm75')
 
     def report(self):
-        # TODO: Output min/max/avg temperature.
-        pass
+        # TODO: print() or self.put() or return xyz, or... ?
+        avg = sum(self.avgvalues) / len(self.avgvalues)
+        temperatures = (self.mintemp, self.maxtemp, avg)
+        # TODO: Configurable report() output, e.g. for Kelvin.
+        return 'Min/max/avg temperature: %f/%f/%f °C' % temperatures
 
     def putx(self, data):
         # Helper for annotations which span exactly one I2C packet.
@@ -119,7 +122,7 @@ class Decoder(srd.Decoder):
             self.mintemp = celsius
         if celsius > self.maxtemp:
             self.maxtemp = celsius
-        # TODO: avg. temp.
+        self.avgvalues.append(celsius)
 
     def handle_temperature_reg(self, b, s, rw):
         # Common helper for the temperature/T_HYST/T_OS registers.
