@@ -109,6 +109,11 @@ class Decoder(srd.Decoder):
         self.putb([0, ['%s: %.1f °C' % (s, celsius)]])
         self.putb([1, ['%s: %.1f °K' % (s, kelvin)]])
 
+        # Warn about the temperature register (0x00) being read-only.
+        if s == 'Temperature' and rw == 'WRITE':
+            s = 'Warning: The temperature register is read-only!'
+            self.putb([4, [s]])
+
         # Keep some statistics. Can be output in report(), for example.
         if celsius < self.mintemp:
             self.mintemp = celsius
