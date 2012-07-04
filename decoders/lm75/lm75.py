@@ -101,7 +101,7 @@ class Decoder(srd.Decoder):
             s = 'Warning: I2C slave 0x%02x not an LM75 compatible sensor.'
             self.putx([4, [s % addr]])
 
-    def output_temperature(self, s):
+    def output_temperature(self, s, rw):
         # TODO: Support for resolutions other than 9 bit.
         before, after = self.databytes[0], (self.databytes[1] >> 7) * 5
         celsius = float('%d.%d' % (before, after))
@@ -116,7 +116,7 @@ class Decoder(srd.Decoder):
             self.maxtemp = celsius
         # TODO: avg. temp.
 
-    def handle_temperature_reg(self, b, s):
+    def handle_temperature_reg(self, b, s, rw):
         # Common helper for the temperature/T_HYST/T_OS registers.
         if len(self.databytes) == 0:
             self.block_start = self.ss
@@ -124,14 +124,14 @@ class Decoder(srd.Decoder):
             return
         self.databytes.append(b)
         self.block_end = self.es
-        self.output_temperature(s)
+        self.output_temperature(s, rw)
         self.databytes = []
 
-    def handle_reg_0x00(self, b):
+    def handle_reg_0x00(self, b, rw):
         # Temperature register (16bits, read-only).
-        self.handle_temperature_reg(b, 'Temperature')
+        self.handle_temperature_reg(b, 'Temperature', rw)
 
-    def handle_reg_0x01(self, b):
+    def handle_reg_0x01(self, b, rw):
         # Configuration register (8 bits, read/write).
         # TODO: Bit-exact annotation ranges.
 
@@ -163,17 +163,13 @@ class Decoder(srd.Decoder):
         self.putx([2, [s]])
         self.putx([3, [s2]])
 
-    def handle_reg_0x02(self, b):
+    def handle_reg_0x02(self, b, rw):
         # T_HYST register (16 bits, read/write).
-        self.handle_temperature_reg(b, 'T_HYST trip temperature')
+        self.handle_temperature_reg(b, 'T_HYST trip temperature', rw)
 
-    def handle_reg_0x03(self, b):
+    def handle_reg_0x03(self, b, rw):
         # T_OS register (16 bits, read/write).
-        self.handle_temperature_reg(b, 'T_OS trip temperature')
-
-    def handle_reg_write(self, b):
-        # TODO
-        self.putx([0, ['LM75 write: reg 0x%02x = 0x%02x' % (self.reg, b)]])
+        self.handle_temperature_reg(b, 'T_OS trip temperature', rw)
 
     def decode(self, ss, es, data):
         cmd, databyte = data
@@ -189,24 +185,13 @@ class Decoder(srd.Decoder):
             self.state = 'GET SLAVE ADDR'
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address read/write operation.
-            if cmd == 'ADDRESS READ':
+            if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
                 self.warn_upon_invalid_slave(databyte)
-                self.state = 'READ REGS'
-            elif cmd == 'ADDRESS WRITE':
-                self.state = 'WRITE REGS'
-        elif self.state == 'READ REGS':
-            if cmd == 'DATA READ':
+                self.state = cmd[8:] + ' REGS' # READ REGS / WRITE REGS
+        elif self.state in ('READ REGS', 'WRITE REGS'):
+            if cmd in ('DATA READ', 'DATA WRITE'):
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
-                handle_reg(databyte)
-            elif cmd == 'STOP':
-                # TODO: Any output?
-                self.state = 'IDLE'
-            else:
-                # self.putx([0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
-                pass
-        elif self.state == 'WRITE REGS':
-            if cmd == 'DATA WRITE':
-                self.handle_reg_write(databyte)
+                handle_reg(databyte, cmd[5:]) # READ / WRITE
             elif cmd == 'STOP':
                 # TODO: Any output?
                 self.state = 'IDLE'
