@@ -57,8 +57,9 @@ class Decoder(srd.Decoder):
         self.state   = 'WAIT FOR FALLING EDGE'
         self.present = 0
         self.bit     = 0
+        self.bit_cnt = 0
+        self.command = 0
         self.overdrive = 0
-        self.cmd_cnt = 0
         # Event timing variables
         self.fall    = 0
         self.rise    = 0
@@ -171,11 +172,11 @@ class Decoder(srd.Decoder):
                     if (self.bit):  self.state = 'WAIT FOR FALLING EDGE'
                     else         :  self.state = 'WAIT FOR RISING EDGE'
                     self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['BIT: %01x' % self.bit]])
-                    self.put(self.out_proto, ['BIT', self.bit])
+                    self.put(self.fall, self.cnt_bit[self.overdrive], self.out_proto, ['BIT', self.bit])
                     # Checking the first command to see if overdrive mode should be entered
-                    if   (self.cmd_cnt <= 8):
-                        self.command = self.command | (self.bit << self.cmd_cnt)
-                    elif (self.cmd_cnt == 8):
+                    if   (self.bit_cnt <= 8):
+                        self.command = self.command | (self.bit << self.bit_cnt)
+                    elif (self.bit_cnt == 8):
                         if (self.command in [0x3c, 0x69]):
                             self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['ENTER OVERDRIVE MODE']])
                     # incrementing the bit counter
@@ -195,7 +196,7 @@ class Decoder(srd.Decoder):
                         # Exit overdrive mode
                         self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['EXIT OVERDRIVE MODE']])
                         self.overdrive = 0
-                        self.cmd_cnt = 0
+                        self.bit_cnt = 0
                         self.command = 0
                     elif ((self.samplenum - self.fall > self.cnt_overdrive_reset) and (self.overdrive)):
                         # Save the sample number for the falling edge.

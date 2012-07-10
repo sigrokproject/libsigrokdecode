@@ -73,6 +73,4 @@ TODO:
 - define output protocol
 '''
 
-from .onewire_link    import *
 from .onewire_network import *
-

@@ -18,9 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-pkgdatadir = $(DECODERS_DIR)/onewire
+pkgdatadir = $(DECODERS_DIR)/onewire_network
 
-dist_pkgdata_DATA = __init__.py onewire_link.py onewire_network.py
+dist_pkgdata_DATA = __init__.py onewire_network.py
 
 CLEANFILES = *.pyc
 

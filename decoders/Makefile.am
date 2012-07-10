@@ -42,5 +42,6 @@ SUBDIRS = \
 	uart_dump \
 	usb_signalling \
 	usb_protocol \
-	onewire
+	onewire_link \
+	onewire_network
 

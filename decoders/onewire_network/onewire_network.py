@@ -77,14 +77,14 @@ class Decoder(srd.Decoder):
         [code, val] = data
 
         # State machine.
-        if (self.code == "RESET"):
+        if (code == "RESET"):
             self.state = "COMMAND"
             self.search = "P"
             self.bit_cnt = 0
-        elif (self.code == "BIT"):
+        elif (code == "BIT"):
             if (self.state == "COMMAND"):
                 # Receiving and decoding a ROM command
-                if (self.onewire_collect(8, val)):
+                if (self.onewire_collect(8, val, ss, es)):
                     self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK,
                       ['ROM COMMAND: 0x%02x \'%s\'' % (self.data, rom_command[self.data])]])
                     if   (self.data == 0x33):  # READ ROM
@@ -106,20 +106,20 @@ class Decoder(srd.Decoder):
             elif (self.state == "GET ROM"):
                 # A 64 bit device address is selected
                 # family code (1B) + serial number (6B) + CRC (1B)
-                if (self.onewire_collect(64, val)):
+                if (self.onewire_collect(64, val, ss, es)):
                     self.net_rom = self.data & 0xffffffffffffffff
                     self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
                     self.state = "TRANSPORT"
             elif (self.state == "SEARCH ROM"):
                 # A 64 bit device address is searched for
                 # family code (1B) + serial number (6B) + CRC (1B)
-                if (self.onewire_search(64)):
+                if (self.onewire_search(64, val, ss, es)):
                     self.net_rom = self.data & 0xffffffffffffffff
                     self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
                     self.state = "TRANSPORT"
             elif (self.state == "TRANSPORT"):
                 # The transport layer is handled in byte sized units
-                if (self.onewire_collect(8, val)):
+                if (self.onewire_collect(8, val, ss, es)):
                     self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK  , ['TRANSPORT: 0x%02x' % self.data]])
                     self.put(self.net_beg, self.net_end, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT: 0x%02x' % self.data]])
                     self.put(self.net_beg, self.net_end, self.out_proto, ['transfer', self.data])
@@ -129,16 +129,16 @@ class Decoder(srd.Decoder):
 
 
     # Link/Network layer data collector
-    def onewire_collect (self, length, val):
+    def onewire_collect (self, length, val, ss, es):
         # Storing the sampe this sequence begins with
         if (self.bit_cnt == 1):
-            self.net_beg = self.ss
+            self.net_beg = ss
         self.data = self.data & ~(1 << self.bit_cnt) | (val << self.bit_cnt)
         self.bit_cnt  = self.bit_cnt + 1
         # Storing the sampe this sequence ends with
         # In case the full length of the sequence is received, return 1
         if (self.bit_cnt == length):
-            self.net_end  = self.es
+            self.net_end  = es
             self.data = self.data & ((1<<length)-1)
             self.bit_cnt  = 0
             return (1)
@@ -146,10 +146,10 @@ class Decoder(srd.Decoder):
             return (0)
 
     # Link/Network layer search collector
-    def onewire_search (self, length):
+    def onewire_search (self, length, val, ss, es):
         # Storing the sampe this sequence begins with
         if ((self.bit_cnt == 0) and (self.search == "P")):
-            self.net_beg = self.ss
+            self.net_beg = ss
         # Master receives an original address bit
         if   (self.search == "P"):
           self.data_p = self.data_p & ~(1 << self.bit_cnt) | (val << self.bit_cnt)
@@ -166,7 +166,7 @@ class Decoder(srd.Decoder):
         # Storing the sampe this sequence ends with
         # In case the full length of the sequence is received, return 1
         if (self.bit_cnt == length):
-            self.net_end = self.es
+            self.net_end = es
             self.data_p = self.data_p & ((1<<length)-1)
             self.data_n = self.data_n & ((1<<length)-1)
             self.data   = self.data   & ((1<<length)-1)

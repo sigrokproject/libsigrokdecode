@@ -170,7 +170,8 @@ AC_CONFIG_FILES([Makefile
 		 decoders/uart_dump/Makefile
 		 decoders/usb_signalling/Makefile
 		 decoders/usb_protocol/Makefile
-		 decoders/onewire/Makefile
+		 decoders/onewire_link/Makefile
+		 decoders/onewire_network/Makefile
 		])
 
 AC_OUTPUT
