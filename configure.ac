@@ -168,7 +168,6 @@ AC_CONFIG_FILES([Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
 		 decoders/uart_dump/Makefile
-		 decoders/usb/Makefile
 		 decoders/usb_signalling/Makefile
 		 decoders/usb_protocol/Makefile
 		 decoders/onewire/Makefile
