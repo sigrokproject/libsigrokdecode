@@ -67,6 +67,7 @@ class Decoder(srd.Decoder):
         self.scount = 0
         self.packet = ''
         self.syms = []
+        self.oldpins = None
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
@@ -77,12 +78,17 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (dp, dm)) in data:
+        for (self.samplenum, pins) in data:
 
             # Note: self.samplenum is the absolute sample number, whereas
             # self.scount only counts the number of samples since the
             # last change in the D+/D- lines.
             self.scount += 1
+
+            # Ignore identical samples early on (for performance reasons).
+            if self.oldpins == pins:
+                continue
+            self.oldpins, (dp, dm) = pins, pins
 
             if self.options['signalling'] == 'low-speed':
                 sym = symbols_ls[dp, dm]

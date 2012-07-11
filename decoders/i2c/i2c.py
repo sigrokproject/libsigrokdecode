@@ -88,6 +88,7 @@ class Decoder(srd.Decoder):
         self.state = 'FIND START'
         self.oldscl = None
         self.oldsda = None
+        self.oldpins = None
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
@@ -198,7 +199,12 @@ class Decoder(srd.Decoder):
         super(Decoder, self).put(self.startsample, self.samplenum, output_id, data)
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (scl, sda)) in data:
+        for (self.samplenum, pins) in data:
+
+            # Ignore identical samples early on (for performance reasons).
+            if self.oldpins == pins:
+                continue
+            self.oldpins, (scl, sda) = pins, pins
 
             # First sample: Save SCL/SDA value.
             if self.oldscl == None:

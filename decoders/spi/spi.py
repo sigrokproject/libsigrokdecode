@@ -74,6 +74,7 @@ class Decoder(srd.Decoder):
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
         self.oldcs = -1
+        self.oldpins = None
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
@@ -84,7 +85,12 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         # TODO: Either MISO or MOSI could be optional. CS# is optional.
-        for (self.samplenum, (miso, mosi, sck, cs)) in data:
+        for (self.samplenum, pins) in data:
+
+            # Ignore identical samples early on (for performance reasons).
+            if self.oldpins == pins:
+                continue
+            self.oldpins, (miso, mosi, sck, cs) = pins, pins
 
             if self.oldcs != cs:
                 # Send all CS# pin value changes.

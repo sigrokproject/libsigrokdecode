@@ -50,6 +50,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.state = 'WAIT FOR RISING EDGE'
+        self.oldpins = None
         self.oldval = None
         self.oldpon = None
         self.samplenum = 0
@@ -197,7 +198,12 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
-        for (self.samplenum, (val, pon)) in data:
+        for (self.samplenum, pins) in data:
+
+            # Ignore identical samples early on (for performance reasons).
+            if self.oldpins == pins:
+                continue
+            self.oldpins, (val, pon) = pins, pins
 
             # Always remember the old PON state.
             if self.oldpon != pon:

@@ -103,6 +103,7 @@ class Decoder(srd.Decoder):
         self.startsample = [-1, -1]
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.oldbit = [None, None]
+        self.oldpins = None
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
@@ -265,7 +266,12 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
-        for (self.samplenum, (rx, tx)) in data:
+        for (self.samplenum, pins) in data:
+
+            # Ignore identical samples early on (for performance reasons).
+            if self.oldpins == pins:
+                continue
+            self.oldpins, (rx, tx) = pins, pins
 
             # First sample: Save RX/TX value.
             if self.oldbit[RX] == None:
