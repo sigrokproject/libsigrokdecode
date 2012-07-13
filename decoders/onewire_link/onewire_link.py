@@ -40,9 +40,11 @@ class Decoder(srd.Decoder):
     options = {
         'overdrive' : ['Overdrive', 1],
         'cnt_normal_bit'        : ['Time (in samplerate periods) for normal mode sample bit'     , 0],
+        'cnt_normal_slot'       : ['Time (in samplerate periods) for normal mode data slot'      , 0],
         'cnt_normal_presence'   : ['Time (in samplerate periods) for normal mode sample presence', 0],
         'cnt_normal_reset'      : ['Time (in samplerate periods) for normal mode reset'          , 0],
         'cnt_overdrive_bit'     : ['Time (in samplerate periods) for overdrive mode sample bit'     , 0],
+        'cnt_overdrive_slot'    : ['Time (in samplerate periods) for overdrive mode data slot'      , 0],
         'cnt_overdrive_presence': ['Time (in samplerate periods) for overdrive mode sample presence', 0],
         'cnt_overdrive_reset'   : ['Time (in samplerate periods) for overdrive mode reset'          , 0],
     }
@@ -94,6 +96,10 @@ class Decoder(srd.Decoder):
             self.cnt_normal_bit = self.options['cnt_normal_bit']
         else:
             self.cnt_normal_bit = int(float(self.samplerate) * 0.000015) - 1 # 15ns
+        if (self.options['cnt_normal_slot']):
+            self.cnt_normal_slot = self.options['cnt_normal_slot']
+        else:
+            self.cnt_normal_slot = int(float(self.samplerate) * 0.000060) - 1 # 60ns
         if (self.options['cnt_normal_presence']):
             self.cnt_normal_presence = self.options['cnt_normal_presence']
         else:
@@ -106,6 +112,10 @@ class Decoder(srd.Decoder):
             self.cnt_overdrive_bit = self.options['cnt_overdrive_bit']
         else:
             self.cnt_overdrive_bit = int(float(self.samplerate) * 0.000002) - 1 # 2ns
+        if (self.options['cnt_overdrive_slot']):
+            self.cnt_overdrive_slot = self.options['cnt_overdrive_slot']
+        else:
+            self.cnt_overdrive_slot = int(float(self.samplerate) * 0.0000073) - 1 # 6ns+1.3ns
         if (self.options['cnt_overdrive_presence']):
             self.cnt_overdrive_presence = self.options['cnt_overdrive_presence']
         else:
@@ -114,10 +124,6 @@ class Decoder(srd.Decoder):
             self.cnt_overdrive_reset = self.options['cnt_overdrive_reset']
         else:
             self.cnt_overdrive_reset = int(float(self.samplerate) * 0.000048) - 1 # 48ns
-
-        # calculating the slot size
-        self.cnt_normal_slot    = int(float(self.samplerate) * 0.000060) - 1 # 60ns
-        self.cnt_overdrive_slot = int(float(self.samplerate) * 0.000006) - 1 #  6ns
 
         # organize values into lists
         self.cnt_bit      = [self.cnt_normal_bit     , self.cnt_overdrive_bit     ]
@@ -168,29 +174,35 @@ class Decoder(srd.Decoder):
             elif self.state == 'WAIT FOR DATA SAMPLE':
                 # Sample data bit
                 if (self.samplenum - self.fall == self.cnt_bit[self.overdrive]):
-                    self.bit  = owr & 0x1
-                    if (self.bit):  self.state = 'WAIT FOR FALLING EDGE'
-                    else         :  self.state = 'WAIT FOR RISING EDGE'
-                    self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['BIT: %01x' % self.bit]])
-                    self.put(self.fall, self.cnt_bit[self.overdrive], self.out_proto, ['BIT', self.bit])
-                    # Checking the first command to see if overdrive mode should be entered
-                    if   (self.bit_cnt <= 8):
-                        self.command = self.command | (self.bit << self.bit_cnt)
-                    elif (self.bit_cnt == 8):
-                        if (self.command in [0x3c, 0x69]):
-                            self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['ENTER OVERDRIVE MODE']])
-                    # incrementing the bit counter
-                    self.bit_cnt += 1
+                    self.bit  = owr
+                    self.state = 'WAIT FOR DATA SLOT END'
+            elif self.state == 'WAIT FOR DATA SLOT END':
+                # A data slot ends in a recovery period, otherwise, this is probably a reset
+                if (self.samplenum - self.fall == self.cnt_slot[self.overdrive]):
+                    if (owr):
+                        self.put(self.fall, self.samplenum, self.out_ann, [0, ['BIT: %01x' % self.bit]])
+                        self.put(self.fall, self.samplenum, self.out_proto, ['BIT', self.bit])
+                        # Checking the first command to see if overdrive mode should be entered
+                        if   (self.bit_cnt <= 8):
+                            self.command = self.command | (self.bit << self.bit_cnt)
+                        elif (self.bit_cnt == 8):
+                            if (self.command in [0x3c, 0x69]):
+                                self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['ENTER OVERDRIVE MODE']])
+                        # Incrementing the bit counter
+                        self.bit_cnt += 1
+                        # Wait for next slot
+                        self.state = 'WAIT FOR FALLING EDGE'
+                    else:
+                        # This seems to be a reset slot, wait for its end
+                        self.state = 'WAIT FOR RISING EDGE'
             elif self.state == 'WAIT FOR RISING EDGE':
                 # The end of a cycle is a rising edge.
-                if (owr == 1):
+                if (owr):
                     # Check if this was a reset cycle
                     if (self.samplenum - self.fall > self.cnt_normal_reset):
                         # Save the sample number for the falling edge.
                         self.rise = self.samplenum
                         self.state = "WAIT FOR PRESENCE DETECT"
-                        # Reset the timer.
-                        self.fall = self.samplenum
                         # Exit overdrive mode
                         if (self.overdrive):
                             self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['EXIT OVERDRIVE MODE']])
@@ -202,21 +214,24 @@ class Decoder(srd.Decoder):
                         # Save the sample number for the falling edge.
                         self.rise = self.samplenum
                         self.state = "WAIT FOR PRESENCE DETECT"
-                        # Reset the timer.
-                        self.fall = self.samplenum
                     # Otherwise this is assumed to be a data bit.
                     else :
                         self.state = "WAIT FOR FALLING EDGE"
             elif self.state == 'WAIT FOR PRESENCE DETECT':
                 # Sample presence status
                 if (self.samplenum - self.rise == self.cnt_presence[self.overdrive]):
-                    self.present = owr & 0x1
-                    # Save the sample number for the falling edge.
-                    if not (self.present) :  self.fall = self.samplenum
-                    # create presence detect event
-                    if (self.present) :  self.state = 'WAIT FOR FALLING EDGE'
-                    else              :  self.state = 'WAIT FOR RISING EDGE'
-                    self.put(self.samplenum, 0, self.out_ann, [0, ['RESET/PRESENCE: %s' % ('False' if self.present else 'True')]])
-                    self.put(self.samplenum, 0, self.out_proto, ['RESET/PRESENCE', not self.present])
+                    self.present = owr
+                    self.state = 'WAIT FOR RESET SLOT END'
+            elif self.state == 'WAIT FOR RESET SLOT END':
+                # A reset slot ends in a long recovery period
+                if (self.samplenum - self.rise == self.cnt_reset[self.overdrive]):
+                    if (owr):
+                        self.put(self.fall, self.samplenum, self.out_ann, [0, ['RESET/PRESENCE: %s' % ('False' if self.present else 'True')]])
+                        self.put(self.fall, self.samplenum, self.out_proto, ['RESET/PRESENCE', not self.present])
+                        # Wait for next slot
+                        self.state = 'WAIT FOR FALLING EDGE'
+                    else:
+                        # This seems to be a reset slot, wait for its end
+                        self.state = 'WAIT FOR RISING EDGE'
             else:
                 raise Exception('Invalid state: %d' % self.state)
