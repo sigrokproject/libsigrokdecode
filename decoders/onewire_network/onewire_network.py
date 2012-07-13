@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
         [code, val] = data
 
         # State machine.
-        if (code == "RESET"):
+        if (code == "RESET/PRESENCE"):
             self.state = "COMMAND"
             self.search = "P"
             self.bit_cnt = 0

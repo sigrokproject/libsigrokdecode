@@ -189,21 +189,19 @@ class Decoder(srd.Decoder):
                         # Save the sample number for the falling edge.
                         self.rise = self.samplenum
                         self.state = "WAIT FOR PRESENCE DETECT"
-                        self.put(self.fall, self.rise, self.out_ann, [0, ['RESET']])
-                        self.put(self.fall, self.rise, self.out_proto, ['RESET', 0])
                         # Reset the timer.
                         self.fall = self.samplenum
                         # Exit overdrive mode
-                        self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['EXIT OVERDRIVE MODE']])
-                        self.overdrive = 0
+                        if (self.overdrive):
+                            self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, [0, ['EXIT OVERDRIVE MODE']])
+                            self.overdrive = 0
+                        # Clear command bit counter and data register
                         self.bit_cnt = 0
                         self.command = 0
                     elif ((self.samplenum - self.fall > self.cnt_overdrive_reset) and (self.overdrive)):
                         # Save the sample number for the falling edge.
                         self.rise = self.samplenum
                         self.state = "WAIT FOR PRESENCE DETECT"
-                        self.put(self.fall, self.rise, self.out_ann, [0, ['RESET']])
-                        self.put(self.fall, self.rise, self.out_proto, ['RESET', 0])
                         # Reset the timer.
                         self.fall = self.samplenum
                     # Otherwise this is assumed to be a data bit.
@@ -218,7 +216,7 @@ class Decoder(srd.Decoder):
                     # create presence detect event
                     if (self.present) :  self.state = 'WAIT FOR FALLING EDGE'
                     else              :  self.state = 'WAIT FOR RISING EDGE'
-                    self.put(self.samplenum, 0, self.out_ann, [0, ['PRESENCE: ' + "False" if self.present else "True"]])
-                    self.put(self.samplenum, 0, self.out_proto, ['PRESENCE', self.present])
+                    self.put(self.samplenum, 0, self.out_ann, [0, ['RESET/PRESENCE: %s' % ('False' if self.present else 'True')]])
+                    self.put(self.samplenum, 0, self.out_proto, ['RESET/PRESENCE', not self.present])
             else:
                 raise Exception('Invalid state: %d' % self.state)
