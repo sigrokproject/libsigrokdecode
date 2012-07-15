@@ -22,19 +22,15 @@
 
 import sigrokdecode as srd
 
-# Annotation feed formats
-ANN_NETWORK   = 0
-ANN_TRANSPORT = 1
-
-# a dictionary of ROM commands and their names
-rom_command = {0x33: "READ ROM",
-               0x0f: "CONDITIONAL READ ROM",
-               0xcc: "SKIP ROM",
-               0x55: "MATCH ROM",
-               0xf0: "SEARCH ROM",
-               0xec: "CONDITIONAL SEARCH ROM",
-               0x3c: "OVERDRIVE SKIP ROM",
-               0x6d: "OVERDRIVE MATCH ROM"}
+# a dictionary of ROM commands and their names, next state
+command = {0x33: ["READ ROM"              , "GET ROM"   ], 
+           0x0f: ["CONDITIONAL READ ROM"  , "GET ROM"   ],
+           0xcc: ["SKIP ROM"              , "TRANSPORT" ],
+           0x55: ["MATCH ROM"             , "GET ROM"   ],
+           0xf0: ["SEARCH ROM"            , "SEARCH ROM"],
+           0xec: ["CONDITIONAL SEARCH ROM", "SEARCH ROM"],
+           0x3c: ["OVERDRIVE SKIP ROM"    , "TRANSPORT" ],
+           0x6d: ["OVERDRIVE MATCH ROM"   , "GET ROM"   ]}
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -50,7 +46,6 @@ class Decoder(srd.Decoder):
     options = {}
     annotations = [
         ['Network', 'Network layer events (device addressing)'],
-        ['Transport', 'Transport layer events'],
     ]
 
     def __init__(self, **kwargs):
@@ -78,52 +73,48 @@ class Decoder(srd.Decoder):
 
         # State machine.
         if (code == "RESET/PRESENCE"):
-            self.state = "COMMAND"
             self.search = "P"
             self.bit_cnt = 0
+            self.put(ss, es, self.out_ann, [0, ['RESET/PRESENCE: %s' % ('True' if val else 'False')]])
+            self.put(ss, es, self.out_proto, ['RESET/PRESENCE', val])
+            self.state = "COMMAND"
         elif (code == "BIT"):
             if (self.state == "COMMAND"):
                 # Receiving and decoding a ROM command
                 if (self.onewire_collect(8, val, ss, es)):
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK,
-                      ['ROM COMMAND: 0x%02x \'%s\'' % (self.data, rom_command[self.data])]])
-                    if   (self.data == 0x33):  # READ ROM
-                        self.state = "GET ROM"
-                    elif (self.data == 0x0f):  # CONDITIONAL READ ROM
-                        self.state = "GET ROM"
-                    elif (self.data == 0xcc):  # SKIP ROM
-                        self.state = "TRANSPORT"
-                    elif (self.data == 0x55):  # MATCH ROM
-                        self.state = "GET ROM"
-                    elif (self.data == 0xf0):  # SEARCH ROM
-                        self.state = "SEARCH ROM"
-                    elif (self.data == 0xec):  # CONDITIONAL SEARCH ROM
-                        self.state = "SEARCH ROM"
-                    elif (self.data == 0x3c):  # OVERDRIVE SKIP ROM
-                        self.state = "TRANSPORT"
-                    elif (self.data == 0x69):  # OVERDRIVE MATCH ROM
-                        self.state = "GET ROM"
+                    if (self.data in command):
+                        self.put(self.net_beg, self.net_end, self.out_ann, [0,
+                          ['ROM COMMAND: 0x%02x \'%s\'' % (self.data, command[self.data][0])]])
+                        self.state = command[self.data][1]
+                    else:
+                        self.put(self.net_beg, self.net_end, self.out_ann, [0,
+                          ['ROM COMMAND: 0x%02x \'%s\'' % (self.data, 'UNRECOGNIZED')]])
+                        self.state = "COMMAND ERROR"
             elif (self.state == "GET ROM"):
                 # A 64 bit device address is selected
                 # family code (1B) + serial number (6B) + CRC (1B)
                 if (self.onewire_collect(64, val, ss, es)):
                     self.net_rom = self.data & 0xffffffffffffffff
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
+                    self.put(self.net_beg, self.net_end, self.out_ann, [0, ['ROM: 0x%016x' % self.net_rom]])
+                    self.put(self.net_beg, self.net_end, self.out_proto, ['ROM', self.net_rom])
                     self.state = "TRANSPORT"
             elif (self.state == "SEARCH ROM"):
                 # A 64 bit device address is searched for
                 # family code (1B) + serial number (6B) + CRC (1B)
                 if (self.onewire_search(64, val, ss, es)):
                     self.net_rom = self.data & 0xffffffffffffffff
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK, ['ROM: 0x%016x' % self.net_rom]])
+                    self.put(self.net_beg, self.net_end, self.out_ann, [0, ['ROM: 0x%016x' % self.net_rom]])
+                    self.put(self.net_beg, self.net_end, self.out_proto, ['ROM', self.net_rom])
                     self.state = "TRANSPORT"
             elif (self.state == "TRANSPORT"):
                 # The transport layer is handled in byte sized units
                 if (self.onewire_collect(8, val, ss, es)):
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_NETWORK  , ['TRANSPORT: 0x%02x' % self.data]])
-                    self.put(self.net_beg, self.net_end, self.out_ann, [ANN_TRANSPORT, ['TRANSPORT: 0x%02x' % self.data]])
-                    self.put(self.net_beg, self.net_end, self.out_proto, ['transfer', self.data])
-                    # TODO: Sending translort layer data to 1-Wire device models
+                    self.put(self.net_beg, self.net_end, self.out_ann, [0, ['DATA: 0x%02x' % self.data]])
+                    self.put(self.net_beg, self.net_end, self.out_proto, ['DATA', self.data])
+            elif (self.state == "COMMAND ERROR"):
+                # Since the command is not recognized, print raw data
+                if (self.onewire_collect(8, val, ss, es)):
+                    self.put(self.net_beg, self.net_end, self.out_ann, [0, ['ROM ERROR DATA: 0x%02x' % self.data]])
             else:
                 raise Exception('Invalid state: %s' % self.state)
 
