@@ -95,9 +95,11 @@ class Decoder(srd.Decoder):
                         self.state = "UNRECOGNIZED"
             elif (self.state == "READ SCRATCHPAD"):
                 self.put(ss, es, self.out_ann, [0, ['SCRATCHPAD DATA: 0x%02x' % (val)]])
-            elif (self.state == "TEMPERATURE CONVERSION"):
+            elif (self.state == "CONVERT TEMPERATURE"):
                 self.put(ss, es, self.out_ann, [0, ['TEMPERATURE CONVERSION STATUS: 0x%02x' % (val)]])
+            elif (self.state in command.values()):
+                self.put(ss, es, self.out_ann, [0, ['TODO "%s": 0x%02x' % (self.state, val)]])
             elif (self.state == "UNRECOGNIZED"):
-                self.put(ss, es, self.out_ann, [0, ['UNRECOGNIZED: 0x%02x' % (val)]])
+                self.put(ss, es, self.out_ann, [0, ['UNRECOGNIZED COMMAND: 0x%02x' % (val)]])
             else:
                 raise Exception('Invalid state: %s' % self.state)
