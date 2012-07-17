@@ -38,7 +38,7 @@ class Decoder(srd.Decoder):
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power'},
     ]
     options = {
-        'overdrive' : ['Overdrive', 1],
+        'overdrive'             : ['Overdrive', 1],
         'cnt_normal_bit'        : ['Time (in samplerate periods) for normal mode sample bit'     , 0],
         'cnt_normal_slot'       : ['Time (in samplerate periods) for normal mode data slot'      , 0],
         'cnt_normal_presence'   : ['Time (in samplerate periods) for normal mode sample presence', 0],

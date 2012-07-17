@@ -23,11 +23,12 @@
 
 The 1-Wire protocol enables bidirectional communication over a single wire (and
 ground) between a single master and one or multiple slaves. The protocol is
-layered, the provided parser decodes the next layers:
+layered.
 - Link layer (reset, presence detection, reading/writing bits)
-- Network layer (skip, search, match device ROM addresses)
-The higher layers (transport, presentation) are not decoded, since they are
-mostly device specific and it would take a lot of code to interpret them.
+- Network layer (skip/search/match device ROM addresses)
+- Transport layer (transfer data between 1-Wire master and device)
+
+Link layer
 
 Sample rate:
 A high enough sample rate is required to properly detect all the elements of
@@ -50,27 +51,31 @@ but in case the user wishes to use different values, it is possible to
 configure the next timing values (number of sample rate periods):
 - overdrive              (if active the decoder will be prepared for overdrive)
 - cnt_normal_bit         (time for normal mode sample bit)
+- cnt_normal_slot        (time for normal mode data slot)
 - cnt_normal_presence    (time for normal mode sample presence)
 - cnt_normal_reset       (time for normal mode reset)
 - cnt_overdrive_bit      (time for overdrive mode sample bit)
+- cnt_overdrive_slot     (time for overdrive mode data slot)
 - cnt_overdrive_presence (time for overdrive mode sample presence)
 - cnt_overdrive_reset    (time for overdrive mode reset)
 This options should be configured only on very rare cases and the user should
 read the decoder source code to understand them correctly.
 
 Annotations:
-Annotations can be shown for each layer of the protocol separately:
-- link (the value of each transmitted bit is shown separately)
-- network (the ROM command, and address are shown)
-- transport (only transport layer byte transfers are shown)
-If link layer annotations are shown, possible issues with sample rate and sample
-timing are also shown.
+Link layer annotations show the next events:
+- NOTE/WARNING/ERROR
+  Possible sample rate related timing issues are reported.
+- RESET/PRESENCE True/False
+  The event is marked from the signal negative edge to the end of the reset
+  high period. It is also reported if there are any devices attached to the
+  bus.
+- BIT 0/1
+  The event is marked from the signal negative edge to the end of the data
+  slot. The value of each received bit is also provided.
 
 TODO:
-- add CRC checks for network layer
-- add transport layer code
-- review link layer code, to check for protocol correctness
-- define output protocol
+- check for protocol correctness, if events are timed inside prescribed limits
+- maybe add support for interrupts, check if this feature is deprecated
 '''
 
 from .onewire_link    import *

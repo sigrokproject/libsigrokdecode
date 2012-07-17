@@ -22,6 +22,7 @@
 
 import sigrokdecode as srd
 
+# a dictionary of FUNCTION commands and their names
 command = {0x44: "TEMPERATURE CONVERSION",
            0xbe: "READ SCRATCHPAD"}
 
