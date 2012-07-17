@@ -23,14 +23,16 @@
 import sigrokdecode as srd
 
 # a dictionary of ROM commands and their names, next state
-command = {0x33: ["READ ROM"              , "GET ROM"   ], 
-           0x0f: ["CONDITIONAL READ ROM"  , "GET ROM"   ],
-           0xcc: ["SKIP ROM"              , "TRANSPORT" ],
-           0x55: ["MATCH ROM"             , "GET ROM"   ],
-           0xf0: ["SEARCH ROM"            , "SEARCH ROM"],
-           0xec: ["CONDITIONAL SEARCH ROM", "SEARCH ROM"],
-           0x3c: ["OVERDRIVE SKIP ROM"    , "TRANSPORT" ],
-           0x6d: ["OVERDRIVE MATCH ROM"   , "GET ROM"   ]}
+command = {
+    0x33: ["READ ROM"              , "GET ROM"   ], 
+    0x0f: ["CONDITIONAL READ ROM"  , "GET ROM"   ],
+    0xcc: ["SKIP ROM"              , "TRANSPORT" ],
+    0x55: ["MATCH ROM"             , "GET ROM"   ],
+    0xf0: ["SEARCH ROM"            , "SEARCH ROM"],
+    0xec: ["CONDITIONAL SEARCH ROM", "SEARCH ROM"],
+    0x3c: ["OVERDRIVE SKIP ROM"    , "TRANSPORT" ],
+    0x6d: ["OVERDRIVE MATCH ROM"   , "GET ROM"   ]
+}
 
 class Decoder(srd.Decoder):
     api_version = 1

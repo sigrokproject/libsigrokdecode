@@ -23,8 +23,26 @@
 import sigrokdecode as srd
 
 # a dictionary of FUNCTION commands and their names
-command = {0x44: "TEMPERATURE CONVERSION",
-           0xbe: "READ SCRATCHPAD"}
+command = {
+    # scratchpad
+    0x4e: "WRITE SCRATCHPAD",
+    0xbe: "READ SCRATCHPAD",
+    0x48: "COPY SCRATCHPAD",
+    # thermometer
+    0x44: "CONVERT TEMPERATURE",
+    0xb4: "READ POWER MODE",
+    0xb8: "RECALL EEPROM",
+    0xf5: "PIO ACCESS READ",
+    0xA5: "PIO ACCESS WRITE",
+    0x99: "CHAIN",
+    # memory
+    0xf0: "READ MEMORY",
+    0xa5: "EXTENDED READ MEMORY",
+    0x0f: "WRITE MEMORY",
+    0x55: "WRITE STATUS",
+    0xaa: "READ STATUS",
+    0xf5: "CHANNEL ACCESS"
+}
 
 class Decoder(srd.Decoder):
     api_version = 1

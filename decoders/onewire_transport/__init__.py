@@ -26,7 +26,7 @@ ground) between a single master and one or multiple slaves. The protocol is
 layered.
 - Link layer (reset, presence detection, reading/writing bits)
 - Network layer (skip/search/match device ROM addresses)
-- Transport layer (transfer data between 1-Wire master and device)
+- Transport layer (transport data between 1-Wire master and device)
 
 Transport layer
 
