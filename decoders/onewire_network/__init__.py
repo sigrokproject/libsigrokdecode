@@ -19,35 +19,44 @@
 ##
 
 '''
-1-Wire protocol decoder.
+1-Wire protocol decoder (network layer).
 
-The 1-Wire protocol enables bidirectional communication over a single wire (and
-ground) between a single master and one or multiple slaves. The protocol is
-layered.
-- Link layer (reset, presence detection, reading/writing bits)
-- Network layer (skip/search/match device ROM addresses)
-- Transport layer (transport data between 1-Wire master and device)
+The 1-Wire protocol enables bidirectional communication over a single wire
+(and ground) between a single master and one or multiple slaves. The protocol
+is layered:
 
-Network layer
+ - Link layer (reset, presence detection, reading/writing bits)
+ - Network layer (skip/search/match device ROM addresses)
+ - Transport layer (transport data between 1-Wire master and device)
+
+Network layer:
+
+Protocol output format:
+TODO.
 
 Annotations:
-The next link layer annotations are shown:
-- RESET/PRESENCE True/False
-  The event is marked from the signal negative edge to the end of the reset
-  high period. It is also reported if there are any devices attached to the
-  bus.
-The next network layer annotations are shown:
-- ROM COMMAND val name
-  The requested ROM command is displayed as an 8bit HEX value and by name.
-- ROM val
-  The 64bit value of the addressed device is displayed:
-  family code (1B) + serial number (6B) + CRC (1B)
-- DATA val
-  Data intended for the transport layer is displayed as an 8bit HEX value.
+
+The following link layer annotations are shown:
+
+ - RESET/PRESENCE True/False
+   The event is marked from the signal negative edge to the end of the reset
+   high period. It is also reported if there are any devices attached to the
+   bus.
+
+The following network layer annotations are shown:
+
+ - ROM command <val> <name>
+   The requested ROM command is displayed as an 8bit hex value and by name.
+ - ROM <val>
+   The 64bit value of the addressed device is displayed:
+   Family code (1 byte) + serial number (6 bytes) + CRC (1 byte)
+ - Data <val>
+   Data intended for the transport layer is displayed as an 8bit hex value.
 
 TODO:
-- add CRC checks, to see if there were communication errors on the wire
-- add reporting original/complement address values from the search algorithm
+ - Add CRC checks, to see if there were communication errors on the wire.
+ - Add reporting original/complement address values from the search algorithm.
 '''
 
 from .onewire_network import *
+
