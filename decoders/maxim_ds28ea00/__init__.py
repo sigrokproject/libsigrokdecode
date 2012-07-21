@@ -53,4 +53,4 @@ TODO:
 - add CRC checks for transport layer
 '''
 
-from .onewire_transport import *
+from .maxim_ds28ea00 import *

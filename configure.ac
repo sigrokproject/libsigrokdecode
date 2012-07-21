@@ -172,7 +172,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/usb_protocol/Makefile
 		 decoders/onewire_link/Makefile
 		 decoders/onewire_network/Makefile
-		 decoders/onewire_transport/Makefile
+		 decoders/maxim_ds28ea00/Makefile
 		])
 
 AC_OUTPUT

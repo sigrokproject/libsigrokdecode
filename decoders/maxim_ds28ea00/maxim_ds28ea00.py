@@ -46,7 +46,7 @@ command = {
 
 class Decoder(srd.Decoder):
     api_version = 1
-    id = 'onewire_transport'
+    id = 'maxim_ds28ea00'
     name = '1-Wire transport layer'
     longname = '1-Wire serial communication bus'
     desc = 'Bidirectional, half-duplex, asynchronous serial bus.'

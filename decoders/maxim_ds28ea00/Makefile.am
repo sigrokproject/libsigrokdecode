@@ -18,9 +18,9 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-pkgdatadir = $(DECODERS_DIR)/onewire_transport
+pkgdatadir = $(DECODERS_DIR)/maxim_ds28ea00
 
-dist_pkgdata_DATA = __init__.py onewire_transport.py
+dist_pkgdata_DATA = __init__.py maxim_ds28ea00.py
 
 CLEANFILES = *.pyc
 

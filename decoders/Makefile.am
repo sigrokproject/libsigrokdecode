@@ -44,5 +44,5 @@ SUBDIRS = \
 	usb_protocol \
 	onewire_link \
 	onewire_network \
-	onewire_transport
+	maxim_ds28ea00
 
