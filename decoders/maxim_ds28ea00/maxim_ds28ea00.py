@@ -70,42 +70,37 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
+    def putx(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
     def decode(self, ss, es, data):
         code, val = data
 
+        self.ss, self.es = ss, es
+
         # State machine.
         if code == 'RESET/PRESENCE':
-            self.put(ss, es, self.out_ann,
-                     [0, ['Reset/presence: %s' % ('true' if val else 'false')]])
+            self.putx([0, ['Reset/presence: %s'
+                           % ('true' if val else 'false')]])
             self.state = 'ROM'
         elif code == 'ROM':
             self.rom = val
-            self.put(ss, es, self.out_ann, [0, ['ROM: 0x%016x' % (val)]])
+            self.putx([0, ['ROM: 0x%016x' % (val)]])
             self.state = 'COMMAND'
         elif code == 'DATA':
             if self.state == 'COMMAND':
-                if val in command:
-                    self.put(ss, es, self.out_ann,
-                             [0, ['Function command: 0x%02x \'%s\''
-                             % (val, command[val])]])
-                    self.state = command[val].upper()
-                else:
-                    self.put(ss, es, self.out_ann,
-                             [0, ['Function command: 0x%02x \'%s\''
-                             % (val, 'unrecognized')]])
-                    self.state = 'UNRECOGNIZED'
+                if val not in command:
+                    self.putx([0, ['Unrecognized command: 0x%02x' % val]])
+                    return
+                self.putx([0, ['Function command: 0x%02x \'%s\''
+                          % (val, command[val])]])
+                self.state = command[val].upper()
             elif self.state == 'READ SCRATCHPAD':
-                self.put(ss, es, self.out_ann,
-                         [0, ['Scratchpad data: 0x%02x' % val]])
+                self.putx([0, ['Scratchpad data: 0x%02x' % val]])
             elif self.state == 'CONVERT TEMPERATURE':
-                self.put(ss, es, self.out_ann,
-                         [0, ['Temperature conversion status: 0x%02x' % val]])
+                self.putx([0, ['Temperature conversion status: 0x%02x' % val]])
             elif self.state in [s.upper() for s in command.values()]:
-                self.put(ss, es, self.out_ann,
-                         [0, ['TODO \'%s\': 0x%02x' % (self.state, val)]])
-            elif self.state == 'UNRECOGNIZED':
-                self.put(ss, es, self.out_ann,
-                         [0, ['Unrecognized command: 0x%02x' % val]])
+                self.putx([0, ['TODO \'%s\': 0x%02x' % (self.state, val)]])
             else:
                 raise Exception('Invalid state: %s' % self.state)
 
