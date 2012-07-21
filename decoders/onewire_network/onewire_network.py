@@ -47,14 +47,12 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['Network', 'Network layer events (device addressing)'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
-        # Event timing variables
         self.beg = 0
         self.end = 0
-        # Network layer variables
         self.state = 'COMMAND'
         self.bit_cnt = 0
         self.search = 'P'
@@ -86,7 +84,7 @@ class Decoder(srd.Decoder):
             self.search = 'P'
             self.bit_cnt = 0
             self.put(ss, es, self.out_ann,
-                     [0, ['RESET/PRESENCE: %s' % ('True' if val else 'False')]])
+                     [0, ['Reset/presence: %s' % ('true' if val else 'false')]])
             self.put(ss, es, self.out_proto, ['RESET/PRESENCE', val])
             self.state = 'COMMAND'
             return
@@ -100,16 +98,16 @@ class Decoder(srd.Decoder):
             if self.onewire_collect(8, val, ss, es) == 0:
                 return
             if self.data in command:
-                self.putx([0, ['ROM COMMAND: 0x%02x \'%s\''
+                self.putx([0, ['ROM command: 0x%02x \'%s\''
                           % (self.data, command[self.data][0])]])
                 self.state = command[self.data][1]
             else:
-                self.putx([0, ['ROM COMMAND: 0x%02x \'%s\''
-                          % (self.data, 'UNRECOGNIZED')]])
+                self.putx([0, ['ROM command: 0x%02x \'%s\''
+                          % (self.data, 'unrecognized')]])
                 self.state = 'COMMAND ERROR'
         elif self.state == 'GET ROM':
             # A 64 bit device address is selected.
-            # Family code (1B) + serial number (6B) + CRC (1B)
+            # Family code (1 byte) + serial number (6 bytes) + CRC (1 byte)
             if self.onewire_collect(64, val, ss, es) == 0:
                 return
             self.rom = self.data & 0xffffffffffffffff
@@ -118,7 +116,7 @@ class Decoder(srd.Decoder):
             self.state = 'TRANSPORT'
         elif self.state == 'SEARCH ROM':
             # A 64 bit device address is searched for.
-            # Family code (1B) + serial number (6B) + CRC (1B)
+            # Family code (1 byte) + serial number (6 bytes) + CRC (1 byte)
             if self.onewire_search(64, val, ss, es) == 0:
                 return
             self.rom = self.data & 0xffffffffffffffff
@@ -129,13 +127,13 @@ class Decoder(srd.Decoder):
             # The transport layer is handled in byte sized units.
             if self.onewire_collect(8, val, ss, es) == 0:
                 return
-            self.putx([0, ['DATA: 0x%02x' % self.data]])
+            self.putx([0, ['Data: 0x%02x' % self.data]])
             self.puty(['DATA', self.data])
         elif self.state == 'COMMAND ERROR':
             # Since the command is not recognized, print raw data.
             if self.onewire_collect(8, val, ss, es) == 0:
                 return
-            self.putx([0, ['ROM ERROR DATA: 0x%02x' % self.data]])
+            self.putx([0, ['ROM error data: 0x%02x' % self.data]])
         else:
             raise Exception('Invalid state: %s' % self.state)
 
