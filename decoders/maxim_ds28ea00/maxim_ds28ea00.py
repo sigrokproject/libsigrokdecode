@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# 1-Wire protocol decoder
+# Maxim DS28EA00 protocol decoder
 
 import sigrokdecode as srd
 
@@ -47,17 +47,22 @@ command = {
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'maxim_ds28ea00'
-    name = '1-Wire transport layer'
-    longname = '1-Wire serial communication bus'
-    desc = 'Bidirectional, half-duplex, asynchronous serial bus.'
+    name = 'Maxim DS28EA00'
+    longname = 'Maxim DS28EA00 1-Wire digital thermometer'
+    desc = '1-Wire digital thermometer with Sequence Detect and PIO'
     license = 'gplv2+'
     inputs = ['onewire_network']
-    outputs = []
+    outputs = ['maxim_ds28ea00']
     probes = []
-    optional_probes = []
+    optional_probes = [
+        {'id': 'pioa', 'name': 'PIOA/DONE#',
+         'desc': 'PIOA channel and chain output'},
+        {'id': 'piob', 'name': 'PIOB/EN#',
+         'desc': 'PIOB channel and chain output'},
+    ]
     options = {}
     annotations = [
-        ['Transport', 'Transport layer events'],
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):
@@ -69,7 +74,7 @@ class Decoder(srd.Decoder):
         self.rom     = 0x0000000000000000
 
     def start(self, metadata):
-        self.out_ann   = self.add(srd.OUTPUT_ANN  , 'onewire_transport')
+        self.out_ann   = self.add(srd.OUTPUT_ANN  , 'maxim_ds28ea00')
 
     def report(self):
         pass
