@@ -116,8 +116,17 @@ class Decoder(srd.Decoder):
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
 
     def handle_cmd_chip_erase(self, cmd, ret):
-        # TODO
+        # Chip erase (erases both flash an EEPROM).
+        # Upon successful chip erase, the lock bits will also be erased.
+        # The only way to end a Chip Erase cycle is to release RESET#.
         self.putx([0, ['Chip erase']])
+
+        # TODO: Check/handle RESET#.
+
+        # Sanity check on reply.
+        bit = (ret[2] & (1 << 7)) >> 7
+        if ret[1] != 0xac or bit != 1 or ret[3] != cmd[2]:
+            self.putx([1, ['Warning: Unexpected bytes in reply!']])
 
     def handle_cmd_read_fuse_bits(self, cmd, ret):
         # Read fuse bits.
