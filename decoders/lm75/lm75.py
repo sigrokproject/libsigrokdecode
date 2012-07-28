@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         ['Celsius', 'Temperature in degrees Celsius'],
-        ['Kelvin', 'Temperature in degrees Kelvin'],
+        ['Kelvin', 'Temperature in Kelvin'],
         ['Text (verbose)', 'Human-readable text (verbose)'],
         ['Text', 'Human-readable text'],
         ['Warnings', 'Human-readable warnings'],
@@ -110,7 +110,7 @@ class Decoder(srd.Decoder):
         celsius = float('%d.%d' % (before, after))
         kelvin = celsius + 273.15
         self.putb([0, ['%s: %.1f °C' % (s, celsius)]])
-        self.putb([1, ['%s: %.1f °K' % (s, kelvin)]])
+        self.putb([1, ['%s: %.1f K' % (s, kelvin)]])
 
         # Warn about the temperature register (0x00) being read-only.
         if s == 'Temperature' and rw == 'WRITE':
