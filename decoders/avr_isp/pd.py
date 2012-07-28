@@ -21,29 +21,7 @@
 # AVR ISP protocol decoder
 
 import sigrokdecode as srd
-
-# Device code addresses:
-# 0x00: vendor code, 0x01: part family + flash size, 0x02: part number
-
-# Vendor code
-vendor_code = {
-    0x1e: 'Atmel',
-    0x00: 'Device locked',
-}
-
-# (Part family + flash size, part number)
-part = {
-    (0x90, 0x01): 'AT90S1200',
-    (0x91, 0x01): 'AT90S2313',
-    (0x92, 0x01): 'AT90S4414',
-    (0x92, 0x05): 'ATmega48', # 4kB flash
-    (0x93, 0x01): 'AT90S8515',
-    (0x93, 0x0a): 'ATmega88', # 8kB flash
-    (0x94, 0x06): 'ATmega168', # 16kB flash
-    (0xff, 0xff): 'Device code erased, or target missing',
-    (0x01, 0x02): 'Device locked',
-    # TODO: Lots more entries.
-}
+from .parts import *
 
 VENDOR_CODE_ATMEL = 0x1e
 
