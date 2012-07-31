@@ -165,6 +165,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/nunchuk/Makefile
 		 decoders/pan1321/Makefile
 		 decoders/rtc8564/Makefile
+		 decoders/sdcard_spi/Makefile
 		 decoders/spi/Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
