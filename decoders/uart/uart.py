@@ -268,9 +268,10 @@ class Decoder(srd.Decoder):
         # TODO: Either RX or TX could be omitted (optional probe).
         for (self.samplenum, pins) in data:
 
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
+            # Note: Ignoring identical samples here for performance reasons
+            # is not possible for this PD, at least not in the current state.
+            # if self.oldpins == pins:
+            #     continue
             self.oldpins, (rx, tx) = pins, pins
 
             # First sample: Save RX/TX value.
