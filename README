@@ -43,8 +43,8 @@ Building and installing
 
 In order to get the libsigrokdecode source code and build it, run:
 
- $ git clone git://sigrok.git.sourceforge.net/gitroot/sigrok/sigrok
- $ cd sigrok/libsigrokdecode
+ $ git clone git://sigrok.org/libsigrokdecode
+ $ cd libsigrokdecode
  $ ./autogen.sh
  $ ./configure
  $ make
