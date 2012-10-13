@@ -90,9 +90,10 @@ case "$build" in
 *mingw*)
 	# We currently hardcode the paths to the Python 3.2 default install
 	# location as there's no 'python-config' script on Windows, it seems.
+	# Note: We add both the /c/ and c:/ syntax (needed for cmake).
 	AC_MSG_WARN([using hardcoded Python3 configuration on MinGW])
-	CPPFLAGS_PYTHON="-I/c/Python32/include"
-	LDFLAGS_PYTHON="-L/c/Python32/libs -lpython32"
+	CPPFLAGS_PYTHON="-I/c/Python32/include -Ic:/Python32/include"
+	LDFLAGS_PYTHON="-L/c/Python32/libs -Lc:/Python32/libs -lpython32"
 	;;
 *)
 	# We know that Linux has 'python3-config'.
