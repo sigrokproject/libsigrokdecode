@@ -36,7 +36,7 @@ class Decoder(srd.Decoder):
     options = {}
     annotations = [
         ['Celsius', 'Temperature in degrees Celsius'],
-        ['Kelvin', 'Temperature in degrees Kelvin'],
+        ['Kelvin', 'Temperature in Kelvin'],
     ]
 
     def __init__(self, **kwargs):
@@ -79,7 +79,7 @@ class Decoder(srd.Decoder):
                 kelvin = (self.data[0] | (self.data[1] << 8)) * 0.02
                 celsius = kelvin - 273.15
                 self.putx([0, ['Temperature: %3.2f °C' % celsius]])
-                self.putx([1, ['Temperature: %3.2f °K' % kelvin]])
+                self.putx([1, ['Temperature: %3.2f K' % kelvin]])
                 self.state = 'IGNORE START REPEAT'
                 self.data = []
         else:
