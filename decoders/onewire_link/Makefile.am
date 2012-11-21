@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/onewire_link
 
-dist_pkgdata_DATA = __init__.py onewire_link.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/jtag_stm32
 
-dist_pkgdata_DATA = __init__.py jtag_stm32.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

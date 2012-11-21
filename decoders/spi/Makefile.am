@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/spi
 
-dist_pkgdata_DATA = __init__.py spi.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

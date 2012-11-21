@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/edid
 
-dist_pkgdata_DATA = __init__.py edid.py pnpids.txt
+dist_pkgdata_DATA = __init__.py pd.py pnpids.txt
 
 CLEANFILES = *.pyc
 

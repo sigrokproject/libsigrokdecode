@@ -25,5 +25,5 @@ Details:
 http://en.wikipedia.org/wiki/DCF77
 '''
 
-from .dcf77 import *
+from .pd import *
 

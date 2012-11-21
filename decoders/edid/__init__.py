@@ -36,5 +36,5 @@ More information on EDID is available here:
  https://en.wikipedia.org/wiki/Extended_display_identification_data
 '''
 
-from .edid import *
+from .pd import *
 

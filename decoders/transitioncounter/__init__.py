@@ -25,5 +25,5 @@ Details:
 TODO
 '''
 
-from .transitioncounter import *
+from .pd import *
 

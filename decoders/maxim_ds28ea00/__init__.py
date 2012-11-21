@@ -28,5 +28,5 @@ Details:
 TODO
 '''
 
-from .maxim_ds28ea00 import *
+from .pd import *
 

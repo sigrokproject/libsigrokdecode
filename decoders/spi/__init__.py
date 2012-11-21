@@ -44,5 +44,5 @@ Examples:
 
 '''
 
-from .spi import *
+from .pd import *
 

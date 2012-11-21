@@ -58,5 +58,5 @@ TODO:
  - Add reporting original/complement address values from the search algorithm.
 '''
 
-from .onewire_network import *
+from .pd import *
 

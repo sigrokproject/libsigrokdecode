@@ -30,5 +30,5 @@ Details:
 TODO
 '''
 
-from .mxc6225xu import *
+from .pd import *
 

@@ -25,5 +25,5 @@ Details:
 TODO
 '''
 
-from .lpc import *
+from .pd import *
 

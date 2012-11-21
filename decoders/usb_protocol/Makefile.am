@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/usb_protocol
 
-dist_pkgdata_DATA = __init__.py usb_protocol.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

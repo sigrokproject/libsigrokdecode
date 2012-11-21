@@ -19,7 +19,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/i2cfilter
 
-dist_pkgdata_DATA = __init__.py i2cfilter.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

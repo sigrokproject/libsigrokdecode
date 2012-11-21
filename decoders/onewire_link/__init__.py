@@ -87,5 +87,5 @@ TODO:
 - Maybe add support for interrupts, check if this feature is deprecated.
 '''
 
-from .onewire_link import *
+from .pd import *
 

@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/rtc8564
 
-dist_pkgdata_DATA = __init__.py rtc8564.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

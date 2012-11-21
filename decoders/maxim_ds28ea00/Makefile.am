@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/maxim_ds28ea00
 
-dist_pkgdata_DATA = __init__.py maxim_ds28ea00.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

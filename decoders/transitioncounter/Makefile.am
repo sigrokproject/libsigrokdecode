@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/transitioncounter
 
-dist_pkgdata_DATA = __init__.py transitioncounter.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

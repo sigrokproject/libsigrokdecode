@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/mlx90614
 
-dist_pkgdata_DATA = __init__.py mlx90614.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

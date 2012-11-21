@@ -30,5 +30,5 @@ Details:
 TODO.
 '''
 
-from .lm75 import *
+from .pd import *
 

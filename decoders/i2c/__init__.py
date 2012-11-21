@@ -79,5 +79,5 @@ For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <data> is None.
 
 '''
 
-from .i2c import *
+from .pd import *
 

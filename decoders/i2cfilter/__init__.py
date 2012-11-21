@@ -34,5 +34,5 @@ Both of these are optional; if no options are specified the entire payload
 of the I2C session will be output.
 '''
 
-from .i2cfilter import *
+from .pd import *
 

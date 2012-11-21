@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/dcf77
 
-dist_pkgdata_DATA = __init__.py dcf77.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

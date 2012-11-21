@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/lm75
 
-dist_pkgdata_DATA = __init__.py lm75.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

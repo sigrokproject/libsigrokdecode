@@ -25,5 +25,5 @@ Details:
 TODO
 '''
 
-from .rtc8564 import *
+from .pd import *
 

@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/jtag
 
-dist_pkgdata_DATA = __init__.py jtag.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

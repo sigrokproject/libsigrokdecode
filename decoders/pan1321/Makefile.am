@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/pan1321
 
-dist_pkgdata_DATA = __init__.py pan1321.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

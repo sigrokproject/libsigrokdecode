@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/mx25lxx05d
 
-dist_pkgdata_DATA = __init__.py mx25lxx05d.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

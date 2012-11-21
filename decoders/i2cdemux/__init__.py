@@ -25,5 +25,5 @@ Takes an I2C stream as input and outputs multiple I2C streams, each stream
 containing only I2C packets for one specific I2C slave.
 '''
 
-from .i2cdemux import *
+from .pd import *
 

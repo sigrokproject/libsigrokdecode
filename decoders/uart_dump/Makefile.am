@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/uart_dump
 
-dist_pkgdata_DATA = __init__.py uart_dump.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

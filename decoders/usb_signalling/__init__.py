@@ -51,5 +51,5 @@ https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
 '''
 
-from .usb_signalling import *
+from .pd import *
 

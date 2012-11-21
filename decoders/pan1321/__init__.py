@@ -25,5 +25,5 @@ Details:
 TODO
 '''
 
-from .pan1321 import *
+from .pd import *
 

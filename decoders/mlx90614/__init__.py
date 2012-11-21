@@ -25,5 +25,5 @@ Details:
 TODO
 '''
 
-from .mlx90614 import *
+from .pd import *
 

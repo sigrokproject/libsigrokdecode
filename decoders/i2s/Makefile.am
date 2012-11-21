@@ -20,7 +20,7 @@
 
 pkgdatadir = $(DECODERS_DIR)/i2s
 
-dist_pkgdata_DATA = __init__.py i2s.py
+dist_pkgdata_DATA = __init__.py pd.py
 
 CLEANFILES = *.pyc
 

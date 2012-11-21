@@ -43,5 +43,5 @@ https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
 '''
 
-from .usb_protocol import *
+from .pd import *
 

@@ -111,5 +111,5 @@ This is the list of <packet-type>s and their respective <packet-data>:
 The <rxtx> field is 0 for RX packets, 1 for TX packets.
 '''
 
-from .uart import *
+from .pd import *
 
