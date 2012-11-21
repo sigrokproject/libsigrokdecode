@@ -225,5 +225,5 @@ class Decoder(srd.Decoder):
             else:
                 pass # TODO?
         else:
-            raise Exception('Invalid state: %d' % self.state)
+            raise Exception('Invalid state: %s' % self.state)
 

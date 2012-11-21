@@ -232,7 +232,7 @@ class Decoder(srd.Decoder):
                 if self.is_data_bit(scl, sda):
                     self.get_ack(scl, sda)
             else:
-                raise Exception('Invalid state %d' % self.STATE)
+                raise Exception('Invalid state: %s' % self.state)
 
             # Save current SDA/SCL values for the next round.
             self.oldscl = scl

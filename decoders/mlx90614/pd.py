@@ -83,5 +83,5 @@ class Decoder(srd.Decoder):
                 self.state = 'IGNORE START REPEAT'
                 self.data = []
         else:
-            raise Exception('Invalid state: %d' % self.state)
+            raise Exception('Invalid state: %s' % self.state)
 
