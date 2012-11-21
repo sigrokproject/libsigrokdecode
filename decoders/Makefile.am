@@ -31,10 +31,13 @@ SUBDIRS = \
 	jtag_stm32 \
 	lm75 \
 	lpc \
+	maxim_ds28ea00 \
 	mlx90614 \
 	mx25lxx05d \
 	mxc6225xu \
 	nunchuk \
+	onewire_link \
+	onewire_network \
 	pan1321 \
 	rtc8564 \
 	sdcard_spi \
@@ -43,9 +46,6 @@ SUBDIRS = \
 	transitioncounter \
 	uart \
 	uart_dump \
-	usb_signalling \
 	usb_protocol \
-	onewire_link \
-	onewire_network \
-	maxim_ds28ea00
+	usb_signalling
 

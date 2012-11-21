@@ -160,10 +160,13 @@ AC_CONFIG_FILES([Makefile
 		 decoders/jtag_stm32/Makefile
 		 decoders/lm75/Makefile
 		 decoders/lpc/Makefile
+		 decoders/maxim_ds28ea00/Makefile
 		 decoders/mlx90614/Makefile
 		 decoders/mx25lxx05d/Makefile
 		 decoders/mxc6225xu/Makefile
 		 decoders/nunchuk/Makefile
+		 decoders/onewire_link/Makefile
+		 decoders/onewire_network/Makefile
 		 decoders/pan1321/Makefile
 		 decoders/rtc8564/Makefile
 		 decoders/sdcard_spi/Makefile
@@ -172,11 +175,8 @@ AC_CONFIG_FILES([Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
 		 decoders/uart_dump/Makefile
-		 decoders/usb_signalling/Makefile
 		 decoders/usb_protocol/Makefile
-		 decoders/onewire_link/Makefile
-		 decoders/onewire_network/Makefile
-		 decoders/maxim_ds28ea00/Makefile
+		 decoders/usb_signalling/Makefile
 		])
 
 AC_OUTPUT
