@@ -150,6 +150,7 @@ AC_CONFIG_FILES([Makefile
 		 libsigrokdecode.pc
 		 decoders/Makefile
 		 decoders/avr_isp/Makefile
+		 decoders/can/Makefile
 		 decoders/dcf77/Makefile
 		 decoders/edid/Makefile
 		 decoders/i2c/Makefile

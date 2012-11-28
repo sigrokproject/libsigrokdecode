@@ -1,7 +1,7 @@
 ##
 ## This file is part of the sigrok project.
 ##
-## Copyright (C) 2010 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,35 +18,19 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Please keep this list in alphabetical order.
-SUBDIRS = \
-	avr_isp \
-	can \
-	dcf77 \
-	edid \
-	i2c \
-	i2cdemux \
-	i2cfilter \
-	i2s \
-	jtag \
-	jtag_stm32 \
-	lm75 \
-	lpc \
-	maxim_ds28ea00 \
-	mlx90614 \
-	mx25lxx05d \
-	mxc6225xu \
-	nunchuk \
-	onewire_link \
-	onewire_network \
-	pan1321 \
-	rtc8564 \
-	sdcard_spi \
-	spi \
-	tlc5620 \
-	transitioncounter \
-	uart \
-	uart_dump \
-	usb_protocol \
-	usb_signalling
+'''
+CAN protocol decoder.
+
+TODO: Description.
+
+Details:
+TODO
+
+Protocol output format:
+
+TODO.
+
+'''
+
+from .pd import *
 
