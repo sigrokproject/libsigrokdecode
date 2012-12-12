@@ -83,7 +83,7 @@ AM_PATH_GLIB_2_0([2.28.0],
 
 # Python support. We require at least Python >= 3.0.
 AC_ARG_VAR([PYTHON3_CONFIG], [path to python3-config utility])
-AC_CHECK_PROGS([PYTHON3_CONFIG], [python3-config python3.2-config python3.1-config python3.0-config])
+AC_CHECK_PROGS([PYTHON3_CONFIG], [python3-config python3.3-config python3.2-config python3.1-config python3.0-config])
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
 case "$build" in
