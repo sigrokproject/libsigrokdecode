@@ -42,7 +42,7 @@ AH_TOP([#ifndef SRD_CONFIG_H
 #define SRD_CONFIG_H    /* To stop multiple inclusions. */])
 AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
-CFLAGS="-g -Wall -Wextra"
+CFLAGS="$CFLAGS -Wall -Wextra"
 
 # Checks for programs.
 AC_PROG_CXX
