@@ -733,6 +733,8 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	struct srd_decoder_inst *di;
 	int ret;
 
+	ret = SRD_OK;
+
 	srd_dbg("Calling start() on all instances with %d probes, "
 		"unitsize %d samplerate %d.", num_probes, unitsize, samplerate);
 
