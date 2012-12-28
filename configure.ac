@@ -42,7 +42,9 @@ AH_TOP([#ifndef SRD_CONFIG_H
 #define SRD_CONFIG_H    /* To stop multiple inclusions. */])
 AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
-CFLAGS="$CFLAGS -Wall -Wextra"
+# Enable more compiler warnings via -Wall and -Wextra. Add -fvisibility=hidden
+# and enforce use of SRD_API to explicitly mark all public API functions.
+CFLAGS="$CFLAGS -Wall -Wextra -fvisibility=hidden"
 
 # Checks for programs.
 AC_PROG_CXX
