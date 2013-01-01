@@ -36,7 +36,7 @@ extern SRD_PRIV PyObject *mod_sigrokdecode;
  *
  * @return List of decoders, NULL if none are supported or loaded.
  */
-SRD_API GSList *srd_decoder_list(void)
+SRD_API const GSList *srd_decoder_list(void)
 {
 	return pd_list;
 }
@@ -53,7 +53,7 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_decoder_list(); l; l = l->next) {
+	for (l = pd_list; l; l = l->next) {
 		dec = l->data;
 		if (!strcmp(dec->id, id))
 			return dec;
@@ -415,7 +415,7 @@ SRD_API int srd_decoder_unload_all(void)
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = srd_decoder_list(); l; l = l->next) {
+	for (l = pd_list; l; l = l->next) {
 		dec = l->data;
 		srd_decoder_unload(dec);
 	}
