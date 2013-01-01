@@ -40,9 +40,9 @@ command = {
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'maxim_ds28ea00'
-    name = 'Maxim DS28EA00'
+    name = 'DS28EA00'
     longname = 'Maxim DS28EA00 1-Wire digital thermometer'
-    desc = '1-Wire digital thermometer with Sequence Detect and PIO'
+    desc = '1-Wire digital thermometer with Sequence Detect and PIO.'
     license = 'gplv2+'
     inputs = ['onewire_network']
     outputs = ['maxim_ds28ea00']

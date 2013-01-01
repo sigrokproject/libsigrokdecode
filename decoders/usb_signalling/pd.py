@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
     id = 'usb_signalling'
     name = 'USB signalling'
     longname = 'Universal Serial Bus (LS/FS) signalling'
-    desc = 'USB 1.x (low-speed and full-speed) signalling protocol.'
+    desc = 'USB (low-speed and full-speed) signalling protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb_signalling']

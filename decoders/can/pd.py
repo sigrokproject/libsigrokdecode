@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'can'
     name = 'CAN'
-    longname = 'Controller area network'
+    longname = 'Controller Area Network'
     desc = 'Field bus protocol for distributed realtime control.'
     license = 'gplv2+'
     inputs = ['logic']

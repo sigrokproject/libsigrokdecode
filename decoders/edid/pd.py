@@ -81,8 +81,10 @@ class Decoder(srd.Decoder):
     longname = 'Extended Display Identification Data'
     desc = 'Data structure describing display device capabilities.'
     license = 'gplv3+'
-    inputs = ['ddc2']
+    inputs = ['i2c']
     outputs = ['edid']
+    probes = []
+    optional_probes = []
     options = {}
     annotations = [
         ['EDID fields', 'EDID structure fields'],

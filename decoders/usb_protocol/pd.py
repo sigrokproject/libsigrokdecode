@@ -99,7 +99,7 @@ class Decoder(srd.Decoder):
     id = 'usb_protocol'
     name = 'USB protocol'
     longname = 'Universal Serial Bus (LS/FS) protocol'
-    desc = 'USB 1.x (low-speed and full-speed) serial protocol.'
+    desc = 'USB (low-speed and full-speed) serial protocol.'
     license = 'gplv2+'
     inputs = ['usb_signalling']
     outputs = ['usb_protocol']
