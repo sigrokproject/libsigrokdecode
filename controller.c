@@ -420,7 +420,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  *
  * @param decoder_id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
- *                the decoder class.
+ *                the decoder class. May be NULL.
  *
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
@@ -445,10 +445,13 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	inst_id = g_hash_table_lookup(options, "id");
 	di->decoder = dec;
-	di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
-	g_hash_table_remove(options, "id");
+	if (options) {
+		inst_id = g_hash_table_lookup(options, "id");
+		di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
+		g_hash_table_remove(options, "id");
+	} else
+		di->inst_id = g_strdup(decoder_id);
 
 	/*
 	 * Prepare a default probe map, where samples come in the
@@ -477,7 +480,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	if (srd_inst_option_set(di, options) != SRD_OK) {
+	if (options && srd_inst_option_set(di, options) != SRD_OK) {
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
