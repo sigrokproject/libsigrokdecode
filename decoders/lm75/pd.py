@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
     id = 'lm75'
     name = 'LM75'
     longname = 'National LM75'
-    desc = 'National LM75 (and compatibles) temperature sensor protocol.'
+    desc = 'National LM75 (and compatibles) temperature sensor.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['lm75']

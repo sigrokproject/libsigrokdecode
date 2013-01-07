@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     api_version = 1
     id = 'avr_isp'
     name = 'AVR ISP'
-    longname = 'AVR in-system programming'
+    longname = 'AVR In-System Programming'
     desc = 'Protocol for in-system programming Atmel AVR MCUs.'
     license = 'gplv2+'
     inputs = ['spi', 'logic']

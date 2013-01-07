@@ -99,7 +99,7 @@ extern "C" {
  * Use SRD_API to mark public API symbols, and SRD_PRIV for private symbols.
  *
  * Variables and functions marked 'static' are private already and don't
- * need SR_PRIV. However, functions which are not static (because they need
+ * need SRD_PRIV. However, functions which are not static (because they need
  * to be used in other libsigrokdecode-internal files) but are also not
  * meant to be part of the public libsigrokdecode API, must use SRD_PRIV.
  *

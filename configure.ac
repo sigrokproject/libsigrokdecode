@@ -102,7 +102,8 @@ case "$build" in
 	# On Darwin, Macports has python3.x-config, fink has python3-config.
 	# Mac OS X (Snow Leopard) ships with 'python-config' per default, but
 	# that's Python 2.x, so not useful for us.
-	# Everything else is untested, we just hope 'PYTHON3_CONFIG' works.
+	# Everything else is untested, we just hope some $PYTHON3_CONFIG
+	# (i.e., any of the tools we check for above) is available.
 	if test -n "$PYTHON3_CONFIG"; then
 		CPPFLAGS_PYTHON="$($PYTHON3_CONFIG --includes)"
 		LDFLAGS_PYTHON="$($PYTHON3_CONFIG --ldflags)"
