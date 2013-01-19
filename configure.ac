@@ -80,7 +80,7 @@ AC_SUBST(SRD_LIB_LDFLAGS)
 # libglib-2.0 is always needed.
 # Note: glib-2.0 is part of the libsigrokdecode API
 # (hard pkg-config requirement).
-AM_PATH_GLIB_2_0([2.28.0],
+AM_PATH_GLIB_2_0([2.24.0],
         [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
 # Python support. We require at least Python >= 3.0.
