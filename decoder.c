@@ -36,7 +36,7 @@ extern SRD_PRIV PyObject *mod_sigrokdecode;
  *
  * @return List of decoders, NULL if none are supported or loaded.
  */
-SRD_API const GSList *srd_decoder_list(void)
+SRD_API GSList *srd_decoder_list(void)
 {
 	return pd_list;
 }
@@ -53,7 +53,7 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = pd_list; l; l = l->next) {
+	for (l = srd_decoder_list(); l; l = l->next) {
 		dec = l->data;
 		if (!strcmp(dec->id, id))
 			return dec;
@@ -124,7 +124,7 @@ err_out:
 /**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
- * @param module_name The module name to be loaded.
+ * @param name The module name to be loaded.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -134,8 +134,6 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_decoder *d;
 	int alen, ret, i;
 	char **ann;
-	struct srd_probe *p;
-	GSList *l;
 
 	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
@@ -223,19 +221,6 @@ SRD_API int srd_decoder_load(const char *module_name)
 	/* Check and import optional probes. */
 	if (get_probes(d, "optional_probes", &d->opt_probes) != SRD_OK)
 		goto err_out;
-
-	/*
-	 * Fix order numbers for the optional probes.
-	 *
-	 * Example:
-	 * Required probes: r1, r2, r3. Optional: o1, o2, o3, o4.
-	 * 'order' fields in the d->probes list = 0, 1, 2.
-	 * 'order' fields in the d->opt_probes list = 3, 4, 5, 6.
-	 */
-	for (l = d->opt_probes; l; l = l->next) {
-		p = l->data;
-		p->order += g_slist_length(d->probes);
-	}
 
 	/* Store required fields in newly allocated strings. */
 	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
@@ -415,7 +400,7 @@ SRD_API int srd_decoder_unload_all(void)
 	GSList *l;
 	struct srd_decoder *dec;
 
-	for (l = pd_list; l; l = l->next) {
+	for (l = srd_decoder_list(); l; l = l->next) {
 		dec = l->data;
 		srd_decoder_unload(dec);
 	}

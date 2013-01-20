@@ -45,26 +45,11 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	 * Convert the bit-packed sample to an array of bytes, with only 0x01
 	 * and 0x00 values, so the PD doesn't need to do any bitshifting.
 	 */
-
-	/* Get probe bits into the 'sample' variable. */
 	memcpy(&sample,
 	       logic->inbuf + logic->itercnt * logic->di->data_unitsize,
 	       logic->di->data_unitsize);
-
-	/* All probe values (required + optional) are pre-set to 42. */
-	memset(probe_samples, 42, logic->di->dec_num_probes);
-	/* TODO: None or -1 in Python would be better. */
-
-	/*
-	 * Set probe values of specified/used probes to their resp. values.
-	 * Unused probe values (those not specified by the user) remain at 42.
-	 */
-	for (i = 0; i < logic->di->dec_num_probes; i++) {
-		/* A probemap value of -1 means "unused optional probe". */
-		if (logic->di->dec_probemap[i] == -1)
-			continue;
+	for (i = 0; i < logic->di->dec_num_probes; i++)
 		probe_samples[i] = sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
-	}
 
 	/* Prepare the next samplenum/sample list in this iteration. */
 	py_samplenum =
