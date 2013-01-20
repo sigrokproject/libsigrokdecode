@@ -47,11 +47,13 @@
  * Performance improvements in some PDs.
  * Documentation: Update website and git URLs.
  * pkg-config file: Small fix to improve behaviour on Windows with cmake.
- * Name PD implementation files 'pd.py' consistently.
+ * All PD implementation files are now named 'pd.py' consistently.
  * configure script:
    - Also check for python3.3-config in addition to python-config and others.
    - Add missing -fvisibility=hidden to default CFLAGS.
    - Fix CFLAGS handling (configure.ac amends CFLAGS, doesn't overwrite now).
+ * The minimum required glib version is 2.24.0 now.
+ * We now ship a standard INSTALL file which documents the 'configure' options.
 
 0.1.0 (2012-04-17)
 ------------------
