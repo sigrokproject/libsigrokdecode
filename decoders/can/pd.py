@@ -236,7 +236,7 @@ class Decoder(srd.Decoder):
             if can_rx == 0:
                 self.put(0, 0, self.out_ann, [0, ['Start of frame', 'SOF']])
             else:
-                self.put(self.ss, self.es, self.out_ann,
+                self.put(0, 0, self.out_ann,
                          [1, ['Start of frame (SOF) must be a dominant bit']])
 
         # Bits 1-11: Identifier (ID[10..0])
