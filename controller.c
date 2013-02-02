@@ -330,9 +330,9 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  * it overwrites any probes that were already defined (if any).
  *
  * @param di Decoder instance.
- * @param probes A GHashTable of probes to set. Key is probe name, value is
- *               the probe number. Samples passed to this instance will be
- *               arranged in this order.
+ * @param new_probes A GHashTable of probes to set. Key is probe name, value is
+ *                   the probe number. Samples passed to this instance will be
+ *                   arranged in this order.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
@@ -344,6 +344,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 	struct srd_probe *p;
 	int *new_probemap, new_probenum;
 	char *probe_id, *probenum_str;
+	int i, num_required_probes;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
 		di->inst_id, g_hash_table_size(new_probes));
@@ -365,6 +366,13 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		srd_err("Failed to g_malloc() new probe map.");
 		return SRD_ERR_MALLOC;
 	}
+
+	/*
+	 * For now, map all indexes to probe -1 (can be overridden later).
+	 * This -1 is interpreted as an unspecified probe later.
+	 */
+	for (i = 0; i < di->dec_num_probes; i++)
+		new_probemap[i] = -1;
 
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
@@ -390,9 +398,17 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		}
 		p = sl->data;
 		new_probemap[p->order] = new_probenum;
-		srd_dbg("setting probe mapping for %d = probe %d", p->order,
-			new_probenum);
+		srd_dbg("Setting probe mapping: %s (index %d) = probe %d.",
+			p->id, p->order, new_probenum);
 	}
+
+	srd_dbg("Final probe map:");
+	num_required_probes = g_slist_length(di->decoder->probes);
+	for (i = 0; i < di->dec_num_probes; i++) {
+		srd_dbg(" - index %d = probe %d (%s)", i, new_probemap[i],
+		        (i < num_required_probes) ? "required" : "optional");
+	}
+
 	g_free(di->dec_probemap);
 	di->dec_probemap = new_probemap;
 
@@ -402,9 +418,9 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 /**
  * Create a new protocol decoder instance.
  *
- * @param id Decoder 'id' field.
+ * @param decoder_id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
- *                the decoder class.
+ *                the decoder class. May be NULL.
  *
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
@@ -429,10 +445,13 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	inst_id = g_hash_table_lookup(options, "id");
 	di->decoder = dec;
-	di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
-	g_hash_table_remove(options, "id");
+	if (options) {
+		inst_id = g_hash_table_lookup(options, "id");
+		di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
+		g_hash_table_remove(options, "id");
+	} else
+		di->inst_id = g_strdup(decoder_id);
 
 	/*
 	 * Prepare a default probe map, where samples come in the
@@ -461,7 +480,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		return NULL;
 	}
 
-	if (srd_inst_option_set(di, options) != SRD_OK) {
+	if (options && srd_inst_option_set(di, options) != SRD_OK) {
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -717,6 +736,8 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 	struct srd_decoder_inst *di;
 	int ret;
 
+	ret = SRD_OK;
+
 	srd_dbg("Calling start() on all instances with %d probes, "
 		"unitsize %d samplerate %d.", num_probes, unitsize, samplerate);
 
@@ -735,7 +756,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 		di->data_num_probes = num_probes;
 		di->data_unitsize = unitsize;
 		di->data_samplerate = samplerate;
-		if ((ret = srd_inst_start(di, args) != SRD_OK))
+		if ((ret = srd_inst_start(di, args)) != SRD_OK)
 			break;
 	}
 
@@ -749,7 +770,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param inbuf Pointer to sample data.
- * @param inbuf Length in bytes of the buffer.
+ * @param inbuflen Length in bytes of the buffer.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
