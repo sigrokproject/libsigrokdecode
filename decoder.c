@@ -23,11 +23,15 @@
 #include "sigrokdecode-internal.h"
 #include <glib.h>
 
+/** @cond PRIVATE */
+
 /* The list of protocol decoders. */
 SRD_PRIV GSList *pd_list = NULL;
 
 /* module_sigrokdecode.c */
 extern SRD_PRIV PyObject *mod_sigrokdecode;
+
+/** @endcond */
 
 /**
  * Returns the list of supported/loaded protocol decoders.

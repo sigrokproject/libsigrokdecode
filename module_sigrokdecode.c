@@ -21,6 +21,8 @@
 #include "sigrokdecode-internal.h"
 #include "config.h"
 
+/** @cond PRIVATE */
+
 /* type_decoder.c */
 extern SRD_PRIV PyTypeObject srd_Decoder_type;
 
@@ -33,6 +35,8 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  */
 SRD_PRIV PyObject *mod_sigrokdecode = NULL;
 
+/** @endcond */
+
 static struct PyModuleDef sigrokdecode_module = {
 	PyModuleDef_HEAD_INIT,
 	.m_name = "sigrokdecode",
@@ -40,6 +44,7 @@ static struct PyModuleDef sigrokdecode_module = {
 	.m_size = -1,
 };
 
+/** @cond PRIVATE */
 /* FIXME: SRD_PRIV causes issues on MinGW. Investigate. */
 PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
@@ -78,3 +83,4 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 
 	return mod;
 }
+/** @endcond */

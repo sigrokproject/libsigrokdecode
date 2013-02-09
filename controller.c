@@ -92,6 +92,8 @@ static GSList *di_list = NULL;
 /* List of frontend callbacks to receive decoder output. */
 static GSList *callbacks = NULL;
 
+/** @cond PRIVATE */
+
 /* decoder.c */
 extern SRD_PRIV GSList *pd_list;
 
@@ -101,6 +103,8 @@ extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* type_logic.c */
 extern SRD_PRIV PyTypeObject srd_logic_type;
+
+/** @endcond */
 
 /**
  * Initialize libsigrokdecode.
@@ -205,6 +209,8 @@ SRD_API int srd_exit(void)
  *             be added to the Python sys.path, or NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @private
  */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
@@ -619,6 +625,8 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
  * @param obj The Python class instantiation.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
+ *
+ * @private
  */
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 						       const PyObject *obj)
@@ -639,6 +647,7 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 	return di;
 }
 
+/** @private */
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
 {
 	PyObject *py_name, *py_res;
@@ -688,6 +697,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  * @param inbuflen Length of the buffer. Must be > 0.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @private
  */
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 			     const struct srd_decoder_inst *di,
@@ -742,6 +753,7 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 	return SRD_OK;
 }
 
+/** @private */
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 {
 	GSList *l;
@@ -761,6 +773,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 	g_slist_free(di->pd_output);
 }
 
+/** @private */
 SRD_PRIV void srd_inst_free_all(GSList *stack)
 {
 	GSList *l;
@@ -886,6 +899,7 @@ SRD_API int srd_pd_output_callback_add(int output_type,
 	return SRD_OK;
 }
 
+/** @private */
 SRD_PRIV void *srd_pd_output_callback_find(int output_type)
 {
 	GSList *l;
@@ -905,6 +919,7 @@ SRD_PRIV void *srd_pd_output_callback_find(int output_type)
 }
 
 /* This is the backend function to Python sigrokdecode.add() call. */
+/** @private */
 SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
 				    int output_type, const char *proto_id)
 {

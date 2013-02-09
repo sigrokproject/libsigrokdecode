@@ -80,6 +80,7 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	return logic->sample;
 }
 
+/** @cond PRIVATE */
 SRD_PRIV PyTypeObject srd_logic_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "srd_logic",
@@ -89,3 +90,4 @@ SRD_PRIV PyTypeObject srd_logic_type = {
 	.tp_iter = srd_logic_iter,
 	.tp_iternext = srd_logic_iternext,
 };
+/** @endcond */

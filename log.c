@@ -40,8 +40,10 @@ static srd_log_callback_t srd_log_callback = srd_logv;
 static void *srd_log_callback_data = NULL;
 
 /* Log domain (a short string that is used as prefix for all messages). */
+/** @cond PRIVATE */
 #define LOGDOMAIN_MAXLEN 30
 #define LOGDOMAIN_DEFAULT "srd: "
+/** @endcond */
 static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
 
 /**
@@ -193,6 +195,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_log(int loglevel, const char *format, ...)
 {
 	int ret;
@@ -205,6 +208,7 @@ SRD_PRIV int srd_log(int loglevel, const char *format, ...)
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_spew(const char *format, ...)
 {
 	int ret;
@@ -218,6 +222,7 @@ SRD_PRIV int srd_spew(const char *format, ...)
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_dbg(const char *format, ...)
 {
 	int ret;
@@ -231,6 +236,7 @@ SRD_PRIV int srd_dbg(const char *format, ...)
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_info(const char *format, ...)
 {
 	int ret;
@@ -244,6 +250,7 @@ SRD_PRIV int srd_info(const char *format, ...)
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_warn(const char *format, ...)
 {
 	int ret;
@@ -257,6 +264,7 @@ SRD_PRIV int srd_warn(const char *format, ...)
 	return ret;
 }
 
+/** @private */
 SRD_PRIV int srd_err(const char *format, ...)
 {
 	int ret;

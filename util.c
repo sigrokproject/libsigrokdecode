@@ -32,6 +32,8 @@
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
+ *
+ * @private
  */
 SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
 			    char **outstr)
@@ -73,6 +75,8 @@ SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
+ *
+ * @private
  */
 SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
 				char **outstr)
@@ -111,6 +115,8 @@ SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a malloc()ed string upon success.
+ *
+ * @private
  */
 SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr)
 {
@@ -165,6 +171,8 @@ err_out:
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *         The 'outstr' argument points to a g_malloc()ed char** upon success.
+ *
+ * @private
  */
 SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr)
 {

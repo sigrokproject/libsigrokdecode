@@ -209,6 +209,7 @@ static PyMethodDef Decoder_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
+/** @cond PRIVATE */
 SRD_PRIV PyTypeObject srd_Decoder_type = {
 	PyVarObject_HEAD_INIT(NULL, 0)
 	.tp_name = "sigrokdecode.Decoder",
@@ -217,3 +218,4 @@ SRD_PRIV PyTypeObject srd_Decoder_type = {
 	.tp_doc = "sigrok Decoder base class",
 	.tp_methods = Decoder_methods,
 };
+/** @endcond */
