@@ -26,6 +26,14 @@
  * Version number querying functions.
  */
 
+/**
+ * @defgroup grp_versions Versions
+ *
+ * Version number querying functions.
+ *
+ * @{
+ */
+
 SRD_API int srd_package_version_major_get(void)
 {
 	return SRD_PACKAGE_VERSION_MAJOR;
@@ -65,3 +73,5 @@ SRD_API const char *srd_lib_version_string_get(void)
 {
 	return SRD_LIB_VERSION_STRING;
 }
+
+/** @} */

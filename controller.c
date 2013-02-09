@@ -265,6 +265,16 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 	return SRD_OK;
 }
 
+/** @} */
+
+/**
+ * @defgroup grp_instances Decoder instances
+ *
+ * Decoder instance handling.
+ *
+ * @{
+ */
+
 /**
  * Set one or more options in a decoder instance.
  *
@@ -791,6 +801,16 @@ SRD_PRIV void srd_inst_free_all(GSList *stack)
 		di_list = NULL;
 	}
 }
+
+/** @} */
+
+/**
+ * @defgroup grp_session Session handling
+ *
+ * Starting and handling decoding sessions.
+ *
+ * @{
+ */
 
 /**
  * Start a decoding session.

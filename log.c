@@ -29,6 +29,14 @@
  * Controlling the libsigrokdecode message logging functionality.
  */
 
+/**
+ * @defgroup grp_logging Logging
+ *
+ * Controlling the libsigrokdecode message logging functionality.
+ *
+ * @{
+ */
+
 /* Currently selected libsigrokdecode loglevel. Default: SRD_LOG_WARN. */
 static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 
@@ -283,3 +291,5 @@ SRD_PRIV int srd_err(const char *format, ...)
 
 	return ret;
 }
+
+/** @} */

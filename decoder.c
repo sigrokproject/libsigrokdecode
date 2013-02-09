@@ -29,6 +29,14 @@
  * Listing, loading, unloading, and handling protocol decoders.
  */
 
+/**
+ * @defgroup grp_decoder Protocol decoders
+ *
+ * Handling protocol decoders.
+ *
+ * @{
+ */
+
 /** @cond PRIVATE */
 
 /* The list of protocol decoders. */
@@ -432,3 +440,5 @@ SRD_API int srd_decoder_unload_all(void)
 
 	return SRD_OK;
 }
+
+/** @} */
