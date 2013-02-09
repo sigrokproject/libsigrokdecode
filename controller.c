@@ -25,6 +25,67 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+/**
+ * @mainpage libsigrokdecode API
+ *
+ * @section sec_intro Introduction
+ *
+ * The <a href="http://sigrok.org">sigrok</a> project aims at creating a
+ * portable, cross-platform, Free/Libre/Open-Source signal analysis software
+ * suite that supports various device types (such as logic analyzers,
+ * oscilloscopes, multimeters, and more).
+ *
+ * <a href="http://sigrok.org/wiki/Libsigrokdecode">libsigrokdecode</a> is a
+ * shared library written in C which provides the basic API for (streaming)
+ * protocol decoding functionality.
+ *
+ * The <a href="http://sigrok.org/wiki/Protocol_decoders">protocol decoders</a>
+ * are written in Python (>= 3.0).
+ *
+ * @section sec_api API reference
+ *
+ * See the "Modules" page for an introduction to various libsigrokdecode
+ * related topics and the detailed API documentation of the respective
+ * functions.
+ *
+ * You can also browse the API documentation by file, or review all
+ * data structures.
+ *
+ * @section sec_mailinglists Mailing lists
+ *
+ * There are two mailing lists for sigrok/libsigrokdecode: <a href="https://lists.sourceforge.net/lists/listinfo/sigrok-devel">sigrok-devel</a> and <a href="https://lists.sourceforge.net/lists/listinfo/sigrok-commits">sigrok-commits</a>.
+ *
+ * @section sec_irc IRC
+ *
+ * You can find the sigrok developers in the
+ * <a href="irc://chat.freenode.net/sigrok">\#sigrok</a>
+ * IRC channel on Freenode.
+ *
+ * @section sec_website Website
+ *
+ * <a href="http://sigrok.org/wiki/Libsigrokdecode">sigrok.org/wiki/Libsigrokdecode</a>
+ */
+
+/**
+ * @file
+ *
+ * Initializing and shutting down libsigrokdecode.
+ */
+
+/**
+ * @defgroup grp_init Initialization
+ *
+ * Initializing and shutting down libsigrokdecode.
+ *
+ * Before using any of the libsigrokdecode functionality, srd_init() must
+ * be called to initialize the library.
+ *
+ * When libsigrokdecode functionality is no longer needed, srd_exit() should
+ * be called.
+ *
+ * @{
+ */
+
 /* List of decoder instances. */
 static GSList *di_list = NULL;
 
@@ -866,3 +927,5 @@ SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
 
 	return pdo->pdo_id;
 }
+
+/** @} */
