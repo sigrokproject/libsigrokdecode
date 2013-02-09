@@ -23,6 +23,12 @@
 #include "sigrokdecode-internal.h"
 #include <glib.h>
 
+/**
+ * @file
+ *
+ * Listing, loading, unloading, and handling protocol decoders.
+ */
+
 /** @cond PRIVATE */
 
 /* The list of protocol decoders. */

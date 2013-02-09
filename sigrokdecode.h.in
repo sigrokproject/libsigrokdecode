@@ -30,6 +30,22 @@
 extern "C" {
 #endif
 
+/**
+ * @file
+ *
+ * The public libsigrokdecode header file to be used by frontends.
+ *
+ * This is the only file that libsigrokdecode users (frontends) are supposed
+ * to use and include. There are other header files which get installed with
+ * libsigrokdecode, but those are not meant to be used directly by frontends.
+ *
+ * The correct way to get/use the libsigrokdecode API functions is:
+ *
+ * @code{.c}
+ *   #include <sigrokdecode.h>
+ * @endcode
+ */
+
 /*
  * Package version macros (can be used for conditional compilation).
  */

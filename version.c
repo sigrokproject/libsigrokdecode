@@ -20,6 +20,12 @@
 
 #include "sigrokdecode.h"
 
+/**
+ * @file
+ *
+ * Version number querying functions.
+ */
+
 SRD_API int srd_package_version_major_get(void)
 {
 	return SRD_PACKAGE_VERSION_MAJOR;

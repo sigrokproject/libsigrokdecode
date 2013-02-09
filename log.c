@@ -23,6 +23,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+/**
+ * @file
+ *
+ * Controlling the libsigrokdecode message logging functionality.
+ */
+
 /* Currently selected libsigrokdecode loglevel. Default: SRD_LOG_WARN. */
 static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 
