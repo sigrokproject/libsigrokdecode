@@ -20,7 +20,7 @@
 
 ACLOCAL_AMFLAGS = -I autostuff
 
-SUBDIRS = decoders
+SUBDIRS = contrib decoders
 
 lib_LTLIBRARIES = libsigrokdecode.la
 

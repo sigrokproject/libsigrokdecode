@@ -150,6 +150,7 @@ AC_SUBST(SRD_PACKAGE_VERSION)
 AC_CONFIG_FILES([Makefile
 		 sigrokdecode.h
 		 libsigrokdecode.pc
+		 contrib/Makefile
 		 decoders/Makefile
 		 decoders/avr_isp/Makefile
 		 decoders/can/Makefile
