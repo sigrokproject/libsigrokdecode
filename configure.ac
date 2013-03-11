@@ -155,6 +155,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/avr_isp/Makefile
 		 decoders/can/Makefile
 		 decoders/dcf77/Makefile
+		 decoders/ds1307/Makefile
 		 decoders/edid/Makefile
 		 decoders/i2c/Makefile
 		 decoders/i2cdemux/Makefile
