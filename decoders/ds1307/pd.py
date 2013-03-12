@@ -141,9 +141,9 @@ class Decoder(srd.Decoder):
                 # TODO: Check for NACK!
             elif cmd == 'STOP':
                 # TODO: Handle read/write of only parts of these items.
-                d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.date,
-                    self.months, self.years, self.hours, self.minutes,
-                    self.seconds)
+                d = '%s, %02d.%02d.%02d %02d:%02d:%02d' % (
+                    days_of_week[self.days - 1], self.date, self.months,
+                    self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
                          [0, ['Written date/time: %s' % d]])
                 self.state = 'IDLE'
@@ -164,9 +164,9 @@ class Decoder(srd.Decoder):
                 self.reg += 1
                 # TODO: Check for NACK!
             elif cmd == 'STOP':
-                d = '%02d.%02d.%02d.%02d %02d:%02d:%02d' % (self.days,
-                    self.date, self.months, self.years, self.hours,
-                    self.minutes, self.seconds)
+                d = '%s, %02d.%02d.%02d %02d:%02d:%02d' % (
+                    days_of_week[self.days - 1], self.date, self.months,
+                    self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
                          [0, ['Read date/time: %s' % d]])
                 self.state = 'IDLE'
