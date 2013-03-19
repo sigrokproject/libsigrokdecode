@@ -58,6 +58,27 @@ See INSTALL or the following wiki page for more (OS-specific) instructions:
  http://sigrok.org/wiki/Building
 
 
+Copyright and license
+---------------------
+
+libsigrokdecode is licensed under the terms of the GNU General Public License
+(GPL), version 3 or later.
+
+The protocol decoders (PDs) included in libsigrokdecode are an integral part
+of the shared library (they are not merely external "plugins", they are not
+external programs that libsigrokdecode calls via fork/exec, they cannot
+function standalone without libsigrokdecode at all, the PDs and the rest of
+the libsigrokdecode codebase share data structures and make function calls
+to each other). Thus, since the PDs are part of the library, they are also
+licensed under the terms of the GPLv3+.
+
+While some individual source code files are licensed under the GPLv2+, and
+some files are licensed under the GPLv3+, this doesn't change the fact that
+the library as a whole is licensed under the terms of the GPLv3+.
+
+Please see the individual source files for the full list of copyright holders.
+
+
 Mailing lists
 -------------
 
