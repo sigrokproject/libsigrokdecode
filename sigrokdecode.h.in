@@ -186,6 +186,9 @@ struct srd_decoder {
 	 */
 	GSList *annotations;
 
+	/** List of decoder options.  */
+	GSList *options;
+
 	/** Python module. */
 	PyObject *py_mod;
 
@@ -206,6 +209,12 @@ struct srd_probe {
 	char *desc;
 	/** The index of the probe, i.e. its order in the list of probes. */
 	int order;
+};
+
+struct srd_decoder_option {
+	char *id;
+	char *desc;
+	GVariant *def;
 };
 
 struct srd_decoder_inst {

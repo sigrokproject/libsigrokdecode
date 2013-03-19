@@ -291,9 +291,12 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
 	Py_UNICODE *py_ustr;
+	GVariant *value;
 	unsigned long long int val_ull;
+	gint64 val_int;
 	int num_optkeys, ret, size, i;
-	char *key, *value;
+	const char *val_str;
+	char *dbg, *key;
 
 	if (!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
 		/* Decoder has no options. */
@@ -332,20 +335,32 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		}
 
 		if ((value = g_hash_table_lookup(options, key))) {
+			dbg = g_variant_print(value, TRUE);
+			srd_dbg("got option '%s' = %s", key, dbg);
+			g_free(dbg);
 			/* An override for this option was provided. */
 			if (PyUnicode_Check(py_classval)) {
-				if (!(py_optval = PyUnicode_FromString(value))) {
+				if (!g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
+					srd_err("Option '%s' requires a string value.", key);
+					goto err_out;
+				}
+				val_str = g_variant_get_string(value, NULL);
+				if (!(py_optval = PyUnicode_FromString(val_str))) {
 					/* Some UTF-8 encoding error. */
 					PyErr_Clear();
+					srd_err("Option '%s' requires a UTF-8 string value.", key);
 					goto err_out;
 				}
 			} else if (PyLong_Check(py_classval)) {
-				if (!(py_optval = PyLong_FromString(value, NULL, 0))) {
+				if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
+					srd_err("Option '%s' requires an integer value.", key);
+					goto err_out;
+				}
+				val_int = g_variant_get_int64(value);
+				if (!(py_optval = PyLong_FromLong(val_int))) {
 					/* ValueError Exception */
 					PyErr_Clear();
-					srd_err("Option %s has invalid value "
-						"%s: expected integer.",
-						key, value);
+					srd_err("Option '%s' has invalid integer value.", key);
 					goto err_out;
 				}
 			}
@@ -416,11 +431,12 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		GHashTable *new_probes)
 {
+	GVariant *probe_val;
 	GList *l;
 	GSList *sl;
 	struct srd_probe *p;
 	int *new_probemap, new_probenum;
-	char *probe_id, *probenum_str;
+	char *probe_id;
 	int i, num_required_probes;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
@@ -453,22 +469,22 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
-		probenum_str = g_hash_table_lookup(new_probes, probe_id);
-		if (!probenum_str) {
+		probe_val= g_hash_table_lookup(new_probes, probe_id);
+		if (!g_variant_is_of_type(probe_val, G_VARIANT_TYPE_INT32)) {
 			/* Probe name was specified without a value. */
 			srd_err("No probe number was specified for %s.",
-				probe_id);
+					probe_id);
 			g_free(new_probemap);
 			return SRD_ERR_ARG;
 		}
-		new_probenum = strtol(probenum_str, NULL, 10);
+		new_probenum = g_variant_get_int32(probe_val);
 		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
 				(GCompareFunc)compare_probe_id))) {
 			/* Fall back on optional probes. */
 			if (!(sl = g_slist_find_custom(di->decoder->opt_probes,
 			     probe_id, (GCompareFunc) compare_probe_id))) {
 				srd_err("Protocol decoder %s has no probe "
-					"'%s'.", di->decoder->name, probe_id);
+						"'%s'.", di->decoder->name, probe_id);
 				g_free(new_probemap);
 				return SRD_ERR_ARG;
 			}

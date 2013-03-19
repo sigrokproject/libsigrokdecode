@@ -139,6 +139,93 @@ err_out:
 	return ret;
 }
 
+static int get_options(struct srd_decoder *d)
+{
+	PyObject *py_opts, *py_keys, *py_values, *py_val, *py_desc, *py_default;
+	Py_ssize_t i;
+	struct srd_decoder_option *o;
+	gint64 def_long;
+	int num_keys, overflow, ret;
+	char *key, *def_str;
+
+	ret = SRD_ERR_PYTHON;
+	key = NULL;
+
+	if (!PyObject_HasAttrString(d->py_dec, "options"))
+		/* That's fine. */
+		return SRD_OK;
+
+	/* If present, options must be a dictionary. */
+	py_opts = PyObject_GetAttrString(d->py_dec, "options");
+	if (!PyDict_Check(py_opts)) {
+		srd_err("Protocol decoder %s options attribute is not "
+			"a dictionary.", d->name);
+		goto err_out;
+	}
+
+	py_keys = PyDict_Keys(py_opts);
+	py_values = PyDict_Values(py_opts);
+	num_keys = PyList_Size(py_keys);
+	for (i = 0; i < num_keys; i++) {
+		py_str_as_str(PyList_GetItem(py_keys, i), &key);
+		srd_dbg("option '%s'", key);
+		py_val = PyList_GetItem(py_values, i);
+		if (!PyList_Check(py_val) || PyList_Size(py_val) != 2) {
+			srd_err("Protocol decoder %s option '%s' value must be "
+					"a list with two elements.", d->name, key);
+			goto err_out;
+		}
+		py_desc = PyList_GetItem(py_val, 0);
+		if (!PyUnicode_Check(py_desc)) {
+			srd_err("Protocol decoder %s option '%s' has no "
+					"description.", d->name, key);
+			goto err_out;
+		}
+		py_default = PyList_GetItem(py_val, 1);
+		if (!PyUnicode_Check(py_default) && !PyLong_Check(py_default)) {
+			srd_err("Protocol decoder %s option '%s' has default "
+					"of unsupported type '%s'.", d->name, key,
+					Py_TYPE(py_default)->tp_name);
+			goto err_out;
+		}
+		if (!(o = g_try_malloc(sizeof(struct srd_decoder_option)))) {
+			srd_err("option malloc failed");
+			goto err_out;
+		}
+		o->id = g_strdup(key);
+		py_str_as_str(py_desc, &o->desc);
+		if (PyUnicode_Check(py_default)) {
+			/* UTF-8 string */
+			py_str_as_str(py_default, &def_str);
+			o->def = g_variant_new_string(def_str);
+			g_free(def_str);
+		} else {
+			/* Long */
+			def_long = PyLong_AsLongAndOverflow(py_default, &overflow);
+			if (overflow) {
+				/* Value is < LONG_MIN or > LONG_MAX */
+				PyErr_Clear();
+				srd_err("Protocol decoder %s option '%s' has "
+						"invalid default value.", d->name, key);
+				goto err_out;
+			}
+			o->def = g_variant_new_int64(def_long);
+		}
+		g_variant_ref_sink(o->def);
+		d->options = g_slist_append(d->options, o);
+	}
+	Py_DecRef(py_keys);
+	Py_DecRef(py_values);
+
+	ret = SRD_OK;
+
+err_out:
+	Py_XDECREF(py_opts);
+	g_free(key);
+
+	return ret;
+}
+
 /**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
@@ -222,17 +309,8 @@ SRD_API int srd_decoder_load(const char *module_name)
 	}
 	Py_CLEAR(py_method);
 
-	/* If present, options must be a dictionary. */
-	if (PyObject_HasAttrString(d->py_dec, "options")) {
-		py_attr = PyObject_GetAttrString(d->py_dec, "options");
-		if (!PyDict_Check(py_attr)) {
-			srd_err("Protocol decoder %s options attribute is not "
-				"a dictionary.", d->name);
-			Py_DecRef(py_attr);
-			goto err_out;
-		}
-		Py_DecRef(py_attr);
-	}
+	if (get_options(d) != SRD_OK)
+		goto err_out;
 
 	/* Check and import required probes. */
 	if (get_probes(d, "probes", &d->probes) != SRD_OK)
@@ -370,6 +448,9 @@ static void free_probes(GSList *probelist)
  */
 SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
+	struct srd_decoder_option *o;
+	GSList *l;
+
 	srd_dbg("Unloading protocol decoder '%s'.", dec->name);
 
 	/*
@@ -379,6 +460,15 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	 * instances, and rebuild the stack.
 	 */
 	srd_inst_free_all(NULL);
+
+	for (l = dec->options; l; l = l->next) {
+		o = l->data;
+		g_free(o->id);
+		g_free(o->desc);
+		g_variant_unref(o->def);
+		g_free(o);
+	}
+	g_slist_free(dec->options);
 
 	free_probes(dec->probes);
 	free_probes(dec->opt_probes);
