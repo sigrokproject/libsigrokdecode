@@ -286,7 +286,7 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
-				GHashTable *options)
+		GHashTable *options)
 {
 	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
 	PyObject *py_optlist, *py_classval;
@@ -414,7 +414,7 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-			           GHashTable *new_probes)
+		GHashTable *new_probes)
 {
 	GList *l;
 	GSList *sl;
@@ -503,7 +503,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  *         NULL in case of failure.
  */
 SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
-					      GHashTable *options)
+		GHashTable *options)
 {
 	int i;
 	struct srd_decoder *dec;
@@ -578,7 +578,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
-			   struct srd_decoder_inst *di_to)
+		struct srd_decoder_inst *di_to)
 {
 	if (!di_from || !di_to) {
 		srd_err("Invalid from/to instance pair.");
@@ -639,9 +639,8 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
  * @private
  */
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
-						       const PyObject *obj)
+		const PyObject *obj)
 {
-// TODO?
 	const GSList *l;
 	struct srd_decoder_inst *tmp, *di;
 
@@ -711,8 +710,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  * @private
  */
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
-			     const struct srd_decoder_inst *di,
-			     const uint8_t *inbuf, uint64_t inbuflen)
+		const struct srd_decoder_inst *di, const uint8_t *inbuf,
+		uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
@@ -756,7 +755,7 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 					   end_samplenum, logic))) {
 		srd_exception_catch("Protocol decoder instance %s: ",
 				    di->inst_id);
-		return SRD_ERR_PYTHON; /* TODO: More specific error? */
+		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
 
@@ -869,7 +868,7 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  */
 SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
-			     uint64_t inbuflen)
+		uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
@@ -900,7 +899,7 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
  * @param cb_data Private data for the callback function. Can be NULL.
  */
 SRD_API int srd_pd_output_callback_add(int output_type,
-				srd_pd_output_callback_t cb, void *cb_data)
+		srd_pd_output_callback_t cb, void *cb_data)
 {
 	struct srd_pd_callback *pd_cb;
 
