@@ -192,12 +192,14 @@ echo
 echo "  - Package version (major.minor.micro):    $SRD_PACKAGE_VERSION"
 echo "  - Library version (current:revision:age): $SRD_LIB_VERSION"
 echo "  - Prefix: $prefix"
+echo "  - Building on: $build"
+echo "  - Building for: $host"
 echo
 echo "Detected libraries:"
 echo
 
 # Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0"; do
+for lib in "glib-2.0 >= 2.24.0"; do
         if `$PKG_CONFIG --exists $lib`; then
                 ver=`$PKG_CONFIG --modversion $lib`
                 answer="yes ($ver)"
