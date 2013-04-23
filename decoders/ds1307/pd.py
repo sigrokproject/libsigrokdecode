@@ -1,5 +1,5 @@
 ##
-## This file is part of the sigrok project.
+## This file is part of the libsigrokdecode project.
 ## 
 ## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ## Copyright (C) 2013 Matt Ranostay <mranostay@gmail.com>
