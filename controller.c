@@ -130,6 +130,8 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  *         Upon Python errors, return SRD_ERR_PYTHON. If the sigrok decoders
  *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
  *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_init(const char *path)
 {
@@ -180,6 +182,8 @@ SRD_API int srd_init(const char *path)
  * any successful srd_init() calls in between, is not allowed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_exit(void)
 {
@@ -211,6 +215,8 @@ SRD_API int srd_exit(void)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
+ *
+ * @since 0.1.0
  */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
@@ -284,6 +290,8 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
  * @param options A GHashTable of options to set.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options)
@@ -427,6 +435,8 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  *                   arranged in this order.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		GHashTable *new_probes)
@@ -517,6 +527,8 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  *
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
+ *
+ * @since 0.1.0
  */
 SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 		GHashTable *options)
@@ -592,6 +604,8 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
  * @param di_to The instance on top of which di_from will be stacked.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
 		struct srd_decoder_inst *di_to)
@@ -621,6 +635,8 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
  * @param inst_id The instance ID to be found.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
+ *
+ * @since 0.1.0
  */
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
 {
@@ -653,6 +669,8 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  *
  * @private
+ *
+ * @since 0.1.0
  */
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 		const PyObject *obj)
@@ -724,6 +742,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
+ *
+ * @since 0.1.0
  */
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 		const struct srd_decoder_inst *di, const uint8_t *inbuf,
@@ -837,6 +857,8 @@ SRD_PRIV void srd_inst_free_all(GSList *stack)
  * @param samplerate The samplerate of the incoming feed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 {
@@ -882,6 +904,8 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  * @param inbuflen Length in bytes of the buffer.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
 		uint64_t inbuflen)
@@ -913,6 +937,8 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
  *                    callback per output type can be registered.
  * @param cb The function to call. Must not be NULL.
  * @param cb_data Private data for the callback function. Can be NULL.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_pd_output_callback_add(int output_type,
 		srd_pd_output_callback_t cb, void *cb_data)

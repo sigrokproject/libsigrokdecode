@@ -75,6 +75,8 @@ static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
  *                 SRD_LOG_WARN, SRD_LOG_INFO, SRD_LOG_DBG, or SRD_LOG_SPEW).
  *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid loglevel.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_log_loglevel_set(int loglevel)
 {
@@ -94,6 +96,8 @@ SRD_API int srd_log_loglevel_set(int loglevel)
  * Get the libsigrokdecode loglevel.
  *
  * @return The currently configured libsigrokdecode loglevel.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_log_loglevel_get(void)
 {
@@ -113,6 +117,8 @@ SRD_API int srd_log_loglevel_get(void)
  *                  the caller does not need to keep it around.
  *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid logdomain.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_log_logdomain_set(const char *logdomain)
 {
@@ -135,6 +141,8 @@ SRD_API int srd_log_logdomain_set(const char *logdomain)
  * @return A copy of the currently configured libsigrokdecode logdomain
  *         string. The caller is responsible for g_free()ing the string when
  *         it is no longer needed.
+ *
+ * @since 0.1.0
  */
 SRD_API char *srd_log_logdomain_get(void)
 {
@@ -154,6 +162,8 @@ SRD_API char *srd_log_logdomain_get(void)
  *                pass any data.
  *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data)
 {
@@ -176,6 +186,8 @@ SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data)
  * Additionally, the internal 'srd_log_callback_data' pointer is set to NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_log_callback_set_default(void)
 {

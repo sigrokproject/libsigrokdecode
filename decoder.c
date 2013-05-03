@@ -53,6 +53,8 @@ extern SRD_PRIV PyObject *mod_sigrokdecode;
  * This is a GSList containing the names of the decoders as strings.
  *
  * @return List of decoders, NULL if none are supported or loaded.
+ *
+ * @since 0.1.0 (but the API changed in 0.2.0)
  */
 SRD_API const GSList *srd_decoder_list(void)
 {
@@ -65,6 +67,8 @@ SRD_API const GSList *srd_decoder_list(void)
  * @param id The ID string of the decoder to return.
  *
  * @return The decoder with the specified ID, or NULL if not found.
+ *
+ * @since 0.1.0
  */
 SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 {
@@ -232,6 +236,8 @@ err_out:
  * @param module_name The module name to be loaded.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_decoder_load(const char *module_name)
 {
@@ -399,6 +405,8 @@ err_out:
  *
  * @return A newly allocated buffer containing the protocol decoder's
  *         documentation. The caller is responsible for free'ing the buffer.
+ *
+ * @since 0.1.0
  */
 SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 {
@@ -445,6 +453,8 @@ static void free_probes(GSList *probelist)
  * @param dec The struct srd_decoder to be unloaded.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
@@ -492,6 +502,8 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
  * Load all installed protocol decoders.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_decoder_load_all(void)
 {
@@ -517,6 +529,8 @@ SRD_API int srd_decoder_load_all(void)
  * Unload all loaded protocol decoders.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
  */
 SRD_API int srd_decoder_unload_all(void)
 {
