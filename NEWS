@@ -7,7 +7,10 @@
    - Dallas DS1307 RTC
  * Library: Decoders now expose their options via the GSList *options field
    in struct srd_decoder.
- * Various API documentation fixes.
+ * API related changes:
+   - Various API documentation fixes.
+   - srd_decoder_list() now returns 'const GSList *' instead of 'GSList *'.
+   - Added new srd_strerror() and srd_strerror_name() API calls.
  * Added support for optional probes for PDs.
 
 0.1.1 (2013-01-27)

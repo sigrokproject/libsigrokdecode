@@ -323,6 +323,11 @@ SRD_API int srd_lib_version_revision_get(void);
 SRD_API int srd_lib_version_age_get(void);
 SRD_API const char *srd_lib_version_string_get(void);
 
+/*--- error.c ---------------------------------------------------------------*/
+
+SRD_API const char *srd_strerror(int error_code);
+SRD_API const char *srd_strerror_name(int error_code);
+
 #ifdef __cplusplus
 }
 #endif
