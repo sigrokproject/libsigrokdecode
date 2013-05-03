@@ -27,18 +27,17 @@
 /*--- controller.c ----------------------------------------------------------*/
 
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
+SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
+						       const PyObject *obj);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args);
 SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 			     const struct srd_decoder_inst *dec,
 			     const uint8_t *inbuf, uint64_t inbuflen);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(GSList *stack);
+SRD_PRIV void *srd_pd_output_callback_find(int output_type);
 SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
 				    int output_type, const char *output_id);
-
-/*--- decoder.c -------------------------------------------------------------*/
-
-SRD_PRIV void *srd_pd_output_callback_find(int output_type);
 
 /*--- exception.c -----------------------------------------------------------*/
 
@@ -61,7 +60,5 @@ SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
 				char **outstr);
 SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr);
 SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr);
-SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
-						       const PyObject *obj);
 
 #endif
