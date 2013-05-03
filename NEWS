@@ -1,3 +1,13 @@
+0.2.0 (2013-05-04)
+------------------
+
+* Library: decoders now expose their options via the GSList *options field
+  in struct srd_decoder.
+* API documentation fixes
+* New supported protocol decoders:
+  - Dallas DS1307 RTC
+
+
 0.1.1 (2013-01-27)
 ------------------
 

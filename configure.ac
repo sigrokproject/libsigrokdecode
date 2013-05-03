@@ -22,8 +22,8 @@ AC_PREREQ([2.63])
 
 # libsigrokdecode package version number (NOT the same as shared lib version!).
 m4_define([srd_package_version_major], [0])
-m4_define([srd_package_version_minor], [1])
-m4_define([srd_package_version_micro], [1])
+m4_define([srd_package_version_minor], [2])
+m4_define([srd_package_version_micro], [0])
 m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro])
 
 AC_INIT([libsigrokdecode], [srd_package_version],
@@ -63,8 +63,8 @@ PKG_PROG_PKG_CONFIG([0.22])
 # Carefully read the libtool docs before updating these numbers!
 # The algorithm for determining which number to change (and how) is nontrivial!
 # http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
-SRD_LIB_VERSION_CURRENT=0
-SRD_LIB_VERSION_REVISION=1
+SRD_LIB_VERSION_CURRENT=1
+SRD_LIB_VERSION_REVISION=0
 SRD_LIB_VERSION_AGE=0
 SRD_LIB_VERSION="$SRD_LIB_VERSION_CURRENT:$SRD_LIB_VERSION_REVISION:$SRD_LIB_VERSION_AGE"
 SRD_LIB_LDFLAGS="-version-info $SRD_LIB_VERSION"
