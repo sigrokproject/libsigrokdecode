@@ -687,7 +687,7 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = config.h sigrokdecode-internal.h exception.c \
+EXCLUDE                = config.h libsigrokdecode-internal.h exception.c \
                          module_sigrokdecode.c type_decoder.c type_logic.c \
                          util.c
 
@@ -706,7 +706,7 @@ EXCLUDE_SYMLINKS       = NO
 #
 # Ignore the following files and directories (see also EXCLUDE above):
 #  - config.h: Non-public stuff, the file doesn't get installed.
-#  - sigrokdecode-internal.h: Non-public stuff, the file doesn't get installed.
+#  - libsigrokdecode-internal.h: Non-public stuff, the file isn't installed.
 #  - decoders/*: The decoders themselves don't contain public API.
 #  - exception.c: No public API stuff in there currently.
 #  - module_sigrokdecode.c: No public API stuff in there currently.

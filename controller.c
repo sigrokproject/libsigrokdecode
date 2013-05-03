@@ -112,10 +112,10 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * This initializes the Python interpreter, and creates and initializes
  * a "sigrokdecode" Python module.
  *
- * Then, it searches for sigrok protocol decoder files (*.py) in the
- * "decoders" subdirectory of the the sigrok installation directory.
+ * Then, it searches for sigrok protocol decoders in the "decoders"
+ * subdirectory of the the libsigrokdecode installation directory.
  * All decoders that are found are loaded into memory and added to an
- * internal list of decoders, which can be queried via srd_decoders_list().
+ * internal list of decoders, which can be queried via srd_decoder_list().
  *
  * The caller is responsible for calling the clean-up function srd_exit(),
  * which will properly shut down libsigrokdecode and free its allocated memory.
@@ -124,12 +124,12 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
  * are not allowed.
  *
  * @param path Path to an extra directory containing protocol decoders
- *             which will be added to the Python sys.path, or NULL.
+ *             which will be added to the Python sys.path. May be NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
- *         Upon Python errors, return SRD_ERR_PYTHON. If the sigrok decoders
- *         directory cannot be accessed, return SRD_ERR_DECODERS_DIR.
- *         If not enough memory could be allocated, return SRD_ERR_MALLOC.
+ *         Upon Python errors, SRD_ERR_PYTHON is returned. If the decoders
+ *         directory cannot be accessed, SRD_ERR_DECODERS_DIR is returned.
+ *         If not enough memory could be allocated, SRD_ERR_MALLOC is returned.
  *
  * @since 0.1.0
  */

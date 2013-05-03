@@ -448,7 +448,7 @@ static void free_probes(GSList *probelist)
 }
 
 /**
- * Unload decoder module.
+ * Unload the specified protocol decoder.
  *
  * @param dec The struct srd_decoder to be unloaded.
  *
