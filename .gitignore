@@ -17,7 +17,7 @@ map
 missing
 stamp-h1
 autostuff/
-sigrokdecode.h
+libsigrokdecode.h
 ChangeLog
 INSTALL
 
