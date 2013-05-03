@@ -79,11 +79,9 @@ extern "C" {
 #define SRD_LIB_VERSION_STRING "@SRD_LIB_VERSION@"
 
 /*
- * Status/error codes returned by libsigrokdecode functions.
- *
  * All possible return codes of libsigrokdecode functions must be listed here.
  * Functions should never return hardcoded numbers as status, but rather
- * use these #defines instead. All error codes are negative numbers.
+ * use these enum values. All error codes are negative numbers.
  *
  * The error codes are globally unique in libsigrokdecode, i.e. if one of the
  * libsigrokdecode functions returns a "malloc error" it must be exactly the
@@ -92,24 +90,35 @@ extern "C" {
  * same return code.
  *
  * Also, for compatibility reasons, no defined return codes are ever removed
- * or reused for different #defines later. You can only add new #defines and
+ * or reused for different errors later. You can only add new entries and
  * return codes, but never remove or redefine existing ones.
  */
-#define SRD_OK                 0 /**< No error */
-#define SRD_ERR               -1 /**< Generic/unspecified error */
-#define SRD_ERR_MALLOC        -2 /**< Malloc/calloc/realloc error */
-#define SRD_ERR_ARG           -3 /**< Function argument error */
-#define SRD_ERR_BUG           -4 /**< Errors hinting at internal bugs */
-#define SRD_ERR_PYTHON        -5 /**< Python C API error */
-#define SRD_ERR_DECODERS_DIR  -6 /**< Protocol decoder path invalid */
+
+/** Status/error codes returned by libsigrokdecode functions. */
+enum {
+	SRD_OK               =  0, /**< No error */
+	SRD_ERR              = -1, /**< Generic/unspecified error */
+	SRD_ERR_MALLOC       = -2, /**< Malloc/calloc/realloc error */
+	SRD_ERR_ARG          = -3, /**< Function argument error */
+	SRD_ERR_BUG          = -4, /**< Errors hinting at internal bugs */
+	SRD_ERR_PYTHON       = -5, /**< Python C API error */
+	SRD_ERR_DECODERS_DIR = -6, /**< Protocol decoder path invalid */
+
+	/*
+	 * Note: When adding entries here, don't forget to also update the
+	 * srd_strerror() and srd_strerror_name() functions in error.c.
+	 */
+};
 
 /* libsigrokdecode loglevels. */
-#define SRD_LOG_NONE   0 /**< Output no messages at all. */
-#define SRD_LOG_ERR    1 /**< Output error messages. */
-#define SRD_LOG_WARN   2 /**< Output warnings. */
-#define SRD_LOG_INFO   3 /**< Output informational messages. */
-#define SRD_LOG_DBG    4 /**< Output debug messages. */
-#define SRD_LOG_SPEW   5 /**< Output very noisy debug messages. */
+enum {
+	SRD_LOG_NONE = 0, /**< Output no messages at all. */
+	SRD_LOG_ERR  = 1, /**< Output error messages. */
+	SRD_LOG_WARN = 2, /**< Output warnings. */
+	SRD_LOG_INFO = 3, /**< Output informational messages. */
+	SRD_LOG_DBG  = 4, /**< Output debug messages. */
+	SRD_LOG_SPEW = 5, /**< Output very noisy debug messages. */
+};
 
 /*
  * Use SRD_API to mark public API symbols, and SRD_PRIV for private symbols.
