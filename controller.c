@@ -229,10 +229,10 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 	srd_dbg("Adding '%s' to module path.", path);
 
 	new_path = g_string_sized_new(256);
-	g_string_assign(new_path, g_strdup(path));
+	g_string_assign(new_path, path);
 	py_cur_path = PySys_GetObject("path");
 	for (i = 0; i < PyList_Size(py_cur_path); i++) {
-		g_string_append(new_path, g_strdup(G_SEARCHPATH_SEPARATOR_S));
+		g_string_append(new_path, G_SEARCHPATH_SEPARATOR_S);
 		py_item = PyList_GetItem(py_cur_path, i);
 		if (!PyUnicode_Check(py_item))
 			/* Shouldn't happen. */
@@ -240,6 +240,7 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 		if (py_str_as_str(py_item, &item) != SRD_OK)
 			continue;
 		g_string_append(new_path, item);
+		g_free(item);
 	}
 
 	/* Convert to wide chars. */
@@ -401,6 +402,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		 */
 		if (PyDict_SetItemString(py_di_options, key, py_optval) == -1)
 			goto err_out;
+		g_free(key);
 	}
 
 	ret = SRD_OK;
@@ -816,6 +818,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 		g_free(pdo);
 	}
 	g_slist_free(di->pd_output);
+	g_free(di);
 }
 
 /** @private */

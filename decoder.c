@@ -217,6 +217,7 @@ static int get_options(struct srd_decoder *d)
 		}
 		g_variant_ref_sink(o->def);
 		d->options = g_slist_append(d->options, o);
+		g_free(key);
 	}
 	Py_DecRef(py_keys);
 	Py_DecRef(py_values);
@@ -493,7 +494,7 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	/* The module itself. */
 	Py_XDECREF(dec->py_mod);
 
-	/* TODO: (g_)free dec itself? */
+	g_free(dec);
 
 	return SRD_OK;
 }
