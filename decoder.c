@@ -218,6 +218,7 @@ static int get_options(struct srd_decoder *d)
 		g_variant_ref_sink(o->def);
 		d->options = g_slist_append(d->options, o);
 		g_free(key);
+		key = NULL;
 	}
 	Py_DecRef(py_keys);
 	Py_DecRef(py_values);
