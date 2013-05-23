@@ -403,6 +403,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		if (PyDict_SetItemString(py_di_options, key, py_optval) == -1)
 			goto err_out;
 		g_free(key);
+		key = NULL;
 	}
 
 	ret = SRD_OK;
