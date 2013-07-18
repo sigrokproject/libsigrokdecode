@@ -166,6 +166,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/lm75/Makefile
 		 decoders/lpc/Makefile
 		 decoders/maxim_ds28ea00/Makefile
+		 decoders/midi/Makefile
 		 decoders/mlx90614/Makefile
 		 decoders/mx25lxx05d/Makefile
 		 decoders/mxc6225xu/Makefile
