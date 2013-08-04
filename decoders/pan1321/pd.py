@@ -41,6 +41,7 @@ class Decoder(srd.Decoder):
     annotations = [
         ['Text (verbose)', 'Human-readable text (verbose)'],
         ['Text', 'Human-readable text'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -60,11 +61,19 @@ class Decoder(srd.Decoder):
     def handle_host_command(self, rxtx, s):
         if s.startswith('AT+JPRO'):
             p = s[s.find('=') + 1:]
+            if p not in ('0', '1'):
+                self.putx([2, ['Warning: Invalid JPRO parameter "%s"' % p]])
+                self.cmd[rxtx] = ''
+                return
             onoff = 'off' if (p == '0') else 'on'
             x = 'Leaving' if (p == '0') else 'Entering'
             self.putx([0, ['%s production mode' % x]])
             self.putx([1, ['Production mode = %s' % onoff]])
         elif s.startswith('AT+JRES'):
+            if s != 'AT+JRES': # JRES has no params.
+                self.putx([2, ['Warning: Invalid JRES usage.']])
+                self.cmd[rxtx] = ''
+                return
             self.putx([0, ['Triggering a software reset']])
             self.putx([1, ['Reset']])
         elif s.startswith('AT+JSEC'):
