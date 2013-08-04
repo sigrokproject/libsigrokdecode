@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -58,13 +58,22 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def handle_host_command(self, rxtx, s):
-        if s.startswith('AT+JSEC'):
+        if s.startswith('AT+JPRO'):
+            p = s[s.find('=') + 1:]
+            onoff = 'off' if (p == '0') else 'on'
+            x = 'Leaving' if (p == '0') else 'Entering'
+            self.putx([0, ['%s production mode' % x]])
+            self.putx([1, ['Production mode = %s' % onoff]])
+        elif s.startswith('AT+JRES'):
+            self.putx([0, ['Triggering a software reset']])
+            self.putx([1, ['Reset']])
+        elif s.startswith('AT+JSEC'):
             pin = s[-4:]
-            self.putx([0, ['Host set the Bluetooth PIN to ' + pin]])
+            self.putx([0, ['Host set the Bluetooth PIN to "' + pin + '"']])
             self.putx([1, ['PIN = ' + pin]])
         elif s.startswith('AT+JSLN'):
             name = s[s.find(',') + 1:]
-            self.putx([0, ['Host set the Bluetooth name to ' + name]])
+            self.putx([0, ['Host set the Bluetooth name to "' + name + '"']])
             self.putx([1, ['BT name = ' + name]])
         else:
             self.putx([0, ['Host sent unsupported command: %s' % s]])
