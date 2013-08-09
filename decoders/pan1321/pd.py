@@ -59,7 +59,16 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def handle_host_command(self, rxtx, s):
-        if s.startswith('AT+JPRO'):
+        if s.startswith('AT+JAAC'):
+            # AT+JAAC=x (x can be 0 or 1)
+            p = s[s.find('=') + 1:]
+            if p not in ('0', '1'):
+                self.putx([2, ['Warning: Invalid JAAC parameter "%s"' % p]])
+                return
+            x = 'Auto' if (p == '1') else 'Don\'t auto'
+            self.putx([0, ['%s-accept new connections' % x]])
+            self.putx([1, ['%s-accept connections' % x]])
+        elif s.startswith('AT+JPRO'):
             p = s[s.find('=') + 1:]
             if p not in ('0', '1'):
                 self.putx([2, ['Warning: Invalid JPRO parameter "%s"' % p]])
