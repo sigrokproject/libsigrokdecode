@@ -83,6 +83,18 @@ class Decoder(srd.Decoder):
                 return
             self.putx([0, ['Triggering a software reset']])
             self.putx([1, ['Reset']])
+        elif s.startswith('AT+JSDA'):
+            # AT+JSDA=l,d (l: length in bytes, d: data)
+            l, d = s[s.find('=') + 1:].split(',')
+            if not l.isnumeric():
+                self.putx([2, ['Warning: Invalid data length "%s".' % l]])
+            if int(l) != len(d):
+                self.putx([2, ['Warning: Data length mismatch (%d != %d).' % \
+                          (int(l), len(d))]])
+            # TODO: Warn if length > MTU size (which is firmware-dependent).
+            b = ''.join(['%02x ' % ord(c) for c in d])[:-1]
+            self.putx([0, ['Sending %d data bytes: %s' % (int(l), b)]])
+            self.putx([1, ['Send %d = %s' % (int(l), b)]])
         elif s.startswith('AT+JSEC'):
             pin = s[-4:]
             self.putx([0, ['Host set the Bluetooth PIN to "' + pin + '"']])
