@@ -116,7 +116,7 @@ class Decoder(srd.Decoder):
         self.cmd[rxtx] += chr(pdata)
 
         # Get packets/bytes until an \r\n sequence is found (end of command).
-        if self.cmd[rxtx][-1:] != '\n':
+        if self.cmd[rxtx][-2:] != '\r\n':
             return
 
         # Handle host commands and device replies.
