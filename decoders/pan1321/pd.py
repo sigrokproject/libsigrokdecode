@@ -63,7 +63,6 @@ class Decoder(srd.Decoder):
             p = s[s.find('=') + 1:]
             if p not in ('0', '1'):
                 self.putx([2, ['Warning: Invalid JPRO parameter "%s"' % p]])
-                self.cmd[rxtx] = ''
                 return
             onoff = 'off' if (p == '0') else 'on'
             x = 'Leaving' if (p == '0') else 'Entering'
@@ -72,7 +71,6 @@ class Decoder(srd.Decoder):
         elif s.startswith('AT+JRES'):
             if s != 'AT+JRES': # JRES has no params.
                 self.putx([2, ['Warning: Invalid JRES usage.']])
-                self.cmd[rxtx] = ''
                 return
             self.putx([0, ['Triggering a software reset']])
             self.putx([1, ['Reset']])
@@ -87,7 +85,6 @@ class Decoder(srd.Decoder):
         else:
             self.putx([0, ['Host sent unsupported command: %s' % s]])
             self.putx([1, ['Unsupported command: %s' % s]])
-        self.cmd[rxtx] = ''
 
     def handle_device_reply(self, rxtx, s):
         if s == 'ROK':
@@ -103,7 +100,6 @@ class Decoder(srd.Decoder):
         else:
             self.putx([0, ['Device sent an unknown reply: %s' % s]])
             self.putx([1, ['Unknown reply: %s' % s]])
-        self.cmd[rxtx] = ''
 
     def decode(self, ss, es, data):
         ptype, rxtx, pdata = data
@@ -125,12 +121,13 @@ class Decoder(srd.Decoder):
 
         # Handle host commands and device replies.
         # We remove trailing \r\n from the strings before handling them.
+        self.es_block = es
         if rxtx == RX:
-            self.es_block = es
             self.handle_device_reply(rxtx, self.cmd[rxtx][:-2])
         elif rxtx == TX:
-            self.es_block = es
             self.handle_host_command(rxtx, self.cmd[rxtx][:-2])
         else:
             raise Exception('Invalid rxtx value: %d' % rxtx)
+
+        self.cmd[rxtx] = ''
 
