@@ -137,16 +137,19 @@ class Decoder(srd.Decoder):
         self.addr = 0
         self.cur_nibble = 0
         self.cycle_type = -1
+        self.databyte = 0
+        self.tarcount = 0
+        self.synccount = 0
         self.oldpins = (-1, -1, -1, -1, -1, -1, -1)
 
     def start(self, metadata):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'lpc')
+        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lpc')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'lpc')
 
     def report(self):
         pass
 
-    def handle_get_start(self, lad, lframe):
+    def handle_get_start(self, lad, lad_bits, lframe):
         # LAD[3:0]: START field (1 clock cycle).
 
         # The last value of LAD[3:0] before LFRAME# gets de-asserted is what
@@ -200,17 +203,17 @@ class Decoder(srd.Decoder):
         else:
             addr_nibbles = 0 # TODO: How to handle later on?
 
-        # Data is driven MSN-first.
+        # Addresses are driven MSN-first.
         offset = ((addr_nibbles - 1) - self.cur_nibble) * 4
         self.addr |= (lad << offset)
 
         # Continue if we haven't seen all ADDR cycles, yet.
-        # TODO: Off-by-one?
         if (self.cur_nibble < addr_nibbles - 1):
             self.cur_nibble += 1
             return
 
-        self.put(0, 0, self.out_ann, [0, ['Address: %s' % hex(self.addr)]])
+        s = 'Address: 0x%%0%dx' % addr_nibbles
+        self.put(0, 0, self.out_ann, [0, [s % self.addr]])
 
         self.state = 'GET TAR'
         self.tar_count = 0
@@ -230,10 +233,11 @@ class Decoder(srd.Decoder):
                      [0, ['Warning: TAR, cycle %d: %s (expected 1111)'
                      % (self.tarcount, lad_bits)]])
 
-        if (self.tarcount != 2):
+        if (self.tarcount != 1):
             self.tarcount += 1
             return
 
+        self.tarcount = 0
         self.state = 'GET SYNC'
 
     def handle_get_sync(self, lad, lad_bits):
@@ -252,25 +256,27 @@ class Decoder(srd.Decoder):
 
         # TODO
 
-        self.state = 'GET DATA'
         self.cycle_count = 0
+        self.state = 'GET DATA'
 
     def handle_get_data(self, lad, lad_bits):
         # LAD[3:0]: DATA field (2 clock cycles).
 
+        # Data is driven LSN-first.
         if (self.cycle_count == 0):
             self.databyte = lad
         elif (self.cycle_count == 1):
             self.databyte |= (lad << 4)
         else:
-            pass # TODO: Error?
+            raise Exception('Invalid cycle_count: %d' % self.cycle_count)
 
-        if (self.cycle_count != 2):
+        if (self.cycle_count != 1):
             self.cycle_count += 1
             return
 
-        self.put(0, 0, self.out_ann, [0, ['DATA: %s' % hex(self.databyte)]])
-        
+        self.put(0, 0, self.out_ann, [0, ['DATA: 0x%02x' % self.databyte]])
+
+        self.cycle_count = 0
         self.state = 'GET TAR2'
 
     def handle_get_tar2(self, lad, lad_bits):
@@ -288,11 +294,12 @@ class Decoder(srd.Decoder):
                      [0, ['Warning: TAR, cycle %d: %s (expected 1111)'
                      % (self.tarcount, lad_bits)]])
 
-        if (self.tarcount != 2):
+        if (self.tarcount != 1):
             self.tarcount += 1
             return
 
-        self.state = 'GET SYNC'
+        self.tarcount = 0
+        self.state = 'IDLE'
 
     # TODO: At which edge of the clock is data latched? Falling?
     def decode(self, ss, es, data):
@@ -311,7 +318,7 @@ class Decoder(srd.Decoder):
 
             # Only look at the signals upon falling LCLK edges.
             # TODO: Rising?
-            ## if not (self.oldlclk == 1 and lclk == 0)
+            ## if not (self.oldlclk == 1 and lclk == 0):
             ##     self.oldlclk = lclk
             ##     continue
 
@@ -319,31 +326,33 @@ class Decoder(srd.Decoder):
             # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
-                lad_bits = bin(lad)[2:]
+                lad_bits = bin(lad)[2:].zfill(4)
+                # self.put(0, 0, self.out_ann, [0, ['LAD: %s' % lad_bits]])
+
+            # TODO: Only memory read/write is currently supported/tested.
 
             # State machine
             if self.state == 'IDLE':
                 # A valid LPC cycle starts with LFRAME# being asserted (low).
-                # TODO?
                 if lframe != 0:
                    continue
                 self.state = 'GET START'
                 self.lad = -1
                 # self.clocknum = 0
             elif self.state == 'GET START':
-                handle_get_start(lad, lad_bits, lframe)
+                self.handle_get_start(lad, lad_bits, lframe)
             elif self.state == 'GET CT/DR':
-                handle_get_ct_dr(lad, lad_bits)
+                self.handle_get_ct_dr(lad, lad_bits)
             elif self.state == 'GET ADDR':
-                handle_get_addr(lad, lad_bits)
+                self.handle_get_addr(lad, lad_bits)
             elif self.state == 'GET TAR':
-                handle_get_tar(lad, lad_bits)
+                self.handle_get_tar(lad, lad_bits)
             elif self.state == 'GET SYNC':
-                handle_get_sync(lad, lad_bits)
+                self.handle_get_sync(lad, lad_bits)
             elif self.state == 'GET DATA':
-                handle_get_data(lad, lad_bits)
+                self.handle_get_data(lad, lad_bits)
             elif self.state == 'GET TAR2':
-                handle_get_tar2(lad, lad_bits)
+                self.handle_get_tar2(lad, lad_bits)
             else:
                 raise Exception('Invalid state: %s' % self.state)
 
