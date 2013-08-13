@@ -301,7 +301,6 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.state = 'IDLE'
 
-    # TODO: At which edge of the clock is data latched? Falling?
     def decode(self, ss, es, data):
         for (samplenum, pins) in data:
 
@@ -316,11 +315,11 @@ class Decoder(srd.Decoder):
             # TODO: Handle optional pins.
             (lframe, lreset, lclk, lad0, lad1, lad2, lad3) = pins
 
-            # Only look at the signals upon falling LCLK edges.
-            # TODO: Rising?
-            ## if not (self.oldlclk == 1 and lclk == 0):
-            ##     self.oldlclk = lclk
-            ##     continue
+            # Only look at the signals upon rising LCLK edges. The LPC clock
+            # is the same as the PCI clock (which is sampled at rising edges).
+            if not (self.oldlclk == 0 and lclk == 1):
+                self.oldlclk = lclk
+                continue
 
             # Store LAD[3:0] bit values (one nibble) in local variables.
             # Most (but not all) states need this.
