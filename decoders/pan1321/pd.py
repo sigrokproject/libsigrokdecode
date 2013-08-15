@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
 
     def handle_host_command(self, rxtx, s):
         if s.startswith('AT+JAAC'):
-            # AT+JAAC=x (x can be 0 or 1)
+            # AT+JAAC=<auto_accept> (0 or 1)
             p = s[s.find('=') + 1:]
             if p not in ('0', '1'):
                 self.putx([2, ['Warning: Invalid JAAC parameter "%s"' % p]])
@@ -69,6 +69,7 @@ class Decoder(srd.Decoder):
             self.putx([0, ['%s-accept new connections' % x]])
             self.putx([1, ['%s-accept connections' % x]])
         elif s.startswith('AT+JPRO'):
+            # AT+JPRO=<mode> (0 or 1)
             p = s[s.find('=') + 1:]
             if p not in ('0', '1'):
                 self.putx([2, ['Warning: Invalid JPRO parameter "%s"' % p]])
@@ -78,28 +79,43 @@ class Decoder(srd.Decoder):
             self.putx([0, ['%s production mode' % x]])
             self.putx([1, ['Production mode = %s' % onoff]])
         elif s.startswith('AT+JRES'):
+            # AT+JRES
             if s != 'AT+JRES': # JRES has no params.
                 self.putx([2, ['Warning: Invalid JRES usage.']])
                 return
             self.putx([0, ['Triggering a software reset']])
             self.putx([1, ['Reset']])
         elif s.startswith('AT+JSDA'):
-            # AT+JSDA=l,d (l: length in bytes, d: data)
+            # AT+JSDA=<l>,<d> (l: length in bytes, d: data)
+            # l is (max?) 3 decimal digits and ranges from 1 to MTU size.
+            # Data can be ASCII or binary values (l bytes total).
             l, d = s[s.find('=') + 1:].split(',')
             if not l.isnumeric():
                 self.putx([2, ['Warning: Invalid data length "%s".' % l]])
             if int(l) != len(d):
                 self.putx([2, ['Warning: Data length mismatch (%d != %d).' % \
                           (int(l), len(d))]])
-            # TODO: Warn if length > MTU size (which is firmware-dependent).
+            # TODO: Warn if length > MTU size (which is firmware-dependent
+            # and is negotiated by both Bluetooth devices upon connection).
             b = ''.join(['%02x ' % ord(c) for c in d])[:-1]
             self.putx([0, ['Sending %d data bytes: %s' % (int(l), b)]])
             self.putx([1, ['Send %d = %s' % (int(l), b)]])
         elif s.startswith('AT+JSEC'):
+            # AT+JSEC=<secmode>,<linkkey_info>,<pintype>,<pinlen>,<pin>
+            # secmode: Security mode 1 or 3 (default).
+            # linkkey_info: Must be 1 or 2. Has no function according to docs.
+            # pintype: 1: variable pin (default), 2: fixed pin.
+            # pinlen: PIN length (2 decimal digits). Max. PIN length is 16.
+            # pin: The Bluetooth PIN ('pinlen' chars). Used if pintype=2.
+            # Note: AT+JSEC (if used) must be the first command after reset.
+            # TODO: Parse all the other parameters.
             pin = s[-4:]
             self.putx([0, ['Host set the Bluetooth PIN to "' + pin + '"']])
             self.putx([1, ['PIN = ' + pin]])
         elif s.startswith('AT+JSLN'):
+            # AT+JSLN=<namelen>,<name>
+            # namelen: Friendly name length (2 decimal digits). Max. len is 18.
+            # name: The Bluetooth "friendly name" ('namelen' ASCII characters).
             name = s[s.find(',') + 1:]
             self.putx([0, ['Host set the Bluetooth name to "' + name + '"']])
             self.putx([1, ['BT name = ' + name]])
