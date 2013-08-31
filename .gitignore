@@ -34,4 +34,4 @@ Makefile.in
 *.la
 .libs/
 *.pc
-
+decoders/*/__pycache__/
