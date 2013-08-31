@@ -182,6 +182,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/uart_dump/Makefile
 		 decoders/usb_protocol/Makefile
 		 decoders/usb_signalling/Makefile
+		 decoders/xfp/Makefile
 		])
 
 AC_OUTPUT
