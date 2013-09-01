@@ -95,7 +95,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	struct srd_proto_data *pdata;
 	uint64_t start_sample, end_sample;
 	int output_id;
-	void (*cb)();
+	struct srd_pd_callback *cb;
 
 	if (!(di = srd_inst_find_by_obj(NULL, self))) {
 		/* Shouldn't happen. */
@@ -142,7 +142,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 				/* An error was already logged. */
 				break;
 			}
-			cb(pdata);
+			cb->cb(pdata, cb->cb_data);
 		}
 		break;
 	case SRD_OUTPUT_PROTO:

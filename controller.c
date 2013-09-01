@@ -965,22 +965,21 @@ SRD_API int srd_pd_output_callback_add(int output_type,
 }
 
 /** @private */
-SRD_PRIV void *srd_pd_output_callback_find(int output_type)
+SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(int output_type)
 {
 	GSList *l;
-	struct srd_pd_callback *pd_cb;
-	void *(cb);
+	struct srd_pd_callback *tmp, *pd_cb;
 
-	cb = NULL;
+	pd_cb = NULL;
 	for (l = callbacks; l; l = l->next) {
-		pd_cb = l->data;
-		if (pd_cb->output_type == output_type) {
-			cb = pd_cb->cb;
+		tmp = l->data;
+		if (tmp->output_type == output_type) {
+			pd_cb = tmp;
 			break;
 		}
 	}
 
-	return cb;
+	return pd_cb;
 }
 
 /* This is the backend function to Python sigrokdecode.add() call. */

@@ -35,7 +35,7 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 			     const uint8_t *inbuf, uint64_t inbuflen);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(GSList *stack);
-SRD_PRIV void *srd_pd_output_callback_find(int output_type);
+SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(int output_type);
 SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
 				    int output_type, const char *output_id);
 
