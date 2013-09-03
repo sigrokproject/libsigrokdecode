@@ -53,7 +53,6 @@ class Decoder(srd.Decoder):
         self.samplesreceived = 0
         self.first_sample = None
         self.start_sample = None
-        self.samplenum = -1
         self.wordlength = -1
 
     def start(self, metadata):
@@ -96,15 +95,15 @@ class Decoder(srd.Decoder):
             # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
                 self.samplesreceived += 1
-                self.put(self.start_sample, self.samplenum, self.out_proto,
+                self.put(self.start_sample, samplenum, self.out_proto,
                          ['data', self.data])
-                self.put(self.start_sample, self.samplenum, self.out_ann,
+                self.put(self.start_sample, samplenum, self.out_ann,
                          [ANN_HEX, ['%s: 0x%08x' % ('L' if self.oldws else 'R',
                          self.data)]])
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
-                    self.put(self.start_sample, self.samplenum, self.out_ann,
+                    self.put(self.start_sample, samplenum, self.out_ann,
                         [ANN_HEX, ['WARNING: Received a %d-bit word, when a '
                         '%d-bit word was expected' % (self.bitcount,
                         self.wordlength)]])
@@ -114,11 +113,11 @@ class Decoder(srd.Decoder):
             # Reset decoder state.
             self.data = 0
             self.bitcount = 0
-            self.start_sample = self.samplenum
+            self.start_sample = samplenum
 
             # Save the first sample position.
             if self.first_sample == None:
-                self.first_sample = self.samplenum
+                self.first_sample = samplenum
 
             self.oldws = ws
 
