@@ -86,9 +86,9 @@ class Decoder(srd.Decoder):
         self.wr = -1
         self.is_repeat_start = 0
         self.state = 'FIND START'
-        self.oldscl = None
-        self.oldsda = None
-        self.oldpins = None
+        self.oldscl = 1
+        self.oldsda = 1
+        self.oldpins = (1, 1)
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
@@ -205,12 +205,6 @@ class Decoder(srd.Decoder):
             if self.oldpins == pins:
                 continue
             self.oldpins, (scl, sda) = pins, pins
-
-            # First sample: Save SCL/SDA value.
-            if self.oldscl == None:
-                self.oldscl = scl
-                self.oldsda = sda
-                continue
 
             # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
