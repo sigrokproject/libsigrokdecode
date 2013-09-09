@@ -58,8 +58,22 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
+    # Generic helper for CAN bit annotations.
+    def putg(self, ss, es, data):
+        left, right = int(self.bitpos), int(self.bit_width - self.bitpos)
+        self.put(ss - left, es + right, self.out_ann, data)
+
+    # Single-CAN-bit annotation using the current samplenum.
     def putx(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_ann, data)
+        self.putg(self.samplenum, self.samplenum, data)
+
+    # Single-CAN-bit annotation using the samplenum of CAN bit 12.
+    def put12(self, data):
+        self.putg(self.ss_bit12, self.ss_bit12, data)
+
+    # Multi-CAN-bit annotation from self.ss_block to current samplenum.
+    def putb(self, data):
+        self.putg(self.ss_block, self.samplenum, data)
 
     def reset_variables(self):
         self.state = 'IDLE'
@@ -68,6 +82,9 @@ class Decoder(srd.Decoder):
         self.bits = [] # Only actual CAN frame bits (no stuff bits)
         self.curbit = 0 # Current bit of CAN frame (bit 0 == SOF)
         self.last_databit = 999 # Positive value that bitnum+x will never match
+        self.ss_block = None
+        self.ss_bit12 = None
+        self.ss_databytebits = []
 
     # Return True if we reached the desired bit position, False otherwise.
     def reached_bit(self, bitnum):
@@ -102,15 +119,18 @@ class Decoder(srd.Decoder):
     # Returns True if the frame ended (EOF), False otherwise.
     def decode_frame_end(self, can_rx, bitnum):
 
+        # Remember start of CRC sequence (see below).
+        if bitnum == (self.last_databit + 1):
+            self.ss_block = self.samplenum
+
         # CRC sequence (15 bits)
-        if bitnum == (self.last_databit + 15):
+        elif bitnum == (self.last_databit + 15):
             x = self.last_databit + 1
             crc_bits = self.bits[x:x + 15 + 1]
             self.crc = int(''.join(str(d) for d in crc_bits), 2)
-            self.putx([0, ['CRC: 0x%04x' % self.crc]])
-
+            self.putb([0, ['CRC: 0x%04x' % self.crc]])
             if not self.is_valid_crc(crc_bits):
-                self.putx([0, ['CRC is invalid']])
+                self.putb([0, ['CRC is invalid']])
 
         # CRC delimiter bit (recessive)
         elif bitnum == (self.last_databit + 16):
@@ -125,9 +145,13 @@ class Decoder(srd.Decoder):
         elif bitnum == (self.last_databit + 18):
             self.putx([0, ['ACK delimiter: %d' % can_rx]])
 
+        # Remember start of EOF (see below).
+        elif bitnum == (self.last_databit + 19):
+            self.ss_block = self.samplenum
+
         # End of frame (EOF), 7 recessive bits
         elif bitnum == (self.last_databit + 25):
-            self.putx([0, ['End of frame', 'EOF']])
+            self.putb([0, ['End of frame', 'EOF']])
             self.reset_variables()
             return True
 
@@ -145,21 +169,33 @@ class Decoder(srd.Decoder):
             # Data frame: dominant, remote frame: recessive
             # Remote frames do not contain a data field.
             rtr = 'remote' if self.bits[12] == 1 else 'data'
-            self.putx([0, ['RTR: %s frame' % rtr]])
+            self.put12([0, ['RTR: %s frame' % rtr]])
+
+        # Remember start of DLC (see below).
+        elif bitnum == 15:
+            self.ss_block = self.samplenum
 
         # Bits 15-18: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == 18:
             self.dlc = int(''.join(str(d) for d in self.bits[15:18 + 1]), 2)
-            self.putx([0, ['DLC: %d' % self.dlc]])
+            self.putb([0, ['DLC: %d' % self.dlc]])
             self.last_databit = 18 + (self.dlc * 8)
+
+        # Remember all databyte bits, except the very last one.
+        elif bitnum in range(19, self.last_databit):
+            self.ss_databytebits.append(self.samplenum)
 
         # Bits 19-X: Data field (0-8 bytes, depending on DLC)
         # The bits within a data byte are transferred MSB-first.
         elif bitnum == self.last_databit:
+            self.ss_databytebits.append(self.samplenum) # Last databyte bit.
             for i in range(self.dlc):
                 x = 18 + (8 * i) + 1
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
-                self.putx([0, ['Data byte %d: 0x%02x' % (i, b)]])
+                ss = self.ss_databytebits[i * 8]
+                es = self.ss_databytebits[((i + 1) * 8) - 1]
+                self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b)]])
+            self.ss_databytebits = []
 
         elif bitnum > self.last_databit:
             return self.decode_frame_end(can_rx, bitnum)
@@ -169,16 +205,20 @@ class Decoder(srd.Decoder):
     # Returns True if the frame ended (EOF), False otherwise.
     def decode_extended_frame(self, can_rx, bitnum):
 
+        # Remember start of EID (see below).
+        if bitnum == 14:
+            self.ss_block = self.samplenum
+
         # Bits 14-31: Extended identifier (EID[17..0])
-        if bitnum == 31:
+        elif bitnum == 31:
             self.eid = int(''.join(str(d) for d in self.bits[14:]), 2)
-            self.putx([0, ['Extended ID: %d (0x%x)' % (self.eid, self.eid)]])
+            self.putb([0, ['Extended ID: %d (0x%x)' % (self.eid, self.eid)]])
 
             self.fullid = self.id << 18 | self.eid
-            self.putx([0, ['Full ID: %d (0x%x)' % (self.fullid, self.fullid)]])
+            self.putb([0, ['Full ID: %d (0x%x)' % (self.fullid, self.fullid)]])
 
             # Bit 12: Substitute remote request (SRR) bit
-            self.putx([0, ['SRR: %d' % self.bits[12]]])
+            self.put12([0, ['SRR: %d' % self.bits[12]]])
 
         # Bit 32: Remote transmission request (RTR) bit
         # Data frame: dominant, remote frame: recessive
@@ -195,19 +235,31 @@ class Decoder(srd.Decoder):
         elif bitnum == 34:
             self.putx([0, ['RB0: %d' % can_rx]])
 
+        # Remember start of DLC (see below).
+        elif bitnum == 35:
+            self.ss_block = self.samplenum
+
         # Bits 35-38: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == 38:
             self.dlc = int(''.join(str(d) for d in self.bits[35:38 + 1]), 2)
-            self.putx([0, ['DLC: %d' % self.dlc]])
+            self.putb([0, ['DLC: %d' % self.dlc]])
             self.last_databit = 38 + (self.dlc * 8)
+
+        # Remember all databyte bits, except the very last one.
+        elif bitnum in range(39, self.last_databit):
+            self.ss_databytebits.append(self.samplenum)
 
         # Bits 39-X: Data field (0-8 bytes, depending on DLC)
         # The bits within a data byte are transferred MSB-first.
         elif bitnum == self.last_databit:
+            self.ss_databytebits.append(self.samplenum) # Last databyte bit.
             for i in range(self.dlc):
                 x = 38 + (8 * i) + 1
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
-                self.putx([0, ['Data byte %d: 0x%02x' % (i, b)]])
+                ss = self.ss_databytebits[i * 8]
+                es = self.ss_databytebits[((i + 1) * 8) - 1]
+                self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b)]])
+            self.ss_databytebits = []
 
         elif bitnum > self.last_databit:
             return self.decode_frame_end(can_rx, bitnum)
@@ -237,16 +289,20 @@ class Decoder(srd.Decoder):
             else:
                 self.putx([1, ['Start of frame (SOF) must be a dominant bit']])
 
+        # Remember start of ID (see below).
+        elif bitnum == 1:
+            self.ss_block = self.samplenum
+
         # Bits 1-11: Identifier (ID[10..0])
         # The bits ID[10..4] must NOT be all recessive.
         elif bitnum == 11:
             self.id = int(''.join(str(d) for d in self.bits[1:]), 2)
-            self.putx([0, ['ID: %d (0x%x)' % (self.id, self.id)]])
+            self.putb([0, ['ID: %d (0x%x)' % (self.id, self.id)]])
 
         # RTR or SRR bit, depending on frame type (gets handled later).
         elif bitnum == 12:
-            # self.putx([0, ['RTR/SRR: %d' % can_rx]])
-            pass
+            # self.putx([0, ['RTR/SRR: %d' % can_rx]]) # Debug only.
+            self.ss_bit12 = self.samplenum
 
         # Bit 13: Identifier extension (IDE) bit
         # Standard frame: dominant, extended frame: recessive
@@ -281,7 +337,6 @@ class Decoder(srd.Decoder):
                 if can_rx == 1:
                     continue
                 self.sof = self.samplenum
-                # self.putx([0, ['SOF']])
                 self.state = 'GET BITS'
             elif self.state == 'GET BITS':
                 # Wait until we're in the correct bit/sampling position.
