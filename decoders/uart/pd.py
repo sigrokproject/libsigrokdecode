@@ -206,14 +206,12 @@ class Decoder(srd.Decoder):
         self.putp(['DATA', rxtx, self.databyte[rxtx]])
 
         s = 'RX: ' if (rxtx == RX) else 'TX: '
-        self.putx(rxtx, [ANN_ASCII, [s + chr(self.databyte[rxtx])]])
-        self.putx(rxtx, [ANN_DEC,   [s + str(self.databyte[rxtx])]])
-        self.putx(rxtx, [ANN_HEX,   [s + hex(self.databyte[rxtx]),
-                                     s + hex(self.databyte[rxtx])[2:]]])
-        self.putx(rxtx, [ANN_OCT,   [s + oct(self.databyte[rxtx]),
-                                     s + oct(self.databyte[rxtx])[2:]]])
-        self.putx(rxtx, [ANN_BITS,  [s + bin(self.databyte[rxtx]),
-                                     s + bin(self.databyte[rxtx])[2:]]])
+        b = self.databyte[rxtx]
+        self.putx(rxtx, [ANN_ASCII, [s + chr(b)]])
+        self.putx(rxtx, [ANN_DEC,   [s + str(b)]])
+        self.putx(rxtx, [ANN_HEX,   [s + hex(b)[2:]]])
+        self.putx(rxtx, [ANN_OCT,   [s + oct(b)[2:]]])
+        self.putx(rxtx, [ANN_BITS,  [s + bin(b)[2:]]])
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
