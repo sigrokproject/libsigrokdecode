@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -90,7 +90,16 @@ class Decoder(srd.Decoder):
     ]
 
     def putx(self, rxtx, data):
-        self.put(self.startsample[rxtx], self.samplenum - 1, self.out_ann, data)
+        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
+        self.put(s - halfbit, self.samplenum + halfbit, self.out_ann, data)
+
+    def putg(self, data):
+        s, halfbit = self.samplenum, int(self.bit_width / 2)
+        self.put(s - halfbit, s + halfbit, self.out_ann, data)
+
+    def putp(self, data):
+        s, halfbit = self.samplenum, int(self.bit_width / 2)
+        self.put(s - halfbit, s + halfbit, self.out_proto, data)
 
     def __init__(self, **kwargs):
         self.samplenum = 0
@@ -154,8 +163,7 @@ class Decoder(srd.Decoder):
 
         # The startbit must be 0. If not, we report an error.
         if self.startbit[rxtx] != 0:
-            self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                     ['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
+            self.putp(['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
             # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit[rxtx] = 0
@@ -164,17 +172,15 @@ class Decoder(srd.Decoder):
 
         self.state[rxtx] = 'GET DATA BITS'
 
-        self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                 ['STARTBIT', rxtx, self.startbit[rxtx]])
-        self.put(self.frame_start[rxtx], self.samplenum, self.out_ann,
-                 [ANN_ASCII, ['Start bit', 'Start', 'S']])
+        self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
+        self.putg([ANN_ASCII, ['Start bit', 'Start', 'S']])
 
     def get_data_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the desired data bit.
         if not self.reached_bit(rxtx, self.cur_data_bit[rxtx] + 1):
             return
 
-        # Save the sample number where the data byte starts.
+        # Save the sample number of the middle of the first data bit.
         if self.startsample[rxtx] == -1:
             self.startsample[rxtx] = self.samplenum
 
@@ -191,15 +197,13 @@ class Decoder(srd.Decoder):
                             self.options['bit_order'])
 
         # Return here, unless we already received all data bits.
-        # TODO? Off-by-one?
         if self.cur_data_bit[rxtx] < self.options['num_data_bits'] - 1:
             self.cur_data_bit[rxtx] += 1
             return
 
         self.state[rxtx] = 'GET PARITY BIT'
 
-        self.put(self.startsample[rxtx], self.samplenum - 1, self.out_proto,
-                 ['DATA', rxtx, self.databyte[rxtx]])
+        self.putp(['DATA', rxtx, self.databyte[rxtx]])
 
         s = 'RX: ' if (rxtx == RX) else 'TX: '
         self.putx(rxtx, [ANN_ASCII, [s + chr(self.databyte[rxtx])]])
@@ -227,18 +231,12 @@ class Decoder(srd.Decoder):
 
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.databyte[rxtx], self.options['num_data_bits']):
-            # TODO: Fix range.
-            self.put(self.samplenum, self.samplenum, self.out_proto,
-                     ['PARITYBIT', rxtx, self.paritybit[rxtx]])
-            self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [ANN_ASCII, ['Parity bit', 'Parity', 'P']])
+            self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
+            self.putg([ANN_ASCII, ['Parity bit', 'Parity', 'P']])
         else:
-            # TODO: Fix range.
             # TODO: Return expected/actual parity values.
-            self.put(self.samplenum, self.samplenum, self.out_proto,
-                     ['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
-            self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
+            self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
+            self.putg([ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
@@ -252,17 +250,13 @@ class Decoder(srd.Decoder):
 
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
-            self.put(self.frame_start[rxtx], self.samplenum, self.out_proto,
-                     ['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
+            self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
             # TODO: Abort? Ignore the frame? Other?
 
         self.state[rxtx] = 'WAIT FOR START BIT'
 
-        # TODO: Fix range.
-        self.put(self.samplenum, self.samplenum, self.out_proto,
-                 ['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [ANN_ASCII, ['Stop bit', 'Stop', 'P']])
+        self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
+        self.putg([ANN_ASCII, ['Stop bit', 'Stop', 'P']])
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
