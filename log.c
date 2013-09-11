@@ -127,7 +127,6 @@ SRD_API int srd_log_logdomain_set(const char *logdomain)
 		return SRD_ERR_ARG;
 	}
 
-	/* TODO: Error handling. */
 	snprintf((char *)&srd_log_domain, LOGDOMAIN_MAXLEN, "%s", logdomain);
 
 	srd_dbg("Log domain set to '%s'.", (const char *)&srd_log_domain);
@@ -211,7 +210,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 
 	/* Only output messages of at least the selected loglevel(s). */
 	if (loglevel > srd_loglevel)
-		return SRD_OK; /* TODO? */
+		return SRD_OK;
 
 	if (srd_log_domain[0] != '\0')
 		fprintf(stderr, "%s", srd_log_domain);

@@ -98,7 +98,6 @@ static GSList *callbacks = NULL;
 extern SRD_PRIV GSList *pd_list;
 
 /* module_sigrokdecode.c */
-/* FIXME: SRD_PRIV causes issues on MinGW. Investigate. */
 extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* type_logic.c */
@@ -253,21 +252,6 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 	PySys_SetPath(wc_new_path);
 	g_string_free(new_path, TRUE);
 	g_free(wc_new_path);
-
-//#ifdef _WIN32
-//	gchar **splitted;
-//
-//	/*
-//	 * On Windows/MinGW, Python's sys.path needs entries of the form
-//	 * 'C:\\foo\\bar' instead of '/foo/bar'.
-//	 */
-//
-//	splitted = g_strsplit(DECODERS_DIR, "/", 0);
-//	path = g_build_pathv("\\\\", splitted);
-//	g_strfreev(splitted);
-//#else
-//	path = g_strdup(DECODERS_DIR);
-//#endif
 
 	return SRD_OK;
 }
