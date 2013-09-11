@@ -111,8 +111,8 @@ class Decoder(srd.Decoder):
         self.stopbit1 = [-1, -1]
         self.startsample = [-1, -1]
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
-        self.oldbit = [None, None]
-        self.oldpins = None
+        self.oldbit = [1, 1]
+        self.oldpins = [1, 1]
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
@@ -267,14 +267,6 @@ class Decoder(srd.Decoder):
             # if self.oldpins == pins:
             #     continue
             self.oldpins, (rx, tx) = pins, pins
-
-            # First sample: Save RX/TX value.
-            if self.oldbit[RX] == None:
-                self.oldbit[RX] = rx
-                continue
-            if self.oldbit[TX] == None:
-                self.oldbit[TX] = tx
-                continue
 
             # State machine.
             for rxtx in (RX, TX):
