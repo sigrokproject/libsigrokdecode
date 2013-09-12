@@ -227,11 +227,11 @@ class Decoder(srd.Decoder):
         elif f == 'dec':
             self.putx(rxtx, [0, [s + str(b)]])
         elif f == 'hex':
-            self.putx(rxtx, [0, [s + hex(b)[2:]]])
+            self.putx(rxtx, [0, [s + hex(b)[2:].zfill(2).upper()]])
         elif f == 'oct':
-            self.putx(rxtx, [0, [s + oct(b)[2:]]])
+            self.putx(rxtx, [0, [s + oct(b)[2:].zfill(3)]])
         elif f == 'bin':
-            self.putx(rxtx, [0, [s + bin(b)[2:]]])
+            self.putx(rxtx, [0, [s + bin(b)[2:].zfill(8)]])
         else:
             raise Exception('Invalid data format option: %s' % f)
 
