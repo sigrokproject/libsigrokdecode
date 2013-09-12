@@ -26,13 +26,6 @@ import sigrokdecode as srd
 RX = 0
 TX = 1
 
-# Annotation feed formats
-ANN_ASCII = 0
-ANN_DEC = 1
-ANN_HEX = 2
-ANN_OCT = 3
-ANN_BITS = 4
-
 # Given a parity type to check (odd, even, zero, one), the value of the
 # parity bit, the value of the data, and the length of the data (5-9 bits,
 # usually 8 bits) return True if the parity is correct, False otherwise.
@@ -79,14 +72,11 @@ class Decoder(srd.Decoder):
         'parity_check': ['Check parity?', 'yes'], # TODO: Bool supported?
         'num_stop_bits': ['Stop bit(s)', '1'], # String! 0, 0.5, 1, 1.5.
         'bit_order': ['Bit order', 'lsb-first'],
+        'format': ['Data format', 'ascii'], # ascii/dec/hex/oct/bin
         # TODO: Options to invert the signal(s).
     }
     annotations = [
-        ['ASCII', 'Data bytes as ASCII characters'],
-        ['Decimal', 'Databytes as decimal, integer values'],
-        ['Hex', 'Data bytes in hex format'],
-        ['Octal', 'Data bytes as octal numbers'],
-        ['Bits', 'Data bytes in bit notation (sequence of 0/1 digits)'],
+        ['Data', 'UART data'],
     ]
 
     def putx(self, rxtx, data):
@@ -173,7 +163,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'GET DATA BITS'
 
         self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
-        self.putg([ANN_ASCII, ['Start bit', 'Start', 'S']])
+        self.putg([0, ['Start bit', 'Start', 'S']])
 
     def get_data_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the desired data bit.
@@ -206,12 +196,19 @@ class Decoder(srd.Decoder):
         self.putp(['DATA', rxtx, self.databyte[rxtx]])
 
         s = 'RX: ' if (rxtx == RX) else 'TX: '
-        b = self.databyte[rxtx]
-        self.putx(rxtx, [ANN_ASCII, [s + chr(b)]])
-        self.putx(rxtx, [ANN_DEC,   [s + str(b)]])
-        self.putx(rxtx, [ANN_HEX,   [s + hex(b)[2:]]])
-        self.putx(rxtx, [ANN_OCT,   [s + oct(b)[2:]]])
-        self.putx(rxtx, [ANN_BITS,  [s + bin(b)[2:]]])
+        b, f = self.databyte[rxtx], self.options['format']
+        if f == 'ascii':
+            self.putx(rxtx, [0, [s + chr(b)]])
+        elif f == 'dec':
+            self.putx(rxtx, [0, [s + str(b)]])
+        elif f == 'hex':
+            self.putx(rxtx, [0, [s + hex(b)[2:]]])
+        elif f == 'oct':
+            self.putx(rxtx, [0, [s + oct(b)[2:]]])
+        elif f == 'bin':
+            self.putx(rxtx, [0, [s + bin(b)[2:]]])
+        else:
+            raise Exception('Invalid data format option: %s' % f)
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
@@ -230,11 +227,11 @@ class Decoder(srd.Decoder):
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.databyte[rxtx], self.options['num_data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
-            self.putg([ANN_ASCII, ['Parity bit', 'Parity', 'P']])
+            self.putg([0, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
-            self.putg([ANN_ASCII, ['Parity error', 'Parity err', 'PE']])
+            self.putg([0, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
@@ -254,7 +251,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'WAIT FOR START BIT'
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.putg([ANN_ASCII, ['Stop bit', 'Stop', 'T']])
+        self.putg([0, ['Stop bit', 'Stop', 'T']])
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
