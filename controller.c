@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 /**
  * @mainpage libsigrokdecode API
@@ -86,13 +87,12 @@
  * @{
  */
 
-/* List of decoder instances. */
-static GSList *di_list = NULL;
-
-/* List of frontend callbacks to receive decoder output. */
-static GSList *callbacks = NULL;
-
 /** @cond PRIVATE */
+
+SRD_PRIV GSList *sessions = NULL;
+static int max_session_id = -1;
+
+static int session_is_valid(struct srd_session *sess);
 
 /* decoder.c */
 extern SRD_PRIV GSList *pd_list;
@@ -137,6 +137,11 @@ SRD_API int srd_init(const char *path)
 	int ret;
 	char *env_path;
 
+	if (max_session_id != -1) {
+		srd_err("libsigrokdecode is already initialized.");
+		return SRD_ERR;
+	}
+
 	srd_dbg("Initializing libsigrokdecode.");
 
 	/* Add our own module to the list of built-in modules. */
@@ -167,6 +172,8 @@ SRD_API int srd_init(const char *path)
 		}
 	}
 
+	max_session_id = 0;
+
 	return SRD_OK;
 }
 
@@ -186,7 +193,12 @@ SRD_API int srd_init(const char *path)
  */
 SRD_API int srd_exit(void)
 {
+	GSList *l;
+
 	srd_dbg("Exiting libsigrokdecode.");
+
+	for (l = sessions; l; l = l->next)
+		srd_session_destroy((struct srd_session *)l->data);
 
 	srd_decoder_unload_all();
 	g_slist_free(pd_list);
@@ -194,6 +206,8 @@ SRD_API int srd_exit(void)
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
+
+	max_session_id = -1;
 
 	return SRD_OK;
 }
@@ -508,6 +522,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 /**
  * Create a new protocol decoder instance.
  *
+ * @param sess The session holding the protocol decoder instance.
  * @param decoder_id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
  *                the decoder class. May be NULL.
@@ -517,8 +532,8 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  *
  * @since 0.1.0
  */
-SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
-		GHashTable *options)
+SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
+		const char *decoder_id, GHashTable *options)
 {
 	int i;
 	struct srd_decoder *dec;
@@ -526,6 +541,11 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	char *inst_id;
 
 	srd_dbg("Creating new %s instance.", decoder_id);
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return NULL;
+	}
 
 	if (!(dec = srd_decoder_get_by_id(decoder_id))) {
 		srd_err("Protocol decoder %s not found.", decoder_id);
@@ -538,6 +558,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	}
 
 	di->decoder = dec;
+	di->sess = sess;
 	if (options) {
 		inst_id = g_hash_table_lookup(options, "id");
 		di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
@@ -579,7 +600,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 	}
 
 	/* Instance takes input from a frontend by default. */
-	di_list = g_slist_append(di_list, di);
+	sess->di_list = g_slist_append(sess->di_list, di);
 
 	return di;
 }
@@ -587,6 +608,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
 /**
  * Stack a decoder instance on top of another.
  *
+ * @param sess The session holding the protocol decoder instances.
  * @param di_from The instance to move.
  * @param di_to The instance on top of which di_from will be stacked.
  *
@@ -594,17 +616,23 @@ SRD_API struct srd_decoder_inst *srd_inst_new(const char *decoder_id,
  *
  * @since 0.1.0
  */
-SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
-		struct srd_decoder_inst *di_to)
+SRD_API int srd_inst_stack(struct srd_session *sess,
+		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to)
 {
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
+
 	if (!di_from || !di_to) {
 		srd_err("Invalid from/to instance pair.");
 		return SRD_ERR_ARG;
 	}
 
-	if (g_slist_find(di_list, di_to)) {
+	if (g_slist_find(sess->di_list, di_to)) {
 		/* Remove from the unstacked list. */
-		di_list = g_slist_remove(di_list, di_to);
+		sess->di_list = g_slist_remove(sess->di_list, di_to);
 	}
 
 	/* Stack on top of source di. */
@@ -619,19 +647,26 @@ SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
  * Only the bottom level of instances are searched -- instances already stacked
  * on top of another one will not be found.
  *
+ * @param sess The session holding the protocol decoder instance.
  * @param inst_id The instance ID to be found.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  *
  * @since 0.1.0
  */
-SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
+SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
+		const char *inst_id)
 {
 	GSList *l;
 	struct srd_decoder_inst *tmp, *di;
 
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return NULL;
+	}
+
 	di = NULL;
-	for (l = di_list; l; l = l->next) {
+	for (l = sess->di_list; l; l = l->next) {
 		tmp = l->data;
 		if (!strcmp(tmp->inst_id, inst_id)) {
 			di = tmp;
@@ -642,11 +677,36 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
 	return di;
 }
 
+static struct srd_decoder_inst *srd_sess_inst_find_by_obj(
+		struct srd_session *sess, const GSList *stack,
+		const PyObject *obj)
+{
+	const GSList *l;
+	struct srd_decoder_inst *tmp, *di;
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return NULL;
+	}
+
+	di = NULL;
+	for (l = stack ? stack : sess->di_list; di == NULL && l != NULL; l = l->next) {
+		tmp = l->data;
+		if (tmp->py_inst == obj)
+			di = tmp;
+		else if (tmp->next_di)
+			di = srd_sess_inst_find_by_obj(sess, tmp->next_di, obj);
+	}
+
+	return di;
+}
+
 /**
  * Find a decoder instance by its Python object.
  *
  * I.e. find that instance's instantiation of the sigrokdecode.Decoder class.
- * This will recurse to find the instance anywhere in the stack tree.
+ * This will recurse to find the instance anywhere in the stack tree of all
+ * sessions.
  *
  * @param stack Pointer to a GSList of struct srd_decoder_inst, indicating the
  *              stack to search. To start searching at the bottom level of
@@ -662,16 +722,14 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id)
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 		const PyObject *obj)
 {
-	const GSList *l;
-	struct srd_decoder_inst *tmp, *di;
+	struct srd_decoder_inst *di;
+	struct srd_session *sess;
+	GSList *l;
 
 	di = NULL;
-	for (l = stack ? stack : di_list; di == NULL && l != NULL; l = l->next) {
-		tmp = l->data;
-		if (tmp->py_inst == obj)
-			di = tmp;
-		else if (tmp->next_di)
-			di = srd_inst_find_by_obj(tmp->next_di, obj);
+	for (l = sessions; di == NULL && l != NULL; l = l->next) {
+		sess = l->data;
+		di = srd_sess_inst_find_by_obj(sess, stack, obj);
 	}
 
 	return di;
@@ -807,21 +865,26 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 }
 
 /** @private */
-SRD_PRIV void srd_inst_free_all(GSList *stack)
+SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack)
 {
 	GSList *l;
 	struct srd_decoder_inst *di;
 
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return;
+	}
+
 	di = NULL;
-	for (l = stack ? stack : di_list; di == NULL && l != NULL; l = l->next) {
+	for (l = stack ? stack : sess->di_list; di == NULL && l != NULL; l = l->next) {
 		di = l->data;
 		if (di->next_di)
-			srd_inst_free_all(di->next_di);
+			srd_inst_free_all(sess, di->next_di);
 		srd_inst_free(di);
 	}
 	if (!stack) {
-		g_slist_free(di_list);
-		di_list = NULL;
+		g_slist_free(sess->di_list);
+		sess->di_list = NULL;
 	}
 }
 
@@ -835,46 +898,107 @@ SRD_PRIV void srd_inst_free_all(GSList *stack)
  * @{
  */
 
+static int session_is_valid(struct srd_session *sess)
+{
+
+	if (!sess || sess->session_id < 1)
+		return SRD_ERR;
+
+	return SRD_OK;
+}
+
+/**
+ * Create a decoding session.
+ *
+ * A session holds all decoder instances, their stack relationships and
+ * output callbacks.
+ *
+ * @param sess. A pointer which will hold a pointer to a newly
+ *              initialized session on return.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.3.0
+ */
+SRD_API int srd_session_new(struct srd_session **sess)
+{
+
+	if (!sess) {
+		srd_err("Invalid session pointer.");
+		return SRD_ERR;
+	}
+
+	if (!(*sess = g_try_malloc(sizeof(struct srd_session))))
+		return SRD_ERR_MALLOC;
+	(*sess)->session_id = ++max_session_id;
+	(*sess)->num_probes = (*sess)->unitsize = (*sess)->samplerate = 0;
+	(*sess)->di_list = (*sess)->callbacks = NULL;
+
+	/* Keep a list of all sessions, so we can clean up as needed. */
+	sessions = g_slist_append(sessions, *sess);
+
+	srd_dbg("Created session %d.", (*sess)->session_id);
+
+	return SRD_OK;
+}
+
 /**
  * Start a decoding session.
  *
- * Decoders, instances and stack must have been prepared beforehand.
+ * Decoders, instances and stack must have been prepared beforehand,
+ * and all SRD_CONF parameters set.
  *
- * @param num_probes The number of probes which the incoming feed will contain.
- * @param unitsize The number of bytes per sample in the incoming feed.
- * @param samplerate The samplerate of the incoming feed.
+ * @param sess The session to start.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @since 0.1.0
  */
-SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
+SRD_API int srd_session_start(struct srd_session *sess)
 {
 	PyObject *args;
 	GSList *d;
 	struct srd_decoder_inst *di;
 	int ret;
 
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session pointer.");
+		return SRD_ERR;
+	}
+	if (sess->num_probes == 0) {
+		srd_err("Session has invalid number of probes.");
+		return SRD_ERR;
+	}
+	if (sess->unitsize == 0) {
+		srd_err("Session has invalid unitsize.");
+		return SRD_ERR;
+	}
+	if (sess->samplerate == 0) {
+		srd_err("Session has invalid samplerate.");
+		return SRD_ERR;
+	}
+
 	ret = SRD_OK;
 
-	srd_dbg("Calling start() on all instances with %d probes, "
-		"unitsize %d samplerate %d.", num_probes, unitsize, samplerate);
+	srd_dbg("Calling start() on all instances in session %d with "
+			"%d probes, unitsize %d samplerate %d.", sess->session_id,
+			sess->num_probes, sess->unitsize, sess->samplerate);
 
 	/*
 	 * Currently only one item of metadata is passed along to decoders,
 	 * samplerate. This can be extended as needed.
 	 */
-	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)samplerate))) {
+	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)sess->samplerate))) {
 		srd_err("Unable to build Python object for metadata.");
 		return SRD_ERR_PYTHON;
 	}
 
 	/* Run the start() method on all decoders receiving frontend data. */
-	for (d = di_list; d; d = d->next) {
+	for (d = sess->di_list; d; d = d->next) {
 		di = d->data;
-		di->data_num_probes = num_probes;
-		di->data_unitsize = unitsize;
-		di->data_samplerate = samplerate;
+		di->data_num_probes = sess->num_probes;
+		di->data_unitsize = sess->unitsize;
+		di->data_samplerate = sess->samplerate;
 		if ((ret = srd_inst_start(di, args)) != SRD_OK)
 			break;
 	}
@@ -885,8 +1009,53 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
 }
 
 /**
+ * Set a configuration key in a session.
+ *
+ * @param sess The session to configure.
+ * @param key The configuration key (SRD_CONF_*).
+ * @param data The new value for the key, as a GVariant with GVariantType
+ *             appropriate to that key. A floating reference can be passed
+ *             in; its refcount will be sunk and unreferenced after use.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.3.0
+ */
+SRD_API int srd_session_config_set(struct srd_session *sess, int key,
+		GVariant *data)
+{
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
+
+	if (!g_variant_is_of_type(data, G_VARIANT_TYPE_UINT64)) {
+		srd_err("Value for key %d should be of type uint64.");
+		return SRD_ERR_ARG;
+	}
+
+	switch (key) {
+	case SRD_CONF_NUM_PROBES:
+		sess->num_probes = g_variant_get_uint64(data);
+		break;
+	case SRD_CONF_UNITSIZE:
+		sess->unitsize = g_variant_get_uint64(data);
+		break;
+	case SRD_CONF_SAMPLERATE:
+		sess->samplerate = g_variant_get_uint64(data);
+		break;
+	}
+
+	g_variant_unref(data);
+
+	return SRD_OK;
+}
+
+/**
  * Send a chunk of logic sample data to a running decoder session.
  *
+ * @param sess The session to use.
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param inbuf Pointer to sample data.
  * @param inbuflen Length in bytes of the buffer.
@@ -895,21 +1064,54 @@ SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate)
  *
  * @since 0.1.0
  */
-SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
-		uint64_t inbuflen)
+SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
+		const uint8_t *inbuf, uint64_t inbuflen)
 {
 	GSList *d;
 	int ret;
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
 
 	srd_dbg("Calling decode() on all instances with starting sample "
 		"number %" PRIu64 ", %" PRIu64 " bytes at 0x%p",
 		start_samplenum, inbuflen, inbuf);
 
-	for (d = di_list; d; d = d->next) {
+	for (d = sess->di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(start_samplenum, d->data, inbuf,
 					   inbuflen)) != SRD_OK)
 			return ret;
 	}
+
+	return SRD_OK;
+}
+
+/**
+ * Destroy a decoding session.
+ *
+ * All decoder instances and output callbacks are properly released.
+ *
+ * @param sess. The session to be destroyed.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.1.0
+ */
+SRD_API int srd_session_destroy(struct srd_session *sess)
+{
+	int session_id;
+
+	session_id = sess->session_id;
+	if (sess->di_list)
+		srd_inst_free_all(sess, NULL);
+	if (sess->callbacks)
+		g_slist_free_full(sess->callbacks, g_free);
+	sessions = g_slist_remove(sessions, sess);
+	g_free(sess);
+
+	srd_dbg("Destroyed session %d.", session_id);
 
 	return SRD_OK;
 }
@@ -921,6 +1123,7 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
  * to the PD controller (except for Python objects, which only go up the
  * stack).
  *
+ * @param sess The output session in which to register the callback.
  * @param output_type The output type this callback will receive. Only one
  *                    callback per output type can be registered.
  * @param cb The function to call. Must not be NULL.
@@ -928,10 +1131,15 @@ SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
  *
  * @since 0.1.0
  */
-SRD_API int srd_pd_output_callback_add(int output_type,
-		srd_pd_output_callback_t cb, void *cb_data)
+SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
+		int output_type, srd_pd_output_callback_t cb, void *cb_data)
 {
 	struct srd_pd_callback *pd_cb;
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
 
 	srd_dbg("Registering new callback for output type %d.", output_type);
 
@@ -943,19 +1151,25 @@ SRD_API int srd_pd_output_callback_add(int output_type,
 	pd_cb->output_type = output_type;
 	pd_cb->cb = cb;
 	pd_cb->cb_data = cb_data;
-	callbacks = g_slist_append(callbacks, pd_cb);
+	sess->callbacks = g_slist_append(sess->callbacks, pd_cb);
 
 	return SRD_OK;
 }
 
 /** @private */
-SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(int output_type)
+SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(
+		struct srd_session *sess, int output_type)
 {
 	GSList *l;
 	struct srd_pd_callback *tmp, *pd_cb;
 
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return NULL;
+	}
+
 	pd_cb = NULL;
-	for (l = callbacks; l; l = l->next) {
+	for (l = sess->callbacks; l; l = l->next) {
 		tmp = l->data;
 		if (tmp->output_type == output_type) {
 			pd_cb = tmp;

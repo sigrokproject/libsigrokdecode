@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+struct srd_session;
+
 /**
  * @file
  *
@@ -164,6 +166,12 @@ enum {
 
 #define SRD_MAX_NUM_PROBES 64
 
+enum {
+	SRD_CONF_NUM_PROBES = 10000,
+	SRD_CONF_UNITSIZE,
+	SRD_CONF_SAMPLERATE,
+};
+
 struct srd_decoder {
 	/** The decoder ID. Must be non-NULL and unique for all decoders. */
 	char *id;
@@ -228,6 +236,7 @@ struct srd_decoder_option {
 
 struct srd_decoder_inst {
 	struct srd_decoder *decoder;
+	struct srd_session *sess;
 	PyObject *py_inst;
 	char *inst_id;
 	GSList *pd_output;
@@ -287,16 +296,21 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options);
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		GHashTable *probes);
-SRD_API struct srd_decoder_inst *srd_inst_new(const char *id,
-		GHashTable *options);
-SRD_API int srd_inst_stack(struct srd_decoder_inst *di_from,
-		struct srd_decoder_inst *di_to);
-SRD_API struct srd_decoder_inst *srd_inst_find_by_id(const char *inst_id);
-SRD_API int srd_session_start(int num_probes, int unitsize, uint64_t samplerate);
-SRD_API int srd_session_send(uint64_t start_samplenum, const uint8_t *inbuf,
-		uint64_t inbuflen);
-SRD_API int srd_pd_output_callback_add(int output_type,
-		srd_pd_output_callback_t cb, void *cb_data);
+SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
+		const char *id, GHashTable *options);
+SRD_API int srd_inst_stack(struct srd_session *sess,
+		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to);
+SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
+		const char *inst_id);
+SRD_API int srd_session_new(struct srd_session **sess);
+SRD_API int srd_session_start(struct srd_session *sess);
+SRD_API int srd_session_config_set(struct srd_session *sess, int key,
+		GVariant *data);
+SRD_API int srd_session_send(struct srd_session *sess,
+		uint64_t start_samplenum, const uint8_t *inbuf, uint64_t inbuflen);
+SRD_API int srd_session_destroy(struct srd_session *sess);
+SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
+		int output_type, srd_pd_output_callback_t cb, void *cb_data);
 
 /*--- decoder.c -------------------------------------------------------------*/
 

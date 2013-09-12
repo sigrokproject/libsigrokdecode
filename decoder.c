@@ -42,6 +42,8 @@
 /* The list of protocol decoders. */
 SRD_PRIV GSList *pd_list = NULL;
 
+extern GSList *sessions;
+
 /* module_sigrokdecode.c */
 extern SRD_PRIV PyObject *mod_sigrokdecode;
 
@@ -461,6 +463,7 @@ static void free_probes(GSList *probelist)
 SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 {
 	struct srd_decoder_option *o;
+	struct srd_session *sess;
 	GSList *l;
 
 	srd_dbg("Unloading protocol decoder '%s'.", dec->name);
@@ -471,7 +474,10 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	 * stack. A frontend reloading a decoder thus has to restart all
 	 * instances, and rebuild the stack.
 	 */
-	srd_inst_free_all(NULL);
+	for (l = sessions; l; l = l->next) {
+		sess = l->data;
+		srd_inst_free_all(sess, NULL);
+	}
 
 	for (l = dec->options; l; l = l->next) {
 		o = l->data;

@@ -135,7 +135,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	switch (pdo->output_type) {
 	case SRD_OUTPUT_ANN:
 		/* Annotations are only fed to callbacks. */
-		if ((cb = srd_pd_output_callback_find(pdo->output_type))) {
+		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
 			if (convert_pyobj(di, data, &pdata->ann_format,
 					  (char ***)&pdata->data) != SRD_OK) {
