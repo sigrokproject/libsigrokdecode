@@ -98,6 +98,10 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         ['Data', 'UART data'],
+        ['Start bits', 'UART start bits'],
+        ['Parity bits', 'UART parity bits'],
+        ['Stop bits', 'UART stop bits'],
+        ['Warnings', 'Warnings'],
     ]
 
     def putx(self, rxtx, data):
@@ -184,7 +188,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'GET DATA BITS'
 
         self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
-        self.putg([0, ['Start bit', 'Start', 'S']])
+        self.putg([1, ['Start bit', 'Start', 'S']])
 
     def get_data_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the desired data bit.
@@ -248,11 +252,11 @@ class Decoder(srd.Decoder):
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.databyte[rxtx], self.options['num_data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
-            self.putg([0, ['Parity bit', 'Parity', 'P']])
+            self.putg([2, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
-            self.putg([0, ['Parity error', 'Parity err', 'PE']])
+            self.putg([4, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
@@ -267,12 +271,13 @@ class Decoder(srd.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
             self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
+            self.putg([4, ['Frame error', 'Frame err', 'FE']])
             # TODO: Abort? Ignore the frame? Other?
 
         self.state[rxtx] = 'WAIT FOR START BIT'
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.putg([0, ['Stop bit', 'Stop', 'T']])
+        self.putg([3, ['Stop bit', 'Stop', 'T']])
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
