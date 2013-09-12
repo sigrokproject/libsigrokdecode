@@ -48,9 +48,10 @@ class Decoder(srd.Decoder):
         {'id': 'mosi', 'name': 'MOSI',
          'desc': 'SPI MOSI line (Master out, slave in)'},
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
-        {'id': 'cs', 'name': 'CS#', 'desc': 'SPI CS (chip select) line'},
     ]
-    optional_probes = [] # TODO
+    optional_probes = [
+        {'id': 'cs', 'name': 'CS#', 'desc': 'SPI chip-select line'},
+    ]
     options = {
         'cs_polarity': ['CS# polarity', 'active-low'],
         'cpol': ['Clock polarity', 0],
@@ -96,10 +97,11 @@ class Decoder(srd.Decoder):
         # If this is the first bit, save its sample number.
         if self.bitcount == 0:
             self.startsample = self.samplenum
-            active_low = (self.options['cs_polarity'] == 'active-low')
-            deasserted = cs if active_low else not cs
-            if deasserted:
-                self.cs_was_deasserted_during_data_word = 1
+            if self.have_cs:
+                active_low = (self.options['cs_polarity'] == 'active-low')
+                deasserted = cs if active_low else not cs
+                if deasserted:
+                    self.cs_was_deasserted_during_data_word = 1
 
         ws = self.options['wordsize']
 
@@ -130,19 +132,19 @@ class Decoder(srd.Decoder):
             self.putw([3, ['CS# was deasserted during this data word!']])
 
         # Reset decoder state.
-        self.mosidata = 0
-        self.misodata = 0
-        self.bitcount = 0
+        self.mosidata = self.misodata = self.bitcount = 0
 
         # Keep stats for summary.
         self.bytesreceived += 1
 
     def find_clk_edge(self, miso, mosi, sck, cs):
-        if self.oldcs != cs:
+        if self.have_cs and self.oldcs != cs:
             # Send all CS# pin value changes.
             self.put(self.samplenum, self.samplenum, self.out_proto,
                      ['CS-CHANGE', self.oldcs, cs])
             self.oldcs = cs
+            # Reset decoder state when CS# changes (and the CS# pin is used).
+            self.mosidata = self.misodata = self.bitcount= 0
 
         # Ignore sample if the clock pin hasn't changed.
         if sck == self.oldsck:
@@ -172,6 +174,7 @@ class Decoder(srd.Decoder):
             if self.oldpins == pins:
                 continue
             self.oldpins, (miso, mosi, sck, cs) = pins, pins
+            self.have_cs = (cs in (0, 1))
 
             # State machine.
             if self.state == 'IDLE':
