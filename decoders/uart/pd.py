@@ -254,7 +254,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'WAIT FOR START BIT'
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.putg([ANN_ASCII, ['Stop bit', 'Stop', 'P']])
+        self.putg([ANN_ASCII, ['Stop bit', 'Stop', 'T']])
 
     def decode(self, ss, es, data):
         # TODO: Either RX or TX could be omitted (optional probe).
