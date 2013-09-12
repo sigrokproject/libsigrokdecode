@@ -23,6 +23,26 @@
 
 import sigrokdecode as srd
 
+'''
+Protocol output format:
+
+SPI packet:
+[<cmd>, <data1>, <data2>]
+
+Commands:
+ - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
+   The data is _usually_ 8 bits (but can also be fewer or more bits).
+   Both data items are Python numbers, not strings.
+ - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
+   Both data items are Python numbers (0/1), not strings.
+
+Examples:
+ ['CS-CHANGE', 1, 0]
+ ['DATA', 0xff, 0x3a]
+ ['DATA', 0x65, 0x00]
+ ['CS-CHANGE', 0, 1]
+'''
+
 # Key: (CPOL, CPHA). Value: SPI mode.
 # Clock polarity (CPOL) = 0/1: Clock is low/high when inactive.
 # Clock phase (CPHA) = 0/1: Data is valid on the leading/trailing clock edge.

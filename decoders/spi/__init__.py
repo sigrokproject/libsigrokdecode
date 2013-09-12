@@ -21,27 +21,13 @@
 '''
 Serial Peripheral Interface protocol decoder.
 
-Details:
-TODO
+This protocol decoder supports synchronous SPI(-like) protocols with a
+clock line, a MISO and MOSI line for data transfer in two directions,
+and an optional CS# pin.
 
-Protocol output format:
-
-SPI packet:
-[<cmd>, <data1>, <data2>]
-
-Commands:
- - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
-   The data is _usually_ 8 bits (but can also be fewer or more bits).
-   Both data items are Python numbers, not strings.
- - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
-   Both data items are Python numbers (0/1), not strings.
-
-Examples:
- ['CS-CHANGE', 1, 0]
- ['DATA', 0xff, 0x3a]
- ['DATA', 0x65, 0x00]
- ['CS-CHANGE', 0, 1]
-
+If CS# is supplied, data is only decoded when CS# is asserted (clock
+transitions where CS# is not asserted are ignored). If CS# is not supplied,
+data is decoded on every clock transition (depending on SPI mode).
 '''
 
 from .pd import *
