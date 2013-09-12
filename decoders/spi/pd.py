@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -33,9 +33,6 @@ spi_mode = {
     (1, 1): 3, # Mode 3
 }
 
-# Annotation formats
-ANN_HEX = 0
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'spi'
@@ -60,9 +57,11 @@ class Decoder(srd.Decoder):
         'cpha': ['Clock phase', 0],
         'bitorder': ['Bit order within the SPI data', 'msb-first'],
         'wordsize': ['Word size of SPI data', 8], # 1-64?
+        'format': ['Data format', 'hex'],
     }
     annotations = [
-        ['Hex', 'SPI data bytes in hex format'],
+        ['Data', 'SPI data'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self):
@@ -148,12 +147,12 @@ class Decoder(srd.Decoder):
             self.put(self.start_sample, self.samplenum, self.out_proto,
                      ['DATA', self.mosidata, self.misodata])
             self.put(self.start_sample, self.samplenum, self.out_ann,
-                     [ANN_HEX, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
+                     [0, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
                      self.misodata)]])
 
             if self.cs_was_deasserted_during_data_word:
                 self.put(self.start_sample, self.samplenum, self.out_ann,
-                         [ANN_HEX, ['WARNING: CS# was deasserted during this '
+                         [1, ['CS# was deasserted during this '
                          'SPI data byte!']])
 
             # Reset decoder state.
