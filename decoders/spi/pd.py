@@ -70,6 +70,7 @@ class Decoder(srd.Decoder):
         self.mosidata = 0
         self.misodata = 0
         self.bytesreceived = 0
+        self.startsample = -1
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
         self.oldcs = -1
@@ -81,6 +82,12 @@ class Decoder(srd.Decoder):
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
+
+    def putpw(self, data):
+        self.put(self.startsample, self.samplenum, self.out_proto, data)
+
+    def putw(self, data):
+        self.put(self.startsample, self.samplenum, self.out_ann, data)
 
     def decode(self, ss, es, data):
         # TODO: Either MISO or MOSI could be optional. CS# is optional.
@@ -95,8 +102,6 @@ class Decoder(srd.Decoder):
                 # Send all CS# pin value changes.
                 self.put(self.samplenum, self.samplenum, self.out_proto,
                          ['CS-CHANGE', self.oldcs, cs])
-                self.put(self.samplenum, self.samplenum, self.out_ann,
-                         [0, ['CS-CHANGE: %d->%d' % (self.oldcs, cs)]])
                 self.oldcs = cs
 
             # Ignore sample if the clock pin hasn't changed.
@@ -118,7 +123,7 @@ class Decoder(srd.Decoder):
 
             # If this is the first bit, save its sample number.
             if self.bitcount == 0:
-                self.start_sample = self.samplenum
+                self.startsample = self.samplenum
                 active_low = (self.options['cs_polarity'] == 'active-low')
                 deasserted = cs if active_low else not cs
                 if deasserted:
@@ -144,16 +149,12 @@ class Decoder(srd.Decoder):
             if self.bitcount != ws:
                 continue
 
-            self.put(self.start_sample, self.samplenum, self.out_proto,
-                     ['DATA', self.mosidata, self.misodata])
-            self.put(self.start_sample, self.samplenum, self.out_ann,
-                     [0, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
-                     self.misodata)]])
+            self.putpw(['DATA', self.mosidata, self.misodata])
+            self.putw([0, ['MOSI: 0x%02x, MISO: 0x%02x' % (self.mosidata,
+                           self.misodata)]])
 
             if self.cs_was_deasserted_during_data_word:
-                self.put(self.start_sample, self.samplenum, self.out_ann,
-                         [1, ['CS# was deasserted during this '
-                         'SPI data byte!']])
+                self.putw([1, ['CS# was deasserted during this data word!']])
 
             # Reset decoder state.
             self.mosidata = 0
