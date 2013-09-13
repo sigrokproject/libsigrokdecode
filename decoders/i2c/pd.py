@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2010-2011 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2010-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -32,22 +32,17 @@
 
 import sigrokdecode as srd
 
-# Annotation feed formats
-ANN_SHIFTED = 0
-ANN_SHIFTED_SHORT = 1
-ANN_RAW = 2
-
-# Values are verbose and short annotation, respectively.
+# CMD: [annotation-type-index, long annotation, short annotation]
 proto = {
-    'START':           ['START',         'S'],
-    'START REPEAT':    ['START REPEAT',  'Sr'],
-    'STOP':            ['STOP',          'P'],
-    'ACK':             ['ACK',           'A'],
-    'NACK':            ['NACK',          'N'],
-    'ADDRESS READ':    ['ADDRESS READ',  'AR'],
-    'ADDRESS WRITE':   ['ADDRESS WRITE', 'AW'],
-    'DATA READ':       ['DATA READ',     'DR'],
-    'DATA WRITE':      ['DATA WRITE',    'DW'],
+    'START':           [0, 'Start',         'S'],
+    'START REPEAT':    [1, 'Start repeat',  'Sr'],
+    'STOP':            [2, 'Stop',          'P'],
+    'ACK':             [3, 'ACK',           'A'],
+    'NACK':            [4, 'NACK',          'N'],
+    'ADDRESS READ':    [5, 'Address read',  'AR'],
+    'ADDRESS WRITE':   [6, 'Address write', 'AW'],
+    'DATA READ':       [7, 'Data read',     'DR'],
+    'DATA WRITE':      [8, 'Data write',    'DW'],
 }
 
 class Decoder(srd.Decoder):
@@ -66,16 +61,19 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {
         'addressing': ['Slave addressing (in bits)', 7], # 7 or 10
+        'address_format': ['Displayed slave address format', 'shifted'],
     }
     annotations = [
-        # ANN_SHIFTED
-        ['7-bit shifted hex',
-         'Read/write bit shifted out from the 8-bit I2C slave address'],
-        # ANN_SHIFTED_SHORT
-        ['7-bit shifted hex (short)',
-         'Read/write bit shifted out from the 8-bit I2C slave address'],
-        # ANN_RAW
-        ['Raw hex', 'Unaltered raw data'],
+        ['Start', 'Start condition'],
+        ['Repeat start', 'Repeat start condition'],
+        ['Stop', 'Stop condition'],
+        ['ACK', 'ACK'],
+        ['NACK', 'NACK'],
+        ['Address read', 'Address read'],
+        ['Address write', 'Address write'],
+        ['Data read', 'Data read'],
+        ['Data write', 'Data write'],
+        ['Warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -88,7 +86,7 @@ class Decoder(srd.Decoder):
         self.state = 'FIND START'
         self.oldscl = 1
         self.oldsda = 1
-        self.oldpins = (1, 1)
+        self.oldpins = [1, 1]
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
@@ -96,6 +94,12 @@ class Decoder(srd.Decoder):
 
     def report(self):
         pass
+
+    def putx(self, data):
+        self.put(self.startsample, self.samplenum, self.out_ann, data)
+
+    def putp(self, data):
+        self.put(self.startsample, self.samplenum, self.out_proto, data)
 
     def is_start_condition(self, scl, sda):
         # START condition (S): SDA = falling, SCL = high
@@ -117,12 +121,9 @@ class Decoder(srd.Decoder):
 
     def found_start(self, scl, sda):
         self.startsample = self.samplenum
-
         cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
-        self.put(self.out_proto, [cmd, None])
-        self.put(self.out_ann, [ANN_SHIFTED, [proto[cmd][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[cmd][1]]])
-
+        self.putp([cmd, None])
+        self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND ADDRESS'
         self.bitcount = self.databyte = 0
         self.is_repeat_start = 1
@@ -145,16 +146,12 @@ class Decoder(srd.Decoder):
         # We triggered on the ACK/NACK bit, but won't report that until later.
         self.startsample -= 1
 
-        # Send raw output annotation before we start shifting out
-        # read/write and ACK/NACK bits.
-        self.put(self.out_ann, [ANN_RAW, ['0x%.2x' % self.databyte]])
-
+        d = self.databyte
         if self.state == 'FIND ADDRESS':
             # The READ/WRITE bit is only in address bytes, not data bytes.
             self.wr = 0 if (self.databyte & 1) else 1
-            d = self.databyte >> 1
-        elif self.state == 'FIND DATA':
-            d = self.databyte
+            if self.options['address_format'] == 'shifted':
+                d = d >> 1
 
         if self.state == 'FIND ADDRESS' and self.wr == 1:
             cmd = 'ADDRESS WRITE'
@@ -165,9 +162,9 @@ class Decoder(srd.Decoder):
         elif self.state == 'FIND DATA' and self.wr == 0:
             cmd = 'DATA READ'
 
-        self.put(self.out_proto, [cmd, d])
-        self.put(self.out_ann, [ANN_SHIFTED, [proto[cmd][0], '0x%02x' % d]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[cmd][1], '0x%02x' % d]])
+        self.putp([cmd, d])
+        self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
+                  '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
 
         # Done with this packet.
         self.startsample = -1
@@ -176,27 +173,21 @@ class Decoder(srd.Decoder):
 
     def get_ack(self, scl, sda):
         self.startsample = self.samplenum
-        ack_bit = 'NACK' if (sda == 1) else 'ACK'
-        self.put(self.out_proto, [ack_bit, None])
-        self.put(self.out_ann, [ANN_SHIFTED, [proto[ack_bit][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto[ack_bit][1]]])
+        cmd = 'NACK' if (sda == 1) else 'ACK'
+        self.putp([cmd, None])
+        self.putx([proto[cmd][0], proto[cmd][1:]])
         # There could be multiple data bytes in a row, so either find
         # another data byte or a STOP condition next.
         self.state = 'FIND DATA'
 
     def found_stop(self, scl, sda):
         self.startsample = self.samplenum
-        self.put(self.out_proto, ['STOP', None])
-        self.put(self.out_ann, [ANN_SHIFTED, [proto['STOP'][0]]])
-        self.put(self.out_ann, [ANN_SHIFTED_SHORT, [proto['STOP'][1]]])
-
+        cmd = 'STOP'
+        self.putp([cmd, None])
+        self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND START'
         self.is_repeat_start = 0
         self.wr = -1
-
-    def put(self, output_id, data):
-        # Inject sample range into the call up to sigrok.
-        super(Decoder, self).put(self.startsample, self.samplenum, output_id, data)
 
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
