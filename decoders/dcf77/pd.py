@@ -246,12 +246,9 @@ class Decoder(srd.Decoder):
                 # 2000ms distance to the last one, this edge marks the
                 # beginning of a new minute (and DCF77 bit 0 of that minute).
                 if len_edges_ms in range(1600, 2400 + 1):
-                    self.put(ss, es, self.out_ann, [0, ['New minute starts']])
                     self.bitcount = 0
                     self.bit_start_old = self.bit_start
                     self.dcf77_bitnumber_is_known = 1
-                    # Don't switch to 'GET BIT' state this time.
-                    continue
 
                 self.bit_start_old = self.bit_start
                 self.state = 'GET BIT'
