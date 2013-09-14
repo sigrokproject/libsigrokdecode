@@ -78,7 +78,6 @@ class Decoder(srd.Decoder):
     ]
     optional_probes = []
     options = {
-        'addressing': ['Slave addressing (in bits)', 7], # 7 or 10
         'address_format': ['Displayed slave address format', 'shifted'],
     }
     annotations = [
