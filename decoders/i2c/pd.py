@@ -21,14 +21,9 @@
 # I2C protocol decoder
 
 # TODO: Look into arbitration, collision detection, clock synchronisation, etc.
-# TODO: Handle clock stretching.
-# TODO: Handle combined messages / repeated START.
-# TODO: Implement support for 7bit and 10bit slave addresses.
+# TODO: Implement support for 10bit slave addresses.
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
-# TODO: I2C address of slaves.
-# TODO: Handle multiple different I2C devices on same bus
-#       -> we need to decode multiple protocols at the same time.
 
 import sigrokdecode as srd
 
