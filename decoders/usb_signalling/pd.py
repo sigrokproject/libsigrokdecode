@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -77,6 +77,12 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
+    def putp(self, data):
+        self.put(self.samplenum, self.samplenum, self.out_proto, data)
+
+    def putx(self, data):
+        self.put(self.samplenum, self.samplenum, self.out_ann, data)
+
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
 
@@ -95,8 +101,8 @@ class Decoder(srd.Decoder):
             elif self.options['signalling'] == 'full-speed':
                 sym = symbols_fs[dp, dm]
 
-            self.put(0, 0, self.out_ann, [0, [sym]])
-            self.put(0, 0, self.out_proto, ['SYM', sym])
+            self.putx([0, [sym]])
+            self.putp(['SYM', sym])
 
             # Wait for a symbol change (i.e., change in D+/D- lines).
             if sym == self.sym:
@@ -105,7 +111,7 @@ class Decoder(srd.Decoder):
             ## # Debug code:
             ## self.syms.append(sym + ' ')
             ## if len(self.syms) == 16:
-            ##     self.put(0, 0, self.out_ann, [0, [''.join(self.syms)]])
+            ##     self.putx([0, [''.join(self.syms)]])
             ##     self.syms = []
             # continue
 
@@ -122,16 +128,15 @@ class Decoder(srd.Decoder):
             if self.sym == 'SE0':
                 if bitcount == 1:
                     # End-Of-Packet (EOP)
-                    # self.put(0, 0, self.out_ann,
-                    #          [0, [packet_decode(self.packet), self.packet]])
+                    # self.putx([0, [packet_decode(self.packet), self.packet]])
                     if self.packet != '': # FIXME?
-                        self.put(0, 0, self.out_ann, [0, ['PACKET: %s' % self.packet]])
-                        self.put(0, 0, self.out_proto, ['PACKET', self.packet])
+                        self.putx([0, ['PACKET: %s' % self.packet]])
+                        self.putp(['PACKET', self.packet])
                 else:
                     # Longer than EOP, assume reset.
-                    self.put(0, 0, self.out_ann, [0, ['RESET']])
-                    self.put(0, 0, self.out_proto, ['RESET', None])
-                # self.put(0, 0, self.out_ann, [0, [self.packet]])
+                    self.putx([0, ['RESET']])
+                    self.putp(['RESET', None])
+                # self.putx([0, [self.packet]])
                 self.scount = 0
                 self.sym = sym
                 self.packet = ''
@@ -144,8 +149,8 @@ class Decoder(srd.Decoder):
             if bitcount < 6 and sym != 'SE0':
                 self.packet += '0'
             elif bitcount > 6:
-                self.put(0, 0, self.out_ann, [0, ['BIT STUFF ERROR']])
-                self.put(0, 0, self.out_proto, ['BIT STUFF ERROR', None])
+                self.putx([0, ['BIT STUFF ERROR']])
+                self.putp(['BIT STUFF ERROR', None])
 
             self.scount = 0
             self.sym = sym
