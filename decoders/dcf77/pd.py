@@ -44,8 +44,26 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['Text', 'Human-readable text'],
-        ['Warnings', 'Human-readable warnings'],
+        ['start_of_minute', 'Start of minute'],
+        ['special_bits', 'Special bits (civil warnings, weather forecast)'],
+        ['call_bit', 'Call bit'],
+        ['summer_time', 'Summer time announcement'],
+        ['cest', 'CEST bit'],
+        ['cet', 'CET bit'],
+        ['leap_second', 'Leap second bit'],
+        ['start_of_time', 'Start of encoded time'],
+        ['minute', 'Minute'],
+        ['minute_parity', 'Minute parity bit'],
+        ['hour', 'Hour'],
+        ['hour_parity', 'Hour parity bit'],
+        ['day', 'Day of month'],
+        ['day_of_week', 'Day of week'],
+        ['month', 'Month'],
+        ['year', 'Year'],
+        ['date_parity', 'Date parity bit'],
+        ['raw_bits', 'Raw bits'],
+        ['unknown_bits', 'Unknown bits'],
+        ['warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -80,7 +98,7 @@ class Decoder(srd.Decoder):
         # 0..58 bits it is (because we haven't seen a 'new minute' marker yet).
         # Otherwise, use 'DCF77 bit x: val'.
         s = '' if self.dcf77_bitnumber_is_known else 'Unknown '
-        self.putx([0, ['%sDCF77 bit %d: %d' % (s, c, bit)]])
+        self.putx([18, ['%sDCF77 bit %d: %d' % (s, c, bit)]])
 
         # If we're not sure yet which of the 0..58 DCF77 bits we have, return.
         # We don't want to decode bogus data.
@@ -93,7 +111,7 @@ class Decoder(srd.Decoder):
             if bit == 0:
                 self.putx([0, ['Start of minute (always 0)']])
             else:
-                self.putx([0, ['ERROR: Start of minute != 0']])
+                self.putx([19, ['Start of minute != 0']])
         elif c in range(1, 14 + 1):
             # Special bits (civil warnings, weather forecast): DCF77 bits 1-14.
             if c == 1:
@@ -101,29 +119,29 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 1))
             if c == 14:
-                self.putx([0, ['Special bits: %s' % bin(self.tmp)]])
+                self.putx([1, ['Special bits: %s' % bin(self.tmp)]])
         elif c == 15:
             s = '' if (bit == 1) else 'not '
-            self.putx([0, ['Call bit is %sset' % s]])
+            self.putx([2, ['Call bit is %sset' % s]])
             # TODO: Previously this bit indicated use of the backup antenna.
         elif c == 16:
             s = '' if (bit == 1) else 'not '
-            self.putx([0, ['Summer time announcement %sactive' % s]])
+            self.putx([3, ['Summer time announcement %sactive' % s]])
         elif c == 17:
             s = '' if (bit == 1) else 'not '
-            self.putx([0, ['CEST is %sin effect' % s]])
+            self.putx([4, ['CEST is %sin effect' % s]])
         elif c == 18:
             s = '' if (bit == 1) else 'not '
-            self.putx([0, ['CET is %sin effect' % s]])
+            self.putx([5, ['CET is %sin effect' % s]])
         elif c == 19:
             s = '' if (bit == 1) else 'not '
-            self.putx([0, ['Leap second announcement %sactive' % s]])
+            self.putx([6, ['Leap second announcement %sactive' % s]])
         elif c == 20:
             # Start of encoded time: DCF bit 20.
             if bit == 1:
-                self.putx([0, ['Start of encoded time (always 1)']])
+                self.putx([7, ['Start of encoded time (always 1)']])
             else:
-                self.putx([0, ['ERROR: Start of encoded time != 1']])
+                self.putx([19, ['ERROR: Start of encoded time != 1']])
         elif c in range(21, 27 + 1):
             # Minutes (0-59): DCF77 bits 21-27 (BCD format).
             if c == 21:
@@ -131,13 +149,13 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 21))
             if c == 27:
-                self.putx([0, ['Minutes: %d' % bcd2int(self.tmp)]])
+                self.putx([8, ['Minutes: %d' % bcd2int(self.tmp)]])
         elif c == 28:
             # Even parity over minute bits (21-28): DCF77 bit 28.
             self.tmp |= (bit << (c - 21))
             parity = bin(self.tmp).count('1')
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
-            self.putx([0, ['Minute parity: %s' % s]])
+            self.putx([9, ['Minute parity: %s' % s]])
         elif c in range(29, 34 + 1):
             # Hours (0-23): DCF77 bits 29-34 (BCD format).
             if c == 29:
@@ -145,13 +163,13 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 29))
             if c == 34:
-                self.putx([0, ['Hours: %d' % bcd2int(self.tmp)]])
+                self.putx([10, ['Hours: %d' % bcd2int(self.tmp)]])
         elif c == 35:
             # Even parity over hour bits (29-35): DCF77 bit 35.
             self.tmp |= (bit << (c - 29))
             parity = bin(self.tmp).count('1')
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
-            self.putx([0, ['Hour parity: %s' % s]])
+            self.putx([11, ['Hour parity: %s' % s]])
         elif c in range(36, 41 + 1):
             # Day of month (1-31): DCF77 bits 36-41 (BCD format).
             if c == 36:
@@ -159,7 +177,7 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 36))
             if c == 41:
-                self.putx([0, ['Day: %d' % bcd2int(self.tmp)]])
+                self.putx([12, ['Day: %d' % bcd2int(self.tmp)]])
         elif c in range(42, 44 + 1):
             # Day of week (1-7): DCF77 bits 42-44 (BCD format).
             # A value of 1 means Monday, 7 means Sunday.
@@ -170,7 +188,7 @@ class Decoder(srd.Decoder):
             if c == 44:
                 d = bcd2int(self.tmp)
                 dn = calendar.day_name[d - 1] # day_name[0] == Monday
-                self.putx([0, ['Day of week: %d (%s)' % (d, dn)]])
+                self.putx([13, ['Day of week: %d (%s)' % (d, dn)]])
         elif c in range(45, 49 + 1):
             # Month (1-12): DCF77 bits 45-49 (BCD format).
             if c == 45:
@@ -180,7 +198,7 @@ class Decoder(srd.Decoder):
             if c == 49:
                 m = bcd2int(self.tmp)
                 mn = calendar.month_name[m] # month_name[1] == January
-                self.putx([0, ['Month: %d (%s)' % (m, mn)]])
+                self.putx([14, ['Month: %d (%s)' % (m, mn)]])
         elif c in range(50, 57 + 1):
             # Year (0-99): DCF77 bits 50-57 (BCD format).
             if c == 50:
@@ -188,13 +206,13 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 50))
             if c == 57:
-                self.putx([0, ['Year: %d' % bcd2int(self.tmp)]])
+                self.putx([15, ['Year: %d' % bcd2int(self.tmp)]])
         elif c == 58:
             # Even parity over date bits (36-58): DCF77 bit 58.
             self.tmp |= (bit << (c - 50))
             parity = bin(self.tmp).count('1')
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
-            self.putx([0, ['Date parity: %s' % s]])
+            self.putx([16, ['Date parity: %s' % s]])
         else:
             raise Exception('Invalid DCF77 bit: %d' % c)
 
