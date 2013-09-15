@@ -69,9 +69,7 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.oldval = None
         self.samplenum = 0
-        self.bit_start = 0
-        self.bit_start_old = 0
-        self.bit_end = 0
+        self.ss_bit = self.ss_bit_old = self.es_bit = 0
         self.bitcount = 0 # Counter for the DCF77 bits (0..58)
         self.dcf77_bitnumber_is_known = 0
 
@@ -84,7 +82,7 @@ class Decoder(srd.Decoder):
         pass
 
     def putx(self, data):
-        self.put(self.bit_start, self.bit_end, self.out_ann, data)
+        self.put(self.ss_bit, self.es_bit, self.out_ann, data)
 
     # TODO: Which range to use? Only the 100ms/200ms or full second?
     def handle_dcf77_bit(self, bit):
@@ -228,10 +226,10 @@ class Decoder(srd.Decoder):
                     continue
 
                 # Save the sample number where the DCF77 bit begins.
-                self.bit_start = self.samplenum
+                self.ss_bit = self.samplenum
 
                 # Calculate the length (in ms) between two rising edges.
-                len_edges = self.bit_start - self.bit_start_old
+                len_edges = self.ss_bit - self.ss_bit_old
                 len_edges_ms = int((len_edges / self.samplerate) * 1000)
 
                 # The time between two rising edges is usually around 1000ms.
@@ -242,10 +240,10 @@ class Decoder(srd.Decoder):
                 # beginning of a new minute (and DCF77 bit 0 of that minute).
                 if len_edges_ms in range(1600, 2400 + 1):
                     self.bitcount = 0
-                    self.bit_start_old = self.bit_start
+                    self.ss_bit_old = self.ss_bit
                     self.dcf77_bitnumber_is_known = 1
 
-                self.bit_start_old = self.bit_start
+                self.ss_bit_old = self.ss_bit
                 self.state = 'GET BIT'
 
             elif self.state == 'GET BIT':
@@ -255,10 +253,10 @@ class Decoder(srd.Decoder):
                     continue
 
                 # Save the sample number where the DCF77 bit ends.
-                self.bit_end = self.samplenum
+                self.es_bit = self.samplenum
 
                 # Calculate the length (in ms) of the current high period.
-                len_high = self.samplenum - self.bit_start
+                len_high = self.samplenum - self.ss_bit
                 len_high_ms = int((len_high / self.samplerate) * 1000)
 
                 # If the high signal was 100ms long, that encodes a 0 bit.
