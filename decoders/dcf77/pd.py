@@ -69,7 +69,7 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.oldval = None
         self.samplenum = 0
-        self.ss_bit = self.ss_bit_old = self.es_bit = 0
+        self.ss_bit = self.ss_bit_old = self.es_bit = self.ss_block = 0
         self.bitcount = 0 # Counter for the DCF77 bits (0..58)
         self.dcf77_bitnumber_is_known = 0
 
@@ -82,7 +82,12 @@ class Decoder(srd.Decoder):
         pass
 
     def putx(self, data):
+        # Annotation for a single DCF77 bit.
         self.put(self.ss_bit, self.es_bit, self.out_ann, data)
+
+    def putb(self, data):
+        # Annotation for a multi-bit DCF77 field.
+        self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     # TODO: Which range to use? Only the 100ms/200ms or full second?
     def handle_dcf77_bit(self, bit):
@@ -111,10 +116,11 @@ class Decoder(srd.Decoder):
             # Special bits (civil warnings, weather forecast): DCF77 bits 1-14.
             if c == 1:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 1))
             if c == 14:
-                self.putx([1, ['Special bits: %s' % bin(self.tmp)]])
+                self.putb([1, ['Special bits: %s' % bin(self.tmp)]])
         elif c == 15:
             s = '' if (bit == 1) else 'not '
             self.putx([2, ['Call bit is %sset' % s]])
@@ -141,10 +147,11 @@ class Decoder(srd.Decoder):
             # Minutes (0-59): DCF77 bits 21-27 (BCD format).
             if c == 21:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 21))
             if c == 27:
-                self.putx([8, ['Minutes: %d' % bcd2int(self.tmp)]])
+                self.putb([8, ['Minutes: %d' % bcd2int(self.tmp)]])
         elif c == 28:
             # Even parity over minute bits (21-28): DCF77 bit 28.
             self.tmp |= (bit << (c - 21))
@@ -155,10 +162,11 @@ class Decoder(srd.Decoder):
             # Hours (0-23): DCF77 bits 29-34 (BCD format).
             if c == 29:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 29))
             if c == 34:
-                self.putx([10, ['Hours: %d' % bcd2int(self.tmp)]])
+                self.putb([10, ['Hours: %d' % bcd2int(self.tmp)]])
         elif c == 35:
             # Even parity over hour bits (29-35): DCF77 bit 35.
             self.tmp |= (bit << (c - 29))
@@ -169,25 +177,28 @@ class Decoder(srd.Decoder):
             # Day of month (1-31): DCF77 bits 36-41 (BCD format).
             if c == 36:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 36))
             if c == 41:
-                self.putx([12, ['Day: %d' % bcd2int(self.tmp)]])
+                self.putb([12, ['Day: %d' % bcd2int(self.tmp)]])
         elif c in range(42, 44 + 1):
             # Day of week (1-7): DCF77 bits 42-44 (BCD format).
             # A value of 1 means Monday, 7 means Sunday.
             if c == 42:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 42))
             if c == 44:
                 d = bcd2int(self.tmp)
                 dn = calendar.day_name[d - 1] # day_name[0] == Monday
-                self.putx([13, ['Day of week: %d (%s)' % (d, dn)]])
+                self.putb([13, ['Day of week: %d (%s)' % (d, dn)]])
         elif c in range(45, 49 + 1):
             # Month (1-12): DCF77 bits 45-49 (BCD format).
             if c == 45:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 45))
             if c == 49:
@@ -198,10 +209,11 @@ class Decoder(srd.Decoder):
             # Year (0-99): DCF77 bits 50-57 (BCD format).
             if c == 50:
                 self.tmp = bit
+                self.ss_block = self.ss_bit
             else:
                 self.tmp |= (bit << (c - 50))
             if c == 57:
-                self.putx([15, ['Year: %d' % bcd2int(self.tmp)]])
+                self.putb([15, ['Year: %d' % bcd2int(self.tmp)]])
         elif c == 58:
             # Even parity over date bits (36-58): DCF77 bit 58.
             self.tmp |= (bit << (c - 50))
