@@ -39,9 +39,7 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
     ]
-    optional_probes = [
-        {'id': 'pon', 'name': 'PON', 'desc': 'Power on'},
-    ]
+    optional_probes = []
     options = {}
     annotations = [
         ['start_of_minute', 'Start of minute'],
@@ -70,7 +68,6 @@ class Decoder(srd.Decoder):
         self.state = 'WAIT FOR RISING EDGE'
         self.oldpins = None
         self.oldval = None
-        self.oldpon = None
         self.samplenum = 0
         self.bit_start = 0
         self.bit_start_old = 0
@@ -222,27 +219,7 @@ class Decoder(srd.Decoder):
             # Ignore identical samples early on (for performance reasons).
             if self.oldpins == pins:
                 continue
-            self.oldpins, (val, pon) = pins, pins
-
-            # Always remember the old PON state.
-            if self.oldpon != pon:
-                self.oldpon = pon
-
-            # Warn if PON goes low.
-            if self.oldpon == 1 and pon == 0:
-                self.pon_ss = self.samplenum
-                self.put(self.samplenum, self.samplenum, self.out_ann,
-                         [1, ['Warning: PON goes low, DCF77 reception '
-                         'no longer possible']])
-            elif self.oldpon == 0 and pon == 1:
-                self.put(self.samplenum, self.samplenum, self.out_ann,
-                         [0, ['PON goes high, DCF77 reception now possible']])
-                self.put(self.pon_ss, self.samplenum, self.out_ann,
-                         [1, ['Warning: PON low, DCF77 reception disabled']])
-
-            # Ignore samples where PON == 0, they can't contain DCF77 signals.
-            if pon == 0:
-                continue
+            self.oldpins, (val,) = pins, pins
 
             if self.state == 'WAIT FOR RISING EDGE':
                 # Wait until the next rising edge occurs.
