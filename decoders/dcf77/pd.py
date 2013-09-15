@@ -70,6 +70,7 @@ class Decoder(srd.Decoder):
         self.oldval = None
         self.samplenum = 0
         self.ss_bit = self.ss_bit_old = self.es_bit = self.ss_block = 0
+        self.datebits = []
         self.bitcount = 0 # Counter for the DCF77 bits (0..58)
         self.dcf77_bitnumber_is_known = 0
 
@@ -105,6 +106,10 @@ class Decoder(srd.Decoder):
         # We don't want to decode bogus data.
         if not self.dcf77_bitnumber_is_known:
             return
+
+        # Collect bits 36-58, we'll need them for a parity check later.
+        if c in range(36, 58 + 1):
+            self.datebits.append(bit)
 
         # Output specific "decoded" annotations for the respective DCF77 bits.
         if c == 0:
@@ -231,10 +236,10 @@ class Decoder(srd.Decoder):
                 self.putb([15, ['Year: %d' % bcd2int(self.tmp)]])
         elif c == 58:
             # Even parity over date bits (36-58): DCF77 bit 58.
-            self.tmp |= (bit << (c - 50))
-            parity = bin(self.tmp).count('1')
+            parity = self.datebits.count(1)
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
             self.putx([16, ['Date parity: %s' % s, 'DP: %s' %s]])
+            self.datebits = []
         else:
             raise Exception('Invalid DCF77 bit: %d' % c)
 
