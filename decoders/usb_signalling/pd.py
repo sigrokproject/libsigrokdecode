@@ -40,6 +40,11 @@ symbols_fs = {
         (1, 1): 'SE1',
 }
 
+bitrates = {
+    'low-speed': 1500000,   # 1.5Mb/s (+/- 1.5%)
+    'full-speed': 12000000, # 12Mb/s (+/- 0.25%)
+}
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'usb_signalling'
@@ -67,12 +72,15 @@ class Decoder(srd.Decoder):
         self.scount = 0
         self.packet = ''
         self.syms = []
+        self.bitrate = None
+        self.bitwidth = None
         self.oldpins = None
 
     def start(self, metadata):
-        self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_signalling')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_signalling')
+        self.bitrate = bitrates[self.options['signalling']]
+        self.bitwidth = float(metadata['samplerate']) / float(self.bitrate)
 
     def report(self):
         pass
@@ -117,11 +125,7 @@ class Decoder(srd.Decoder):
 
             # How many bits since the last transition?
             if self.packet != '' or self.sym != 'J':
-                if self.options['signalling'] == 'low-speed':
-                    bitrate = 1500000 # 1.5Mb/s (+/- 1.5%)
-                elif self.options['signalling'] == 'full-speed':
-                    bitrate = 12000000 # 12Mb/s (+/- 0.25%)
-                bitcount = int((self.scount - 1) * bitrate / self.samplerate)
+                bitcount = int((self.scount - 1) / self.bitwidth)
             else:
                 bitcount = 0
 
