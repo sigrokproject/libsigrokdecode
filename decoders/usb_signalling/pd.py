@@ -25,19 +25,21 @@ import sigrokdecode as srd
 
 # Low-/full-speed symbols (used as states of our state machine, too).
 # Note: Low-speed J and K are inverted compared to the full-speed J and K!
-symbols_ls = {
+symbols = {
+    'low-speed': {
         # (<dp>, <dm>): <symbol/state>
         (0, 0): 'SE0',
         (1, 0): 'K',
         (0, 1): 'J',
         (1, 1): 'SE1',
-}
-symbols_fs = {
+    },
+    'full-speed': {
         # (<dp>, <dm>): <symbol/state>
         (0, 0): 'SE0',
         (1, 0): 'J',
         (0, 1): 'K',
         (1, 1): 'SE1',
+    },
 }
 
 bitrates = {
@@ -104,10 +106,7 @@ class Decoder(srd.Decoder):
                 continue
             self.oldpins, (dp, dm) = pins, pins
 
-            if self.options['signalling'] == 'low-speed':
-                sym = symbols_ls[dp, dm]
-            elif self.options['signalling'] == 'full-speed':
-                sym = symbols_fs[dp, dm]
+            sym = symbols[self.options['signalling']][dp, dm]
 
             self.putx([0, [sym]])
             self.putp(['SYM', sym])
