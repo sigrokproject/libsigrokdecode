@@ -23,7 +23,7 @@
 
 import sigrokdecode as srd
 
-# Low-/full-speed symbols (used as states of our state machine, too).
+# Low-/full-speed symbols.
 # Note: Low-speed J and K are inverted compared to the full-speed J and K!
 symbols = {
     'low-speed': {
@@ -65,18 +65,22 @@ class Decoder(srd.Decoder):
         'signalling': ['Signalling', 'full-speed'],
     }
     annotations = [
-        ['Text', 'Human-readable text']
+        ['Text', 'Human-readable text'],
     ]
 
     def __init__(self):
-        self.sym = 'J' # The "idle" state is J.
+        self.oldsym = 'J' # The "idle" state is J.
+        self.ss_sop = -1
         self.samplenum = 0
-        self.scount = 0
         self.packet = ''
         self.syms = []
         self.bitrate = None
         self.bitwidth = None
+        self.bitnum = 0
+        self.samplenum_target = None
         self.oldpins = None
+        self.consecutive_ones = 0
+        self.state = 'IDLE'
 
     def start(self, metadata):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_signalling')
@@ -87,74 +91,98 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
-    def putp(self, data):
+    def putpx(self, data):
         self.put(self.samplenum, self.samplenum, self.out_proto, data)
 
     def putx(self, data):
         self.put(self.samplenum, self.samplenum, self.out_ann, data)
 
+    def putpb(self, data):
+        s, halfbit = self.samplenum, int(self.bitwidth / 2)
+        self.put(s - halfbit, s + halfbit, self.out_proto, data)
+
+    def putb(self, data):
+        s, halfbit = self.samplenum, int(self.bitwidth / 2)
+        self.put(s - halfbit, s + halfbit, self.out_ann, data)
+
+    def set_new_target_samplenum(self):
+        bitpos = self.ss_sop + (self.bitwidth / 2)
+        bitpos += self.bitnum * self.bitwidth
+        self.samplenum_target = int(bitpos)
+
+    def wait_for_sop(self, sym):
+        # Wait for a Start of Packet (SOP), i.e. a J->K symbol change.
+        if sym != 'K':
+            self.oldsym = sym
+            return
+        self.ss_sop = self.samplenum
+        self.set_new_target_samplenum()
+        self.putpx(['SOP', None])
+        self.putx([0, ['SOP']])
+        self.state = 'GET BIT'
+
+    def handle_bit(self, sym, b):
+        if self.consecutive_ones == 6 and b == '0':
+            # Stuff bit. Don't add to the packet, reset self.consecutive_ones.
+            self.putb([0, ['SB: %s/%s' % (sym, b)]])
+            self.consecutive_ones = 0
+        else:
+            # Normal bit. Add it to the packet, update self.consecutive_ones.
+            self.putb([0, ['%s/%s' % (sym, b)]])
+            self.packet += b
+            if b == '1':
+                self.consecutive_ones += 1
+            else:
+                self.consecutive_ones = 0
+
+    def get_eop(self, sym):
+        # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
+        self.syms.append(sym)
+        self.putpb(['SYM', sym])
+        self.putb([0, ['%s' % sym]])
+        self.bitnum += 1
+        self.set_new_target_samplenum()
+        self.oldsym = sym
+        if self.syms[-2:] == ['SE0', 'J']:
+            # Got an EOP, i.e. we now have a full packet.
+            self.putpb(['PACKET', self.packet])
+            self.putb([0, ['PACKET: %s' % self.packet]])
+            self.bitnum, self.packet, self.syms, self.state = 0, '', [], 'IDLE'
+            self.consecutive_ones = 0
+
+    def get_bit(self, sym):
+        if sym == 'SE0':
+            # Start of an EOP. Change state, run get_eop() for this bit.
+            self.state = 'GET EOP'
+            self.get_eop(sym)
+            return
+        self.syms.append(sym)
+        self.putpb(['SYM', sym])
+        b = '0' if self.oldsym != sym else '1'
+        self.handle_bit(sym, b)
+        self.bitnum += 1
+        self.set_new_target_samplenum()
+        self.oldsym = sym
+
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
-
-            # Note: self.samplenum is the absolute sample number, whereas
-            # self.scount only counts the number of samples since the
-            # last change in the D+/D- lines.
-            self.scount += 1
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins, (dp, dm) = pins, pins
-
-            sym = symbols[self.options['signalling']][dp, dm]
-
-            self.putx([0, [sym]])
-            self.putp(['SYM', sym])
-
-            # Wait for a symbol change (i.e., change in D+/D- lines).
-            if sym == self.sym:
-                continue
-
-            ## # Debug code:
-            ## self.syms.append(sym + ' ')
-            ## if len(self.syms) == 16:
-            ##     self.putx([0, [''.join(self.syms)]])
-            ##     self.syms = []
-            # continue
-
-            # How many bits since the last transition?
-            if self.packet != '' or self.sym != 'J':
-                bitcount = int((self.scount - 1) / self.bitwidth)
+            # State machine.
+            if self.state == 'IDLE':
+                # Ignore identical samples early on (for performance reasons).
+                if self.oldpins == pins:
+                    continue
+                self.oldpins = pins
+                sym = symbols[self.options['signalling']][tuple(pins)]
+                self.wait_for_sop(sym)
+            elif self.state in ('GET BIT', 'GET EOP'):
+                # Wait until we're in the middle of the desired bit.
+                if self.samplenum < self.samplenum_target:
+                    continue
+                sym = symbols[self.options['signalling']][tuple(pins)]
+                if self.state == 'GET BIT':
+                    self.get_bit(sym)
+                elif self.state == 'GET EOP':
+                    self.get_eop(sym)
             else:
-                bitcount = 0
-
-            if self.sym == 'SE0':
-                if bitcount == 1:
-                    # End-Of-Packet (EOP)
-                    # self.putx([0, [packet_decode(self.packet), self.packet]])
-                    if self.packet != '': # FIXME?
-                        self.putx([0, ['PACKET: %s' % self.packet]])
-                        self.putp(['PACKET', self.packet])
-                else:
-                    # Longer than EOP, assume reset.
-                    self.putx([0, ['RESET']])
-                    self.putp(['RESET', None])
-                # self.putx([0, [self.packet]])
-                self.scount = 0
-                self.sym = sym
-                self.packet = ''
-                continue
-
-            # Add bits to the packet string.
-            self.packet += '1' * bitcount
-
-            # Handle bit stuffing.
-            if bitcount < 6 and sym != 'SE0':
-                self.packet += '0'
-            elif bitcount > 6:
-                self.putx([0, ['BIT STUFF ERROR']])
-                self.putp(['BIT STUFF ERROR', None])
-
-            self.scount = 0
-            self.sym = sym
+                raise Exception('Invalid state: %s' % self.state)
 
