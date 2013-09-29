@@ -75,7 +75,8 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.oldsym = 'J' # The "idle" state is J.
-        self.ss_sop = -1
+        self.ss_sop = None
+        self.ss_block = None
         self.samplenum = 0
         self.packet = ''
         self.syms = []
@@ -92,6 +93,7 @@ class Decoder(srd.Decoder):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_signalling')
         self.bitrate = bitrates[self.options['signalling']]
         self.bitwidth = float(metadata['samplerate']) / float(self.bitrate)
+        self.halfbit = int(self.bitwidth / 2)
 
     def report(self):
         pass
@@ -102,13 +104,21 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.samplenum, self.samplenum, self.out_ann, data)
 
+    def putpm(self, data):
+        s, h = self.samplenum, self.halfbit
+        self.put(self.ss_block - h, self.samplenum + h, self.out_proto, data)
+
+    def putm(self, data):
+        s, h = self.samplenum, self.halfbit
+        self.put(self.ss_block - h, self.samplenum + h, self.out_ann, data)
+
     def putpb(self, data):
-        s, halfbit = self.samplenum, int(self.bitwidth / 2)
-        self.put(s - halfbit, s + halfbit, self.out_proto, data)
+        s, h = self.samplenum, self.halfbit
+        self.put(s - h, s + h, self.out_proto, data)
 
     def putb(self, data):
-        s, halfbit = self.samplenum, int(self.bitwidth / 2)
-        self.put(s - halfbit, s + halfbit, self.out_ann, data)
+        s, h = self.samplenum, self.halfbit
+        self.put(s - h, s + h, self.out_ann, data)
 
     def set_new_target_samplenum(self):
         bitpos = self.ss_sop + (self.bitwidth / 2)
@@ -150,6 +160,8 @@ class Decoder(srd.Decoder):
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
             # Got an EOP, i.e. we now have a full packet.
+            self.putpm(['EOP', None])
+            self.putm([2, ['EOP']])
             self.putpb(['PACKET', self.packet])
             self.putb([5, ['PACKET: %s' % self.packet]])
             self.bitnum, self.packet, self.syms, self.state = 0, '', [], 'IDLE'
@@ -159,6 +171,7 @@ class Decoder(srd.Decoder):
         if sym == 'SE0':
             # Start of an EOP. Change state, run get_eop() for this bit.
             self.state = 'GET EOP'
+            self.ss_block = self.samplenum
             self.get_eop(sym)
             return
         self.syms.append(sym)
