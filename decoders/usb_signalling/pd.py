@@ -65,7 +65,12 @@ class Decoder(srd.Decoder):
         'signalling': ['Signalling', 'full-speed'],
     }
     annotations = [
-        ['Text', 'Human-readable text'],
+        ['symbol', 'Symbol'],
+        ['sop', 'Start of packet (SOP)'],
+        ['eop', 'End of packet (EOP)'],
+        ['bit', 'Bit'],
+        ['stuffbit', 'Stuff bit'],
+        ['packet', 'Packet'],
     ]
 
     def __init__(self):
@@ -118,17 +123,17 @@ class Decoder(srd.Decoder):
         self.ss_sop = self.samplenum
         self.set_new_target_samplenum()
         self.putpx(['SOP', None])
-        self.putx([0, ['SOP']])
+        self.putx([1, ['SOP']])
         self.state = 'GET BIT'
 
     def handle_bit(self, sym, b):
         if self.consecutive_ones == 6 and b == '0':
             # Stuff bit. Don't add to the packet, reset self.consecutive_ones.
-            self.putb([0, ['SB: %s/%s' % (sym, b)]])
+            self.putb([4, ['SB: %s/%s' % (sym, b)]])
             self.consecutive_ones = 0
         else:
             # Normal bit. Add it to the packet, update self.consecutive_ones.
-            self.putb([0, ['%s/%s' % (sym, b)]])
+            self.putb([3, ['%s/%s' % (sym, b)]])
             self.packet += b
             if b == '1':
                 self.consecutive_ones += 1
@@ -146,7 +151,7 @@ class Decoder(srd.Decoder):
         if self.syms[-2:] == ['SE0', 'J']:
             # Got an EOP, i.e. we now have a full packet.
             self.putpb(['PACKET', self.packet])
-            self.putb([0, ['PACKET: %s' % self.packet]])
+            self.putb([5, ['PACKET: %s' % self.packet]])
             self.bitnum, self.packet, self.syms, self.state = 0, '', [], 'IDLE'
             self.consecutive_ones = 0
 
