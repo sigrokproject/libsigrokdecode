@@ -162,8 +162,9 @@ class Decoder(srd.Decoder):
             # Got an EOP, i.e. we now have a full packet.
             self.putpm(['EOP', None])
             self.putm([2, ['EOP']])
-            self.putpb(['PACKET', self.packet])
-            self.putb([5, ['PACKET: %s' % self.packet]])
+            self.ss_block = self.ss_sop
+            self.putpm(['PACKET', self.packet])
+            self.putm([5, ['PACKET: %s' % self.packet]])
             self.bitnum, self.packet, self.syms, self.state = 0, '', [], 'IDLE'
             self.consecutive_ones = 0
 
