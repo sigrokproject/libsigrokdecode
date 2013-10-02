@@ -23,6 +23,32 @@
 
 import sigrokdecode as srd
 
+'''
+Protocol output format:
+
+Packet:
+[<ptype>, <pdata>]
+
+<ptype>, <pdata>:
+ - 'SOP', None
+ - 'SYM', <sym>
+ - 'BIT', <bit>
+ - 'STUFF BIT', None
+ - 'EOP', None
+ - 'PACKET', <packet>
+
+<sym>:
+ - 'J', 'K', 'SE0', or 'SE1'
+
+<bit>:
+ - 0 or 1
+ - Note: Symbols like SE0, SE1, and the J that's part of EOP don't yield 'BIT'.
+
+<packet>:
+ - A string consisting of '1' and '0' characters, e.g. '11010100'.
+ - The packet contains only "real" bits, no stuff bits (and no SOF/EOP).
+'''
+
 # Low-/full-speed symbols.
 # Note: Low-speed J and K are inverted compared to the full-speed J and K!
 symbols = {
@@ -139,10 +165,12 @@ class Decoder(srd.Decoder):
     def handle_bit(self, sym, b):
         if self.consecutive_ones == 6 and b == '0':
             # Stuff bit. Don't add to the packet, reset self.consecutive_ones.
+            self.putpb(['STUFF BIT', None])
             self.putb([4, ['SB: %s/%s' % (sym, b)]])
             self.consecutive_ones = 0
         else:
             # Normal bit. Add it to the packet, update self.consecutive_ones.
+            self.putpb(['BIT', b])
             self.putb([3, ['%s/%s' % (sym, b)]])
             self.packet += b
             if b == '1':
