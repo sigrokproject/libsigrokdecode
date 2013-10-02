@@ -181,7 +181,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/transitioncounter/Makefile
 		 decoders/uart/Makefile
 		 decoders/uart_dump/Makefile
-		 decoders/usb_protocol/Makefile
+		 decoders/usb_packet/Makefile
 		 decoders/usb_signalling/Makefile
 		 decoders/xfp/Makefile
 		])

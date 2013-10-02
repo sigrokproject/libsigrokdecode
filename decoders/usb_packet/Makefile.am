@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-pkgdatadir = $(DECODERS_DIR)/usb_protocol
+pkgdatadir = $(DECODERS_DIR)/usb_packet
 
 dist_pkgdata_DATA = __init__.py pd.py
 

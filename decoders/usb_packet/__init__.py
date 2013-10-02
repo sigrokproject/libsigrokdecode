@@ -19,7 +19,7 @@
 ##
 
 '''
-USB (low-speed and full-speed) protocol decoder.
+USB (low-speed and full-speed) packet protocol decoder.
 
 Protocol layer (USB spec, chapter 8):
 

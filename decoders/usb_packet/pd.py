@@ -19,7 +19,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# USB (low-speed and full-speed) protocol decoder
+# USB (low-speed and full-speed) packet protocol decoder
 
 import sigrokdecode as srd
 
@@ -96,13 +96,13 @@ def packet_decode(packet):
 
 class Decoder(srd.Decoder):
     api_version = 1
-    id = 'usb_protocol'
-    name = 'USB protocol'
-    longname = 'Universal Serial Bus (LS/FS) protocol'
-    desc = 'USB (low-speed and full-speed) serial protocol.'
+    id = 'usb_packet'
+    name = 'USB packet'
+    longname = 'Universal Serial Bus (LS/FS) packet'
+    desc = 'USB (low-speed and full-speed) packet protocol.'
     license = 'gplv2+'
     inputs = ['usb_signalling']
-    outputs = ['usb_protocol']
+    outputs = ['usb_packet']
     probes = []
     optional_probes = []
     options = {
@@ -121,8 +121,8 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_protocol')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_protocol')
+        self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_packet')
+        self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_packet')
 
     def report(self):
         pass

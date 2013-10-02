@@ -49,7 +49,7 @@ SUBDIRS = \
 	transitioncounter \
 	uart \
 	uart_dump \
-	usb_protocol \
+	usb_packet \
 	usb_signalling \
 	xfp
 
