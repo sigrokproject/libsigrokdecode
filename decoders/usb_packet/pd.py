@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -22,6 +22,68 @@
 # USB (low-speed and full-speed) packet protocol decoder
 
 import sigrokdecode as srd
+
+'''
+Protocol output format:
+
+Packet:
+[<ptype>, <pdata>]
+
+<ptype>, <pdata>:
+ - 'SYNC', <sync>
+ - 'PID', <pid>
+ - 'ADDR', <addr>
+ - 'EP', <ep>
+ - 'CRC5', <crc5>
+ - 'CRC16', <crc16>
+ - 'EOP', <eop>
+ - 'FRAMENUM', <framenum>
+ - 'DATABYTE', <databyte>
+ - 'HUBADDR', <hubaddr>
+ - 'SC', <sc>
+ - 'PORT', <port>
+ - 'S', <s>
+ - 'E/U', <e/u>
+ - 'ET', <et>
+ - 'PACKET', [<pcategory>, <pname>, <pinfo>]
+
+<pcategory>, <pname>, <pinfo>:
+ - 'TOKEN', 'OUT', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
+ - 'TOKEN', 'IN', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
+ - 'TOKEN', 'SOF', [<sync>, <pid>, <framenum>, <crc5>, <eop>]
+ - 'TOKEN', 'SETUP', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
+ - 'DATA', 'DATA0', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
+ - 'DATA', 'DATA1', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
+ - 'DATA', 'DATA2', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
+ - 'DATA', 'MDATA', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
+ - 'HANDSHAKE', 'ACK', [<sync>, <pid>, <eop>]
+ - 'HANDSHAKE', 'NACK', [<sync>, <pid>, <eop>]
+ - 'HANDSHAKE', 'STALL', [<sync>, <pid>, <eop>]
+ - 'HANDSHAKE', 'NYET', [<sync>, <pid>, <eop>]
+ - 'SPECIAL', 'PRE', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
+ - 'SPECIAL', 'ERR', [<sync>, <pid>, <eop>]
+ - 'SPECIAL', 'SPLIT',
+   [<sync>, <pid>, <hubaddr>, <sc>, <port>, <s>, <e/u>, <et>, <crc5>, <eop>]
+ - 'SPECIAL', 'PING', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
+ - 'SPECIAL', 'Reserved', None
+
+<sync>: SYNC field bitstring, normally '00000001' (8 chars).
+<pid>: Packet ID bitstring, e.g. '11000011' for DATA0 (8 chars).
+<addr>: Address field number, 0-127 (7 bits).
+<ep>: Endpoint number, 0-15 (4 bits).
+<crc5>: CRC-5 number (5 bits).
+<crc16>: CRC-16 number (16 bits).
+<eop>: End of packet marker. List of symbols, usually ['SE0', 'SE0', 'J'].
+<framenum>: USB (micro)frame number, 0-2047 (11 bits).
+<databyte>: A single data byte, e.g. 0x55.
+<databytes>: List of data bytes, e.g. [0x55, 0xaa, 0x99] (0 - 1024 bytes).
+<hubaddr>: TODO
+<sc>: TODO
+<port>: TODO
+<s>: TODO
+<e/u>: TODO
+<et>: TODO
+'''
 
 # Packet IDs (PIDs).
 # The first 4 bits are the 'packet type' field, the last 4 bits are the
@@ -57,42 +119,22 @@ pids = {
     '00001111': ['Reserved', 'Reserved PID'],
 }
 
+def get_category(pidname):
+    if pidname in ('OUT', 'IN', 'SOF', 'SETUP'):
+        return 'TOKEN'
+    elif pidname in ('DATA0', 'DATA1', 'DATA2', 'MDATA'):
+        return 'DATA'
+    elif pidname in ('ACK', 'NACK', 'STALL', 'NYET'):
+        return 'HANDSHAKE'
+    else:
+        return 'SPECIAL'
+
 def bitstr_to_num(bitstr):
     if not bitstr:
         return 0
     l = list(bitstr)
     l.reverse()
     return int(''.join(l), 2)
-
-def packet_decode(packet):
-    sync = packet[:8]
-    pid = packet[8:16]
-    pid = pids.get(pid, (pid, ''))[0]
-
-    # Remove CRC.
-    if pid in ('OUT', 'IN', 'SOF', 'SETUP'):
-        data = packet[16:-5]
-        if pid == 'SOF':
-            data = str(bitstr_to_num(data))
-        else:
-            dev = bitstr_to_num(data[:7])
-            ep = bitstr_to_num(data[7:])
-            data = 'DEV %d EP %d' % (dev, ep)
-    elif pid in ('DATA0', 'DATA1'):
-        data = packet[16:-16]
-        tmp = ''
-        while data:
-            tmp += '%02x ' % bitstr_to_num(data[:8])
-            data = data[8:]
-        data = tmp
-    else:
-        data = packet[16:]
-
-    # The SYNC pattern for low-speed/full-speed is KJKJKJKK (0001).
-    if sync != '00000001':
-        return 'SYNC INVALID: %s' % sync
-
-    return pid + ' ' + data
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -113,25 +155,152 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self):
-        self.sym = 'J'
         self.samplenum = 0
-        self.scount = 0
-        self.packet = ''
-        self.state = 'IDLE'
+        self.bits = []
+        self.packet = []
+        self.packet_summary = ''
+        self.ss = self.es = None
+        self.ss_packet = self.es_packet = None
+        self.state = 'WAIT FOR SOP'
+
+    def putpb(self, data):
+        self.put(self.ss, self.es, self.out_proto, data)
+
+    def putb(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
+    def putpp(self, data):
+        self.put(self.ss_packet, self.es_packet, self.out_proto, data)
+
+    def putp(self, data):
+        self.put(self.ss_packet, self.es_packet, self.out_ann, data)
 
     def start(self, metadata):
-        self.samplerate = metadata['samplerate']
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_packet')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_packet')
 
     def report(self):
         pass
 
+    def handle_packet(self):
+        packet = ''
+        for (bit, ss, es) in self.bits:
+            packet += bit
+
+        # Bits[0:7]: SYNC
+        sync = packet[:7 + 1]
+        self.ss, self.es = self.bits[0][1], self.bits[7][2]
+        # The SYNC pattern for low-speed/full-speed is KJKJKJKK (00000001).
+        if sync != '00000001':
+            self.putpb(['SYNC ERROR', sync])
+            self.putb([0, ['SYNC ERROR: %s' % sync]])
+        else:
+            self.putpb(['SYNC', sync])
+            self.putb([0, ['SYNC: %s' % sync]])
+        self.packet.append(sync)
+
+        # Bits[8:15]: PID
+        pid = packet[8:15 + 1]
+        pidname = pids.get(pid, (pid, ''))[0]
+        self.ss, self.es = self.bits[8][1], self.bits[15][2]
+        self.putpb(['PID', pidname])
+        self.putb([0, ['PID: %s' % pidname]])
+        self.packet.append(pid)
+        self.packet_summary += pidname
+
+        if pidname in ('OUT', 'IN', 'SOF', 'SETUP', 'PRE', 'PING'):
+            if pidname == 'SOF':
+                # Bits[16:26]: Framenum
+                framenum = bitstr_to_num(packet[16:26 + 1])
+                self.ss, self.es = self.bits[16][1], self.bits[26][2]
+                self.putpb(['FRAMENUM', framenum])
+                self.putb([0, ['Frame: %d' % framenum]])
+                self.packet.append(framenum)
+                self.packet_summary += ' %d' % framenum
+            else:
+                # Bits[16:22]: Addr
+                addr = bitstr_to_num(packet[16:22 + 1])
+                self.ss, self.es = self.bits[16][1], self.bits[22][2]
+                self.putpb(['ADDR', addr])
+                self.putb([0, ['Addr: %d' % addr]])
+                self.packet.append(addr)
+                self.packet_summary += ' ADDR %d' % addr
+
+                # Bits[23:26]: EP
+                ep = bitstr_to_num(packet[23:26 + 1])
+                self.ss, self.es = self.bits[23][1], self.bits[26][2]
+                self.putpb(['EP', ep])
+                self.putb([0, ['EP: %d' % ep]])
+                self.packet.append(ep)
+                self.packet_summary += ' EP %d' % ep
+
+            # Bits[27:31]: CRC5
+            crc5 = bitstr_to_num(packet[27:31 + 1])
+            self.ss, self.es = self.bits[27][1], self.bits[31][2]
+            self.putpb(['CRC5', crc5])
+            self.putb([0, ['CRC5: 0x%02x' % crc5]])
+            self.packet.append(crc5)
+        elif pidname in ('DATA0', 'DATA1', 'DATA2', 'MDATA'):
+            # Bits[16:packetlen-16]: Data
+            data = packet[16:-16]
+            # TODO: len(data) must be a multiple of 8.
+            databytes = []
+            self.packet_summary += ' ['
+            for i in range(0, len(data), 8):
+                db = bitstr_to_num(data[i:i + 8])
+                self.ss, self.es = self.bits[16 + i][1], self.bits[23 + i][2]
+                self.putpb(['DATABYTE', db])
+                self.putb([0, ['Databyte: %02x' % db]])
+                databytes.append(db)
+                self.packet_summary += ' %02x' % db
+                data = data[8:]
+            self.packet_summary += ' ]'
+
+            # Convenience proto output (no annotation) for all bytes together.
+            self.ss, self.es = self.bits[16][1], self.bits[-16][2]
+            self.putpb(['DATABYTES', databytes])
+            self.packet.append(databytes)
+
+            # Bits[packetlen-16:packetlen]: CRC16
+            crc16 = bitstr_to_num(packet[-16:])
+            self.ss, self.es = self.bits[-16][1], self.bits[-1][2]
+            self.putpb(['CRC16', crc16])
+            self.putb([0, ['CRC16: 0x%04x' % crc16]])
+            self.packet.append(crc16)
+        elif pidname in ('ACK', 'NAK', 'STALL', 'NYET', 'ERR'):
+            pass # Nothing to do, these only have SYNC+PID+EOP fields.
+        else:
+            pass # TODO: Handle 'SPLIT' and possibly 'Reserved' packets.
+
+        # Output a (summary of) the whole packet.
+        pcategory, pname, pinfo = get_category(pidname), pidname, self.packet
+        self.putpp(['PACKET', [pcategory, pname, pinfo]])
+        self.putp([0, ['PACKET: %s' % self.packet_summary]])
+
+        self.packet, self.packet_summary = [], ''
+
     def decode(self, ss, es, data):
         (ptype, pdata) = data
 
-        if ptype == 'PACKET':
-            self.put(0, 0, self.out_ann, [0, [packet_decode(pdata)]])
+        # We only care about certain packet types for now.
+        if ptype not in ('SOP', 'BIT', 'EOP'):
+            return
 
-        # TODO.
+        # State machine.
+        if self.state == 'WAIT FOR SOP':
+            if ptype != 'SOP':
+                return
+            self.ss_packet = ss
+            self.state = 'GET BIT'
+        elif self.state == 'GET BIT':
+            if ptype == 'BIT':
+                self.bits.append([pdata, ss, es])
+            elif ptype == 'EOP':
+                self.es_packet = es
+                self.handle_packet()
+                self.bits, self.state = [], 'WAIT FOR SOP'
+            else:
+                pass # TODO: Error
+        else:
+            raise Exception('Invalid state: %s' % self.state)
 
