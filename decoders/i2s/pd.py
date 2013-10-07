@@ -59,6 +59,12 @@ class Decoder(srd.Decoder):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2s')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2s')
 
+    def putpb(self, data):
+        self.put(self.start_sample, self.samplenum, self.out_proto, data)
+
+    def putb(self, data):
+        self.put(self.start_sample, self.samplenum, self.out_ann, data)
+
     def report(self):
 
         # Calculate the sample rate.
@@ -74,7 +80,7 @@ class Decoder(srd.Decoder):
             (self.samplesreceived, self.wordlength, samplerate)
 
     def decode(self, ss, es, data):
-        for samplenum, (sck, ws, sd) in data:
+        for self.samplenum, (sck, ws, sd) in data:
 
             # Ignore sample if the bit clock hasn't changed.
             if sck == self.oldsck:
@@ -94,29 +100,24 @@ class Decoder(srd.Decoder):
             # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
                 self.samplesreceived += 1
-                self.put(self.start_sample, samplenum, self.out_proto,
-                         ['data', self.data])
-                idx = 0 if self.oldws else 1
-                self.put(self.start_sample, samplenum, self.out_ann,
-                         [idx, ['0x%08x', self.data)]])
+                self.putpb(['data', self.data])
+                self.putb([0 if self.oldws else 1, ['0x%08x' % self.data]])
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
-                    self.put(self.start_sample, samplenum, self.out_ann,
-                        [2, ['Received a %d-bit word, when a '
-                        '%d-bit word was expected' % (self.bitcount,
-                        self.wordlength)]])
+                    self.putb([2, ['Received %d-bit word, expected %d-bit '
+                                   'word' % (self.bitcount, self.wordlength)]])
 
                 self.wordlength = self.bitcount
 
             # Reset decoder state.
             self.data = 0
             self.bitcount = 0
-            self.start_sample = samplenum
+            self.start_sample = self.samplenum
 
             # Save the first sample position.
             if self.first_sample == None:
-                self.first_sample = samplenum
+                self.first_sample = self.samplenum
 
             self.oldws = ws
 
