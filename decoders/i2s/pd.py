@@ -22,6 +22,19 @@
 
 import sigrokdecode as srd
 
+'''
+Protocol output format:
+
+Packet:
+[<ptype>, <pdata>]
+
+<ptype>, <pdata>:
+ - 'DATA', [<channel>, <value>]
+
+<channel>: 'L' or 'R'
+<value>: integer
+'''
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2s'
@@ -100,7 +113,7 @@ class Decoder(srd.Decoder):
             # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
                 self.samplesreceived += 1
-                self.putpb(['data', self.data])
+                self.putpb(['DATA', ['L' if self.oldws else 'R', self.data]])
                 self.putb([0 if self.oldws else 1, ['0x%08x' % self.data]])
 
                 # Check that the data word was the correct length.
