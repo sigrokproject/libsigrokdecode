@@ -22,9 +22,6 @@
 
 import sigrokdecode as srd
 
-# Annotation formats
-ANN_HEX = 0
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2s'
@@ -42,7 +39,9 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['Hex', 'Annotations in hex format'],
+        ['left', 'Left channel'],
+        ['right', 'Right channel'],
+        ['warnings', 'Warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -97,14 +96,14 @@ class Decoder(srd.Decoder):
                 self.samplesreceived += 1
                 self.put(self.start_sample, samplenum, self.out_proto,
                          ['data', self.data])
+                idx = 0 if self.oldws else 1
                 self.put(self.start_sample, samplenum, self.out_ann,
-                         [ANN_HEX, ['%s: 0x%08x' % ('L' if self.oldws else 'R',
-                         self.data)]])
+                         [idx, ['0x%08x', self.data)]])
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
                     self.put(self.start_sample, samplenum, self.out_ann,
-                        [ANN_HEX, ['WARNING: Received a %d-bit word, when a '
+                        [2, ['Received a %d-bit word, when a '
                         '%d-bit word was expected' % (self.bitcount,
                         self.wordlength)]])
 
