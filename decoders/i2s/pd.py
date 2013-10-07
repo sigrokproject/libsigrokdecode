@@ -113,8 +113,15 @@ class Decoder(srd.Decoder):
             # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
                 self.samplesreceived += 1
-                self.putpb(['DATA', ['L' if self.oldws else 'R', self.data]])
-                self.putb([0 if self.oldws else 1, ['0x%08x' % self.data]])
+
+                idx = 0 if self.oldws else 1
+                c1 = 'Left channel' if self.oldws else 'Right channel'
+                c2 = 'Left' if self.oldws else 'Right'
+                c3 = 'L' if self.oldws else 'R'
+                v = '%08x' % self.data
+                self.putpb(['DATA', [c3, self.data]])
+                self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
+                                 '%s: %s' % (c3, v), c3]])
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
