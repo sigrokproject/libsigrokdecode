@@ -38,7 +38,7 @@ class Decoder(srd.Decoder):
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power supply pin'},
     ]
     options = {
-        'overdrive': ['Overdrive', 1],
+        'overdrive': ['Overdrive mode', 'no'],
         # Time options (specified in microseconds):
         'cnt_normal_bit': ['Normal mode sample bit time (us)', 15],
         'cnt_normal_slot': ['Normal mode data slot time (us)', 60],
@@ -87,7 +87,7 @@ class Decoder(srd.Decoder):
         self.samplerate = metadata['samplerate']
 
         # Check if samplerate is appropriate.
-        if self.options['overdrive']:
+        if self.options['overdrive'] == 'yes':
             if self.samplerate < 2000000:
                 self.putm([1, ['Sampling rate is too low. Must be above ' +
                                '2MHz for proper overdrive mode decoding.']])
