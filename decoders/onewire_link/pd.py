@@ -39,15 +39,16 @@ class Decoder(srd.Decoder):
     ]
     options = {
         'overdrive': ['Overdrive', 1],
-        # Time options (specified in number of samplerate periods):
-        'cnt_normal_bit': ['Normal mode sample bit time', 0],
-        'cnt_normal_slot': ['Normal mode data slot time', 0],
-        'cnt_normal_presence': ['Normal mode sample presence time', 0],
-        'cnt_normal_reset': ['Normal mode reset time', 0],
-        'cnt_overdrive_bit': ['Overdrive mode sample bit time', 0],
-        'cnt_overdrive_slot': ['Overdrive mode data slot time', 0],
-        'cnt_overdrive_presence': ['Overdrive mode sample presence time', 0],
-        'cnt_overdrive_reset': ['Overdrive mode reset time', 0],
+        # Time options (specified in microseconds):
+        'cnt_normal_bit': ['Normal mode sample bit time (us)', 15],
+        'cnt_normal_slot': ['Normal mode data slot time (us)', 60],
+        'cnt_normal_presence': ['Normal mode sample presence time (us)', 75],
+        'cnt_normal_reset': ['Normal mode reset time (us)', 480],
+        'cnt_overdrive_bit': ['Overdrive mode sample bit time (us)', 2],
+        # 'cnt_overdrive_slot': ['Overdrive mode data slot time (us)', 7.3],
+        'cnt_overdrive_slot': ['Overdrive mode data slot time (us)', 7],
+        'cnt_overdrive_presence': ['Overdrive mode sample presence time (us)', 10],
+        'cnt_overdrive_reset': ['Overdrive mode reset time (us)', 48],
     }
     annotations = [
         ['bit', 'Bit'],
@@ -104,38 +105,23 @@ class Decoder(srd.Decoder):
         # The default 1-Wire time base is 30us. This is used to calculate
         # sampling times.
         samplerate = float(self.samplerate)
-        if self.options['cnt_normal_bit']:
-            self.cnt_normal_bit = self.options['cnt_normal_bit']
-        else:
-            self.cnt_normal_bit = int(samplerate * 0.000015) - 1 # 15ns
-        if self.options['cnt_normal_slot']:
-            self.cnt_normal_slot = self.options['cnt_normal_slot']
-        else:
-            self.cnt_normal_slot = int(samplerate * 0.000060) - 1 # 60ns
-        if self.options['cnt_normal_presence']:
-            self.cnt_normal_presence = self.options['cnt_normal_presence']
-        else:
-            self.cnt_normal_presence = int(samplerate * 0.000075) - 1 # 75ns
-        if self.options['cnt_normal_reset']:
-            self.cnt_normal_reset = self.options['cnt_normal_reset']
-        else:
-            self.cnt_normal_reset = int(samplerate * 0.000480) - 1 # 480ns
-        if self.options['cnt_overdrive_bit']:
-            self.cnt_overdrive_bit = self.options['cnt_overdrive_bit']
-        else:
-            self.cnt_overdrive_bit = int(samplerate * 0.000002) - 1 # 2ns
-        if self.options['cnt_overdrive_slot']:
-            self.cnt_overdrive_slot = self.options['cnt_overdrive_slot']
-        else:
-            self.cnt_overdrive_slot = int(samplerate * 0.0000073) - 1 # 6ns+1.3ns
-        if self.options['cnt_overdrive_presence']:
-            self.cnt_overdrive_presence = self.options['cnt_overdrive_presence']
-        else:
-            self.cnt_overdrive_presence = int(samplerate * 0.000010) - 1 # 10ns
-        if self.options['cnt_overdrive_reset']:
-            self.cnt_overdrive_reset = self.options['cnt_overdrive_reset']
-        else:
-            self.cnt_overdrive_reset = int(samplerate * 0.000048) - 1 # 48ns
+
+        x = float(self.options['cnt_normal_bit']) / 1000000.0
+        self.cnt_normal_bit = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_slot']) / 1000000.0
+        self.cnt_normal_slot = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_presence']) / 1000000.0
+        self.cnt_normal_presence = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_reset']) / 1000000.0
+        self.cnt_normal_reset = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_bit']) / 1000000.0
+        self.cnt_overdrive_bit = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_slot']) / 1000000.0
+        self.cnt_overdrive_slot = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_presence']) / 1000000.0
+        self.cnt_overdrive_presence = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_reset']) / 1000000.0
+        self.cnt_overdrive_reset = int(samplerate * x) - 1
 
         # Organize values into lists.
         self.cnt_bit = [self.cnt_normal_bit, self.cnt_overdrive_bit]
