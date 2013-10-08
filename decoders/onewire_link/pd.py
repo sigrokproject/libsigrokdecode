@@ -50,8 +50,10 @@ class Decoder(srd.Decoder):
         'cnt_overdrive_reset': ['Overdrive mode reset time', 0],
     }
     annotations = [
-        ['Text', 'Human-readable text'],
-        ['Warnings', 'Human-readable warnings'],
+        ['bit', 'Bit'],
+        ['warnings', 'Warnings'],
+        ['reset', 'Reset/presence'],
+        ['overdrive', 'Overdrive mode notifications'],
     ]
 
     def putm(self, data):
@@ -211,7 +213,7 @@ class Decoder(srd.Decoder):
                 if self.bit_cnt <= 8:
                     self.command |= (self.bit << self.bit_cnt)
                 elif self.bit_cnt == 8 and self.command in [0x3c, 0x69]:
-                    self.putx([0, ['Entering overdrive mode']])
+                    self.putx([3, ['Entering overdrive mode']])
                 # Increment the bit counter.
                 self.bit_cnt += 1
                 # Wait for next slot.
@@ -229,7 +231,7 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR PRESENCE DETECT'
                     # Exit overdrive mode.
                     if self.overdrive:
-                        self.putx([0, ['Exiting overdrive mode']])
+                        self.putx([3, ['Exiting overdrive mode']])
                         self.overdrive = 0
                     # Clear command bit counter and data register.
                     self.bit_cnt = 0
@@ -259,7 +261,7 @@ class Decoder(srd.Decoder):
                     continue
 
                 p = 'false' if self.present else 'true'
-                self.putb([0, ['Reset/presence: %s' % p]])
+                self.putb([2, ['Reset/presence: %s' % p]])
                 self.putpb(['RESET/PRESENCE', not self.present])
 
                 # Wait for next slot.
