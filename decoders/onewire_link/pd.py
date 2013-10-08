@@ -54,6 +54,18 @@ class Decoder(srd.Decoder):
         ['Warnings', 'Human-readable warnings'],
     ]
 
+    def putm(self, data):
+        self.put(0, 0, self.out_ann, data)
+
+    def putpb(self, data):
+        self.put(self.fall, self.samplenum, self.out_proto, data)
+
+    def putb(self, data):
+        self.put(self.fall, self.samplenum, self.out_ann, data)
+
+    def putx(self, data):
+        self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, data)
+
     def __init__(self, **kwargs):
         self.samplenum = 0
         self.state = 'WAIT FOR FALLING EDGE'
@@ -74,22 +86,18 @@ class Decoder(srd.Decoder):
         # Check if samplerate is appropriate.
         if self.options['overdrive']:
             if self.samplerate < 2000000:
-                self.put(0, 0, self.out_ann, [1,
-                    ['ERROR: Sampling rate is too low. Must be above 2MHz ' +
-                     'for proper overdrive mode decoding.']])
+                self.putm([1, ['Sampling rate is too low. Must be above ' +
+                               '2MHz for proper overdrive mode decoding.']])
             elif self.samplerate < 5000000:
-                self.put(0, 0, self.out_ann, [1,
-                  ['WARNING: Sampling rate is suggested to be above 5MHz ' +
-                   'for proper overdrive mode decoding.']])
+                self.putm([1, ['Sampling rate is suggested to be above 5MHz ' +
+                               'for proper overdrive mode decoding.']])
         else:
             if self.samplerate < 400000:
-                self.put(0, 0, self.out_ann, [1,
-                    ['ERROR: Sampling rate is too low. Must be above ' +
-                     '400kHz for proper normal mode decoding.']])
+                self.putm([1, ['Sampling rate is too low. Must be above ' +
+                               '400kHz for proper normal mode decoding.']])
             elif (self.samplerate < 1000000):
-                self.put(0, 0, self.out_ann, [1,
-                    ['WARNING: Sampling rate is suggested to be above ' +
-                     '1MHz for proper normal mode decoding.']])
+                self.putm([1, ['Sampling rate is suggested to be above ' +
+                               '1MHz for proper normal mode decoding.']])
 
         # The default 1-Wire time base is 30us. This is used to calculate
         # sampling times.
@@ -138,32 +146,28 @@ class Decoder(srd.Decoder):
         time_min = float(self.cnt_normal_bit) / self.samplerate
         time_max = float(self.cnt_normal_bit + 1) / self.samplerate
         if (time_min < 0.000005) or (time_max > 0.000015):
-            self.put(0, 0, self.out_ann, [1,
-                ['WARNING: The normal mode data sample time interval ' +
+            self.putm([1, ['The normal mode data sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (5.0us, 15.0us).'
                  % (time_min * 1000000, time_max * 1000000)]])
 
         time_min = float(self.cnt_normal_presence) / self.samplerate
         time_max = float(self.cnt_normal_presence + 1) / self.samplerate
         if (time_min < 0.0000681) or (time_max > 0.000075):
-            self.put(0, 0, self.out_ann, [1,
-                ['WARNING: The normal mode presence sample time interval ' +
+            self.putm([1, ['The normal mode presence sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (68.1us, 75.0us).'
                  % (time_min * 1000000, time_max * 1000000)]])
 
         time_min = float(self.cnt_overdrive_bit) / self.samplerate
         time_max = float(self.cnt_overdrive_bit + 1) / self.samplerate
         if (time_min < 0.000001) or (time_max > 0.000002):
-            self.put(0, 0, self.out_ann, [1,
-                ['WARNING: The overdrive mode data sample time interval ' +
+            self.putm([1, ['The overdrive mode data sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (1.0us, 2.0us).'
                  % (time_min * 1000000, time_max * 1000000)]])
 
         time_min = float(self.cnt_overdrive_presence) / self.samplerate
         time_max = float(self.cnt_overdrive_presence + 1) / self.samplerate
         if (time_min < 0.0000073) or (time_max > 0.000010):
-            self.put(0, 0, self.out_ann, [1,
-                ['WARNING: The overdrive mode presence sample time interval ' +
+            self.putm([1, ['The overdrive mode presence sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (7.3us, 10.0us).'
                  % (time_min*1000000, time_max*1000000)]])
 
@@ -199,18 +203,15 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR RISING EDGE'
                     continue
 
-                self.put(self.fall, self.samplenum, self.out_ann,
-                         [0, ['Bit: %d' % self.bit]])
-                self.put(self.fall, self.samplenum, self.out_proto,
-                         ['BIT', self.bit])
+                self.putb([0, ['Bit: %d' % self.bit]])
+                self.putpb(['BIT', self.bit])
 
                 # Checking the first command to see if overdrive mode
                 # should be entered.
                 if self.bit_cnt <= 8:
                     self.command |= (self.bit << self.bit_cnt)
                 elif self.bit_cnt == 8 and self.command in [0x3c, 0x69]:
-                    self.put(self.fall, self.cnt_bit[self.overdrive],
-                             self.out_ann, [0, ['Entering overdrive mode']])
+                    self.putx([0, ['Entering overdrive mode']])
                 # Increment the bit counter.
                 self.bit_cnt += 1
                 # Wait for next slot.
@@ -228,8 +229,7 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR PRESENCE DETECT'
                     # Exit overdrive mode.
                     if self.overdrive:
-                        self.put(self.fall, self.cnt_bit[self.overdrive],
-                                 self.out_ann, [0, ['Exiting overdrive mode']])
+                        self.putx([0, ['Exiting overdrive mode']])
                         self.overdrive = 0
                     # Clear command bit counter and data register.
                     self.bit_cnt = 0
@@ -258,11 +258,10 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR RISING EDGE'
                     continue
 
-                self.put(self.fall, self.samplenum, self.out_ann,
-                         [0, ['Reset/presence: %s'
-                         % ('false' if self.present else 'true')]])
-                self.put(self.fall, self.samplenum, self.out_proto,
-                         ['RESET/PRESENCE', not self.present])
+                p = 'false' if self.present else 'true'
+                self.putb([0, ['Reset/presence: %s' % p]])
+                self.putpb(['RESET/PRESENCE', not self.present])
+
                 # Wait for next slot.
                 self.state = 'WAIT FOR FALLING EDGE'
             else:
