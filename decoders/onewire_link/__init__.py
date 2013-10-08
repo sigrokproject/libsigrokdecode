@@ -29,7 +29,7 @@ is layered:
  - Network layer (skip/search/match device ROM addresses)
  - Transport layer (transport data between 1-Wire master and device)
 
-Link layer protocol details:
+This protocol decoder handles the 1-Wire link layer.
 
 Sample rate:
 A sufficiently high samplerate is required to properly detect all the elements
@@ -65,26 +65,6 @@ configure the following timing values (number of samplerate periods):
 
 These options should be configured only on very rare cases and the user should
 read the decoder source code to understand them correctly.
-
-Protocol output format:
-TODO.
-
-Annotations:
-
-Link layer annotations show the following events:
-
- - NOTE/WARNING/ERROR
-   Possible samplerate related timing issues are reported.
- - Reset/presence true/false
-   The event is marked from the signal negative edge to the end of the reset
-   high period. It's also reported if there are any devices attached to the bus.
- - Bit 0/1
-   The event is marked from the signal negative edge to the end of the data
-   slot. The value of each received bit is also provided.
-
-TODO:
-- Check for protocol correctness, if events are timed inside prescribed limits.
-- Maybe add support for interrupts, check if this feature is deprecated.
 '''
 
 from .pd import *
