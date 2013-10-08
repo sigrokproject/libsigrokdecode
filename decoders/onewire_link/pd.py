@@ -201,7 +201,7 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR RISING EDGE'
                     continue
 
-                self.putb([0, ['Bit: %d' % self.bit]])
+                self.putb([0, ['Bit: %d' % self.bit, '%d' % self.bit]])
                 self.putpb(['BIT', self.bit])
 
                 # Checking the first command to see if overdrive mode
@@ -209,7 +209,7 @@ class Decoder(srd.Decoder):
                 if self.bit_cnt <= 8:
                     self.command |= (self.bit << self.bit_cnt)
                 elif self.bit_cnt == 8 and self.command in [0x3c, 0x69]:
-                    self.putx([4, ['Entering overdrive mode']])
+                    self.putx([4, ['Entering overdrive mode', 'Overdrive on']])
                 # Increment the bit counter.
                 self.bit_cnt += 1
                 # Wait for next slot.
@@ -224,11 +224,11 @@ class Decoder(srd.Decoder):
                 if t > self.cnt_normal_reset:
                     # Save the sample number for the rising edge.
                     self.rise = self.samplenum
-                    self.putfr([2, ['Reset']])
+                    self.putfr([2, ['Reset', 'Rst', 'R']])
                     self.state = 'WAIT FOR PRESENCE DETECT'
                     # Exit overdrive mode.
                     if self.overdrive:
-                        self.putx([4, ['Exiting overdrive mode']])
+                        self.putx([4, ['Exiting overdrive mode', 'Overdrive off']])
                         self.overdrive = 0
                     # Clear command bit counter and data register.
                     self.bit_cnt = 0
@@ -236,7 +236,7 @@ class Decoder(srd.Decoder):
                 elif (t > self.cnt_overdrive_reset) and self.overdrive:
                     # Save the sample number for the rising edge.
                     self.rise = self.samplenum
-                    self.putfr([2, ['Reset']])
+                    self.putfr([2, ['Reset', 'Rst', 'R']])
                     self.state = "WAIT FOR PRESENCE DETECT"
                 # Otherwise this is assumed to be a data bit.
                 else:
@@ -259,7 +259,7 @@ class Decoder(srd.Decoder):
                     continue
 
                 p = 'false' if self.present else 'true'
-                self.putrs([3, ['Presence: %s' % p]])
+                self.putrs([3, ['Presence: %s' % p, 'Presence', 'Pres', 'P']])
                 self.putprs(['RESET/PRESENCE', not self.present])
 
                 # Wait for next slot.
