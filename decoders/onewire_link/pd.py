@@ -53,7 +53,8 @@ class Decoder(srd.Decoder):
     annotations = [
         ['bit', 'Bit'],
         ['warnings', 'Warnings'],
-        ['reset', 'Reset/presence'],
+        ['reset', 'Reset'],
+        ['presence', 'Presence'],
         ['overdrive', 'Overdrive mode notifications'],
     ]
 
@@ -68,6 +69,15 @@ class Decoder(srd.Decoder):
 
     def putx(self, data):
         self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, data)
+
+    def putfr(self, data):
+        self.put(self.fall, self.rise, self.out_ann, data)
+
+    def putprs(self, data):
+        self.put(self.rise, self.samplenum, self.out_proto, data)
+
+    def putrs(self, data):
+        self.put(self.rise, self.samplenum, self.out_ann, data)
 
     def __init__(self, **kwargs):
         self.samplenum = 0
@@ -199,7 +209,7 @@ class Decoder(srd.Decoder):
                 if self.bit_cnt <= 8:
                     self.command |= (self.bit << self.bit_cnt)
                 elif self.bit_cnt == 8 and self.command in [0x3c, 0x69]:
-                    self.putx([3, ['Entering overdrive mode']])
+                    self.putx([4, ['Entering overdrive mode']])
                 # Increment the bit counter.
                 self.bit_cnt += 1
                 # Wait for next slot.
@@ -214,10 +224,11 @@ class Decoder(srd.Decoder):
                 if t > self.cnt_normal_reset:
                     # Save the sample number for the falling edge.
                     self.rise = self.samplenum
+                    self.putfr([2, ['Reset']])
                     self.state = 'WAIT FOR PRESENCE DETECT'
                     # Exit overdrive mode.
                     if self.overdrive:
-                        self.putx([3, ['Exiting overdrive mode']])
+                        self.putx([4, ['Exiting overdrive mode']])
                         self.overdrive = 0
                     # Clear command bit counter and data register.
                     self.bit_cnt = 0
@@ -225,6 +236,7 @@ class Decoder(srd.Decoder):
                 elif (t > self.cnt_overdrive_reset) and self.overdrive:
                     # Save the sample number for the falling edge.
                     self.rise = self.samplenum
+                    self.putfr([2, ['Reset']])
                     self.state = "WAIT FOR PRESENCE DETECT"
                 # Otherwise this is assumed to be a data bit.
                 else:
@@ -247,8 +259,8 @@ class Decoder(srd.Decoder):
                     continue
 
                 p = 'false' if self.present else 'true'
-                self.putb([2, ['Reset/presence: %s' % p]])
-                self.putpb(['RESET/PRESENCE', not self.present])
+                self.putrs([3, ['Presence: %s' % p]])
+                self.putprs(['RESET/PRESENCE', not self.present])
 
                 # Wait for next slot.
                 self.state = 'WAIT FOR FALLING EDGE'
