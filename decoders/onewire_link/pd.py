@@ -222,7 +222,7 @@ class Decoder(srd.Decoder):
                 # Check if this was a reset cycle.
                 t = self.samplenum - self.fall
                 if t > self.cnt_normal_reset:
-                    # Save the sample number for the falling edge.
+                    # Save the sample number for the rising edge.
                     self.rise = self.samplenum
                     self.putfr([2, ['Reset']])
                     self.state = 'WAIT FOR PRESENCE DETECT'
@@ -234,7 +234,7 @@ class Decoder(srd.Decoder):
                     self.bit_cnt = 0
                     self.command = 0
                 elif (t > self.cnt_overdrive_reset) and self.overdrive:
-                    # Save the sample number for the falling edge.
+                    # Save the sample number for the rising edge.
                     self.rise = self.samplenum
                     self.putfr([2, ['Reset']])
                     self.state = "WAIT FOR PRESENCE DETECT"
