@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -149,6 +149,9 @@ class Decoder(srd.Decoder):
     def report(self):
         pass
 
+    def putb(self, data):
+        self.put(0, 0, self.out_ann, data)
+
     def handle_get_start(self, lad, lad_bits, lframe):
         # LAD[3:0]: START field (1 clock cycle).
 
@@ -157,14 +160,13 @@ class Decoder(srd.Decoder):
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
         s = fields['START'][lad]
-        self.put(0, 0, self.out_ann, [0, [s]])
+        self.putb([0, [s]])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         # TODO
         if (self.lad != -1 and self.lad != lad):
-            self.put(0, 0, self.out_ann,
-                     [0, ['Warning: LAD[3:0] changed while '
-                     'LFRAME# was asserted']])
+            self.putb([0, ['Warning: LAD[3:0] changed while '
+                           'LFRAME# was asserted']])
 
         # LFRAME# is asserted (low). Wait until it gets de-asserted again
         # (the host is allowed to keep it asserted multiple clocks).
@@ -181,11 +183,10 @@ class Decoder(srd.Decoder):
 
         # TODO: Warning/error on invalid cycle types.
         if self.cycle_type == 'Reserved':
-            self.put(0, 0, self.out_ann,
-                     [0, ['Warning: Invalid cycle type (%s)' % lad_bits]])
+            self.putb([0, ['Warning: Invalid cycle type (%s)' % lad_bits]])
 
         # ...
-        self.put(0, 0, self.out_ann, [0, ['Cycle type: %s' % self.cycle_type]])
+        self.putb([0, ['Cycle type: %s' % self.cycle_type]])
 
         self.state = 'GET ADDR'
         self.addr = 0
@@ -213,7 +214,7 @@ class Decoder(srd.Decoder):
             return
 
         s = 'Address: 0x%%0%dx' % addr_nibbles
-        self.put(0, 0, self.out_ann, [0, [s % self.addr]])
+        self.putb([0, [s % self.addr]])
 
         self.state = 'GET TAR'
         self.tar_count = 0
@@ -221,17 +222,15 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
-        self.put(0, 0, self.out_ann, [0, ['TAR, cycle %d: %s'
-                 % (self.tarcount, lad_bits)]])
+        self.putb([0, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put(0, 0, self.out_ann,
-                     [0, ['Warning: TAR, cycle %d: %s (expected 1111)'
-                     % (self.tarcount, lad_bits)]])
+            self.putb([0, ['Warning: TAR, cycle %d: %s (expected 1111)' % \
+                           (self.tarcount, lad_bits)]])
 
         if (self.tarcount != 1):
             self.tarcount += 1
@@ -248,11 +247,10 @@ class Decoder(srd.Decoder):
 
         # TODO: Warnings if reserved value are seen?
         if self.cycle_type == 'Reserved':
-            self.put(0, 0, self.out_ann, [0, ['Warning: SYNC, cycle %d: %s '
-                     '(reserved value)' % (self.synccount, self.sync_val)]])
+            self.putb([0, ['Warning: SYNC, cycle %d: %s (reserved value)' % \
+                           (self.synccount, self.sync_val)]])
 
-        self.put(0, 0, self.out_ann, [0, ['SYNC, cycle %d: %s'
-                 % (self.synccount, self.sync_val)]])
+        self.putb([0, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
 
         # TODO
 
@@ -274,7 +272,7 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
-        self.put(0, 0, self.out_ann, [0, ['DATA: 0x%02x' % self.databyte]])
+        self.putb([0, ['DATA: 0x%02x' % self.databyte]])
 
         self.cycle_count = 0
         self.state = 'GET TAR2'
@@ -282,17 +280,15 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
-        self.put(0, 0, self.out_ann, [0, ['TAR, cycle %d: %s'
-                 % (self.tarcount, lad_bits)]])
+        self.putb([0, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put(0, 0, self.out_ann,
-                     [0, ['Warning: TAR, cycle %d: %s (expected 1111)'
-                     % (self.tarcount, lad_bits)]])
+            self.putb([0, ['Warning: TAR, cycle %d: %s (expected 1111)'
+                           % (self.tarcount, lad_bits)]])
 
         if (self.tarcount != 1):
             self.tarcount += 1
@@ -326,7 +322,7 @@ class Decoder(srd.Decoder):
             if self.state != 'IDLE':
                 lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
                 lad_bits = bin(lad)[2:].zfill(4)
-                # self.put(0, 0, self.out_ann, [0, ['LAD: %s' % lad_bits]])
+                # self.putb([0, ['LAD: %s' % lad_bits]])
 
             # TODO: Only memory read/write is currently supported/tested.
 

@@ -20,9 +20,6 @@
 
 '''
 Low-Pin Count protocol decoder.
-
-Details:
-TODO
 '''
 
 from .pd import *
