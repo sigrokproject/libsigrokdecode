@@ -125,7 +125,14 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['Text', 'Human-readable text'],
+        ['warnings', 'Warnings'],
+        ['start', 'Start'],
+        ['cycle_type', 'Cycle-type/direction'],
+        ['addr', 'Address'],
+        ['tar1', 'Turn-around cycle 1'],
+        ['sync', 'Sync'],
+        ['data', 'Data'],
+        ['tar2', 'Turn-around cycle 2'],
     ]
 
     def __init__(self, **kwargs):
@@ -160,13 +167,12 @@ class Decoder(srd.Decoder):
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
         s = fields['START'][lad]
-        self.putb([0, [s]])
+        self.putb([1, [s]])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         # TODO
         if (self.lad != -1 and self.lad != lad):
-            self.putb([0, ['Warning: LAD[3:0] changed while '
-                           'LFRAME# was asserted']])
+            self.putb([0, ['LAD[3:0] changed while LFRAME# was asserted']])
 
         # LFRAME# is asserted (low). Wait until it gets de-asserted again
         # (the host is allowed to keep it asserted multiple clocks).
@@ -183,10 +189,10 @@ class Decoder(srd.Decoder):
 
         # TODO: Warning/error on invalid cycle types.
         if self.cycle_type == 'Reserved':
-            self.putb([0, ['Warning: Invalid cycle type (%s)' % lad_bits]])
+            self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
 
         # ...
-        self.putb([0, ['Cycle type: %s' % self.cycle_type]])
+        self.putb([2, ['Cycle type: %s' % self.cycle_type]])
 
         self.state = 'GET ADDR'
         self.addr = 0
@@ -214,7 +220,7 @@ class Decoder(srd.Decoder):
             return
 
         s = 'Address: 0x%%0%dx' % addr_nibbles
-        self.putb([0, [s % self.addr]])
+        self.putb([3, [s % self.addr]])
 
         self.state = 'GET TAR'
         self.tar_count = 0
@@ -222,14 +228,14 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
-        self.putb([0, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.putb([4, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.putb([0, ['Warning: TAR, cycle %d: %s (expected 1111)' % \
+            self.putb([0, ['TAR, cycle %d: %s (expected 1111)' % \
                            (self.tarcount, lad_bits)]])
 
         if (self.tarcount != 1):
@@ -247,10 +253,10 @@ class Decoder(srd.Decoder):
 
         # TODO: Warnings if reserved value are seen?
         if self.cycle_type == 'Reserved':
-            self.putb([0, ['Warning: SYNC, cycle %d: %s (reserved value)' % \
+            self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
-        self.putb([0, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
+        self.putb([5, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
 
         # TODO
 
@@ -272,7 +278,7 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
-        self.putb([0, ['DATA: 0x%02x' % self.databyte]])
+        self.putb([6, ['DATA: 0x%02x' % self.databyte]])
 
         self.cycle_count = 0
         self.state = 'GET TAR2'
@@ -280,7 +286,7 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
-        self.putb([0, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.putb([7, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
