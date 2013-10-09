@@ -148,6 +148,7 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.synccount = 0
         self.oldpins = None
+        self.ss_block = self.es_block = None
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lpc')
@@ -157,7 +158,7 @@ class Decoder(srd.Decoder):
         pass
 
     def putb(self, data):
-        self.put(0, 0, self.out_ann, data)
+        self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def handle_get_start(self, lad, lad_bits, lframe):
         # LAD[3:0]: START field (1 clock cycle).
@@ -166,8 +167,9 @@ class Decoder(srd.Decoder):
         # the peripherals must use. However, the host can keep LFRAME# asserted
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
-        s = fields['START'][lad]
-        self.putb([1, [s]])
+        self.es_block = self.samplenum
+        self.putb([1, [fields['START'][lad], 'START', 'St', 'S']])
+        self.ss_block = self.samplenum
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         # TODO
@@ -191,8 +193,9 @@ class Decoder(srd.Decoder):
         if self.cycle_type == 'Reserved':
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
 
-        # ...
+        self.es_block = self.samplenum
         self.putb([2, ['Cycle type: %s' % self.cycle_type]])
+        self.ss_block = self.samplenum
 
         self.state = 'GET ADDR'
         self.addr = 0
@@ -219,8 +222,10 @@ class Decoder(srd.Decoder):
             self.cur_nibble += 1
             return
 
+        self.es_block = self.samplenum
         s = 'Address: 0x%%0%dx' % addr_nibbles
         self.putb([3, [s % self.addr]])
+        self.ss_block = self.samplenum
 
         self.state = 'GET TAR'
         self.tar_count = 0
@@ -228,7 +233,9 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
+        self.es_block = self.samplenum
         self.putb([4, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.ss_block = self.samplenum
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -256,7 +263,9 @@ class Decoder(srd.Decoder):
             self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
+        self.es_block = self.samplenum
         self.putb([5, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
+        self.ss_block = self.samplenum
 
         # TODO
 
@@ -278,7 +287,9 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
+        self.es_block = self.samplenum
         self.putb([6, ['DATA: 0x%02x' % self.databyte]])
+        self.ss_block = self.samplenum
 
         self.cycle_count = 0
         self.state = 'GET TAR2'
@@ -286,7 +297,9 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
+        self.es_block = self.samplenum
         self.putb([7, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.ss_block = self.samplenum
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -304,7 +317,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def decode(self, ss, es, data):
-        for (samplenum, pins) in data:
+        for (self.samplenum, pins) in data:
 
             # If none of the pins changed, there's nothing to do.
             if self.oldpins == pins:
@@ -337,6 +350,7 @@ class Decoder(srd.Decoder):
                 # A valid LPC cycle starts with LFRAME# being asserted (low).
                 if lframe != 0:
                    continue
+                self.ss_block = self.samplenum
                 self.state = 'GET START'
                 self.lad = -1
                 # self.clocknum = 0
