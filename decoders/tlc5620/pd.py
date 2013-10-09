@@ -48,8 +48,11 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['Text', 'Human-readable text'],
-        ['Warnings', 'Human-readable warnings'],
+        ['dac_select', 'DAC select'],
+        ['gain', 'Gain'],
+        ['value', 'DAC value'],
+        ['data_latch', 'Data latch point'],
+        ['ldac_fall', 'LDAC falling edge'],
     ]
 
     def __init__(self, **kwargs):
@@ -76,21 +79,21 @@ class Decoder(srd.Decoder):
 
         self.gain = 1 + self.bits[2]
         self.put(self.ss_gain, self.es_gain, self.out_ann,
-                 [0, ['Gain: x%d' % self.gain]])
+                 [1, ['Gain: x%d' % self.gain]])
 
         s = "".join(str(i) for i in self.bits[3:])
         self.dac_value = int(s, 2)
         self.put(self.ss_value, self.es_value, self.out_ann,
-                 [0, ['DAC value: %d' % self.dac_value]])
+                 [2, ['DAC value: %d' % self.dac_value]])
 
     def handle_falling_edge_load(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [0, ['Setting %s value to %d (x%d gain)' % \
+                 [3, ['Setting %s value to %d (x%d gain)' % \
                  (self.dac_select, self.dac_value, self.gain)]])
 
     def handle_falling_edge_ldac(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [0, ['Falling edge on LDAC pin']])
+                 [4, ['Falling edge on LDAC pin']])
 
     def handle_new_dac_bit(self):
         self.bits.append(self.datapin)

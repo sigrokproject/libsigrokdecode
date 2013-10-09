@@ -20,11 +20,6 @@
 
 '''
 Texas Instruments TLC5620 protocol decoder.
-
-TODO: Description.
-
-Details:
-TODO
 '''
 
 from .pd import *
