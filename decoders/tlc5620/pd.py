@@ -73,27 +73,30 @@ class Decoder(srd.Decoder):
 
     def handle_11bits(self):
         s = "".join(str(i) for i in self.bits[:2])
-        self.dac_select = dacs[int(s, 2)]
+        self.dac_select = s = dacs[int(s, 2)]
         self.put(self.ss_dac, self.es_dac, self.out_ann,
-                 [0, ['DAC select: %s' % self.dac_select]])
+                 [0, ['DAC select: %s' % s, 'DAC sel: %s' % s,
+                      'DAC: %s' % s, 'D: %s' % s, s, s[3]]])
 
-        self.gain = 1 + self.bits[2]
+        self.gain = g = 1 + self.bits[2]
         self.put(self.ss_gain, self.es_gain, self.out_ann,
-                 [1, ['Gain: x%d' % self.gain]])
+                 [1, ['Gain: x%d' % g, 'G: x%d' % g, 'x%d' % g]])
 
         s = "".join(str(i) for i in self.bits[3:])
-        self.dac_value = int(s, 2)
+        self.dac_value = v = int(s, 2)
         self.put(self.ss_value, self.es_value, self.out_ann,
-                 [2, ['DAC value: %d' % self.dac_value]])
+                 [2, ['DAC value: %d' % v, 'Value: %d' % v, 'Val: %d' % v,
+                      'V: %d' % v, '%d' % v]])
 
     def handle_falling_edge_load(self):
+        s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [3, ['Setting %s value to %d (x%d gain)' % \
-                 (self.dac_select, self.dac_value, self.gain)]])
+                 [3, ['Setting %s value to %d (x%d gain)' % (s, v, g),
+                      '%s=%d (x%d gain)' % (s, v, g)]])
 
     def handle_falling_edge_ldac(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [4, ['Falling edge on LDAC pin']])
+                 [4, ['Falling edge on LDAC pin', 'LDAC fall', 'LDAC']])
 
     def handle_new_dac_bit(self):
         self.bits.append(self.datapin)
