@@ -140,7 +140,7 @@ class Decoder(srd.Decoder):
         self.databyte = 0
         self.tarcount = 0
         self.synccount = 0
-        self.oldpins = (-1, -1, -1, -1, -1, -1, -1)
+        self.oldpins = None
 
     def start(self, metadata):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lpc')
@@ -308,8 +308,8 @@ class Decoder(srd.Decoder):
             self.oldpins = pins
 
             # Get individual pin values into local variables.
-            # TODO: Handle optional pins.
-            (lframe, lreset, lclk, lad0, lad1, lad2, lad3) = pins
+            (lframe, lreset, lclk, lad0, lad1, lad2, lad3) = pins[:7]
+            (ldrq, serirq, clkrun, lpme, lpcpd, lsmi) = pins[7:]
 
             # Only look at the signals upon rising LCLK edges. The LPC clock
             # is the same as the PCI clock (which is sampled at rising edges).
