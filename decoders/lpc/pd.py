@@ -108,7 +108,6 @@ class Decoder(srd.Decoder):
     outputs = ['lpc']
     probes = [
         {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'TODO'},
-        {'id': 'lreset', 'name': 'LRESET#', 'desc': 'TODO'},
         {'id': 'lclk',   'name': 'LCLK',    'desc': 'TODO'},
         {'id': 'lad0',   'name': 'LAD[0]',  'desc': 'TODO'},
         {'id': 'lad1',   'name': 'LAD[1]',  'desc': 'TODO'},
@@ -116,6 +115,7 @@ class Decoder(srd.Decoder):
         {'id': 'lad3',   'name': 'LAD[3]',  'desc': 'TODO'},
     ]
     optional_probes = [
+        {'id': 'lreset', 'name': 'LRESET#', 'desc': 'TODO'},
         {'id': 'ldrq',   'name': 'LDRQ#',   'desc': 'TODO'},
         {'id': 'serirq', 'name': 'SERIRQ',  'desc': 'TODO'},
         {'id': 'clkrun', 'name': 'CLKRUN#', 'desc': 'TODO'},
@@ -308,8 +308,8 @@ class Decoder(srd.Decoder):
             self.oldpins = pins
 
             # Get individual pin values into local variables.
-            (lframe, lreset, lclk, lad0, lad1, lad2, lad3) = pins[:7]
-            (ldrq, serirq, clkrun, lpme, lpcpd, lsmi) = pins[7:]
+            (lframe, lclk, lad0, lad1, lad2, lad3) = pins[:6]
+            (lreset, ldrq, serirq, clkrun, lpme, lpcpd, lsmi) = pins[6:]
 
             # Only look at the signals upon rising LCLK edges. The LPC clock
             # is the same as the PCI clock (which is sampled at rising edges).
