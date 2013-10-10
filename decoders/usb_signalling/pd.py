@@ -35,7 +35,6 @@ Packet:
  - 'BIT', <bit>
  - 'STUFF BIT', None
  - 'EOP', None
- - 'PACKET', <packet>
 
 <sym>:
  - 'J', 'K', 'SE0', or 'SE1'
@@ -43,10 +42,6 @@ Packet:
 <bit>:
  - 0 or 1
  - Note: Symbols like SE0, SE1, and the J that's part of EOP don't yield 'BIT'.
-
-<packet>:
- - A string consisting of '1' and '0' characters, e.g. '11010100'.
- - The packet contains only "real" bits, no stuff bits (and no SOF/EOP).
 '''
 
 # Low-/full-speed symbols.
@@ -91,12 +86,11 @@ class Decoder(srd.Decoder):
         'signalling': ['Signalling', 'full-speed'],
     }
     annotations = [
-        ['symbol', 'Symbol'],
+        ['sym', 'Symbol'],
         ['sop', 'Start of packet (SOP)'],
         ['eop', 'End of packet (EOP)'],
         ['bit', 'Bit'],
         ['stuffbit', 'Stuff bit'],
-        ['packet', 'Packet'],
     ]
 
     def __init__(self):
@@ -104,7 +98,6 @@ class Decoder(srd.Decoder):
         self.ss_sop = None
         self.ss_block = None
         self.samplenum = 0
-        self.packet = ''
         self.syms = []
         self.bitrate = None
         self.bitwidth = None
@@ -132,11 +125,11 @@ class Decoder(srd.Decoder):
 
     def putpm(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(self.ss_block - h, self.samplenum + h, self.out_proto, data)
+        self.put(self.ss_block - h, s + h, self.out_proto, data)
 
     def putm(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(self.ss_block - h, self.samplenum + h, self.out_ann, data)
+        self.put(self.ss_block - h, s + h, self.out_ann, data)
 
     def putpb(self, data):
         s, h = self.samplenum, self.halfbit
@@ -164,15 +157,14 @@ class Decoder(srd.Decoder):
 
     def handle_bit(self, sym, b):
         if self.consecutive_ones == 6 and b == '0':
-            # Stuff bit. Don't add to the packet, reset self.consecutive_ones.
+            # Stuff bit.
             self.putpb(['STUFF BIT', None])
             self.putb([4, ['SB: %s/%s' % (sym, b)]])
             self.consecutive_ones = 0
         else:
-            # Normal bit. Add it to the packet, update self.consecutive_ones.
+            # Normal bit (not a stuff bit).
             self.putpb(['BIT', b])
             self.putb([3, ['%s/%s' % (sym, b)]])
-            self.packet += b
             if b == '1':
                 self.consecutive_ones += 1
             else:
@@ -187,13 +179,10 @@ class Decoder(srd.Decoder):
         self.set_new_target_samplenum()
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
-            # Got an EOP, i.e. we now have a full packet.
+            # Got an EOP.
             self.putpm(['EOP', None])
             self.putm([2, ['EOP']])
-            self.ss_block = self.ss_sop
-            self.putpm(['PACKET', self.packet])
-            self.putm([5, ['PACKET: %s' % self.packet]])
-            self.bitnum, self.packet, self.syms, self.state = 0, '', [], 'IDLE'
+            self.bitnum, self.syms, self.state = 0, [], 'IDLE'
             self.consecutive_ones = 0
 
     def get_bit(self, sym):
