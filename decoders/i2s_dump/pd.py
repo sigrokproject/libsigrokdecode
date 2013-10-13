@@ -71,8 +71,8 @@ class Decoder(srd.Decoder):
         self.f.write(b'\x10\x00\x00\x00') # Subchunk size (16 bytes)
         self.f.write(b'\x01\x00')         # Audio format (0x0001 == PCM)
         self.f.write(b'\x02\x00')         # Number of channels (2)
-        self.f.write(b'\x44\xac\x00\x00') # Samplerate (44100)
-        self.f.write(b'\x88\x58\x01\x00') # Byterate (88200) TODO
+        self.f.write(b'\x80\x3e\x00\x00') # Samplerate (16000)
+        self.f.write(b'\x00\x7d\x00\x00') # Byterate (32000)
         self.f.write(b'\x04\x00')         # Blockalign (4)
         self.f.write(b'\x10\x00')         # Bits per sample (16)
 
@@ -102,6 +102,6 @@ class Decoder(srd.Decoder):
             if s >= 0x8000:
                 s -= 0x10000
             lo, hi = s & 0xff, (s >> 8) & 0xff
-            self.f.write(bytes('%02x%02x' % (lo, hi), 'utf-8'))
+            self.f.write(bytes([lo, hi]))
             self.f.flush()
 
