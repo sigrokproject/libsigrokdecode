@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -55,10 +55,17 @@ class Decoder(srd.Decoder):
         self.oldtck = -1
         self.bits_tdi = []
         self.bits_tdo = []
+        self.samplenum = 0
 
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+
+    def putx(self, data):
+        self.put(self.samplenum, self.samplenum, self.out_ann, data)
+
+    def putp(self, data):
+        self.put(self.samplenum, self.samplenum, self.out_proto, data)
 
     def advance_state_machine(self, tms):
         self.oldstate = self.state
@@ -109,10 +116,8 @@ class Decoder(srd.Decoder):
         self.advance_state_machine(tms)
 
         # Output the state we just switched to.
-        self.put(self.ss, self.es, self.out_ann,
-                 [0, ['New state: %s' % self.state]])
-        self.put(self.ss, self.es, self.out_proto,
-                 ['NEW STATE', self.state])
+        self.putx([0, ['New state: %s' % self.state]])
+        self.putp(['NEW STATE', self.state])
 
         # If we went from SHIFT-IR to SHIFT-IR, or SHIFT-DR to SHIFT-DR,
         # collect the current TDI/TDO values (upon rising TCK edge).
@@ -120,10 +125,8 @@ class Decoder(srd.Decoder):
             self.bits_tdi.insert(0, tdi)
             self.bits_tdo.insert(0, tdo)
             # TODO: ANN/PROTO output.
-            # self.put(self.ss, self.es, self.out_ann,
-            #          [0, ['TDI add: ' + str(tdi)]])
-            # self.put(self.ss, self.es, self.out_ann,
-            #          [0, ['TDO add: ' + str(tdo)]])
+            # self.putx([0, ['TDI add: ' + str(tdi)]])
+            # self.putp([0, ['TDO add: ' + str(tdo)]])
 
         # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
         if self.oldstate.startswith('SHIFT-') and \
@@ -133,20 +136,20 @@ class Decoder(srd.Decoder):
             b = ''.join(map(str, self.bits_tdi))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
-            self.put(self.ss, self.es, self.out_ann, [0, [s]])
-            self.put(self.ss, self.es, self.out_proto, [t, b])
+            # self.putx([0, [s]])
+            # self.putp([t, b])
             self.bits_tdi = []
 
             t = self.state[-2:] + ' TDO'
             b = ''.join(map(str, self.bits_tdo))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
-            self.put(self.ss, self.es, self.out_ann, [0, [s]])
-            self.put(self.ss, self.es, self.out_proto, [t, b])
+            # self.putx([0, [s]])
+            # self.putp([t, b])
             self.bits_tdo = []
 
     def decode(self, ss, es, data):
-        for (samplenum, pins) in data:
+        for (self.samplenum, pins) in data:
 
             # If none of the pins changed, there's nothing to do.
             if self.oldpins == pins:
@@ -166,9 +169,8 @@ class Decoder(srd.Decoder):
             # Store start/end sample for later usage.
             self.ss, self.es = ss, es
 
-            # self.put(self.ss, self.es, self.out_ann,
-            #     [0, ['tdi:%s, tdo:%s, tck:%s, tms:%s' \
-            #          % (tdi, tdo, tck, tms)]])
+            # self.putx([0, ['tdi:%s, tdo:%s, tck:%s, tms:%s' \
+            #                % (tdi, tdo, tck, tms)]])
 
             if (self.oldtck == 0 and tck == 1):
                 self.handle_rising_tck_edge(tdi, tdo, tck, tms)
