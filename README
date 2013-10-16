@@ -36,6 +36,7 @@ Requirements
  - pkg-config >= 0.22
  - libglib >= 2.24.0
  - Python >= 3.0
+ - check >= 0.9.4 (optional, only needed to run unit tests)
 
 
 Building and installing

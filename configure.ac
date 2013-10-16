@@ -34,7 +34,7 @@ AC_CONFIG_MACRO_DIR([autostuff])
 AC_CONFIG_AUX_DIR([autostuff])
 
 # We require at least automake 1.11 (needed for 'silent rules').
-AM_INIT_AUTOMAKE([1.11 -Wall -Werror check-news])
+AM_INIT_AUTOMAKE([1.11 -Wall -Werror check-news color-tests])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
@@ -51,6 +51,9 @@ AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
+
+# Required for per-target flags or subdir-objects with C sources.
+AM_PROG_CC_C_O
 
 # Initialize libtool.
 LT_INIT
@@ -113,6 +116,12 @@ case "$build" in
 esac
 AC_SUBST(CPPFLAGS_PYTHON)
 AC_SUBST(LDFLAGS_PYTHON)
+
+# The Check unit testing framework is optional. Disable if not found.
+PKG_CHECK_MODULES([check], [check >= 0.9.4],
+	[have_check="yes"; CFLAGS="$CFLAGS $check_CFLAGS";
+	LIBS="$LIBS $check_LIBS"], [have_check="no"])
+AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
 # Checks for header files.
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
@@ -185,6 +194,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/usb_packet/Makefile
 		 decoders/usb_signalling/Makefile
 		 decoders/xfp/Makefile
+		 tests/Makefile
 		])
 
 AC_OUTPUT
@@ -202,7 +212,7 @@ echo "Detected libraries:"
 echo
 
 # Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0 >= 2.24.0"; do
+for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4"; do
         if `$PKG_CONFIG --exists $lib`; then
                 ver=`$PKG_CONFIG --modversion $lib`
                 answer="yes ($ver)"
