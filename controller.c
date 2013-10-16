@@ -412,8 +412,10 @@ err_out:
 	Py_XDECREF(py_dec_optkeys);
 	Py_XDECREF(py_dec_options);
 	g_free(key);
-	if (PyErr_Occurred())
+	if (PyErr_Occurred()) {
 		srd_exception_catch("Stray exception in srd_inst_option_set().");
+		ret = SRD_ERR_PYTHON;
+	}
 
 	return ret;
 }
