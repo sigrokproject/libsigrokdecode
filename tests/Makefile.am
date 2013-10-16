@@ -27,7 +27,8 @@ check_PROGRAMS = ${TESTS}
 check_main_SOURCES = \
 	$(top_builddir)/libsigrokdecode.h \
 	check_main.c \
-	check_core.c
+	check_core.c \
+	check_decoder.c
 
 check_main_CFLAGS = @check_CFLAGS@
 

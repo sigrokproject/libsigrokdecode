@@ -23,6 +23,7 @@
 #include <check.h>
 
 Suite *suite_core(void);
+Suite *suite_decoder(void);
 
 int main(void)
 {
@@ -35,6 +36,7 @@ int main(void)
 
 	/* Add all testsuites to the master suite. */
 	srunner_add_suite(srunner, suite_core());
+	srunner_add_suite(srunner, suite_decoder());
 
 	srunner_run_all(srunner, CK_VERBOSE);
 	ret = srunner_ntests_failed(srunner);
