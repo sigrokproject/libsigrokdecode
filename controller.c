@@ -407,7 +407,6 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	ret = SRD_OK;
 
 err_out:
-	Py_XDECREF(py_optlist);
 	Py_XDECREF(py_di_options);
 	Py_XDECREF(py_dec_optkeys);
 	Py_XDECREF(py_dec_options);
