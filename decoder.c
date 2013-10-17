@@ -252,6 +252,9 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_probe *p;
 	GSList *l;
 
+	if (!module_name)
+		return SRD_ERR_ARG;
+
 	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
 	py_basedec = py_method = py_attr = NULL;
