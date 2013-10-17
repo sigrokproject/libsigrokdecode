@@ -541,7 +541,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
  *
- * @since 0.1.0
+ * @since 0.1.0 (the API changed in 0.3.0, though)
  */
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *decoder_id, GHashTable *options)
@@ -625,7 +625,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0
+ * @since 0.1.0 (the API changed in 0.3.0, though)
  */
 SRD_API int srd_inst_stack(struct srd_session *sess,
 		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to)
@@ -663,7 +663,7 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  *
- * @since 0.1.0
+ * @since 0.1.0 (the API changed in 0.3.0, though)
  */
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 		const char *inst_id)
@@ -924,8 +924,8 @@ static int session_is_valid(struct srd_session *sess)
  * A session holds all decoder instances, their stack relationships and
  * output callbacks.
  *
- * @param sess. A pointer which will hold a pointer to a newly
- *              initialized session on return.
+ * @param sess A pointer which will hold a pointer to a newly
+ *             initialized session on return.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
@@ -963,7 +963,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0
+ * @since 0.1.0 (the API changed in 0.3.0, though)
  */
 SRD_API int srd_session_start(struct srd_session *sess)
 {
@@ -992,7 +992,7 @@ SRD_API int srd_session_start(struct srd_session *sess)
 	ret = SRD_OK;
 
 	srd_dbg("Calling start() on all instances in session %d with "
-			"%d probes, unitsize %d samplerate %d.", sess->session_id,
+			"%d probes, unitsize %d, samplerate %d.", sess->session_id,
 			sess->num_probes, sess->unitsize, sess->samplerate);
 
 	/*
@@ -1104,11 +1104,11 @@ SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
  *
  * All decoder instances and output callbacks are properly released.
  *
- * @param sess. The session to be destroyed.
+ * @param sess The session to be destroyed.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0
+ * @since 0.3.0
  */
 SRD_API int srd_session_destroy(struct srd_session *sess)
 {
@@ -1140,7 +1140,7 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
  * @param cb The function to call. Must not be NULL.
  * @param cb_data Private data for the callback function. Can be NULL.
  *
- * @since 0.1.0
+ * @since 0.1.0 (the API changed in 0.3.0, though)
  */
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 		int output_type, srd_pd_output_callback_t cb, void *cb_data)
