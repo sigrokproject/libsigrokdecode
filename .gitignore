@@ -21,6 +21,8 @@ libsigrokdecode.h
 ChangeLog
 INSTALL
 tests/check_main
+tests/check_main.*
+tests/test-suite.log
 
 # recursive autoconf leftovers
 .deps
