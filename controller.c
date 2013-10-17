@@ -326,8 +326,18 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	/* All of these are synthesized objects, so they're good. */
 	py_dec_optkeys = PyDict_Keys(py_dec_options);
 	num_optkeys = PyList_Size(py_dec_optkeys);
+
+	/*
+	 * The 'options' dictionary is a class variable, but we need to
+	 * change it. Changing it directly will affect the entire class,
+	 * so we need to create a new object for it, and populate that
+	 * instead.
+	 */
 	if (!(py_di_options = PyObject_GetAttrString(di->py_inst, "options")))
 		goto err_out;
+	Py_DECREF(py_di_options);
+	py_di_options = PyDict_New();
+	PyObject_SetAttrString(di->py_inst, "options", py_di_options);
 	for (i = 0; i < num_optkeys; i++) {
 		/* Get the default class value for this option. */
 		py_str_as_str(PyList_GetItem(py_dec_optkeys, i), &key);
