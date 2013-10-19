@@ -184,6 +184,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/onewire_link/Makefile
 		 decoders/onewire_network/Makefile
 		 decoders/pan1321/Makefile
+		 decoders/parallel/Makefile
 		 decoders/rtc8564/Makefile
 		 decoders/sdcard_spi/Makefile
 		 decoders/spi/Makefile
