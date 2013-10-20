@@ -809,8 +809,9 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 	srd_logic *logic;
 	uint64_t end_samplenum;
 
-	srd_dbg("Calling decode() on instance %s with %d bytes starting "
-		"at sample %d.", di->inst_id, inbuflen, start_samplenum);
+	srd_dbg("Calling decode() on instance %s with %" PRIu64 " bytes "
+		"starting at sample %" PRIu64 ".", di->inst_id, inbuflen,
+		start_samplenum);
 
 	/* Return an error upon unusable input. */
 	if (!di) {
@@ -936,7 +937,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
 
 	if (!sess) {
 		srd_err("Invalid session pointer.");
-		return SRD_ERR;
+		return SRD_ERR_ARG;
 	}
 
 	if (!(*sess = g_try_malloc(sizeof(struct srd_session))))
@@ -992,7 +993,8 @@ SRD_API int srd_session_start(struct srd_session *sess)
 	ret = SRD_OK;
 
 	srd_dbg("Calling start() on all instances in session %d with "
-			"%d probes, unitsize %d, samplerate %d.", sess->session_id,
+			"%" PRIu64 " probes, unitsize %" PRIu64
+			", samplerate %" PRIu64 ".", sess->session_id,
 			sess->num_probes, sess->unitsize, sess->samplerate);
 
 	/*
@@ -1041,8 +1043,13 @@ SRD_API int srd_session_config_set(struct srd_session *sess, int key,
 		return SRD_ERR_ARG;
 	}
 
+	if (!data) {
+		srd_err("Invalid config data.");
+		return SRD_ERR_ARG;
+	}
+
 	if (!g_variant_is_of_type(data, G_VARIANT_TYPE_UINT64)) {
-		srd_err("Value for key %d should be of type uint64.");
+		srd_err("Value for key %d should be of type uint64.", key);
 		return SRD_ERR_ARG;
 	}
 
@@ -1056,6 +1063,9 @@ SRD_API int srd_session_config_set(struct srd_session *sess, int key,
 	case SRD_CONF_SAMPLERATE:
 		sess->samplerate = g_variant_get_uint64(data);
 		break;
+	default:
+		srd_err("Cannot set config for unknown key %d.", key);
+		return SRD_ERR_ARG;
 	}
 
 	g_variant_unref(data);
@@ -1113,6 +1123,11 @@ SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
 SRD_API int srd_session_destroy(struct srd_session *sess)
 {
 	int session_id;
+
+	if (!sess) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
 
 	session_id = sess->session_id;
 	if (sess->di_list)
