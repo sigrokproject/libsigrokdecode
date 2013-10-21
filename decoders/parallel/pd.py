@@ -75,7 +75,7 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'},
     ]
-    optional_probes = probe_list(32)
+    optional_probes = probe_list(8)
     options = {
         'clock_edge': ['Clock edge to sample on', 'rising'],
         'wordsize': ['Word size of the data', 1],
