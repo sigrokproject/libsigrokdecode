@@ -305,6 +305,16 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	const char *val_str;
 	char *dbg, *key;
 
+	if (!di) {
+		srd_err("Invalid decoder instance.");
+		return SRD_ERR_ARG;
+	}
+
+	if (!options) {
+		srd_err("Invalid options GHashTable.");
+		return SRD_ERR_ARG;
+	}
+
 	if (!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
 		/* Decoder has no options. */
 		if (g_hash_table_size(options) == 0) {
