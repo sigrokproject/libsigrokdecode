@@ -166,6 +166,7 @@ AC_CONFIG_FILES([Makefile
 		 decoders/dcf77/Makefile
 		 decoders/ds1307/Makefile
 		 decoders/edid/Makefile
+		 decoders/guess_bitrate/Makefile
 		 decoders/i2c/Makefile
 		 decoders/i2cdemux/Makefile
 		 decoders/i2cfilter/Makefile
