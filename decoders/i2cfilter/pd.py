@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
         self.curdirection = None
         self.packets = [] # Local cache of I2C packets
 
-    def start(self, metadata):
+    def start(self):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
         if self.options['address'] not in range(0, 127 + 1):
             raise Exception('Invalid slave (must be 0..127).')

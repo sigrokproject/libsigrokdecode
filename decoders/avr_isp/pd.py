@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
         self.cmd_ss, self.cmd_es = 0, 0
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'avr_isp')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'avr_isp')
 

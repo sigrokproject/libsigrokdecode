@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
         self.months = -1
         self.years = -1
 
-    def start(self, metadata):
+    def start(self):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'ds1307')
 
     def report(self):

@@ -276,7 +276,7 @@ class Decoder(srd.Decoder):
             255: self.maybe_ascii,
         }
 
-    def start(self, metadata):
+    def start(self):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'xfp')
 
     def decode(self, ss, es, data):

@@ -82,7 +82,7 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.state = 'IDLE'
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mxc6225xu')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'mxc6225xu')
 

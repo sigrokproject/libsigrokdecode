@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
         self.maxtemp = 0
         self.avgvalues = []
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lm75')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'lm75')
 

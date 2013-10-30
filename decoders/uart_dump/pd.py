@@ -58,7 +58,7 @@ class Decoder(srd.Decoder):
         else:
             return open(filename, 'w')
 
-    def start(self, metadata):
+    def start(self):
         # The user can specify 'filename' (gets both RX and TX data), and/or
         # 'filename_rx' (for RX data only), and/or 'filename_tx', respectively.
 

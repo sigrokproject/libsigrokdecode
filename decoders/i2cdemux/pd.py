@@ -42,7 +42,7 @@ class Decoder(srd.Decoder):
         self.stream = -1 # Current output stream
         self.streamcount = 0 # Number of created output streams
 
-    def start(self, metadata):
+    def start(self):
         self.out_proto = []
 
     def report(self):

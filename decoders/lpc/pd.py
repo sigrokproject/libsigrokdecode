@@ -150,7 +150,7 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.ss_block = self.es_block = None
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lpc')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'lpc')
 

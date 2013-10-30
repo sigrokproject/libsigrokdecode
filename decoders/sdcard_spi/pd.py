@@ -97,7 +97,7 @@ class Decoder(srd.Decoder):
         self.blocklen = 0
         self.read_buf = []
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'sdcard_spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'sdcard_spi')
 

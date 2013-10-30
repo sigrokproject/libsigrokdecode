@@ -51,7 +51,7 @@ class Decoder(srd.Decoder):
         self.ss_block = None
         self.es_block = None
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'midi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'midi')
 

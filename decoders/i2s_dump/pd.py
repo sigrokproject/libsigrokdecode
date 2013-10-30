@@ -51,7 +51,7 @@ class Decoder(srd.Decoder):
         else:
             return open(filename, 'wb')
 
-    def start(self, metadata):
+    def start(self):
         # A filename of 'none' is not allowed (has special meaning). A filename
         # of '-' means 'stdout'.
         self.f = self.file_open(self.options['filename'])

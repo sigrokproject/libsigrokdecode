@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
         self.reg = 0x00
         self.init_seq = []
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'nunchuk')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'nunchuk')
 

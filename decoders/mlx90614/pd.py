@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
         self.state = 'IGNORE START REPEAT'
         self.data = []
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mlx90614')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'mlx90614')
 

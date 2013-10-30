@@ -110,7 +110,7 @@ class Decoder(srd.Decoder):
         self.addr = 0
         self.data = []
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mx25lxx05d')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'mx25lxx05d')
 

@@ -100,7 +100,7 @@ class Decoder(srd.Decoder):
         # Received data
         self.cache = []
 
-    def start(self, metadata):
+    def start(self):
         self.out_ann = self.add(srd.OUTPUT_ANN, 'edid')
 
     def report(self):

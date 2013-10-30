@@ -140,7 +140,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         # self.state = 'BYPASS'
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'jtag_stm32')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'jtag_stm32')
 

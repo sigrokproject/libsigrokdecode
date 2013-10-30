@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
         self.ss_value = self.es_value = 0
         self.dac_select = self.gain = self.dac_value = None
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'tlc5620')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'tlc5620')
 
