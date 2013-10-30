@@ -94,6 +94,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self):
+        self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_sop = None
         self.ss_block = None
@@ -107,12 +108,16 @@ class Decoder(srd.Decoder):
         self.consecutive_ones = 0
         self.state = 'IDLE'
 
-    def start(self, metadata):
+    def start(self):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_signalling')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_signalling')
-        self.bitrate = bitrates[self.options['signalling']]
-        self.bitwidth = float(metadata['samplerate']) / float(self.bitrate)
-        self.halfbit = int(self.bitwidth / 2)
+
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
+            self.bitrate = bitrates[self.options['signalling']]
+            self.bitwidth = float(self.samplerate) / float(self.bitrate)
+            self.halfbit = int(self.bitwidth / 2)
 
     def report(self):
         pass
@@ -201,6 +206,8 @@ class Decoder(srd.Decoder):
         self.oldsym = sym
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
             # State machine.
             if self.state == 'IDLE':

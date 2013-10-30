@@ -80,6 +80,7 @@ class Decoder(srd.Decoder):
         self.put(self.rise, self.samplenum, self.out_ann, data)
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.samplenum = 0
         self.state = 'WAIT FOR FALLING EDGE'
         self.present = 0
@@ -90,11 +91,14 @@ class Decoder(srd.Decoder):
         self.fall = 0
         self.rise = 0
 
-    def start(self, metadata):
+    def start(self):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'onewire_link')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'onewire_link')
 
-        self.samplerate = metadata['samplerate']
+    def metadata(self, key, value):
+        if key != srd.SRD_CONF_SAMPLERATE:
+            return
+        self.samplerate = value
 
         # Check if samplerate is appropriate.
         if self.options['overdrive'] == 'yes':
@@ -173,6 +177,8 @@ class Decoder(srd.Decoder):
         pass
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, (owr, pwr)) in data:
             # State machine.
             if self.state == 'WAIT FOR FALLING EDGE':

@@ -58,6 +58,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.oldsck = 1
         self.oldws = 1
         self.bitcount = 0
@@ -67,10 +68,13 @@ class Decoder(srd.Decoder):
         self.start_sample = None
         self.wordlength = -1
 
-    def start(self, metadata):
-        self.samplerate = metadata['samplerate']
+    def start(self):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2s')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2s')
+
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
 
     def putpb(self, data):
         self.put(self.start_sample, self.samplenum, self.out_proto, data)
@@ -93,6 +97,8 @@ class Decoder(srd.Decoder):
             (self.samplesreceived, self.wordlength, samplerate)
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for self.samplenum, (sck, ws, sd) in data:
 
             # Ignore sample if the bit clock hasn't changed.

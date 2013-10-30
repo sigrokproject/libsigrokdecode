@@ -60,15 +60,18 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.reset_variables()
 
-    def start(self, metadata):
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'can')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'can')
 
-        self.samplerate = metadata['samplerate']
-        self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
-        self.bitpos = (self.bit_width / 100.0) * self.options['sample_point']
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
+            self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
+            self.bitpos = (self.bit_width / 100.0) * self.options['sample_point']
 
     def report(self):
         pass
@@ -362,6 +365,8 @@ class Decoder(srd.Decoder):
         self.curbit += 1
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
 
             (can_rx,) = pins

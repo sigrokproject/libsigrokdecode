@@ -65,6 +65,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.state = 'WAIT FOR RISING EDGE'
         self.oldpins = None
         self.oldval = None
@@ -74,10 +75,13 @@ class Decoder(srd.Decoder):
         self.bitcount = 0 # Counter for the DCF77 bits (0..58)
         self.dcf77_bitnumber_is_known = 0
 
-    def start(self, metadata):
-        self.samplerate = metadata['samplerate']
+    def start(self):
         # self.out_proto = self.add(srd.OUTPUT_PROTO, 'dcf77')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'dcf77')
+
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
 
     def report(self):
         pass
@@ -244,6 +248,8 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).

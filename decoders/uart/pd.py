@@ -118,6 +118,7 @@ class Decoder(srd.Decoder):
         self.put(s - halfbit, s + halfbit, self.out_proto, data)
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.samplenum = 0
         self.frame_start = [-1, -1]
         self.startbit = [-1, -1]
@@ -130,14 +131,15 @@ class Decoder(srd.Decoder):
         self.oldbit = [1, 1]
         self.oldpins = [1, 1]
 
-    def start(self, metadata):
-        self.samplerate = metadata['samplerate']
+    def start(self):
         self.out_proto = self.add(srd.OUTPUT_PROTO, 'uart')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'uart')
 
-        # The width of one UART bit in number of samples.
-        self.bit_width = \
-            float(self.samplerate) / float(self.options['baudrate'])
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value;
+            # The width of one UART bit in number of samples.
+            self.bit_width = float(self.samplerate) / float(self.options['baudrate'])
 
     def report(self):
         pass
@@ -280,6 +282,8 @@ class Decoder(srd.Decoder):
         self.putg([4, ['Stop bit', 'Stop', 'T']])
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         # TODO: Either RX or TX could be omitted (optional probe).
         for (self.samplenum, pins) in data:
 
