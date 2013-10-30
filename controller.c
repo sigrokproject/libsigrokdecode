@@ -467,9 +467,8 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 	GList *l;
 	GSList *sl;
 	struct srd_probe *p;
-	int *new_probemap, new_probenum;
+	int *new_probemap, new_probenum, num_required_probes, num_probes, i;
 	char *probe_id;
-	int i, num_required_probes;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
 		di->inst_id, g_hash_table_size(new_probes));
@@ -499,6 +498,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 	for (i = 0; i < di->dec_num_probes; i++)
 		new_probemap[i] = -1;
 
+	num_probes = 0;
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
 		probe_val = g_hash_table_lookup(new_probes, probe_id);
@@ -525,7 +525,9 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		new_probemap[p->order] = new_probenum;
 		srd_dbg("Setting probe mapping: %s (index %d) = probe %d.",
 			p->id, p->order, new_probenum);
+		num_probes++;
 	}
+	di->data_unitsize = (num_probes + 7) / 8;
 
 	srd_dbg("Final probe map:");
 	num_required_probes = g_slist_length(di->decoder->probes);
@@ -603,6 +605,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		for (i = 0; i < di->dec_num_probes; i++)
 			di->dec_probemap[i] = i;
 	}
+	di->data_unitsize = (di->dec_num_probes + 7) / 8;
 
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
@@ -757,40 +760,28 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 }
 
 /** @private */
-SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
+SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 {
-	PyObject *py_name, *py_res;
+	PyObject *py_res;
 	GSList *l;
 	struct srd_decoder_inst *next_di;
+	int ret;
 
 	srd_dbg("Calling start() method on protocol decoder instance %s.",
-		di->inst_id);
+			di->inst_id);
 
-	if (!(py_name = PyUnicode_FromString("start"))) {
-		srd_err("Unable to build Python object for 'start'.");
+	if (!(py_res = PyObject_CallMethod(di->py_inst, "start", NULL))) {
 		srd_exception_catch("Protocol decoder instance %s: ",
-				    di->inst_id);
+				di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
-
-	if (!(py_res = PyObject_CallMethodObjArgs(di->py_inst,
-						  py_name, args, NULL))) {
-		srd_exception_catch("Protocol decoder instance %s: ",
-				    di->inst_id);
-		return SRD_ERR_PYTHON;
-	}
-
 	Py_DecRef(py_res);
-	Py_DecRef(py_name);
 
-	/*
-	 * Start all the PDs stacked on top of this one. Pass along the
-	 * metadata all the way from the bottom PD, even though it's only
-	 * applicable to logic data for now.
-	 */
+	/* Start all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {
 		next_di = l->data;
-		srd_inst_start(next_di, args);
+		if ((ret = srd_inst_start(next_di)) != SRD_OK)
+			return ret;
 	}
 
 	return SRD_OK;
@@ -799,9 +790,11 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
 /**
  * Run the specified decoder function.
  *
+ * @param di The decoder instance to call. Must not be NULL.
  * @param start_samplenum The starting sample number for the buffer's sample
  * 			  set, relative to the start of capture.
- * @param di The decoder instance to call. Must not be NULL.
+ * @param end_samplenum The ending sample number for the buffer's sample
+ * 			  set, relative to the start of capture.
  * @param inbuf The buffer to decode. Must not be NULL.
  * @param inbuflen Length of the buffer. Must be > 0.
  *
@@ -811,13 +804,12 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di, PyObject *args)
  *
  * @since 0.1.0
  */
-SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
-		const struct srd_decoder_inst *di, const uint8_t *inbuf,
-		uint64_t inbuflen)
+SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
+		uint64_t start_samplenum, uint64_t end_samplenum,
+		const uint8_t *inbuf, uint64_t inbuflen)
 {
 	PyObject *py_res;
 	srd_logic *logic;
-	uint64_t end_samplenum;
 
 	srd_dbg("Calling decode() on instance %s with %" PRIu64 " bytes "
 		"starting at sample %" PRIu64 ".", di->inst_id, inbuflen,
@@ -852,12 +844,9 @@ SRD_PRIV int srd_inst_decode(uint64_t start_samplenum,
 	Py_INCREF(logic->sample);
 
 	Py_IncRef(di->py_inst);
-	end_samplenum = start_samplenum + inbuflen / di->data_unitsize;
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
-					   "KKO", logic->start_samplenum,
-					   end_samplenum, logic))) {
-		srd_exception_catch("Protocol decoder instance %s: ",
-				    di->inst_id);
+			"KKO", start_samplenum, end_samplenum, logic))) {
+		srd_exception_catch("Protocol decoder instance %s: ", di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
@@ -953,7 +942,6 @@ SRD_API int srd_session_new(struct srd_session **sess)
 	if (!(*sess = g_try_malloc(sizeof(struct srd_session))))
 		return SRD_ERR_MALLOC;
 	(*sess)->session_id = ++max_session_id;
-	(*sess)->num_probes = (*sess)->unitsize = (*sess)->samplerate = 0;
 	(*sess)->di_list = (*sess)->callbacks = NULL;
 
 	/* Keep a list of all sessions, so we can clean up as needed. */
@@ -978,7 +966,6 @@ SRD_API int srd_session_new(struct srd_session **sess)
  */
 SRD_API int srd_session_start(struct srd_session *sess)
 {
-	PyObject *args;
 	GSList *d;
 	struct srd_decoder_inst *di;
 	int ret;
@@ -987,52 +974,43 @@ SRD_API int srd_session_start(struct srd_session *sess)
 		srd_err("Invalid session pointer.");
 		return SRD_ERR;
 	}
-	if (sess->num_probes == 0) {
-		srd_err("Session has invalid number of probes.");
-		return SRD_ERR;
-	}
-	if (sess->unitsize == 0) {
-		srd_err("Session has invalid unitsize.");
-		return SRD_ERR;
-	}
-	if (sess->samplerate == 0) {
-		srd_err("Session has invalid samplerate.");
-		return SRD_ERR;
-	}
 
-	ret = SRD_OK;
-
-	srd_dbg("Calling start() on all instances in session %d with "
-			"%" PRIu64 " probes, unitsize %" PRIu64
-			", samplerate %" PRIu64 ".", sess->session_id,
-			sess->num_probes, sess->unitsize, sess->samplerate);
-
-	/*
-	 * Currently only one item of metadata is passed along to decoders,
-	 * samplerate. This can be extended as needed.
-	 */
-	if (!(args = Py_BuildValue("{s:l}", "samplerate", (long)sess->samplerate))) {
-		srd_err("Unable to build Python object for metadata.");
-		return SRD_ERR_PYTHON;
-	}
+	srd_dbg("Calling start() on all instances in session %d.", sess->session_id);
 
 	/* Run the start() method on all decoders receiving frontend data. */
+	ret = SRD_OK;
 	for (d = sess->di_list; d; d = d->next) {
 		di = d->data;
-		di->data_num_probes = sess->num_probes;
-		di->data_unitsize = sess->unitsize;
-		di->data_samplerate = sess->samplerate;
-		if ((ret = srd_inst_start(di, args)) != SRD_OK)
+		if ((ret = srd_inst_start(di)) != SRD_OK)
 			break;
 	}
-
-	Py_DecRef(args);
 
 	return ret;
 }
 
+SRD_PRIV int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
+		GVariant *data)
+{
+	PyObject *py_ret;
+
+	if (key != SRD_CONF_SAMPLERATE)
+		/* This is the only key we pass on to the decoder for now. */
+		return SRD_OK;
+
+	if (!PyObject_HasAttrString(di->py_inst, "metadata"))
+		/* This decoder doesn't want metadata, that's fine. */
+		return SRD_OK;
+
+	py_ret = PyObject_CallMethod(di->py_inst, "metadata", "lK",
+			(long)SRD_CONF_SAMPLERATE,
+			(unsigned long long)g_variant_get_uint64(data));
+	Py_XDECREF(py_ret);
+
+	return SRD_OK;
+}
+
 /**
- * Set a configuration key in a session.
+ * Set a metadata configuration key in a session.
  *
  * @param sess The session to configure.
  * @param key The configuration key (SRD_CONF_*).
@@ -1044,50 +1022,49 @@ SRD_API int srd_session_start(struct srd_session *sess)
  *
  * @since 0.3.0
  */
-SRD_API int srd_session_config_set(struct srd_session *sess, int key,
+SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		GVariant *data)
 {
+	GSList *l;
+	int ret;
 
 	if (session_is_valid(sess) != SRD_OK) {
 		srd_err("Invalid session.");
 		return SRD_ERR_ARG;
 	}
 
-	if (!data) {
-		srd_err("Invalid config data.");
+	if (key != SRD_CONF_SAMPLERATE) {
+		srd_err("Unknown config key %d.", key);
 		return SRD_ERR_ARG;
 	}
 
-	if (!g_variant_is_of_type(data, G_VARIANT_TYPE_UINT64)) {
-		srd_err("Value for key %d should be of type uint64.", key);
-		return SRD_ERR_ARG;
-	}
+	srd_dbg("Setting session %d samplerate to %"PRIu64".",
+			sess->session_id, g_variant_get_uint64(data));
 
-	switch (key) {
-	case SRD_CONF_NUM_PROBES:
-		sess->num_probes = g_variant_get_uint64(data);
-		break;
-	case SRD_CONF_UNITSIZE:
-		sess->unitsize = g_variant_get_uint64(data);
-		break;
-	case SRD_CONF_SAMPLERATE:
-		sess->samplerate = g_variant_get_uint64(data);
-		break;
-	default:
-		srd_err("Cannot set config for unknown key %d.", key);
-		return SRD_ERR_ARG;
+	ret = SRD_OK;
+	for (l = sess->di_list; l; l = l->next) {
+		if ((ret = srd_inst_send_meta(l->data, key, data)) != SRD_OK)
+			break;
 	}
 
 	g_variant_unref(data);
 
-	return SRD_OK;
+	return ret;
 }
 
 /**
  * Send a chunk of logic sample data to a running decoder session.
  *
+ * The logic samples must be arranged in probe order, in the least
+ * amount of space possible. If no probes were configured, the default
+ * probe set consists of all required probes + all optional probes.
+ *
+ * The size of a sample in inbuf is the minimum number of bytes needed
+ * to store the configured (or default) probes.
+ *
  * @param sess The session to use.
  * @param start_samplenum The sample number of the first sample in this chunk.
+ * @param end_samplenum The sample number of the last sample in this chunk.
  * @param inbuf Pointer to sample data.
  * @param inbuflen Length in bytes of the buffer.
  *
@@ -1095,7 +1072,8 @@ SRD_API int srd_session_config_set(struct srd_session *sess, int key,
  *
  * @since 0.3.0
  */
-SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
+SRD_API int srd_session_send(struct srd_session *sess,
+		uint64_t start_samplenum, uint64_t end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen)
 {
 	GSList *d;
@@ -1111,8 +1089,8 @@ SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
 			start_samplenum, inbuflen, inbuf);
 
 	for (d = sess->di_list; d; d = d->next) {
-		if ((ret = srd_inst_decode(start_samplenum, d->data, inbuf,
-					   inbuflen)) != SRD_OK)
+		if ((ret = srd_inst_decode(d->data, start_samplenum,
+				end_samplenum, inbuf, inbuflen)) != SRD_OK)
 			return ret;
 	}
 

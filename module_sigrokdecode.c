@@ -77,6 +77,9 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 	if (PyModule_AddIntConstant(mod, "OUTPUT_BINARY",
 	    SRD_OUTPUT_BINARY) == -1)
 		return NULL;
+	if (PyModule_AddIntConstant(mod, "SRD_CONF_SAMPLERATE",
+			SRD_CONF_SAMPLERATE) == -1)
+		return NULL;
 
 	mod_sigrokdecode = mod;
 
