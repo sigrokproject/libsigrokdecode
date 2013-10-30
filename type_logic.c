@@ -29,11 +29,11 @@ static PyObject *srd_logic_iter(PyObject *self)
 
 static PyObject *srd_logic_iternext(PyObject *self)
 {
-	int i;
-	PyObject *py_samplenum, *py_samples;
 	srd_logic *logic;
+	PyObject *py_samplenum, *py_samples;
 	uint64_t sample;
 	uint8_t probe_samples[SRD_MAX_NUM_PROBES + 1];
+	int i;
 
 	logic = (srd_logic *)self;
 	if (logic->itercnt >= logic->inbuflen / logic->di->data_unitsize) {

@@ -501,7 +501,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
-		probe_val= g_hash_table_lookup(new_probes, probe_id);
+		probe_val = g_hash_table_lookup(new_probes, probe_id);
 		if (!g_variant_is_of_type(probe_val, G_VARIANT_TYPE_INT32)) {
 			/* Probe name was specified without a value. */
 			srd_err("No probe number was specified for %s.",
@@ -551,7 +551,7 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
  * @return Pointer to a newly allocated struct srd_decoder_inst, or
  *         NULL in case of failure.
  *
- * @since 0.1.0 (the API changed in 0.3.0, though)
+ * @since 0.3.0
  */
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *decoder_id, GHashTable *options)
@@ -592,10 +592,10 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	 * order in which the decoder class defined them.
 	 */
 	di->dec_num_probes = g_slist_length(di->decoder->probes) +
-			     g_slist_length(di->decoder->opt_probes);
+			g_slist_length(di->decoder->opt_probes);
 	if (di->dec_num_probes) {
 		if (!(di->dec_probemap =
-		     g_try_malloc(sizeof(int) * di->dec_num_probes))) {
+				g_try_malloc(sizeof(int) * di->dec_num_probes))) {
 			srd_err("Failed to g_malloc() probe map.");
 			g_free(di);
 			return NULL;
@@ -608,7 +608,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
 			srd_exception_catch("failed to create %s instance: ",
-					    decoder_id);
+					decoder_id);
 		g_free(di->dec_probemap);
 		g_free(di);
 		return NULL;
@@ -635,7 +635,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0 (the API changed in 0.3.0, though)
+ * @since 0.3.0
  */
 SRD_API int srd_inst_stack(struct srd_session *sess,
 		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to)
@@ -673,7 +673,7 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
  *
- * @since 0.1.0 (the API changed in 0.3.0, though)
+ * @since 0.3.0
  */
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 		const char *inst_id)
@@ -974,7 +974,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0 (the API changed in 0.3.0, though)
+ * @since 0.3.0
  */
 SRD_API int srd_session_start(struct srd_session *sess)
 {
@@ -1093,7 +1093,7 @@ SRD_API int srd_session_config_set(struct srd_session *sess, int key,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0
+ * @since 0.3.0
  */
 SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen)
@@ -1107,8 +1107,8 @@ SRD_API int srd_session_send(struct srd_session *sess, uint64_t start_samplenum,
 	}
 
 	srd_dbg("Calling decode() on all instances with starting sample "
-		"number %" PRIu64 ", %" PRIu64 " bytes at 0x%p",
-		start_samplenum, inbuflen, inbuf);
+			"number %" PRIu64 ", %" PRIu64 " bytes at 0x%p",
+			start_samplenum, inbuflen, inbuf);
 
 	for (d = sess->di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(start_samplenum, d->data, inbuf,
@@ -1165,7 +1165,7 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
  * @param cb The function to call. Must not be NULL.
  * @param cb_data Private data for the callback function. Can be NULL.
  *
- * @since 0.1.0 (the API changed in 0.3.0, though)
+ * @since 0.3.0
  */
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 		int output_type, srd_pd_output_callback_t cb, void *cb_data)
