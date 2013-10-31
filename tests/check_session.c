@@ -148,8 +148,8 @@ static void conf_check_ok(struct srd_session *sess, int key, uint64_t x)
 {
 	int ret;
 
-	ret = srd_session_config_set(sess, key, g_variant_new_uint64(x));
-	fail_unless(ret == SRD_OK, "srd_session_config_set(%p, %d, %"
+	ret = srd_session_metadata_set(sess, key, g_variant_new_uint64(x));
+	fail_unless(ret == SRD_OK, "srd_session_metadata_set(%p, %d, %"
 		PRIu64 ") failed: %d.", sess, key, x, ret);
 }
 
@@ -157,8 +157,8 @@ static void conf_check_fail(struct srd_session *sess, int key, uint64_t x)
 {
 	int ret;
 
-	ret = srd_session_config_set(sess, key, g_variant_new_uint64(x));
-	fail_unless(ret != SRD_OK, "srd_session_config_set(%p, %d, %"
+	ret = srd_session_metadata_set(sess, key, g_variant_new_uint64(x));
+	fail_unless(ret != SRD_OK, "srd_session_metadata_set(%p, %d, %"
 		PRIu64 ") worked.", sess, key, x);
 }
 
@@ -166,25 +166,25 @@ static void conf_check_fail_null(struct srd_session *sess, int key)
 {
 	int ret;
 
-	ret = srd_session_config_set(sess, key, NULL);
+	ret = srd_session_metadata_set(sess, key, NULL);
 	fail_unless(ret != SRD_OK,
-		"srd_session_config_set(NULL) for key %d worked.", key);
+		"srd_session_metadata_set(NULL) for key %d worked.", key);
 }
 
 static void conf_check_fail_str(struct srd_session *sess, int key, const char *s)
 {
 	int ret;
 
-	ret = srd_session_config_set(sess, key, g_variant_new_string(s));
-	fail_unless(ret != SRD_OK, "srd_session_config_set for key %d "
+	ret = srd_session_metadata_set(sess, key, g_variant_new_string(s));
+	fail_unless(ret != SRD_OK, "srd_session_metadata_set() for key %d "
 		"failed: %d.", key, ret);
 }
 
 /*
- * Check whether srd_session_config_set() works.
+ * Check whether srd_session_metadata_set() works.
  * If it returns != SRD_OK (or segfaults) this test will fail.
  */
-START_TEST(test_session_config_set)
+START_TEST(test_session_metadata_set)
 {
 	uint64_t i;
 	struct srd_session *sess;
@@ -193,13 +193,9 @@ START_TEST(test_session_config_set)
 	srd_session_new(&sess);
 	/* Try a bunch of values. */
 	for (i = 0; i < 1000; i++) {
-		conf_check_ok(sess, SRD_CONF_NUM_PROBES, i);
-		conf_check_ok(sess, SRD_CONF_UNITSIZE, i);
 		conf_check_ok(sess, SRD_CONF_SAMPLERATE, i);
 	}
 	/* Try the max. possible value. */
-	conf_check_ok(sess, SRD_CONF_NUM_PROBES, 18446744073709551615ULL);
-	conf_check_ok(sess, SRD_CONF_UNITSIZE, 18446744073709551615ULL);
 	conf_check_ok(sess, SRD_CONF_SAMPLERATE, 18446744073709551615ULL);
 	srd_session_destroy(sess);
 	srd_exit();
@@ -207,10 +203,10 @@ START_TEST(test_session_config_set)
 END_TEST
 
 /*
- * Check whether srd_session_config_set() fails with invalid input.
+ * Check whether srd_session_metadata_set() fails with invalid input.
  * If it returns SRD_OK (or segfaults) this test will fail.
  */
-START_TEST(test_session_config_set_bogus)
+START_TEST(test_session_metadata_set_bogus)
 {
 	struct srd_session *sess;
 
@@ -218,21 +214,13 @@ START_TEST(test_session_config_set_bogus)
 	srd_session_new(&sess);
 
 	/* Incorrect gvariant type (currently only uint64 is used). */
-	conf_check_fail_str(sess, SRD_CONF_NUM_PROBES, "");
-	conf_check_fail_str(sess, SRD_CONF_UNITSIZE, "");
 	conf_check_fail_str(sess, SRD_CONF_SAMPLERATE, "");
-	conf_check_fail_str(sess, SRD_CONF_NUM_PROBES, "Foo");
-	conf_check_fail_str(sess, SRD_CONF_UNITSIZE, "Foo");
 	conf_check_fail_str(sess, SRD_CONF_SAMPLERATE, "Foo");
 
 	/* NULL data pointer. */
-	conf_check_fail_null(sess, SRD_CONF_NUM_PROBES);
-	conf_check_fail_null(sess, SRD_CONF_UNITSIZE);
 	conf_check_fail_null(sess, SRD_CONF_SAMPLERATE);
 
 	/* NULL session. */
-	conf_check_fail(NULL, SRD_CONF_NUM_PROBES, 0);
-	conf_check_fail(NULL, SRD_CONF_UNITSIZE, 0);
 	conf_check_fail(NULL, SRD_CONF_SAMPLERATE, 0);
 
 	/* Invalid keys. */
@@ -263,8 +251,8 @@ Suite *suite_session(void)
 
 	tc = tcase_create("config");
 	tcase_add_checked_fixture(tc, setup, teardown);
-	tcase_add_test(tc, test_session_config_set);
-	tcase_add_test(tc, test_session_config_set_bogus);
+	tcase_add_test(tc, test_session_metadata_set);
+	tcase_add_test(tc, test_session_metadata_set_bogus);
 	suite_add_tcase(s, tc);
 
 	return s;
