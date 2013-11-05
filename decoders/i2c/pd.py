@@ -106,7 +106,7 @@ class Decoder(srd.Decoder):
         self.oldpins = [1, 1]
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2c')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'i2c')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2c')
 
     def report(self):

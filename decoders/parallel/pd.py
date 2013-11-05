@@ -99,7 +99,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self, metadata):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'parallel')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'parallel')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'parallel')
 
     def report(self):

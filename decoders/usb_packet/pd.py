@@ -176,7 +176,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_packet, self.es_packet, self.out_ann, data)
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_packet')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'usb_packet')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_packet')
 
     def report(self):

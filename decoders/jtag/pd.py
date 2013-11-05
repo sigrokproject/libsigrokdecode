@@ -57,7 +57,7 @@ class Decoder(srd.Decoder):
         self.bits_tdo = []
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'jtag')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'jtag')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'jtag')
 
     def report(self):

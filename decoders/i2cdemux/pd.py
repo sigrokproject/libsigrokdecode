@@ -68,7 +68,7 @@ class Decoder(srd.Decoder):
 
             # We're never seen this slave, add a new stream.
             self.slaves.append(databyte)
-            self.out_proto.append(self.add(srd.OUTPUT_PROTO,
+            self.out_proto.append(self.add(srd.OUTPUT_PYTHON,
                                   'i2c-%s' % hex(databyte)))
             self.stream = self.streamcount
             self.streamcount += 1

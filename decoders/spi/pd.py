@@ -101,7 +101,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'spi')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
 
     def report(self):

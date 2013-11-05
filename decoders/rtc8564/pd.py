@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
         self.years = -1
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'rtc8564')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'rtc8564')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'rtc8564')
 
     def report(self):

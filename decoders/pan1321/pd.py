@@ -49,7 +49,7 @@ class Decoder(srd.Decoder):
         self.ss_block = None
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'pan1321')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'pan1321')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'pan1321')
 
     def report(self):

@@ -25,7 +25,7 @@
 /* This is only used for nicer srd_dbg() output. */
 static const char *OUTPUT_TYPES[] = {
 	"OUTPUT_ANN",
-	"OUTPUT_PROTO",
+	"OUTPUT_PYTHON",
 	"OUTPUT_BINARY",
 };
 
@@ -145,7 +145,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			cb->cb(pdata, cb->cb_data);
 		}
 		break;
-	case SRD_OUTPUT_PROTO:
+	case SRD_OUTPUT_PYTHON:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
 			/* TODO: Is this needed? */

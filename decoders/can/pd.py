@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
         self.reset_variables()
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'can')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'can')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'can')
 
     def metadata(self, key, value):

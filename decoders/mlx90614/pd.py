@@ -44,7 +44,7 @@ class Decoder(srd.Decoder):
         self.data = []
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mlx90614')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'mlx90614')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'mlx90614')
 
     def report(self):

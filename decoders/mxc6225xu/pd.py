@@ -83,7 +83,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'mxc6225xu')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'mxc6225xu')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'mxc6225xu')
 
     def report(self):

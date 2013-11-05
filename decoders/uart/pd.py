@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
         self.oldpins = [1, 1]
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'uart')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'uart')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'uart')
 
     def metadata(self, key, value):

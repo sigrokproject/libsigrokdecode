@@ -62,7 +62,7 @@ class Decoder(srd.Decoder):
         self.rom = 0x0000000000000000
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'onewire_network')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'onewire_network')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'onewire_network')
 
     def report(self):

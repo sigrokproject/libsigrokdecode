@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
         self.lastsample = None
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'transitioncounter')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'transitioncounter')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'transitioncounter')
 
     def report(self):

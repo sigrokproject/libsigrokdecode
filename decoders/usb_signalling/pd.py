@@ -109,7 +109,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'usb_signalling')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'usb_signalling')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'usb_signalling')
 
     def metadata(self, key, value):

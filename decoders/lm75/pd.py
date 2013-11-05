@@ -78,7 +78,7 @@ class Decoder(srd.Decoder):
         self.avgvalues = []
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PROTO, 'lm75')
+        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'lm75')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'lm75')
 
     def report(self):

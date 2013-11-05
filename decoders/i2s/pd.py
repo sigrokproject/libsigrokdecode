@@ -69,7 +69,7 @@ class Decoder(srd.Decoder):
         self.wordlength = -1
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PROTO, 'i2s')
+        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'i2s')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'i2s')
 
     def metadata(self, key, value):
