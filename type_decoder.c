@@ -29,8 +29,8 @@ static const char *OUTPUT_TYPES[] = {
 	"OUTPUT_BINARY",
 };
 
-static int convert_pyobj(struct srd_decoder_inst *di, PyObject *obj,
-			 int *ann_format, char ***ann)
+static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
+		int *ann_format, char ***ann)
 {
 	PyObject *py_tmp;
 	struct srd_pd_output *pdo;
@@ -89,7 +89,7 @@ static int convert_pyobj(struct srd_decoder_inst *di, PyObject *obj,
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
-	PyObject *data, *py_res;
+	PyObject *py_data, *py_res;
 	struct srd_decoder_inst *di, *next_di;
 	struct srd_pd_output *pdo;
 	struct srd_proto_data *pdata;
@@ -104,7 +104,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 
 	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample,
-	    &output_id, &data)) {
+	    &output_id, &py_data)) {
 		/*
 		 * This throws an exception, but by returning NULL here we let
 		 * Python raise it. This results in a much better trace in
@@ -137,7 +137,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
-			if (convert_pyobj(di, data, &pdata->ann_format,
+			if (convert_annotation(di, py_data, &pdata->ann_format,
 					  (char ***)&pdata->data) != SRD_OK) {
 				/* An error was already logged. */
 				break;
@@ -155,7 +155,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 				 next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
 			    next_di->py_inst, "decode", "KKO", start_sample,
-			    end_sample, data))) {
+			    end_sample, py_data))) {
 				srd_exception_catch("Calling %s decode(): ",
 						    next_di->inst_id);
 			}
