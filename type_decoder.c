@@ -30,11 +30,13 @@ static const char *OUTPUT_TYPES[] = {
 };
 
 static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
-		int *ann_format, char ***ann)
+		struct srd_proto_data *pdata)
 {
 	PyObject *py_tmp;
 	struct srd_pd_output *pdo;
-	int ann_id;
+	struct srd_proto_data_annotation *pda;
+	int ann_format;
+	char **ann_text;
 
 	/* Should be a list of [annotation format, [string, ...]]. */
 	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
@@ -61,14 +63,12 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 			"first element was not an integer.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
-
-	ann_id = PyLong_AsLong(py_tmp);
-	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_id))) {
+	ann_format = PyLong_AsLong(py_tmp);
+	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_format))) {
 		srd_err("Protocol decoder %s submitted data to unregistered "
-			"annotation format %d.", di->decoder->name, ann_id);
+			"annotation format %d.", di->decoder->name, ann_format);
 		return SRD_ERR_PYTHON;
 	}
-	*ann_format = ann_id;
 
 	/* Second element must be a list. */
 	py_tmp = PyList_GetItem(obj, 1);
@@ -77,11 +77,17 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 			"second element was not a list.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
-	if (py_strlist_to_char(py_tmp, ann) != SRD_OK) {
+	if (py_strlist_to_char(py_tmp, &ann_text) != SRD_OK) {
 		srd_err("Protocol decoder %s submitted annotation list, but "
 			"second element was malformed.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
+
+	if (!(pda = g_try_malloc(sizeof(struct srd_proto_data_annotation))))
+		return SRD_ERR_MALLOC;
+	pda->ann_format = ann_format;
+	pda->ann_text = ann_text;
+	pdata->data = pda;
 
 	return SRD_OK;
 }
@@ -137,8 +143,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
-			if (convert_annotation(di, py_data, &pdata->ann_format,
-					  (char ***)&pdata->data) != SRD_OK) {
+			if (convert_annotation(di, py_data, pdata) != SRD_OK) {
 				/* An error was already logged. */
 				break;
 			}
