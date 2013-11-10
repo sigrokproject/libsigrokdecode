@@ -202,6 +202,12 @@ struct srd_decoder {
 	 */
 	GSList *annotations;
 
+	/**
+	 * List of NULL-terminated char[], containing descriptions of the
+	 * supported binary output.
+	 */
+	GSList *binary;
+
 	/** List of decoder options.  */
 	GSList *options;
 
@@ -265,6 +271,11 @@ struct srd_proto_data {
 struct srd_proto_data_annotation {
 	int ann_format;
 	char **ann_text;
+};
+struct srd_proto_data_binary {
+	int bin_class;
+	uint64_t size;
+	const unsigned char *data;
 };
 
 typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata,

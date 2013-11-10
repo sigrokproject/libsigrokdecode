@@ -93,6 +93,74 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	return SRD_OK;
 }
 
+static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
+		struct srd_proto_data *pdata)
+{
+	struct srd_proto_data_binary *pdb;
+	PyObject *py_tmp;
+	Py_ssize_t size;
+	int bin_class;
+	char *class_name, *buf;
+
+	/* Should be a tuple of (binary class, bytes). */
+	if (!PyTuple_Check(obj)) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY with "
+				"%s instead of tuple.", di->decoder->name,
+				obj->ob_type->tp_name);
+		return SRD_ERR_PYTHON;
+	}
+
+	/* Should have 2 elements. */
+	if (PyTuple_Size(obj) != 2) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple "
+				"with %d elements instead of 2", di->decoder->name,
+				PyList_Size(obj));
+		return SRD_ERR_PYTHON;
+	}
+
+	/* The first element should be an integer. */
+	py_tmp = PyTuple_GetItem(obj, 0);
+	if (!PyLong_Check(py_tmp)) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple, "
+			"but first element was not an integer.", di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+	bin_class = PyLong_AsLong(py_tmp);
+	if (!(class_name = g_slist_nth_data(di->decoder->binary, bin_class))) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY with "
+			"unregistered binary class %d.", di->decoder->name, bin_class);
+		return SRD_ERR_PYTHON;
+	}
+
+	/* Second element should be bytes. */
+	py_tmp = PyTuple_GetItem(obj, 1);
+	if (!PyBytes_Check(py_tmp)) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple, "
+			"but second element was not bytes.", di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+
+	/* Consider an empty set of bytes a bug. */
+	if (PyBytes_Size(py_tmp) == 0) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY "
+				"with empty data set.", di->decoder->name);
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(pdb = g_try_malloc(sizeof(struct srd_proto_data_binary))))
+		return SRD_ERR_MALLOC;
+	if (PyBytes_AsStringAndSize(py_tmp, &buf, &size) == -1)
+		return SRD_ERR_PYTHON;
+	pdb->bin_class = bin_class;
+	pdb->size = size;
+	if (!(pdb->data = g_try_malloc(pdb->size)))
+		return SRD_ERR_MALLOC;
+	memcpy((void *)pdb->data, (const void *)buf, pdb->size);
+	pdata->data = pdb;
+
+	return SRD_OK;
+}
+
 static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
 {
 	long long intvalue;
@@ -173,7 +241,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_ANN:
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
-			/* Annotations need converting from PyObject. */
+			/* Convert from PyDict to srd_proto_data_annotation. */
 			if (convert_annotation(di, py_data, pdata) != SRD_OK) {
 				/* An error was already logged. */
 				break;
@@ -199,7 +267,14 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		}
 		break;
 	case SRD_OUTPUT_BINARY:
-		srd_err("SRD_OUTPUT_BINARY not yet supported.");
+		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
+			/* Convert from PyDict to srd_proto_data_binary. */
+			if (convert_binary(di, py_data, pdata) != SRD_OK) {
+				/* An error was already logged. */
+				break;
+			}
+			cb->cb(pdata, cb->cb_data);
+		}
 		break;
 	case SRD_OUTPUT_META:
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
