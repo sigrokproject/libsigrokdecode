@@ -1194,29 +1194,4 @@ SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(
 	return pd_cb;
 }
 
-/* This is the backend function to Python sigrokdecode.add() call. */
-/** @private */
-SRD_PRIV int srd_inst_pd_output_add(struct srd_decoder_inst *di,
-				    int output_type, const char *proto_id)
-{
-	struct srd_pd_output *pdo;
-
-	srd_dbg("Instance %s creating new output type %d for %s.",
-		di->inst_id, output_type, proto_id);
-
-	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output)))) {
-		srd_err("Failed to g_malloc() struct srd_pd_output.");
-		return -1;
-	}
-
-	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
-	pdo->pdo_id = g_slist_length(di->pd_output);
-	pdo->output_type = output_type;
-	pdo->di = di;
-	pdo->proto_id = g_strdup(proto_id);
-	di->pd_output = g_slist_append(di->pd_output, pdo);
-
-	return pdo->pdo_id;
-}
-
 /** @} */
