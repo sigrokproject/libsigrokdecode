@@ -94,6 +94,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self, **kwargs):
+        self.samplerate = None
         self.startsample = -1
         self.samplenum = None
         self.bitcount = 0
@@ -104,10 +105,18 @@ class Decoder(srd.Decoder):
         self.oldscl = 1
         self.oldsda = 1
         self.oldpins = [1, 1]
+        self.pdu_start = None
+        self.pdu_bits = 0
+
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'i2c')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'i2c')
+        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_bitrate = self.register(srd.OUTPUT_META,
+                meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
     def report(self):
         pass
@@ -138,6 +147,8 @@ class Decoder(srd.Decoder):
 
     def found_start(self, scl, sda):
         self.startsample = self.samplenum
+        self.pdu_start = self.samplenum
+        self.pdu_bits = 0
         cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
@@ -198,6 +209,11 @@ class Decoder(srd.Decoder):
         self.state = 'FIND DATA'
 
     def found_stop(self, scl, sda):
+        # Meta bitrate
+        elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
+        bitrate = int(1 / elapsed * self.pdu_bits)
+        self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
+
         self.startsample = self.samplenum
         cmd = 'STOP'
         self.putp([cmd, None])
@@ -207,12 +223,16 @@ class Decoder(srd.Decoder):
         self.wr = -1
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).
             if self.oldpins == pins:
                 continue
             self.oldpins, (scl, sda) = pins, pins
+
+            self.pdu_bits += 1
 
             # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
