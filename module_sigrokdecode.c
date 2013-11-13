@@ -68,17 +68,17 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 	    (PyObject *)&srd_logic_type) == -1)
 		return NULL;
 
-	/* expose output types as symbols in the sigrokdecode module */
+	/* Expose output types as symbols in the sigrokdecode module */
 	if (PyModule_AddIntConstant(mod, "OUTPUT_ANN", SRD_OUTPUT_ANN) == -1)
 		return NULL;
-	if (PyModule_AddIntConstant(mod, "OUTPUT_PYTHON",
-	    SRD_OUTPUT_PYTHON) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_PYTHON", SRD_OUTPUT_PYTHON) == -1)
 		return NULL;
-	if (PyModule_AddIntConstant(mod, "OUTPUT_BINARY",
-	    SRD_OUTPUT_BINARY) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_BINARY", SRD_OUTPUT_BINARY) == -1)
 		return NULL;
-	if (PyModule_AddIntConstant(mod, "SRD_CONF_SAMPLERATE",
-			SRD_CONF_SAMPLERATE) == -1)
+	if (PyModule_AddIntConstant(mod, "OUTPUT_META", SRD_OUTPUT_META) == -1)
+		return NULL;
+	/* Expose meta input symbols. */
+	if (PyModule_AddIntConstant(mod, "SRD_CONF_SAMPLERATE", SRD_CONF_SAMPLERATE) == -1)
 		return NULL;
 
 	mod_sigrokdecode = mod;

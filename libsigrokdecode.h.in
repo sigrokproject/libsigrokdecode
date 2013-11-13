@@ -162,6 +162,7 @@ enum {
 	SRD_OUTPUT_ANN,
 	SRD_OUTPUT_PYTHON,
 	SRD_OUTPUT_BINARY,
+	SRD_OUTPUT_META,
 };
 
 #define SRD_MAX_NUM_PROBES 64
@@ -249,6 +250,10 @@ struct srd_pd_output {
 	int output_type;
 	struct srd_decoder_inst *di;
 	char *proto_id;
+	/* Only used for OUTPUT_META. */
+	const GVariantType *meta_type;
+	char *meta_name;
+	char *meta_descr;
 };
 
 struct srd_proto_data {

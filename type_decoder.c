@@ -27,6 +27,7 @@ static const char *OUTPUT_TYPES[] = {
 	"OUTPUT_ANN",
 	"OUTPUT_PYTHON",
 	"OUTPUT_BINARY",
+	"OUTPUT_META",
 };
 
 static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
@@ -88,6 +89,36 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	pda->ann_format = ann_format;
 	pda->ann_text = ann_text;
 	pdata->data = pda;
+
+	return SRD_OK;
+}
+
+static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
+{
+	long long intvalue;
+	double dvalue;
+
+	if (pdata->pdo->meta_type == G_VARIANT_TYPE_INT64) {
+		if (!PyLong_Check(obj)) {
+			PyErr_Format(PyExc_TypeError, "This output was registered "
+					"as 'int', but '%s' was passed.", obj->ob_type->tp_name);
+			return SRD_ERR_PYTHON;
+		}
+		intvalue = PyLong_AsLongLong(obj);
+		if (PyErr_Occurred())
+			return SRD_ERR_PYTHON;
+		pdata->data = g_variant_new_int64(intvalue);
+	} else if (pdata->pdo->meta_type == G_VARIANT_TYPE_DOUBLE) {
+		if (!PyFloat_Check(obj)) {
+			PyErr_Format(PyExc_TypeError, "This output was registered "
+					"as 'float', but '%s' was passed.", obj->ob_type->tp_name);
+			return SRD_ERR_PYTHON;
+		}
+		dvalue = PyFloat_AsDouble(obj);
+		if (PyErr_Occurred())
+			return SRD_ERR_PYTHON;
+		pdata->data = g_variant_new_double(dvalue);
+	}
 
 	return SRD_OK;
 }
@@ -170,6 +201,16 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_BINARY:
 		srd_err("SRD_OUTPUT_BINARY not yet supported.");
 		break;
+	case SRD_OUTPUT_META:
+		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
+			/* Annotations need converting from PyObject. */
+			if (convert_meta(pdata, py_data) != SRD_OK) {
+				/* An exception was already set up. */
+				break;
+			}
+			cb->cb(pdata, cb->cb_data);
+		}
+		break;
 	default:
 		srd_err("Protocol decoder %s submitted invalid output type %d.",
 			di->decoder->name, pdo->output_type);
@@ -181,36 +222,94 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *Decoder_add(PyObject *self, PyObject *args)
+static PyObject *Decoder_register(PyObject *self, PyObject *args,
+		PyObject *kwargs)
 {
-	PyObject *ret;
 	struct srd_decoder_inst *di;
-	char *proto_id;
-	int output_type, pdo_id;
+	struct srd_pd_output *pdo;
+	PyObject *py_new_output_id;
+	PyTypeObject *meta_type_py;
+	const GVariantType *meta_type_gv;
+	int output_type;
+	char *proto_id, *meta_name, *meta_descr;
+	char *keywords[] = {"output_type", "proto_id", "meta", NULL};
+
+	meta_type_py = NULL;
+	meta_type_gv = NULL;
+	meta_name = meta_descr = NULL;
 
 	if (!(di = srd_inst_find_by_obj(NULL, self))) {
 		PyErr_SetString(PyExc_Exception, "decoder instance not found");
 		return NULL;
 	}
 
-	if (!PyArg_ParseTuple(args, "is", &output_type, &proto_id)) {
+	/* Default to instance id, which defaults to class id. */
+	proto_id = di->inst_id;
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|s(Oss)", keywords,
+			&output_type, &proto_id,
+			&meta_type_py, &meta_name, &meta_descr)) {
 		/* Let Python raise this exception. */
 		return NULL;
 	}
 
-	pdo_id = srd_inst_pd_output_add(di, output_type, proto_id);
-	if (pdo_id < 0)
-		Py_RETURN_NONE;
-	else
-		ret = Py_BuildValue("i", pdo_id);
+	/* Check if the meta value's type is supported. */
+	if (output_type == SRD_OUTPUT_META) {
+		if (meta_type_py == &PyLong_Type)
+			meta_type_gv = G_VARIANT_TYPE_INT64;
+		else if (meta_type_py == &PyFloat_Type)
+			meta_type_gv = G_VARIANT_TYPE_DOUBLE;
+		else {
+			PyErr_Format(PyExc_TypeError, "Unsupported type '%s'.",
+					meta_type_py->tp_name);
+			return NULL;
+		}
+	}
 
-	return ret;
+	srd_dbg("Instance %s creating new output type %d for %s.",
+		di->inst_id, output_type, proto_id);
+
+	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output)))) {
+		PyErr_SetString(PyExc_MemoryError, "struct srd_pd_output");
+		return NULL;
+	}
+
+	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
+	pdo->pdo_id = g_slist_length(di->pd_output);
+	pdo->output_type = output_type;
+	pdo->di = di;
+	pdo->proto_id = g_strdup(proto_id);
+
+	if (output_type == SRD_OUTPUT_META) {
+		pdo->meta_type = meta_type_gv;
+		pdo->meta_name = g_strdup(meta_name);
+		pdo->meta_descr = g_strdup(meta_descr);
+	}
+
+	di->pd_output = g_slist_append(di->pd_output, pdo);
+	py_new_output_id = Py_BuildValue("i", pdo->pdo_id);
+
+	return py_new_output_id;
+}
+
+/* TODO: this is just a stub that calls _register() until all PDs
+ * are changed to use the new register API. */
+static PyObject *Decoder_add(PyObject *self, PyObject *args)
+{
+	PyObject *py_keywords, *py_new_output_id;
+
+	py_keywords = PyDict_New();
+	py_new_output_id = Decoder_register(self, args, py_keywords);
+	Py_DecRef(py_keywords);
+
+	return py_new_output_id;
 }
 
 static PyMethodDef Decoder_methods[] = {
 	{"put", Decoder_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: startsample, endsample, data"},
 	{"add", Decoder_add, METH_VARARGS, "Create a new output stream"},
+	{"register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
+			"Register a new output stream"},
 	{NULL, NULL, 0, NULL}
 };
 
