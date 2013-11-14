@@ -73,9 +73,6 @@ class Decoder(srd.Decoder):
             self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
             self.bitpos = (self.bit_width / 100.0) * self.options['sample_point']
 
-    def report(self):
-        pass
-
     # Generic helper for CAN bit annotations.
     def putg(self, ss, es, data):
         left, right = int(self.bitpos), int(self.bit_width - self.bitpos)

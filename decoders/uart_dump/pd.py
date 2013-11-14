@@ -75,9 +75,6 @@ class Decoder(srd.Decoder):
         self.f_rx = self.file_open(self.options['filename_rx'])
         self.f_tx = self.file_open(self.options['filename_tx'])
 
-    def report(self):
-        pass
-
     def decode(self, ss, es, data):
         ptype, rxtx, pdata = data
 

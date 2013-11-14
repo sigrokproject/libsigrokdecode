@@ -60,9 +60,6 @@ class Decoder(srd.Decoder):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def advance_state_machine(self, tms):
         self.oldstate = self.state
 

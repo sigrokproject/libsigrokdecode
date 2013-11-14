@@ -56,9 +56,6 @@ class Decoder(srd.Decoder):
         # of '-' means 'stdout'.
         self.f = self.file_open(self.options['filename'])
 
-    def report(self):
-        pass
-
     # TODO: Lots of hard-coded fields in here.
     def write_wav_header(self):
         # Chunk descriptor

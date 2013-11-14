@@ -83,9 +83,6 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def report(self):
-        pass
-
     def putx(self, data):
         # Annotation for a single DCF77 bit.
         self.put(self.ss_bit, self.es_bit, self.out_ann, data)

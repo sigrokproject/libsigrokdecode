@@ -54,9 +54,6 @@ class Decoder(srd.Decoder):
         # self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
 

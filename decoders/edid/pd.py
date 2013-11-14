@@ -103,9 +103,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def decode(self, ss, es, data):
         cmd, data = data
 

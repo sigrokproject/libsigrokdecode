@@ -144,9 +144,6 @@ class Decoder(srd.Decoder):
         # self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def handle_reg_bypass(self, cmd, bits):
         # TODO
         self.put(self.ss, self.es, self.out_ann, [0, ['BYPASS: ' + bits]])

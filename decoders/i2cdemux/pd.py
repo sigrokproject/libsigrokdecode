@@ -45,9 +45,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_proto = []
 
-    def report(self):
-        pass
-
     # Grab I2C packets into a local cache, until an I2C STOP condition
     # packet comes along. At some point before that STOP condition, there
     # will have been an ADDRESS READ or ADDRESS WRITE which contains the

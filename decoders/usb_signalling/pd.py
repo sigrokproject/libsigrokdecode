@@ -119,9 +119,6 @@ class Decoder(srd.Decoder):
             self.bitwidth = float(self.samplerate) / float(self.bitrate)
             self.halfbit = int(self.bitwidth / 2)
 
-    def report(self):
-        pass
-
     def putpx(self, data):
         self.put(self.samplenum, self.samplenum, self.out_proto, data)
 

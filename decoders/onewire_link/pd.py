@@ -173,9 +173,6 @@ class Decoder(srd.Decoder):
                  '(%2.1fus-%2.1fus) should be inside (7.3us, 10.0us).'
                  % (time_min*1000000, time_max*1000000)]])
 
-    def report(self):
-        pass
-
     def decode(self, ss, es, data):
         if self.samplerate is None:
             raise Exception("Cannot decode without samplerate.")

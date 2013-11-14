@@ -179,9 +179,6 @@ class Decoder(srd.Decoder):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def handle_packet(self):
         packet = ''
         for (bit, ss, es) in self.bits:

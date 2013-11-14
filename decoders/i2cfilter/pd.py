@@ -54,9 +54,6 @@ class Decoder(srd.Decoder):
         if self.options['direction'] not in ('both', 'read', 'write'):
             raise Exception('Invalid direction (valid: read/write/both).')
 
-    def report(self):
-        pass
-
     # Grab I2C packets into a local cache, until an I2C STOP condition
     # packet comes along. At some point before that STOP condition, there
     # will have been an ADDRESS READ or ADDRESS WRITE which contains the

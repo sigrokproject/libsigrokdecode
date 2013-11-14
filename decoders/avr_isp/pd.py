@@ -54,9 +54,6 @@ class Decoder(srd.Decoder):
         # self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def report(self):
-        pass
-
     def putx(self, data):
         self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
 

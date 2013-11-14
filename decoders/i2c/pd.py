@@ -118,9 +118,6 @@ class Decoder(srd.Decoder):
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
-    def report(self):
-        pass
-
     def putx(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 

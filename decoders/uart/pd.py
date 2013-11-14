@@ -141,9 +141,6 @@ class Decoder(srd.Decoder):
             # The width of one UART bit in number of samples.
             self.bit_width = float(self.samplerate) / float(self.options['baudrate'])
 
-    def report(self):
-        pass
-
     # Return true if we reached the middle of the desired bit, false otherwise.
     def reached_bit(self, rxtx, bitnum):
         # bitpos is the samplenumber which is in the middle of the
