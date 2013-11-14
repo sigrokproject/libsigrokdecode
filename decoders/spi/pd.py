@@ -88,6 +88,7 @@ class Decoder(srd.Decoder):
     ]
 
     def __init__(self):
+        self.samplerate = None
         self.oldsck = 1
         self.bitcount = 0
         self.mosidata = 0
@@ -100,9 +101,15 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.state = 'IDLE'
 
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
+
     def start(self):
         self.out_proto = self.add(srd.OUTPUT_PYTHON, 'spi')
         self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
+        self.out_bitrate = self.register(srd.OUTPUT_META,
+                meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
     def report(self):
         return 'SPI: %d bytes received' % self.bytesreceived
@@ -143,10 +150,18 @@ class Decoder(srd.Decoder):
         if self.bitcount != ws:
             return
 
+        # Pass MOSI and MISO to the next PD up the stack
         self.putpw(['DATA', self.mosidata, self.misodata])
+
+        # Annotations
         self.putw([0, ['%02X/%02X' % (self.mosidata, self.misodata)]])
         self.putw([1, ['%02X' % self.misodata]])
         self.putw([2, ['%02X' % self.mosidata]])
+
+        # Meta bitrate
+        elapsed = 1 / float(self.samplerate) * (self.samplenum - self.startsample + 1)
+        bitrate = int(1 / elapsed * self.options['wordsize'])
+        self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
         if self.cs_was_deasserted_during_data_word:
             self.putw([3, ['CS# was deasserted during this data word!']])
@@ -187,6 +202,8 @@ class Decoder(srd.Decoder):
         self.handle_bit(miso, mosi, sck, cs)
 
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         # TODO: Either MISO or MOSI could be optional. CS# is optional.
         for (self.samplenum, pins) in data:
 
