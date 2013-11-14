@@ -93,7 +93,6 @@ class Decoder(srd.Decoder):
         self.bitcount = 0
         self.mosidata = 0
         self.misodata = 0
-        self.bytesreceived = 0
         self.startsample = -1
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
@@ -110,9 +109,6 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
-
-    def report(self):
-        return 'SPI: %d bytes received' % self.bytesreceived
 
     def putpw(self, data):
         self.put(self.startsample, self.samplenum, self.out_proto, data)
@@ -168,9 +164,6 @@ class Decoder(srd.Decoder):
 
         # Reset decoder state.
         self.mosidata = self.misodata = self.bitcount = 0
-
-        # Keep stats for summary.
-        self.bytesreceived += 1
 
     def find_clk_edge(self, miso, mosi, sck, cs):
         if self.have_cs and self.oldcs != cs:

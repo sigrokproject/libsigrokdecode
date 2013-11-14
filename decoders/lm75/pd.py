@@ -73,20 +73,10 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         self.reg = 0x00 # Currently selected register
         self.databytes = []
-        self.mintemp = 0
-        self.maxtemp = 0
-        self.avgvalues = []
 
     def start(self):
         # self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-
-    def report(self):
-        # TODO: print() or self.put() or return xyz, or... ?
-        avg = sum(self.avgvalues) / len(self.avgvalues)
-        temperatures = (self.mintemp, self.maxtemp, avg)
-        # TODO: Configurable report() output, e.g. for Kelvin.
-        return 'Min/max/avg temperature: %f/%f/%f °C' % temperatures
 
     def putx(self, data):
         # Helper for annotations which span exactly one I2C packet.
@@ -116,13 +106,6 @@ class Decoder(srd.Decoder):
         if s == 'Temperature' and rw == 'WRITE':
             s = 'Warning: The temperature register is read-only!'
             self.putb([4, [s]])
-
-        # Keep some statistics. Can be output in report(), for example.
-        if celsius < self.mintemp:
-            self.mintemp = celsius
-        if celsius > self.maxtemp:
-            self.maxtemp = celsius
-        self.avgvalues.append(celsius)
 
     def handle_temperature_reg(self, b, s, rw):
         # Common helper for the temperature/T_HYST/T_OS registers.
