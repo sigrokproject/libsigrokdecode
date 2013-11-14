@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
         self.years = -1
 
     def start(self):
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'ds1307')
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass

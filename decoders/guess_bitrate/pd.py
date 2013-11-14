@@ -51,8 +51,8 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'guess_bitrate')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'guess_bitrate')
+        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass

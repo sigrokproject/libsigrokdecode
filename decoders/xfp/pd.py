@@ -277,7 +277,7 @@ class Decoder(srd.Decoder):
         }
 
     def start(self):
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'xfp')
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def decode(self, ss, es, data):
         cmd, data = data

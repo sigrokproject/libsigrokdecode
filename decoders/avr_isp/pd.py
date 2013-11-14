@@ -51,8 +51,8 @@ class Decoder(srd.Decoder):
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'avr_isp')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'avr_isp')
+        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass

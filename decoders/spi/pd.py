@@ -106,8 +106,8 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'spi')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'spi')
+        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 

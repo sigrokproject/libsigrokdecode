@@ -69,8 +69,8 @@ class Decoder(srd.Decoder):
         self.wordlength = -1
 
     def start(self):
-        self.out_proto = self.add(srd.OUTPUT_PYTHON, 'i2s')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'i2s')
+        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:

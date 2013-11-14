@@ -48,8 +48,8 @@ class Decoder(srd.Decoder):
         self.init_seq = []
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'nunchuk')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'nunchuk')
+        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass

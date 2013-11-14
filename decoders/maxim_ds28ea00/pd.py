@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
         self.rom = 0x0000000000000000
 
     def start(self):
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'maxim_ds28ea00')
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass

@@ -65,8 +65,8 @@ class Decoder(srd.Decoder):
         self.dac_select = self.gain = self.dac_value = None
 
     def start(self):
-        # self.out_proto = self.add(srd.OUTPUT_PYTHON, 'tlc5620')
-        self.out_ann = self.add(srd.OUTPUT_ANN, 'tlc5620')
+        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def report(self):
         pass
