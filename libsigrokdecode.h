@@ -49,38 +49,6 @@ struct srd_session;
  */
 
 /*
- * Package version macros (can be used for conditional compilation).
- */
-
-/** The libsigrokdecode package 'major' version number. */
-#define SRD_PACKAGE_VERSION_MAJOR @SRD_PACKAGE_VERSION_MAJOR@
-
-/** The libsigrokdecode package 'minor' version number. */
-#define SRD_PACKAGE_VERSION_MINOR @SRD_PACKAGE_VERSION_MINOR@
-
-/** The libsigrokdecode package 'micro' version number. */
-#define SRD_PACKAGE_VERSION_MICRO @SRD_PACKAGE_VERSION_MICRO@
-
-/** The libsigrokdecode package version ("major.minor.micro") as string. */
-#define SRD_PACKAGE_VERSION_STRING "@SRD_PACKAGE_VERSION@"
-
-/*
- * Library/libtool version macros (can be used for conditional compilation).
- */
-
-/** The libsigrokdecode libtool 'current' version number. */
-#define SRD_LIB_VERSION_CURRENT @SRD_LIB_VERSION_CURRENT@
-
-/** The libsigrokdecode libtool 'revision' version number. */
-#define SRD_LIB_VERSION_REVISION @SRD_LIB_VERSION_REVISION@
-
-/** The libsigrokdecode libtool 'age' version number. */
-#define SRD_LIB_VERSION_AGE @SRD_LIB_VERSION_AGE@
-
-/** The libsigrokdecode libtool version ("current:revision:age") as string. */
-#define SRD_LIB_VERSION_STRING "@SRD_LIB_VERSION@"
-
-/*
  * All possible return codes of libsigrokdecode functions must be listed here.
  * Functions should never return hardcoded numbers as status, but rather
  * use these enum values. All error codes are negative numbers.
@@ -366,6 +334,8 @@ SRD_API const char *srd_lib_version_string_get(void);
 
 SRD_API const char *srd_strerror(int error_code);
 SRD_API const char *srd_strerror_name(int error_code);
+
+#include "version.h"
 
 #ifdef __cplusplus
 }

@@ -17,12 +17,12 @@ map
 missing
 stamp-h1
 autostuff/
-libsigrokdecode.h
 ChangeLog
 INSTALL
 tests/check_main
 tests/check_main.*
 tests/test-suite.log
+version.h
 
 # recursive autoconf leftovers
 .deps

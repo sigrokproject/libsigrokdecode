@@ -157,7 +157,7 @@ AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
 AC_SUBST(SRD_PACKAGE_VERSION)
 
 AC_CONFIG_FILES([Makefile
-		 libsigrokdecode.h
+		 version.h
 		 libsigrokdecode.pc
 		 contrib/Makefile
 		 decoders/Makefile
