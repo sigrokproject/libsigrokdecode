@@ -48,6 +48,9 @@ SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack);
 SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session *sess,
 		int output_type);
 
+/*--- session.c -------------------------------------------------------------*/
+SRD_PRIV int session_is_valid(struct srd_session *sess);
+
 /*--- exception.c -----------------------------------------------------------*/
 
 SRD_PRIV void srd_exception_catch(const char *format, ...);

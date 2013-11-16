@@ -26,6 +26,7 @@ lib_LTLIBRARIES = libsigrokdecode.la
 
 libsigrokdecode_la_SOURCES = \
 	controller.c \
+	session.c \
 	decoder.c \
 	log.c \
 	util.c \
