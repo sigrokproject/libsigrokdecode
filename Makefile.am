@@ -25,6 +25,7 @@ SUBDIRS = contrib decoders tests
 lib_LTLIBRARIES = libsigrokdecode.la
 
 libsigrokdecode_la_SOURCES = \
+	srd.c \
 	controller.c \
 	session.c \
 	decoder.c \
