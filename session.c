@@ -170,8 +170,25 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		return SRD_ERR_ARG;
 	}
 
+	if (!key) {
+		srd_err("Invalid key.");
+		return SRD_ERR_ARG;
+	}
+
+	if (!data) {
+		srd_err("Invalid value.");
+		return SRD_ERR_ARG;
+	}
+
+	/* Hardcoded to samplerate/uint64 for now. */
+
 	if (key != SRD_CONF_SAMPLERATE) {
 		srd_err("Unknown config key %d.", key);
+		return SRD_ERR_ARG;
+	}
+	if (!g_variant_is_of_type(data, G_VARIANT_TYPE_UINT64)) {
+		srd_err("Invalid value type: expected uint64, got %s",
+				g_variant_get_type_string(data));
 		return SRD_ERR_ARG;
 	}
 
