@@ -57,7 +57,7 @@ START_TEST(test_load_all_no_init)
 	int ret;
 
 	ret = srd_decoder_load_all();
-	fail_unless(ret == SRD_OK, "srd_decoder_load_all() failed: %d.", ret);
+	fail_unless(ret != SRD_OK, "srd_decoder_load_all() didn't fail properly.");
 }
 END_TEST
 
