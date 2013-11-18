@@ -34,9 +34,16 @@ struct srd_session {
 	GSList *callbacks;
 };
 
-/*--- controller.c ----------------------------------------------------------*/
 
+/* srd.c */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
+
+/* session.c */
+SRD_PRIV int session_is_valid(struct srd_session *sess);
+SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session *sess,
+		int output_type);
+
+/* instance.c */
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj( const GSList *stack,
 		const PyObject *obj);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di);
@@ -45,18 +52,8 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		const uint8_t *inbuf, uint64_t inbuflen);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack);
-SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session *sess,
-		int output_type);
 
-/*--- session.c -------------------------------------------------------------*/
-SRD_PRIV int session_is_valid(struct srd_session *sess);
-
-/*--- exception.c -----------------------------------------------------------*/
-
-SRD_PRIV void srd_exception_catch(const char *format, ...);
-
-/*--- log.c -----------------------------------------------------------------*/
-
+/* log.c */
 SRD_PRIV int srd_log(int loglevel, const char *format, ...);
 SRD_PRIV int srd_spew(const char *format, ...);
 SRD_PRIV int srd_dbg(const char *format, ...);
@@ -64,13 +61,15 @@ SRD_PRIV int srd_info(const char *format, ...);
 SRD_PRIV int srd_warn(const char *format, ...);
 SRD_PRIV int srd_err(const char *format, ...);
 
-/*--- util.c ----------------------------------------------------------------*/
-
+/* util.c */
 SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
-			    char **outstr);
+        char **outstr);
 SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
-				char **outstr);
+        char **outstr);
 SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr);
 SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr);
+
+/* exception.c */
+SRD_PRIV void srd_exception_catch(const char *format, ...);
 
 #endif

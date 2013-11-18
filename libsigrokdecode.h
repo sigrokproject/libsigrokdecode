@@ -271,20 +271,12 @@ typedef struct {
 	PyObject *sample;
 } srd_logic;
 
-/*--- controller.c ----------------------------------------------------------*/
 
+/* srd.c */
 SRD_API int srd_init(const char *path);
 SRD_API int srd_exit(void);
-SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
-		GHashTable *options);
-SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-		GHashTable *probes);
-SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
-		const char *id, GHashTable *options);
-SRD_API int srd_inst_stack(struct srd_session *sess,
-		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to);
-SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
-		const char *inst_id);
+
+/* session.c */
 SRD_API int srd_session_new(struct srd_session **sess);
 SRD_API int srd_session_start(struct srd_session *sess);
 SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
@@ -296,21 +288,30 @@ SRD_API int srd_session_destroy(struct srd_session *sess);
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 		int output_type, srd_pd_output_callback_t cb, void *cb_data);
 
-/*--- decoder.c -------------------------------------------------------------*/
-
+/* decoder.c */
 SRD_API const GSList *srd_decoder_list(void);
 SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id);
 SRD_API int srd_decoder_load(const char *name);
+SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec);
 SRD_API int srd_decoder_unload(struct srd_decoder *dec);
 SRD_API int srd_decoder_load_all(void);
 SRD_API int srd_decoder_unload_all(void);
-SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec);
 
-/*--- log.c -----------------------------------------------------------------*/
+/* instance.c */
+SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
+		GHashTable *options);
+SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
+		GHashTable *probes);
+SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
+		const char *id, GHashTable *options);
+SRD_API int srd_inst_stack(struct srd_session *sess,
+		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to);
+SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
+		const char *inst_id);
 
+/* log.c */
 typedef int (*srd_log_callback_t)(void *cb_data, int loglevel,
 				  const char *format, va_list args);
-
 SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
 SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data);
@@ -318,22 +319,19 @@ SRD_API int srd_log_callback_set_default(void);
 SRD_API int srd_log_logdomain_set(const char *logdomain);
 SRD_API char *srd_log_logdomain_get(void);
 
-/*--- version.c -------------------------------------------------------------*/
+/* error.c */
+SRD_API const char *srd_strerror(int error_code);
+SRD_API const char *srd_strerror_name(int error_code);
 
+/* version.c */
 SRD_API int srd_package_version_major_get(void);
 SRD_API int srd_package_version_minor_get(void);
 SRD_API int srd_package_version_micro_get(void);
 SRD_API const char *srd_package_version_string_get(void);
-
 SRD_API int srd_lib_version_current_get(void);
 SRD_API int srd_lib_version_revision_get(void);
 SRD_API int srd_lib_version_age_get(void);
 SRD_API const char *srd_lib_version_string_get(void);
-
-/*--- error.c ---------------------------------------------------------------*/
-
-SRD_API const char *srd_strerror(int error_code);
-SRD_API const char *srd_strerror_name(int error_code);
 
 #include "version.h"
 
