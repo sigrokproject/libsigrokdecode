@@ -87,7 +87,7 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 }
 
 static int get_probes(const struct srd_decoder *d, const char *attr,
-		      GSList **pl)
+		GSList **pl)
 {
 	PyObject *py_probelist, *py_entry;
 	struct srd_probe *p;
@@ -97,49 +97,50 @@ static int get_probes(const struct srd_decoder *d, const char *attr,
 		/* No probes of this type specified. */
 		return SRD_OK;
 
-	ret = SRD_ERR_PYTHON;
-	py_probelist = py_entry = NULL;
-
 	py_probelist = PyObject_GetAttrString(d->py_dec, attr);
 	if (!PyList_Check(py_probelist)) {
-		srd_err("Protocol decoder %s %s attribute is not "
-			"a list.", d->name, attr);
-		goto err_out;
+		srd_err("Protocol decoder %s %s attribute is not a list.",
+				d->name, attr);
+		return SRD_ERR_PYTHON;
 	}
 
-	num_probes = PyList_Size(py_probelist);
-	if (num_probes == 0)
+	if ((num_probes = PyList_Size(py_probelist)) == 0)
 		/* Empty probelist. */
 		return SRD_OK;
 
+	ret = SRD_OK;
 	for (i = 0; i < num_probes; i++) {
 		py_entry = PyList_GetItem(py_probelist, i);
 		if (!PyDict_Check(py_entry)) {
 			srd_err("Protocol decoder %s %s attribute is not "
 				"a list with dict elements.", d->name, attr);
-			goto err_out;
+			ret = SRD_ERR_PYTHON;
+			break;
 		}
 
 		if (!(p = g_try_malloc(sizeof(struct srd_probe)))) {
 			srd_err("Failed to g_malloc() struct srd_probe.");
 			ret = SRD_ERR_MALLOC;
-			goto err_out;
+			break;
 		}
 
-		if ((py_dictitem_as_str(py_entry, "id", &p->id)) != SRD_OK)
-			goto err_out;
-		if ((py_dictitem_as_str(py_entry, "name", &p->name)) != SRD_OK)
-			goto err_out;
-		if ((py_dictitem_as_str(py_entry, "desc", &p->desc)) != SRD_OK)
-			goto err_out;
+		if ((py_dictitem_as_str(py_entry, "id", &p->id)) != SRD_OK) {
+			ret = SRD_ERR_PYTHON;
+			break;
+		}
+		if ((py_dictitem_as_str(py_entry, "name", &p->name)) != SRD_OK) {
+			ret = SRD_ERR_PYTHON;
+			break;
+		}
+		if ((py_dictitem_as_str(py_entry, "desc", &p->desc)) != SRD_OK) {
+			ret = SRD_ERR_PYTHON;
+			break;
+		}
 		p->order = i;
 
 		*pl = g_slist_append(*pl, p);
 	}
-	ret = SRD_OK;
 
-err_out:
-	Py_DecRef(py_entry);
 	Py_DecRef(py_probelist);
 
 	return ret;
