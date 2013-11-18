@@ -131,7 +131,6 @@ START_TEST(test_load_multiple)
 	int ret;
 
 	srd_init(NULL);
-	srd_log_loglevel_set(SRD_LOG_SPEW);
 	ret = srd_decoder_load("uart");
 	fail_unless(ret == SRD_OK, "Loading uart PD 1x failed: %d", ret);
 	ret = srd_decoder_load("uart");
