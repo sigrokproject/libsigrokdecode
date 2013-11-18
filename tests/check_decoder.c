@@ -307,7 +307,7 @@ END_TEST
 START_TEST(test_doc_get_null)
 {
 	srd_init(NULL);
-	fail_unless(srd_decoder_doc_get(NULL) != NULL);
+	fail_unless(srd_decoder_doc_get(NULL) == NULL);
 	srd_exit();
 }
 END_TEST
