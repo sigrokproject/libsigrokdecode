@@ -260,6 +260,11 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (!module_name)
 		return SRD_ERR_ARG;
 
+	if (PyDict_GetItemString(PyImport_GetModuleDict(), module_name)) {
+		/* Module was already imported. */
+		return SRD_OK;
+	}
+
 	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
 	py_basedec = py_method = py_attr = NULL;
