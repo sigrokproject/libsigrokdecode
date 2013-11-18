@@ -263,4 +263,14 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 	return SRD_OK;
 }
 
+/* @private */
+SRD_PRIV gboolean srd_check_init(void)
+{
+	if (max_session_id < 0) {
+		srd_err("Library is not initialized.");
+		return FALSE;
+	} else
+		return TRUE;
+}
+
 /** @} */

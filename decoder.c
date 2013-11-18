@@ -253,6 +253,9 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_probe *p;
 	GSList *l;
 
+	if (!srd_check_init())
+		return SRD_ERR;
+
 	if (!module_name)
 		return SRD_ERR_ARG;
 
@@ -446,6 +449,12 @@ SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 	PyObject *py_str;
 	char *doc;
 
+	if (!srd_check_init())
+		return NULL;
+
+	if (!dec)
+		return NULL;
+
 	if (!PyObject_HasAttrString(dec->py_mod, "__doc__"))
 		return NULL;
 
@@ -494,6 +503,12 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	struct srd_decoder_option *o;
 	struct srd_session *sess;
 	GSList *l;
+
+	if (!srd_check_init())
+		return SRD_ERR;
+
+	if (!dec)
+		return SRD_ERR_ARG;
 
 	srd_dbg("Unloading protocol decoder '%s'.", dec->name);
 
@@ -547,6 +562,9 @@ SRD_API int srd_decoder_load_all(void)
 	GDir *dir;
 	GError *error;
 	const gchar *direntry;
+
+	if (!srd_check_init())
+		return SRD_ERR;
 
 	if (!(dir = g_dir_open(DECODERS_DIR, 0, &error))) {
 		srd_err("Unable to open %s for reading.", DECODERS_DIR);

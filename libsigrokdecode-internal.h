@@ -37,6 +37,7 @@ struct srd_session {
 
 /* srd.c */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
+SRD_PRIV gboolean srd_check_init(void);
 
 /* session.c */
 SRD_PRIV int session_is_valid(struct srd_session *sess);
