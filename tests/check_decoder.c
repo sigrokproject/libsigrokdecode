@@ -312,24 +312,6 @@ START_TEST(test_doc_get_null)
 }
 END_TEST
 
-/*
- * Check whether srd_decoder_doc_get() fails with an "empty" argument.
- * If it returns a value != NULL (or segfaults) this test will fail.
- * See also: http://sigrok.org/bugzilla/show_bug.cgi?id=180
- */
-START_TEST(test_doc_get_empty)
-{
-	struct srd_decoder dec;
-
-	srd_init(NULL);
-
-	memset(&dec, 0, sizeof(struct srd_decoder));
-	fail_unless(srd_decoder_doc_get(&dec) == NULL);
-
-	srd_exit();
-}
-END_TEST
-
 Suite *suite_decoder(void)
 {
 	Suite *s;
@@ -366,7 +348,6 @@ Suite *suite_decoder(void)
 	tc = tcase_create("doc_get");
 	tcase_add_test(tc, test_doc_get);
 	tcase_add_test(tc, test_doc_get_null);
-	tcase_add_test(tc, test_doc_get_empty);
 	suite_add_tcase(s, tc);
 
 	return s;
