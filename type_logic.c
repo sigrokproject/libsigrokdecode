@@ -31,9 +31,8 @@ static PyObject *srd_logic_iternext(PyObject *self)
 {
 	srd_logic *logic;
 	PyObject *py_samplenum, *py_samples;
-	uint64_t sample;
-	uint8_t probe_samples[SRD_MAX_NUM_PROBES + 1];
-	int i;
+	uint8_t *sample_pos, sample;
+	int byte_offset, bit_offset, i;
 
 	logic = (srd_logic *)self;
 	if (logic->itercnt >= logic->inbuflen / logic->di->data_unitsize) {
@@ -45,25 +44,18 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	 * Convert the bit-packed sample to an array of bytes, with only 0x01
 	 * and 0x00 values, so the PD doesn't need to do any bitshifting.
 	 */
-
-	/* Get probe bits into the 'sample' variable. */
-	memcpy(&sample,
-	       logic->inbuf + logic->itercnt * logic->di->data_unitsize,
-	       logic->di->data_unitsize);
-
-	/* All probe values (required + optional) are pre-set to 42. */
-	memset(probe_samples, 42, logic->di->dec_num_probes);
-	/* TODO: None or -1 in Python would be better. */
-
-	/*
-	 * Set probe values of specified/used probes to their resp. values.
-	 * Unused probe values (those not specified by the user) remain at 42.
-	 */
+	sample_pos = logic->inbuf + logic->itercnt * logic->di->data_unitsize;
 	for (i = 0; i < logic->di->dec_num_probes; i++) {
 		/* A probemap value of -1 means "unused optional probe". */
-		if (logic->di->dec_probemap[i] == -1)
-			continue;
-		probe_samples[i] = sample & (1 << logic->di->dec_probemap[i]) ? 1 : 0;
+		if (logic->di->dec_probemap[i] == -1) {
+			/* Value of unused probe is 0xff, instead of 0 or 1. */
+			logic->di->probe_samples[i] = 0xff;
+		} else {
+			byte_offset = logic->di->dec_probemap[i] / 8;
+			bit_offset = logic->di->dec_probemap[i] % 8;
+			sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+			logic->di->probe_samples[i] = sample;
+		}
 	}
 
 	/* Prepare the next samplenum/sample list in this iteration. */
@@ -71,7 +63,7 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	    PyLong_FromUnsignedLongLong(logic->start_samplenum +
 					logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
-	py_samples = PyBytes_FromStringAndSize((const char *)probe_samples,
+	py_samples = PyBytes_FromStringAndSize((const char *)logic->di->probe_samples,
 					       logic->di->dec_num_probes);
 	PyList_SetItem(logic->sample, 1, py_samples);
 	Py_INCREF(logic->sample);

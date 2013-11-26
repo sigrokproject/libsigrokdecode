@@ -133,8 +133,6 @@ enum {
 	SRD_OUTPUT_META,
 };
 
-#define SRD_MAX_NUM_PROBES 64
-
 enum {
 	SRD_CONF_SAMPLERATE = 10000,
 };
@@ -216,6 +214,7 @@ struct srd_decoder_inst {
 	int dec_num_probes;
 	int *dec_probemap;
 	int data_unitsize;
+	uint8_t *probe_samples;
 	GSList *next_di;
 };
 

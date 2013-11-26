@@ -373,8 +373,18 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		}
 		for (i = 0; i < di->dec_num_probes; i++)
 			di->dec_probemap[i] = i;
+		di->data_unitsize = (di->dec_num_probes + 7) / 8;
+		/*
+		 * Will be used to prepare a sample at every iteration
+		 * of the instance's decode() method.
+		 */
+		if (!(di->probe_samples = g_try_malloc(di->dec_num_probes))) {
+			srd_err("Failed to g_malloc() sample buffer.");
+			g_free(di->dec_probemap);
+			g_free(di);
+			return NULL;
+		}
 	}
-	di->data_unitsize = (di->dec_num_probes + 7) / 8;
 
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
