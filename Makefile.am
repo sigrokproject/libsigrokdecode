@@ -20,7 +20,7 @@
 
 ACLOCAL_AMFLAGS = -I autostuff
 
-SUBDIRS = contrib decoders tests
+SUBDIRS = contrib tests
 
 lib_LTLIBRARIES = libsigrokdecode.la
 
@@ -58,4 +58,10 @@ ChangeLog:
 	git --git-dir $(top_srcdir)/.git log > ChangeLog || touch ChangeLog
 
 dist-hook: ChangeLog
+
+install-decoders:
+	$(MKDIR_P) $(DECODERS_DIR)
+	tools/install-decoders -o $(DECODERS_DIR)
+
+install-data-hook: install-decoders
 
