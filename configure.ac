@@ -160,42 +160,6 @@ AC_CONFIG_FILES([Makefile
 		 version.h
 		 libsigrokdecode.pc
 		 contrib/Makefile
-		 decoders/Makefile
-		 decoders/avr_isp/Makefile
-		 decoders/can/Makefile
-		 decoders/dcf77/Makefile
-		 decoders/ds1307/Makefile
-		 decoders/edid/Makefile
-		 decoders/guess_bitrate/Makefile
-		 decoders/i2c/Makefile
-		 decoders/i2cdemux/Makefile
-		 decoders/i2cfilter/Makefile
-		 decoders/i2s/Makefile
-		 decoders/i2s_dump/Makefile
-		 decoders/jtag/Makefile
-		 decoders/jtag_stm32/Makefile
-		 decoders/lm75/Makefile
-		 decoders/lpc/Makefile
-		 decoders/maxim_ds28ea00/Makefile
-		 decoders/midi/Makefile
-		 decoders/mlx90614/Makefile
-		 decoders/mx25lxx05d/Makefile
-		 decoders/mxc6225xu/Makefile
-		 decoders/nunchuk/Makefile
-		 decoders/onewire_link/Makefile
-		 decoders/onewire_network/Makefile
-		 decoders/pan1321/Makefile
-		 decoders/parallel/Makefile
-		 decoders/rtc8564/Makefile
-		 decoders/sdcard_spi/Makefile
-		 decoders/spi/Makefile
-		 decoders/tlc5620/Makefile
-		 decoders/transitioncounter/Makefile
-		 decoders/uart/Makefile
-		 decoders/uart_dump/Makefile
-		 decoders/usb_packet/Makefile
-		 decoders/usb_signalling/Makefile
-		 decoders/xfp/Makefile
 		 tests/Makefile
 		])
 
