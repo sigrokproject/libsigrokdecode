@@ -2,7 +2,7 @@
 #
 # This file is part of the libsigrokdecode project.
 #
-# Copyright (C) 2012 Bert Vermeulen <bert@biot.com>
+# Copyright (C) 2013 Bert Vermeulen <bert@biot.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,13 +50,16 @@ def install(srcdir, dstdir):
             col = 0
         print(msg, end='')
         col += len(msg)
-        pd_dst = dstdir + '/' + pd
+        pd_dst = os.path.join(dstdir, pd)
         try:
             os.mkdir(pd_dst)
-        except FileExistsError:
-            pass
+        except OSError as e:
+            if e.errno != os.errno.EEXIST:
+                raise
+            else:
+                pass
         for f in install_list:
-            copy(pd_dir + '/' + f, pd_dst)
+            copy(os.path.join(pd_dir, f), pd_dst)
     print()
 
 
