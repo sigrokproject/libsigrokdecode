@@ -222,7 +222,8 @@ class Decoder(srd.Decoder):
 
         b, f = self.databyte[rxtx], self.options['format']
         if f == 'ascii':
-            self.putx(rxtx, [rxtx, [chr(b)]])
+            c = chr(b) if chr(b).isprintable() else '[%02X]' % b
+            self.putx(rxtx, [rxtx, [c]])
         elif f == 'dec':
             self.putx(rxtx, [rxtx, [str(b)]])
         elif f == 'hex':
