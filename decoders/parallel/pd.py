@@ -98,7 +98,7 @@ class Decoder(srd.Decoder):
         self.first = True
         self.state = 'IDLE'
 
-    def start(self, metadata):
+    def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
