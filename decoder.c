@@ -566,13 +566,12 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 SRD_API int srd_decoder_load_all(void)
 {
 	GDir *dir;
-	GError *error;
 	const gchar *direntry;
 
 	if (!srd_check_init())
 		return SRD_ERR;
 
-	if (!(dir = g_dir_open(DECODERS_DIR, 0, &error))) {
+	if (!(dir = g_dir_open(DECODERS_DIR, 0, NULL))) {
 		srd_err("Unable to open %s for reading.", DECODERS_DIR);
 		return SRD_ERR_DECODERS_DIR;
 	}
