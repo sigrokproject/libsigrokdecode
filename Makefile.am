@@ -60,8 +60,8 @@ ChangeLog:
 dist-hook: ChangeLog
 
 install-decoders:
-	$(MKDIR_P) $(DECODERS_DIR)
-	tools/install-decoders -o $(DECODERS_DIR)
+	$(MKDIR_P) $(DESTDIR)$(DECODERS_DIR)
+	tools/install-decoders -o $(DESTDIR)$(DECODERS_DIR)
 
 install-data-hook: install-decoders
 
