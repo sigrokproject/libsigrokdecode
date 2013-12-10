@@ -58,6 +58,10 @@ ChangeLog:
 	git --git-dir $(top_srcdir)/.git log > ChangeLog || touch ChangeLog
 
 dist-hook: ChangeLog
+	$(MKDIR_P) $(distdir)/tools
+	cp tools/install-decoders $(distdir)/tools
+	$(MKDIR_P) $(distdir)/decoders
+	tools/install-decoders -o $(distdir)/decoders
 
 install-decoders:
 	$(MKDIR_P) $(DESTDIR)$(DECODERS_DIR)
