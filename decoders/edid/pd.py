@@ -87,8 +87,8 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['EDID fields', 'EDID structure fields'],
-        ['EDID sections', 'EDID structure sections'],
+        ['fields', 'EDID structure fields'],
+        ['sections', 'EDID structure sections'],
     ]
 
     def __init__(self, **kwargs):

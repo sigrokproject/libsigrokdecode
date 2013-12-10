@@ -19,7 +19,6 @@
 ##
 
 if HAVE_CHECK
-
 TESTS = check_main
 
 check_PROGRAMS = ${TESTS}
@@ -37,5 +36,11 @@ check_main_CFLAGS = @check_CFLAGS@
 check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
 
 check_main_CPPFLAGS = $(CPPFLAGS_PYTHON)
+endif
 
+if HAVE_LIBSIGROK
+bin_PROGRAMS = runtc
+runtc_SOURCES = runtc.c
+runtc_CPPFLAGS = $(CPPFLAGS_PYTHON)
+runtc_LDFLAGS = -L/home/bert/sr/lib -lsigrok -lsigrokdecode
 endif

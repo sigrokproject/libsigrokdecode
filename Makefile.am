@@ -39,7 +39,7 @@ libsigrokdecode_la_SOURCES = \
 	version.c
 
 libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
-			      -DDECODERS_DIR='"$(DECODERS_DIR)"'
+	-DDECODERS_DIR='"$(DECODERS_DIR)"'
 libsigrokdecode_la_LDFLAGS = $(SRD_LIB_LDFLAGS) $(LDFLAGS_PYTHON)
 
 library_includedir = $(includedir)/libsigrokdecode

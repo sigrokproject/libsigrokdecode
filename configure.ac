@@ -123,6 +123,11 @@ PKG_CHECK_MODULES([check], [check >= 0.9.4],
 	LIBS="$LIBS $check_LIBS"], [have_check="no"])
 AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
+PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.2.0],
+    [have_libsigrok="yes"; CFLAGS="$CFLAGS $libsigrok_CFLAGS";
+    LIBS="$LIBS $libsigrok_LIBS"], [have_libsigrok="no"])
+AM_CONDITIONAL(HAVE_LIBSIGROK, test x"$have_libsigrok" = "xyes")
+
 # Checks for header files.
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
 # AC_CHECK_HEADERS([])
@@ -178,7 +183,7 @@ echo "Detected libraries:"
 echo
 
 # Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4"; do
+for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4" "libsigrok >= 0.2.0"; do
         if `$PKG_CONFIG --exists $lib`; then
                 ver=`$PKG_CONFIG --modversion $lib`
                 answer="yes ($ver)"

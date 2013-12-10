@@ -81,16 +81,16 @@ class Decoder(srd.Decoder):
         'address_format': ['Displayed slave address format', 'shifted'],
     }
     annotations = [
-        ['Start', 'Start condition'],
-        ['Repeat start', 'Repeat start condition'],
-        ['Stop', 'Stop condition'],
-        ['ACK', 'ACK'],
-        ['NACK', 'NACK'],
-        ['Address read', 'Address read'],
-        ['Address write', 'Address write'],
-        ['Data read', 'Data read'],
-        ['Data write', 'Data write'],
-        ['Warnings', 'Human-readable warnings'],
+        ['start', 'Start condition'],
+        ['repeat-start', 'Repeat start condition'],
+        ['stop', 'Stop condition'],
+        ['ack', 'ACK'],
+        ['nack', 'NACK'],
+        ['address-read', 'Address read'],
+        ['address-write', 'Address write'],
+        ['data-read', 'Data read'],
+        ['data-write', 'Data write'],
+        ['warnings', 'Human-readable warnings'],
     ]
     binary = (
         'Address read',
