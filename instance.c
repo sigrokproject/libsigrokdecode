@@ -412,15 +412,16 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
  * Stack a decoder instance on top of another.
  *
  * @param sess The session holding the protocol decoder instances.
- * @param di_from The instance to move.
- * @param di_to The instance on top of which di_from will be stacked.
+ * @param di_bottom The instance on top of which di_top will be stacked.
+ * @param di_top The instance to go on top.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @since 0.3.0
  */
 SRD_API int srd_inst_stack(struct srd_session *sess,
-		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to)
+		struct srd_decoder_inst *di_bottom,
+		struct srd_decoder_inst *di_top)
 {
 
 	if (session_is_valid(sess) != SRD_OK) {
@@ -428,18 +429,20 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 		return SRD_ERR_ARG;
 	}
 
-	if (!di_from || !di_to) {
+	if (!di_bottom || !di_top) {
 		srd_err("Invalid from/to instance pair.");
 		return SRD_ERR_ARG;
 	}
 
-	if (g_slist_find(sess->di_list, di_to)) {
+	if (g_slist_find(sess->di_list, di_top)) {
 		/* Remove from the unstacked list. */
-		sess->di_list = g_slist_remove(sess->di_list, di_to);
+		sess->di_list = g_slist_remove(sess->di_list, di_top);
 	}
 
 	/* Stack on top of source di. */
-	di_from->next_di = g_slist_append(di_from->next_di, di_to);
+	di_bottom->next_di = g_slist_append(di_bottom->next_di, di_top);
+
+	srd_dbg("Stacked %s on top of %s.", di_top->inst_id, di_bottom->inst_id);
 
 	return SRD_OK;
 }
