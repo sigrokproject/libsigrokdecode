@@ -20,7 +20,7 @@
 
 ACLOCAL_AMFLAGS = -I autostuff
 
-SUBDIRS = contrib tests
+SUBDIRS = . contrib tests
 
 lib_LTLIBRARIES = libsigrokdecode.la
 

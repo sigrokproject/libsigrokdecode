@@ -41,6 +41,6 @@ endif
 if HAVE_LIBSIGROK
 bin_PROGRAMS = runtc
 runtc_SOURCES = runtc.c
-runtc_CPPFLAGS = $(CPPFLAGS_PYTHON)
-runtc_LDFLAGS = -L/home/bert/sr/lib -lsigrok -lsigrokdecode
+runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS)
+runtc_LDFLAGS = $(LIBSIGROK_LIBS) -L$(top_builddir) -lsigrokdecode
 endif
