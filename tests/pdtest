@@ -46,7 +46,7 @@ def usage(msg=None):
     sys.exit()
 
 
-def check_testcase(tc):
+def check_tclist(tc):
     if 'pdlist' not in tc or not tc['pdlist']:
         return("No protocol decoders")
     if 'input' not in tc or not tc['input']:
@@ -167,11 +167,11 @@ def parse_testfile(path, pd, tc, op_type, op_class):
             tclist = []
         else:
             tclist = [target_tc]
-            for t in tclist:
-                error = check_testcase(t)
-                if error:
-                    ERR("Error in %s: %s" % (path, error))
-                    return []
+    for t in tclist:
+        error = check_tclist(t)
+        if error:
+            ERR("Error in %s: %s" % (path, error))
+            return []
 
     return tclist
 
