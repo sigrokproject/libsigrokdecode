@@ -244,17 +244,24 @@ def run_tests(tests):
                     fd, outfile = mkstemp()
                     os.close(fd)
                     opargs.extend(['-f', outfile])
-                    DBG("Running %s %s" % (cmd, ' '.join(args + opargs)))
-                    stdout, stderr = Popen(args + opargs, stdout=PIPE, stderr=PIPE).communicate()
+                    DBG("Running %s" % (' '.join(args + opargs)))
+                    p = Popen(args + opargs, stdout=PIPE, stderr=PIPE)
+                    stdout, stderr = p.communicate()
                     if stdout:
                         results[-1]['statistics'] = stdout.decode('utf-8').strip()
                     if stderr:
                         results[-1]['error'] = stderr.decode('utf-8').strip()
                         errors += 1
-                    match = "%s/%s/test/%s" % (decoders_dir, op['pd'], op['match'])
-                    diff = diff_files(match, outfile)
-                    if diff:
-                        results[-1]['diff'] = diff
+                    elif p.returncode != 0:
+                        # runtc indicated an error, but didn't output a
+                        # message on stderr about it
+                        results[-1]['error'] = "Unknown error: runtc %d" % p.returncode
+                    # Only bother with the diff if it all worked.
+                    if 'error' not in results[-1]:
+                        match = "%s/%s/test/%s" % (decoders_dir, op['pd'], op['match'])
+                        diff = diff_files(match, outfile)
+                        if diff:
+                            results[-1]['diff'] = diff
                 except Exception as e:
                     results[-1]['error'] = str(e)
                 finally:
