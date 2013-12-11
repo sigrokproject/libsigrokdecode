@@ -348,7 +348,7 @@ if len(sys.argv) == 1:
 
 opt_all = opt_run = opt_show = opt_list = False
 report_dir = None
-opts, args = getopt(sys.argv[1:], "dvarslR:")
+opts, args = getopt(sys.argv[1:], "dvarslRS:")
 for opt, arg in opts:
     if opt == '-d':
         DEBUG = True
@@ -364,6 +364,8 @@ for opt, arg in opts:
         opt_list = True
     elif opt == '-R':
         report_dir = arg
+    elif opt == '-S':
+        dumps_dir = arg
 
 if opt_run and opt_show:
     usage("Use either -s or -r, not both.")
@@ -382,6 +384,9 @@ try:
         usage("Specify either -a or tests.")
 
     if opt_run:
+        if not os.path.isdir(dumps_dir):
+            ERR("Could not find sigrok-dumps repository at %s" % dumps_dir)
+            sys.exit(1)
         results, errors = run_tests(testlist)
         ret = errors
     elif opt_show:
