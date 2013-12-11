@@ -254,7 +254,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 		*py_bin_classes, *py_bin_class;
 	struct srd_decoder *d;
 	int len, ret, i;
-	char **ann, *bin;
+	char **ann, **bin;
 	struct srd_probe *p;
 	GSList *l;
 
@@ -381,17 +381,16 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
 		if (!PyList_Check(py_annlist)) {
-			srd_err("Protocol decoder module %s annotations "
-				"should be a list.", module_name);
+			srd_err("Protocol decoder %s annotations should "
+					"be a list.", module_name);
 			goto err_out;
 		}
 		len = PyList_Size(py_annlist);
 		for (i = 0; i < len; i++) {
 			py_ann = PyList_GetItem(py_annlist, i);
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
-				srd_err("Protocol decoder module %s "
-					"annotation %d should be a list with "
-					"two elements.", module_name, i + 1);
+				srd_err("Protocol decoder %s annotation %d should "
+						"be a list with two elements.", module_name, i + 1);
 				goto err_out;
 			}
 
@@ -407,20 +406,27 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (PyObject_HasAttrString(d->py_dec, "binary")) {
 		py_bin_classes = PyObject_GetAttrString(d->py_dec, "binary");
 		if (!PyTuple_Check(py_bin_classes)) {
-			srd_err("Protocol decoder module %s binary classes "
-				"should be a tuple.", module_name);
+			srd_err("Protocol decoder %s binary classes should "
+					"be a tuple.", module_name);
 			goto err_out;
 		}
 		len = PyTuple_Size(py_bin_classes);
 		for (i = 0; i < len; i++) {
 			py_bin_class = PyTuple_GetItem(py_bin_classes, i);
-			if (!PyUnicode_Check(py_bin_class)) {
-				srd_err("Protocol decoder module %s binary "
-						"class should be a string.", module_name);
+			if (!PyTuple_Check(py_bin_class)) {
+				srd_err("Protocol decoder %s binary classes "
+						"should consist of tuples.", module_name);
+				goto err_out;
+			}
+			if (PyTuple_Size(py_bin_class) != 2
+					|| !PyUnicode_Check(PyTuple_GetItem(py_bin_class, 0))
+					|| !PyUnicode_Check(PyTuple_GetItem(py_bin_class, 1))) {
+				srd_err("Protocol decoder %s binary classes should "
+						"contain tuples with two strings.", module_name);
 				goto err_out;
 			}
 
-			if (py_str_as_str(py_bin_class, &bin) != SRD_OK) {
+			if (py_strseq_to_char(py_bin_class, &bin) != SRD_OK) {
 				goto err_out;
 			}
 			d->binary = g_slist_append(d->binary, bin);
