@@ -78,7 +78,7 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 			"second element was not a list.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
-	if (py_strlist_to_char(py_tmp, &ann_text) != SRD_OK) {
+	if (py_strseq_to_char(py_tmp, &ann_text) != SRD_OK) {
 		srd_err("Protocol decoder %s submitted annotation list, but "
 			"second element was malformed.", di->decoder->name);
 		return SRD_ERR_PYTHON;

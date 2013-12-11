@@ -395,7 +395,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 				goto err_out;
 			}
 
-			if (py_strlist_to_char(py_ann, &ann) != SRD_OK) {
+			if (py_strseq_to_char(py_ann, &ann) != SRD_OK) {
 				goto err_out;
 			}
 			d->annotations = g_slist_append(d->annotations, ann);

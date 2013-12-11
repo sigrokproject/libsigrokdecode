@@ -174,20 +174,20 @@ err_out:
  *
  * @private
  */
-SRD_PRIV int py_strlist_to_char(const PyObject *py_strlist, char ***outstr)
+SRD_PRIV int py_strseq_to_char(const PyObject *py_strseq, char ***outstr)
 {
 	PyObject *py_str;
 	int list_len, i;
 	char **out, *str;
 
-	list_len = PyList_Size((PyObject *)py_strlist);
+	list_len = PySequence_Size((PyObject *)py_strseq);
 	if (!(out = g_try_malloc(sizeof(char *) * (list_len + 1)))) {
 		srd_err("Failed to g_malloc() 'out'.");
 		return SRD_ERR_MALLOC;
 	}
 	for (i = 0; i < list_len; i++) {
 		if (!(py_str = PyUnicode_AsEncodedString(
-		    PyList_GetItem((PyObject *)py_strlist, i), "utf-8", NULL)))
+		    PySequence_GetItem((PyObject *)py_strseq, i), "utf-8", NULL)))
 			return SRD_ERR_PYTHON;
 		if (!(str = PyBytes_AS_STRING(py_str)))
 			return SRD_ERR_PYTHON;
