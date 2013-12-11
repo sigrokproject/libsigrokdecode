@@ -42,6 +42,10 @@
 /* The list of protocol decoders. */
 SRD_PRIV GSList *pd_list = NULL;
 
+/* srd.c */
+extern GSList *searchpaths;
+
+/* session.c */
 extern GSList *sessions;
 
 /* module_sigrokdecode.c */
@@ -556,6 +560,26 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
+static void srd_decoder_load_all_path(char *path)
+{
+	GDir *dir;
+	const gchar *direntry;
+
+	if (!(dir = g_dir_open(path, 0, NULL)))
+		/* Not really fatal */
+		return;
+
+	/* This ignores errors returned by srd_decoder_load(). That
+	 * function will have logged the cause, but in any case we
+	 * want to continue anyway. */
+	while ((direntry = g_dir_read_name(dir)) != NULL) {
+		/* The directory name is the module name (e.g. "i2c"). */
+		srd_decoder_load(direntry);
+	}
+	g_dir_close(dir);
+
+}
+
 /**
  * Load all installed protocol decoders.
  *
@@ -565,22 +589,13 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
  */
 SRD_API int srd_decoder_load_all(void)
 {
-	GDir *dir;
-	const gchar *direntry;
+	GSList *l;
 
 	if (!srd_check_init())
 		return SRD_ERR;
 
-	if (!(dir = g_dir_open(DECODERS_DIR, 0, NULL))) {
-		srd_err("Unable to open %s for reading.", DECODERS_DIR);
-		return SRD_ERR_DECODERS_DIR;
-	}
-
-	while ((direntry = g_dir_read_name(dir)) != NULL) {
-		/* The directory name is the module name (e.g. "i2c"). */
-		srd_decoder_load(direntry);
-	}
-	g_dir_close(dir);
+	for (l = searchpaths; l; l = l->next)
+		srd_decoder_load_all_path(l->data);
 
 	return SRD_OK;
 }

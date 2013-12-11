@@ -25,6 +25,9 @@
 
 /** @cond PRIVATE */
 
+/* Python module search paths */
+SRD_PRIV GSList *searchpaths = NULL;
+
 /* session.c */
 extern GSList *sessions;
 extern int max_session_id;
@@ -194,6 +197,8 @@ SRD_API int srd_exit(void)
 		srd_session_destroy((struct srd_session *)l->data);
 
 	srd_decoder_unload_all();
+	g_slist_free_full(searchpaths, g_free);
+	searchpaths = NULL;
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
@@ -257,6 +262,7 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 	PySys_SetPath(wc_new_path);
 	g_string_free(new_path, TRUE);
 	g_free(wc_new_path);
+	searchpaths = g_slist_append(searchpaths, g_strdup(path));
 
 	return SRD_OK;
 }
