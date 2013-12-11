@@ -41,6 +41,7 @@ endif
 if HAVE_LIBSIGROK
 bin_PROGRAMS = runtc
 runtc_SOURCES = runtc.c
-runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS)
+runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS) \
+	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
 runtc_LDFLAGS = $(LIBSIGROK_LIBS) -L$(top_builddir) -lsigrokdecode
 endif

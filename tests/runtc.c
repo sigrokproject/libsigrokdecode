@@ -468,7 +468,7 @@ int main(int argc, char **argv)
 		return 1;
 
 	srd_log_callback_set(srd_log, NULL);
-	if (srd_init(NULL) != SRD_OK)
+	if (srd_init(DECODERS_DIR) != SRD_OK)
 		return 1;
 
 	run_testcase(opt_infile, pdlist, op);
