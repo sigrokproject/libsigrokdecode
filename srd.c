@@ -194,8 +194,6 @@ SRD_API int srd_exit(void)
 		srd_session_destroy((struct srd_session *)l->data);
 
 	srd_decoder_unload_all();
-	g_slist_free(pd_list);
-	pd_list = NULL;
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();

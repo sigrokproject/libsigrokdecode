@@ -601,6 +601,8 @@ SRD_API int srd_decoder_unload_all(void)
 		dec = l->data;
 		srd_decoder_unload(dec);
 	}
+	g_slist_free(pd_list);
+	pd_list = NULL;
 
 	return SRD_OK;
 }
