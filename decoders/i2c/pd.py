@@ -93,10 +93,10 @@ class Decoder(srd.Decoder):
         ['warnings', 'Human-readable warnings'],
     ]
     binary = (
-        'Address read',
-        'Address write',
-        'Data read',
-        'Data write',
+        ('address-read', 'Address read'),
+        ('address-write', 'Address write'),
+        ('data-read', 'Data read'),
+        ('data-write', 'Data write'),
     )
 
     def __init__(self, **kwargs):
