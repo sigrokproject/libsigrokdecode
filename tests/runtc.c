@@ -378,6 +378,7 @@ int main(int argc, char **argv)
 	struct probe *probe;
 	struct option *option;
 	struct output *op;
+	int ret;
 	char c, *opt_infile, **kv, **opstr;
 
 	op = malloc(sizeof(struct output));
@@ -484,12 +485,14 @@ int main(int argc, char **argv)
 	if (srd_init(DECODERS_DIR) != SRD_OK)
 		return 1;
 
-	run_testcase(opt_infile, pdlist, op);
+	ret = 0;
+	if (!run_testcase(opt_infile, pdlist, op))
+		ret = 1;
 
 	srd_exit();
 	sr_exit(ctx);
 
-	return 0;
+	return ret;
 }
 
 
