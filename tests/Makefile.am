@@ -20,9 +20,7 @@
 
 if HAVE_CHECK
 TESTS = check_main
-
 check_PROGRAMS = ${TESTS}
-
 check_main_SOURCES = \
 	$(top_builddir)/libsigrokdecode.h \
 	check_main.c \
@@ -30,12 +28,10 @@ check_main_SOURCES = \
 	check_decoder.c \
 	check_inst.c \
 	check_session.c
-
 check_main_CFLAGS = @check_CFLAGS@
-
 check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
-
-check_main_CPPFLAGS = $(CPPFLAGS_PYTHON)
+check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
+	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
 endif
 
 if HAVE_LIBSIGROK

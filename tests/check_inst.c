@@ -41,7 +41,7 @@ START_TEST(test_inst_new)
 	struct srd_session *sess;
 	struct srd_decoder_inst *inst;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load("uart");
 	srd_session_new(&sess);
 	inst = srd_inst_new(sess, "uart", NULL);
@@ -61,7 +61,7 @@ START_TEST(test_inst_new_multiple)
 
 	inst1 = inst2 = inst3 = NULL;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load_all();
 	srd_session_new(&sess);
 
@@ -98,7 +98,7 @@ START_TEST(test_inst_option_set_empty)
 	struct srd_decoder_inst *inst;
 	GHashTable *options;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load_all();
 	srd_session_new(&sess);
 	inst = srd_inst_new(sess, "uart", NULL);
@@ -122,7 +122,7 @@ START_TEST(test_inst_option_set_bogus)
 	struct srd_decoder_inst *inst;
 	GHashTable *options;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load_all();
 	srd_session_new(&sess);
 	inst = srd_inst_new(sess, "uart", NULL);

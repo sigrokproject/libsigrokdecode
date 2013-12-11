@@ -40,7 +40,7 @@ START_TEST(test_load_all)
 {
 	int ret;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	ret = srd_decoder_load_all();
 	fail_unless(ret == SRD_OK, "srd_decoder_load_all() failed: %d.", ret);
 	srd_exit();
@@ -69,7 +69,7 @@ START_TEST(test_load)
 {
 	int ret;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	ret = srd_decoder_load("uart");
 	fail_unless(ret == SRD_OK, "srd_decoder_load(uart) failed: %d.", ret);
 	ret = srd_decoder_load("spi");
@@ -86,7 +86,7 @@ END_TEST
  */
 START_TEST(test_load_bogus)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	/* http://sigrok.org/bugzilla/show_bug.cgi?id=176 */
 	fail_unless(srd_decoder_load(NULL) != SRD_OK);
 	fail_unless(srd_decoder_load("") != SRD_OK);
@@ -109,7 +109,7 @@ END_TEST
  */
 START_TEST(test_load_valid_and_bogus)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	fail_unless(srd_decoder_load("") != SRD_OK);
 	fail_unless(srd_decoder_load("uart") == SRD_OK);
 	fail_unless(srd_decoder_load("") != SRD_OK);
@@ -130,7 +130,7 @@ START_TEST(test_load_multiple)
 {
 	int ret;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	ret = srd_decoder_load("uart");
 	fail_unless(ret == SRD_OK, "Loading uart PD 1x failed: %d", ret);
 	ret = srd_decoder_load("uart");
@@ -163,7 +163,7 @@ END_TEST
  */
 START_TEST(test_decoder_list)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load_all();
 	fail_unless(srd_decoder_list() != NULL);
 	srd_exit();
@@ -177,7 +177,7 @@ END_TEST
  */
 START_TEST(test_decoder_list_no_load)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	fail_unless(srd_decoder_list() == NULL);
 	srd_exit();
 }
@@ -213,7 +213,7 @@ END_TEST
  */
 START_TEST(test_decoder_list_correct_numbers)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	fail_unless(g_slist_length((GSList *)srd_decoder_list()) == 0);
 	srd_decoder_load("spi");
 	fail_unless(g_slist_length((GSList *)srd_decoder_list()) == 1);
@@ -233,7 +233,7 @@ END_TEST
  */
 START_TEST(test_get_by_id)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load("uart");
 	fail_unless(srd_decoder_get_by_id("uart") != NULL);
 	fail_unless(srd_decoder_get_by_id("can") == NULL);
@@ -250,7 +250,7 @@ END_TEST
  */
 START_TEST(test_get_by_id_multiple)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load("uart");
 	fail_unless(srd_decoder_get_by_id("uart") != NULL);
 	fail_unless(srd_decoder_get_by_id("uart") != NULL);
@@ -266,7 +266,7 @@ END_TEST
  */
 START_TEST(test_get_by_id_bogus)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	fail_unless(srd_decoder_get_by_id(NULL) == NULL);
 	fail_unless(srd_decoder_get_by_id("") == NULL);
 	fail_unless(srd_decoder_get_by_id(" ") == NULL);
@@ -290,7 +290,7 @@ START_TEST(test_doc_get)
 {
 	struct srd_decoder *dec;
 
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	srd_decoder_load("uart");
 	dec = srd_decoder_get_by_id("uart");
 	fail_unless(srd_decoder_doc_get(dec) != NULL);
@@ -305,7 +305,7 @@ END_TEST
  */
 START_TEST(test_doc_get_null)
 {
-	srd_init(NULL);
+	srd_init(DECODERS_DIR);
 	fail_unless(srd_decoder_doc_get(NULL) == NULL);
 	srd_exit();
 }
