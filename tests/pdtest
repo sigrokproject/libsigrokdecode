@@ -7,7 +7,7 @@ from tempfile import mkstemp
 from subprocess import Popen, PIPE
 from difflib import Differ
 
-DEBUG = False
+DEBUG = 0
 VERBOSE = False
 
 
@@ -221,6 +221,8 @@ def run_tests(tests):
     for tclist in tests:
         for tc in tclist:
             args = [cmd]
+            if DEBUG > 1:
+                args.append('-d')
             for pd in tc['pdlist']:
                 args.extend(['-P', pd['name']])
                 for label, probe in pd['probes']:
@@ -358,7 +360,7 @@ report_dir = None
 opts, args = getopt(sys.argv[1:], "dvarslRS:")
 for opt, arg in opts:
     if opt == '-d':
-        DEBUG = True
+        DEBUG += 1
     if opt == '-v':
         VERBOSE = True
     elif opt == '-a':

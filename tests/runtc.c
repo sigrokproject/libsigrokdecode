@@ -94,13 +94,25 @@ void ERR(const char *format, ...)
 	va_end(args);
 }
 
+int sr_log(void *cb_data, int loglevel, const char *format, va_list args)
+{
+	(void)cb_data;
+
+	if (loglevel == SR_LOG_ERR || loglevel == SR_LOG_WARN)
+		logmsg("Error: sr: ", stderr, format, args);
+	else if (debug)
+		logmsg("DBG: sr: ", stdout, format, args);
+
+	return SRD_OK;
+}
+
 int srd_log(void *cb_data, int loglevel, const char *format, va_list args)
 {
 	(void)cb_data;
 
 	if (loglevel == SRD_LOG_ERR || loglevel == SRD_LOG_WARN)
 		logmsg("Error: srd: ", stderr, format, args);
-	else if (loglevel >= SRD_LOG_DBG && debug)
+	else if (debug)
 		logmsg("DBG: srd: ", stdout, format, args);
 
 	return SRD_OK;
@@ -464,6 +476,7 @@ int main(int argc, char **argv)
 	if (!op->pd || op->type == -1)
 		usage(NULL);
 
+	sr_log_callback_set(sr_log, NULL);
 	if (sr_init(&ctx) != SR_OK)
 		return 1;
 
