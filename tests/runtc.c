@@ -136,6 +136,34 @@ void usage(char *msg)
 
 }
 
+static void srd_cb_bin(struct srd_proto_data *pdata, void *cb_data)
+{
+	struct srd_proto_data_binary *pdb;
+	struct output *op;
+
+	op = cb_data;
+	if (op->type != SRD_OUTPUT_BINARY)
+		return;
+
+	DBG("Binary output from %s", pdata->pdo->di->inst_id);
+	pdb = pdata->data;
+
+	if (strcmp(pdata->pdo->di->inst_id, op->pd))
+		/* This is not the PD selected for output. */
+		return;
+
+	if (op->class_idx != -1 && op->class_idx != pdb->bin_class)
+		/*
+		 * This output takes a specific binary class,
+		 * but not the one that just came in.
+		 */
+		return;
+
+	if (write(op->outfd, pdb->data, pdb->size) == -1)
+		ERR("Oops!");
+
+}
+
 static void srd_cb_ann(struct srd_proto_data *pdata, void *cb_data)
 {
 	struct srd_decoder *dec;
@@ -145,18 +173,22 @@ static void srd_cb_ann(struct srd_proto_data *pdata, void *cb_data)
 	int i;
 	char **dec_ann;
 
-	DBG("Annotation from %s", pdata->pdo->di->inst_id);
 	op = cb_data;
+	if (op->type != SRD_OUTPUT_ANN)
+		return;
+
+	DBG("Annotation output from %s", pdata->pdo->di->inst_id);
 	pda = pdata->data;
 	dec = pdata->pdo->di->decoder;
-
 	if (strcmp(pdata->pdo->di->inst_id, op->pd))
 		/* This is not the PD selected for output. */
 		return;
 
 	if (op->class_idx != -1 && op->class_idx != pda->ann_format)
-		/* This output takes a specific annotation class,
-		 * but not the one that just came in. */
+		/*
+		 * This output takes a specific annotation class,
+		 * but not the one that just came in.
+		 */
 		return;
 
 	dec_ann = g_slist_nth_data(dec->annotations, pda->ann_format);
@@ -282,6 +314,7 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 		return FALSE;
 	sr_session_datafeed_callback_add(sr_cb, sess);
 	srd_pd_output_callback_add(sess, SRD_OUTPUT_ANN, srd_cb_ann, op);
+	srd_pd_output_callback_add(sess, SRD_OUTPUT_BINARY, srd_cb_bin, op);
 
 	prev_di = NULL;
 	pd = NULL;
@@ -352,7 +385,8 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 			ERR("Output class '%s' not found in decoder %s.",
 					op->class, pd->name);
 			return FALSE;
-		}
+		} else
+			DBG("Class %s index is %d", op->class, op->class_idx);
 	}
 
 	sr_session_start();

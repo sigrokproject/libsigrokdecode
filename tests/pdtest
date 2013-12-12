@@ -6,6 +6,8 @@ from getopt import getopt
 from tempfile import mkstemp
 from subprocess import Popen, PIPE
 from difflib import Differ
+from hashlib import md5
+from shutil import copy
 
 DEBUG = 0
 VERBOSE = False
@@ -203,7 +205,7 @@ def get_tests(testnames):
     return tests
 
 
-def diff_files(f1, f2):
+def diff_textfiles(f1, f2):
     t1 = open(f1).readlines()
     t2 = open(f2).readlines()
     diff = []
@@ -213,6 +215,19 @@ def diff_files(f1, f2):
             diff.append(line.strip())
 
     return diff
+
+
+def compare_binfiles(f1, f2):
+    h1 = md5()
+    h1.update(open(f1, 'rb').read())
+    h2 = md5()
+    h2.update(open(f2, 'rb').read())
+    if h1.digest() == h2.digest():
+        result = None
+    else:
+        result = ["Binary output does not match."]
+
+    return result
 
 
 def run_tests(tests, fix=False):
@@ -265,6 +280,8 @@ def run_tests(tests, fix=False):
                             diff = diff_error = None
                             if op['type'] == 'annotation':
                                 diff = diff_textfiles(match, outfile)
+                            elif op['type'] == 'binary':
+                                diff = compare_binfiles(match, outfile)
                             else:
                                 diff = ["Unsupported output type '%s'." % op['type']]
                         except Exception as e:
