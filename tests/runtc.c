@@ -263,9 +263,9 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	struct option *option;
 	GVariant *gvar;
 	GHashTable *probes, *opts;
-	GSList *pdl, *l, *annl;
+	GSList *pdl, *l;
 	int idx;
-	char **dec_ann;
+	char **decoder_class;
 
 	if (op->outfile) {
 		if ((op->outfd = open(op->outfile, O_CREAT|O_WRONLY, 0600)) == -1) {
@@ -332,24 +332,21 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	dec = srd_decoder_get_by_id(pd->name);
 	if (op->class) {
 		if (op->type == SRD_OUTPUT_ANN)
-			annl = dec->annotations;
-		/* TODO can't dereference this for binary yet
+			l = dec->annotations;
 		else if (op->type == SRD_OUTPUT_BINARY)
-			annl = dec->binary;
-		*/
+			l = dec->binary;
 		else
 			/* Only annotations and binary for now. */
 			return FALSE;
 		idx = 0;
-		while(annl) {
-			dec_ann = annl->data;
-			/* TODO can't dereference this for binary yet */
-			if (!strcmp(dec_ann[0], op->class)) {
+		while(l) {
+			decoder_class = l->data;
+			if (!strcmp(decoder_class[0], op->class)) {
 				op->class_idx = idx;
 				break;
 			} else
 				idx++;
-		annl = annl->next;
+			l = l->next;
 		}
 		if (op->class_idx == -1) {
 			ERR("Output class '%s' not found in decoder %s.",
