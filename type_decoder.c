@@ -209,7 +209,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 
 	if (!PyArg_ParseTuple(args, "KKiO", &start_sample, &end_sample,
-	    &output_id, &py_data)) {
+		&output_id, &py_data)) {
 		/*
 		 * This throws an exception, but by returning NULL here we let
 		 * Python raise it. This results in a much better trace in
@@ -253,15 +253,20 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
 			srd_spew("Sending %d-%d to instance %s",
-				 start_sample, end_sample,
-				 next_di->inst_id);
+				 start_sample, end_sample, next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
-			    next_di->py_inst, "decode", "KKO", start_sample,
-			    end_sample, py_data))) {
+				next_di->py_inst, "decode", "KKO", start_sample,
+				end_sample, py_data))) {
 				srd_exception_catch("Calling %s decode(): ",
-						    next_di->inst_id);
+							next_di->inst_id);
 			}
 			Py_XDECREF(py_res);
+		}
+		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
+			/* Frontends aren't really supposed to get Python
+			 * callbacks, but it's useful for testing. */
+			pdata->data = py_data;
+			cb->cb(pdata, cb->cb_data);
 		}
 		break;
 	case SRD_OUTPUT_BINARY:
