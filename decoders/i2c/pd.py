@@ -121,7 +121,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_binary = self.add(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
