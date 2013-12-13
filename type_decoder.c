@@ -364,23 +364,9 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	return py_new_output_id;
 }
 
-/* TODO: this is just a stub that calls _register() until all PDs
- * are changed to use the new register API. */
-static PyObject *Decoder_add(PyObject *self, PyObject *args)
-{
-	PyObject *py_keywords, *py_new_output_id;
-
-	py_keywords = PyDict_New();
-	py_new_output_id = Decoder_register(self, args, py_keywords);
-	Py_DecRef(py_keywords);
-
-	return py_new_output_id;
-}
-
 static PyMethodDef Decoder_methods[] = {
 	{"put", Decoder_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: startsample, endsample, data"},
-	{"add", Decoder_add, METH_VARARGS, "Create a new output stream"},
 	{"register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
 			"Register a new output stream"},
 	{NULL, NULL, 0, NULL}
