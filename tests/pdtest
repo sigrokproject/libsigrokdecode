@@ -205,7 +205,7 @@ def get_tests(testnames):
     return tests
 
 
-def diff_textfiles(f1, f2):
+def diff_text(f1, f2):
     t1 = open(f1).readlines()
     t2 = open(f2).readlines()
     diff = []
@@ -217,7 +217,7 @@ def diff_textfiles(f1, f2):
     return diff
 
 
-def compare_binfiles(f1, f2):
+def compare_binary(f1, f2):
     h1 = md5()
     h1.update(open(f1, 'rb').read())
     h2 = md5()
@@ -278,10 +278,10 @@ def run_tests(tests, fix=False):
                         match = os.path.join(decoders_dir, op['pd'], 'test', op['match'])
                         try:
                             diff = diff_error = None
-                            if op['type'] == 'annotation':
-                                diff = diff_textfiles(match, outfile)
+                            if op['type'] in ('annotation', 'python'):
+                                diff = diff_text(match, outfile)
                             elif op['type'] == 'binary':
-                                diff = compare_binfiles(match, outfile)
+                                diff = compare_binary(match, outfile)
                             else:
                                 diff = ["Unsupported output type '%s'." % op['type']]
                         except Exception as e:
