@@ -191,6 +191,8 @@ static void srd_cb_bin(struct srd_proto_data *pdata, void *cb_data)
 {
 	struct srd_proto_data_binary *pdb;
 	struct output *op;
+	GString *out;
+	unsigned int i;
 
 	DBG("Binary output from %s", pdata->pdo->di->inst_id);
 	op = cb_data;
@@ -207,7 +209,15 @@ static void srd_cb_bin(struct srd_proto_data *pdata, void *cb_data)
 		 */
 		return;
 
-	if (write(op->outfd, pdb->data, pdb->size) == -1)
+	out = g_string_sized_new(128);
+	g_string_printf(out, "%"PRIu64"-%"PRIu64" %s:",
+			pdata->start_sample, pdata->end_sample,
+			pdata->pdo->di->inst_id);
+	for (i = 0; i < pdb->size; i++) {
+		g_string_append_printf(out, " %.2x", pdb->data[i]);
+	}
+	g_string_append(out, "\n");
+	if (write(op->outfd, out->str, out->len) == -1)
 		ERR("SRD_OUTPUT_BINARY callback write failure!");
 
 }
