@@ -35,7 +35,7 @@ check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 endif
 
 if HAVE_LIBSIGROK
-bin_PROGRAMS = runtc
+noinst_PROGRAMS = runtc
 runtc_SOURCES = runtc.c
 runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS) \
 	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
