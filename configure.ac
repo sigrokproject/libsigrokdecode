@@ -77,6 +77,9 @@ AC_SUBST(SRD_LIB_VERSION_AGE)
 AC_SUBST(SRD_LIB_VERSION)
 AC_SUBST(SRD_LIB_LDFLAGS)
 
+# assume we can build tests/runtc unless proven otherwise
+build_runtc="yes"
+
 # Checks for libraries.
 
 # libglib-2.0 is always needed.
@@ -123,18 +126,16 @@ PKG_CHECK_MODULES([check], [check >= 0.9.4],
 	LIBS="$LIBS $check_LIBS"], [have_check="no"])
 AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
+# Protocol decoder test framework
 PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.2.0],
-	[have_libsigrok="yes";
-		LIBSIGROK_CFLAGS="$libsigrok_CFLAGS";
-		LIBSIGROK_LIBS="$libsigrok_LIBS"],
-	[have_libsigrok="no"])
-AM_CONDITIONAL(HAVE_LIBSIGROK, test x"$have_libsigrok" = "xyes")
+	[LIBSIGROK_CFLAGS="$libsigrok_CFLAGS"; LIBSIGROK_LIBS="$libsigrok_LIBS"],
+	[build_runtc="no"])
 AC_SUBST([LIBSIGROK_CFLAGS])
 AC_SUBST([LIBSIGROK_LIBS])
 
 # Checks for header files.
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
-# AC_CHECK_HEADERS([])
+AC_CHECK_HEADER([sys/resource.h], [], [build_runtc="no"])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -165,6 +166,8 @@ AC_SUBST(SRD_PACKAGE_VERSION_MINOR)
 AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
 AC_SUBST(SRD_PACKAGE_VERSION)
 
+AM_CONDITIONAL(BUILD_RUNTC, test x"$build_runtc" = "xyes")
+
 AC_CONFIG_FILES([Makefile
 		 version.h
 		 libsigrokdecode.pc
@@ -182,6 +185,7 @@ echo "  - Library version (current:revision:age): $SRD_LIB_VERSION"
 echo "  - Prefix: $prefix"
 echo "  - Building on: $build"
 echo "  - Building for: $host"
+echo "  - Building protocol decoder test framework: $build_runtc"
 echo
 echo "Detected libraries:"
 echo

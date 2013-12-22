@@ -307,39 +307,6 @@ static void sr_cb(const struct sr_dev_inst *sdi,
 
 }
 
-int get_stats(int stats[2])
-{
-	FILE *f;
-	size_t len;
-	int tmp;
-	char *buf;
-
-	stats[0] = stats[1] = -1;
-	if (!(f = fopen("/proc/self/status", "r")))
-		return FALSE;
-	len = 128;
-	buf = malloc(len);
-	while (getline(&buf, &len, f) != -1) {
-		if (strcasestr(buf, "vmpeak:")) {
-			stats[0] = strtoul(buf + 10, NULL, 10);
-		} else if (strcasestr(buf, "vmsize:")) {
-			tmp = strtoul(buf + 10, NULL, 10);
-			if (tmp > stats[0])
-				stats[0] = tmp;
-		} else if (strcasestr(buf, "vmhwm:")) {
-			stats[1] = strtoul(buf + 6, NULL, 10);
-		} else if (strcasestr(buf, "vmrss:")) {
-			tmp = strtoul(buf + 10, NULL, 10);
-			if (tmp > stats[0])
-				stats[0] = tmp;
-		}
-	}
-	free(buf);
-	fclose(f);
-
-	return TRUE;
-}
-
 static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 {
 	struct srd_session *sess;
