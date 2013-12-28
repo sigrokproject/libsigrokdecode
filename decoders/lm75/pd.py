@@ -53,9 +53,9 @@ class Decoder(srd.Decoder):
     probes = []
     optional_probes = [
         {'id': 'os', 'name': 'OS', 'desc': 'Overtemperature shutdown'},
-        {'id': 'a0', 'name': 'A0', 'desc': 'I2C slave address input 0'},
-        {'id': 'a1', 'name': 'A1', 'desc': 'I2C slave address input 1'},
-        {'id': 'a2', 'name': 'A2', 'desc': 'I2C slave address input 2'},
+        {'id': 'a0', 'name': 'A0', 'desc': 'I²C slave address input 0'},
+        {'id': 'a1', 'name': 'A1', 'desc': 'I²C slave address input 1'},
+        {'id': 'a2', 'name': 'A2', 'desc': 'I²C slave address input 2'},
     ]
     options = {
         'sensor': ['Sensor type', 'lm75'],
@@ -79,19 +79,19 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        # Helper for annotations which span exactly one I2C packet.
+        # Helper for annotations which span exactly one I²C packet.
         self.put(self.ss, self.es, self.out_ann, data)
 
     def putb(self, data):
-        # Helper for annotations which span a block of I2C packets.
+        # Helper for annotations which span a block of I²C packets.
         self.put(self.block_start, self.block_end, self.out_ann, data)
 
     def warn_upon_invalid_slave(self, addr):
-        # LM75 and compatible devices have a 7-bit I2C slave address where
+        # LM75 and compatible devices have a 7-bit I²C slave address where
         # the 4 MSBs are fixed to 1001, and the 3 LSBs are configurable.
         # Thus, valid slave addresses (1001xxx) range from 0x48 to 0x4f.
         if addr not in range(0x48, 0x4f + 1):
-            s = 'Warning: I2C slave 0x%02x not an LM75 compatible sensor.'
+            s = 'Warning: I²C slave 0x%02x not an LM75 compatible sensor.'
             self.putx([4, [s % addr]])
 
     def output_temperature(self, s, rw):
@@ -165,12 +165,12 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         cmd, databyte = data
 
-        # Store the start/end samples of this I2C packet.
+        # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
 
         # State machine.
         if self.state == 'IDLE':
-            # Wait for an I2C START condition.
+            # Wait for an I²C START condition.
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
