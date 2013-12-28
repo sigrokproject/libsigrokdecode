@@ -19,9 +19,9 @@
 ##
 
 '''
-I2C protocol decoder.
+I²C protocol decoder.
 
-The Inter-Integrated Circuit (I2C) bus is a bidirectional, multi-master
+The Inter-Integrated Circuit (I²C) bus is a bidirectional, multi-master
 bus using two signals (SCL = serial clock line, SDA = serial data line).
 '''
 

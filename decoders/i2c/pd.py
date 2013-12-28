@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# I2C protocol decoder
+# I²C protocol decoder
 
 # TODO: Look into arbitration, collision detection, clock synchronisation, etc.
 # TODO: Implement support for 10bit slave addresses.
@@ -30,7 +30,7 @@ import sigrokdecode as srd
 '''
 Protocol output format:
 
-I2C packet:
+I²C packet:
 [<cmd>, <data>]
 
 <cmd> is one of:
@@ -66,7 +66,7 @@ proto = {
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2c'
-    name = 'I2C'
+    name = 'I²C'
     longname = 'Inter-Integrated Circuit'
     desc = 'Two-wire, multi-master, serial bus.'
     license = 'gplv2+'
