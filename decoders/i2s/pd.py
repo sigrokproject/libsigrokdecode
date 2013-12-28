@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# I2S protocol decoder
+# I²S protocol decoder
 
 import sigrokdecode as srd
 
@@ -38,7 +38,7 @@ Packet:
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2s'
-    name = 'I2S'
+    name = 'I²S'
     longname = 'Integrated Interchip Sound'
     desc = 'Serial bus for connecting digital audio devices.'
     license = 'gplv2+'
@@ -93,7 +93,7 @@ class Decoder(srd.Decoder):
                 self.samplerate / (self.start_sample -
                 self.first_sample))
 
-        return 'I2S: %d %d-bit samples received at %sHz' % \
+        return 'I³S: %d %d-bit samples received at %sHz' % \
             (self.samplesreceived, self.wordlength, samplerate)
 
     def decode(self, ss, es, data):

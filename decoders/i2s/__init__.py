@@ -19,7 +19,7 @@
 ##
 
 '''
-I2S protocol decoder.
+I²S protocol decoder.
 
 Documentation:
 http://www.nxp.com/acrobat_download/various/I2SBUS.pdf
