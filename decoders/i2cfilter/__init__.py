@@ -18,20 +18,20 @@
 ##
 
 '''
-Generic I2C filtering protocol decoder.
+Generic I²C filtering protocol decoder.
 
-Takes input from the I2C protocol decoder and removes all traffic
+Takes input from the I²C protocol decoder and removes all traffic
 except that from/to the specified slave address and/or direction.
 
 It then outputs the filtered data again as OUTPUT_PROTO of type/format 'i2c'
 (up the protocol decoder stack). No annotations are output.
 
-The I2C slave address to filter out should be passed in as an option
+The I²C slave address to filter out should be passed in as an option
 'address', as an integer. A specific read or write operation can be selected
 with the 'direction' option, which should be 'read', 'write', or 'both'.
 
 Both of these are optional; if no options are specified the entire payload
-of the I2C session will be output.
+of the I²C session will be output.
 '''
 
 from .pd import *

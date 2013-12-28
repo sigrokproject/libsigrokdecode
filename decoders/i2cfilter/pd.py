@@ -18,7 +18,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-# Generic I2C filtering protocol decoder
+# Generic I²C filtering protocol decoder
 
 # TODO: Support for filtering out multiple slave/direction pairs?
 
@@ -27,16 +27,16 @@ import sigrokdecode as srd
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2cfilter'
-    name = 'I2C filter'
-    longname = 'I2C filter'
-    desc = 'Filter out addresses/directions in an I2C stream.'
+    name = 'I²C filter'
+    longname = 'I²C filter'
+    desc = 'Filter out addresses/directions in an I²C stream.'
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['i2c']
     probes = []
     optional_probes = []
     options = {
-        'address': ['Address to filter out of the I2C stream', 0],
+        'address': ['Address to filter out of the I²C stream', 0],
         'direction': ['Direction to filter (read/write/both)', 'both']
     }
     annotations = []
@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
         self.state = None
         self.curslave = -1
         self.curdirection = None
-        self.packets = [] # Local cache of I2C packets
+        self.packets = [] # Local cache of I²C packets
 
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON, proto_id='i2c')
@@ -54,17 +54,17 @@ class Decoder(srd.Decoder):
         if self.options['direction'] not in ('both', 'read', 'write'):
             raise Exception('Invalid direction (valid: read/write/both).')
 
-    # Grab I2C packets into a local cache, until an I2C STOP condition
+    # Grab I²C packets into a local cache, until an I²C STOP condition
     # packet comes along. At some point before that STOP condition, there
     # will have been an ADDRESS READ or ADDRESS WRITE which contains the
-    # I2C address of the slave that the master wants to talk to.
+    # I²C address of the slave that the master wants to talk to.
     # If that slave shall be filtered, output the cache (all packets from
     # START to STOP) as proto 'i2c', otherwise drop it.
     def decode(self, ss, es, data):
 
         cmd, databyte = data
 
-        # Add the I2C packet to our local cache.
+        # Add the I²C packet to our local cache.
         self.packets.append([ss, es, data])
 
         if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
@@ -86,11 +86,11 @@ class Decoder(srd.Decoder):
                 return
 
             # TODO: START->STOP chunks with both read and write (Repeat START)
-            # Otherwise, send out the whole chunk of I2C packets.
+            # Otherwise, send out the whole chunk of I²C packets.
             for p in self.packets:
                 self.put(p[0], p[1], self.out_proto, p[2])
 
             self.packets = []
         else:
-            pass # Do nothing, only add the I2C packet to our cache.
+            pass # Do nothing, only add the I²C packet to our cache.
 
