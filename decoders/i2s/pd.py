@@ -93,7 +93,7 @@ class Decoder(srd.Decoder):
                 self.samplerate / (self.start_sample -
                 self.first_sample))
 
-        return 'I³S: %d %d-bit samples received at %sHz' % \
+        return 'I²S: %d %d-bit samples received at %sHz' % \
             (self.samplesreceived, self.wordlength, samplerate)
 
     def decode(self, ss, es, data):
