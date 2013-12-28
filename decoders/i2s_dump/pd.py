@@ -25,9 +25,9 @@ import sys
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2s_dump'
-    name = 'I2S dump'
-    longname = 'I2S dump'
-    desc = 'Output decoded I2S data to a file.'
+    name = 'I²S dump'
+    longname = 'I²S dump'
+    desc = 'Output decoded I²S data to a file.'
     license = 'gplv2+'
     inputs = ['i2s']
     outputs = []
