@@ -19,10 +19,10 @@
 ##
 
 '''
-XFP I2C management interface structure decoder.
+XFP I²C management interface structure decoder.
 
-XFP modules include an I2C interface, used to monitor and control various
-aspects of the module. The specification defines an I2C slave at address
+XFP modules include an I²C interface, used to monitor and control various
+aspects of the module. The specification defines an I²C slave at address
 0x50 (0xa0) which returns 128 bytes of a standard structure ("lower memory"),
 and, after setting a table number in lower memory, a set of 256 "higher
 memory" tables, which can be mapped to different subdevices on the XFP.

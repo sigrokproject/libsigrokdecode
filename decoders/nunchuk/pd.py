@@ -52,11 +52,11 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        # Helper for annotations which span exactly one I2C packet.
+        # Helper for annotations which span exactly one I²C packet.
         self.put(self.ss, self.es, self.out_ann, data)
 
     def putb(self, data):
-        # Helper for annotations which span a block of I2C packets.
+        # Helper for annotations which span a block of I²C packets.
         self.put(self.block_start_sample, self.block_end_sample,
                  self.out_ann, data)
 
@@ -157,12 +157,12 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         cmd, databyte = data
 
-        # Store the start/end samples of this I2C packet.
+        # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
 
         # State machine.
         if self.state == 'IDLE':
-            # Wait for an I2C START condition.
+            # Wait for an I²C START condition.
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'

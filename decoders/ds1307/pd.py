@@ -103,12 +103,12 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         cmd, databyte = data
 
-        # Store the start/end samples of this I2C packet.
+        # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
 
         # State machine.
         if self.state == 'IDLE':
-            # Wait for an I2C START condition.
+            # Wait for an I²C START condition.
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
