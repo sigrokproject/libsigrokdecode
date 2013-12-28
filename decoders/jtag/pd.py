@@ -22,6 +22,23 @@
 
 import sigrokdecode as srd
 
+jtag_states = [
+        # Intro "tree"
+        'TEST-LOGIC-RESET', 'RUN-TEST/IDLE',
+        # DR "tree"
+        'SELECT-DR-SCAN', 'CAPTURE-DR', 'UPDATE-DR', 'PAUSE-DR',
+        'SHIFT-DR', 'EXIT1-DR', 'EXIT2-DR',
+        # IR "tree"
+        'SELECT-IR-SCAN', 'CAPTURE-IR', 'UPDATE-IR', 'PAUSE-IR',
+        'SHIFT-IR', 'EXIT1-IR', 'EXIT2-IR',
+]
+
+def get_annotation_classes():
+    l = []
+    for s in jtag_states:
+        l.append([s.lower(), s])
+    return l
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag'
@@ -43,9 +60,7 @@ class Decoder(srd.Decoder):
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     ]
     options = {}
-    annotations = [
-        ['Text', 'Human-readable text'],
-    ]
+    annotations = get_annotation_classes()
 
     def __init__(self, **kwargs):
         # self.state = 'TEST-LOGIC-RESET'
@@ -56,16 +71,19 @@ class Decoder(srd.Decoder):
         self.bits_tdi = []
         self.bits_tdo = []
         self.samplenum = 0
+        self.ss_item = self.es_item = None
+        self.saved_item = None
+        self.first = True
 
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_ann, data)
+        self.put(self.ss_item, self.es_item, self.out_ann, data)
 
     def putp(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_proto, data)
+        self.put(self.ss_item, self.es_item, self.out_proto, data)
 
     def advance_state_machine(self, tms):
         self.oldstate = self.state
@@ -115,9 +133,19 @@ class Decoder(srd.Decoder):
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
 
-        # Output the state we just switched to.
-        self.putx([0, ['New state: %s' % self.state]])
-        self.putp(['NEW STATE', self.state])
+        if self.first == True:
+            # Save the start sample and item for later (no output yet).
+            self.ss_item = self.samplenum
+            self.first = False
+            self.saved_item = self.state
+        else:
+            # Output the saved item (from the last CLK edge to the current).
+            self.es_item = self.samplenum
+            # Output the state we just switched to.
+            self.putx([jtag_states.index(self.state), [self.state]])
+            self.putp(['NEW STATE', self.state])
+            self.ss_item = self.samplenum
+            self.saved_item = self.state
 
         # If we went from SHIFT-IR to SHIFT-IR, or SHIFT-DR to SHIFT-DR,
         # collect the current TDI/TDO values (upon rising TCK edge).
