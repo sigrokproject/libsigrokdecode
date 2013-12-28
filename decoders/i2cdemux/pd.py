@@ -18,16 +18,16 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Generic I2C demultiplexing protocol decoder
+# Generic I²C demultiplexing protocol decoder
 
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'i2cdemux'
-    name = 'I2C demux'
-    longname = 'I2C demultiplexer'
-    desc = 'Demux I2C packets into per-slave-address streams.'
+    name = 'I²C demux'
+    longname = 'I²C demultiplexer'
+    desc = 'Demux I²C packets into per-slave-address streams.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
@@ -37,7 +37,7 @@ class Decoder(srd.Decoder):
     annotations = []
 
     def __init__(self, **kwargs):
-        self.packets = [] # Local cache of I2C packets
+        self.packets = [] # Local cache of I²C packets
         self.slaves = [] # List of known slave addresses
         self.stream = -1 # Current output stream
         self.streamcount = 0 # Number of created output streams
@@ -45,17 +45,17 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_proto = []
 
-    # Grab I2C packets into a local cache, until an I2C STOP condition
+    # Grab I²C packets into a local cache, until an I²C STOP condition
     # packet comes along. At some point before that STOP condition, there
     # will have been an ADDRESS READ or ADDRESS WRITE which contains the
-    # I2C address of the slave that the master wants to talk to.
+    # I²C address of the slave that the master wants to talk to.
     # We use this slave address to figure out which output stream should
     # get the whole chunk of packets (from START to STOP).
     def decode(self, ss, es, data):
 
         cmd, databyte = data
 
-        # Add the I2C packet to our local cache.
+        # Add the I²C packet to our local cache.
         self.packets.append([ss, es, data])
 
         if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
@@ -73,12 +73,12 @@ class Decoder(srd.Decoder):
             if self.stream == -1:
                 raise Exception('Invalid stream!') # FIXME?
 
-            # Send the whole chunk of I2C packets to the correct stream.
+            # Send the whole chunk of I²C packets to the correct stream.
             for p in self.packets:
                 self.put(p[0], p[1], self.out_proto[self.stream], p[2])
 
             self.packets = []
             self.stream = -1
         else:
-            pass # Do nothing, only add the I2C packet to our cache.
+            pass # Do nothing, only add the I²C packet to our cache.
 

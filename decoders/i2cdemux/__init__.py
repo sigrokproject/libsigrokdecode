@@ -19,10 +19,10 @@
 ##
 
 '''
-Generic I2C demultiplexing protocol decoder.
+Generic I²C demultiplexing protocol decoder.
 
-Takes an I2C stream as input and outputs multiple I2C streams, each stream
-containing only I2C packets for one specific I2C slave.
+Takes an I²C stream as input and outputs multiple I²C streams, each stream
+containing only I²C packets for one specific I²C slave.
 '''
 
 from .pd import *
