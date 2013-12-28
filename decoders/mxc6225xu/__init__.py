@@ -23,8 +23,8 @@ MEMSIC MXC6225XU protocol decoder.
 
 The MEMSIC MXC6225XU is a Digital Thermal Orientation Sensor (DTOS).
 
-The chip's I2C interface supports standard mode and fast mode (max. 400kHz).
-Its I2C slave address is 0x2a.
+The chip's I²C interface supports standard mode and fast mode (max. 400kHz).
+Its I²C slave address is 0x2a.
 
 Details:
 TODO
