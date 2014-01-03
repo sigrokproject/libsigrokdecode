@@ -112,6 +112,9 @@ esac
 AC_SUBST(CPPFLAGS_PYTHON)
 AC_SUBST(LDFLAGS_PYTHON)
 
+# Link against libm, this is required (among other things) by Python.
+AC_SEARCH_LIBS([pow], [m])
+
 # The Check unit testing framework is optional. Disable if not found.
 PKG_CHECK_MODULES([check], [check >= 0.9.4],
 	[have_check="yes"; CFLAGS="$CFLAGS $check_CFLAGS";
