@@ -57,7 +57,7 @@ Packet:
 '''
 
 def probe_list(num_probes):
-    l = []
+    l = [{'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'}]
     for i in range(num_probes):
         d = {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data line %d' % i}
         l.append(d)
@@ -72,9 +72,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['parallel']
-    probes = [
-        {'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'},
-    ]
+    probes = []
     optional_probes = probe_list(8)
     options = {
         'clock_edge': ['Clock edge to sample on', 'rising'],
@@ -187,7 +185,10 @@ class Decoder(srd.Decoder):
 
             # State machine.
             if self.state == 'IDLE':
-                self.find_clk_edge(pins[0], pins[1:])
+                if pins[0] not in (0, 1):
+                    self.handle_bits(pins[1:])
+                else:
+                    self.find_clk_edge(pins[0], pins[1:])
             else:
                 raise Exception('Invalid state: %s' % self.state)
 

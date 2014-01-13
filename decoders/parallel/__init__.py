@@ -20,7 +20,11 @@
 
 '''
 This protocol decoder can decode synchronous parallel buses with various
-number of data bits/probes and one clock line.
+number of data bits/probes and one (optional) clock line.
+
+If no clock line is supplied, the decoder works slightly differently in
+that it interprets every transition on any of the supplied data probes
+like there had been a clock transition.
 
 It is required to use the lowest data probes, and use consecutive ones.
 For example, for a 4-bit sync parallel bus, probes D0/D1/D2/D3 (and CLK)
