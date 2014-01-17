@@ -88,12 +88,28 @@ build_runtc="yes"
 AM_PATH_GLIB_2_0([2.24.0],
         [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
-# Python support. We require at least Python >= 3.0.
+# Python 3 is always needed.
+# Note: We need to try a few different variants, since some systems have a
+# python3.pc file, others have a python-3.3.pc file, and so on.
+# See also: http://sigrok.org/wiki/Libsigrokdecode/Python
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
 PKG_CHECK_MODULES([python3], [python3 >= 3.0],
-	[have_python3="yes"; CPPFLAGS_PYTHON="$python3_CFLAGS";
-	LDFLAGS_PYTHON="$python3_LIBS"], [have_python3="no"])
+	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python3_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python3_LIBS"],
+[PKG_CHECK_MODULES([python33], [python-3.3 >= 3.0],
+	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python33_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python33_LIBS"],
+[PKG_CHECK_MODULES([python32], [python-3.2 >= 3.0],
+	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python32_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python32_LIBS"],
+[PKG_CHECK_MODULES([python31], [python-3.1 >= 3.0],
+	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python31_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python31_LIBS"],
+[PKG_CHECK_MODULES([python30], [python-3.0 >= 3.0],
+	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python30_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python30_LIBS"],
+)])])])])
 case "$build" in
 *mingw*)
 	# We currently hardcode the paths to the Python 3.2 default install
@@ -102,11 +118,6 @@ case "$build" in
 	AC_MSG_WARN([using hardcoded Python3 configuration on MinGW])
 	CPPFLAGS_PYTHON="-I/c/Python32/include -Ic:/Python32/include"
 	LDFLAGS_PYTHON="-L/c/Python32/libs -Lc:/Python32/libs -lpython32"
-	;;
-*)
-	if test x"$have_python3" = xno; then
-		AC_MSG_ERROR([python3 not found])
-	fi
 	;;
 esac
 AC_SUBST(CPPFLAGS_PYTHON)
@@ -121,7 +132,8 @@ PKG_CHECK_MODULES([check], [check >= 0.9.4],
 	LIBS="$LIBS $check_LIBS"], [have_check="no"])
 AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
-# Protocol decoder test framework
+# libsigrok is optional (only used for the protocol decoder test framework).
+# Disable if not found.
 PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.2.0],
 	[LIBSIGROK_CFLAGS="$libsigrok_CFLAGS"; LIBSIGROK_LIBS="$libsigrok_LIBS"],
 	[build_runtc="no"])
