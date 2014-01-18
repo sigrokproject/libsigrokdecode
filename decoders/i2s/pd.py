@@ -56,6 +56,9 @@ class Decoder(srd.Decoder):
         ['right', 'Right channel'],
         ['warnings', 'Warnings'],
     ]
+    binary = (
+        ('wav', 'WAV file'),
+    )
 
     def __init__(self, **kwargs):
         self.samplerate = None
@@ -67,9 +70,11 @@ class Decoder(srd.Decoder):
         self.first_sample = None
         self.start_sample = None
         self.wordlength = -1
+        self.wrote_wav_header = False
 
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
@@ -78,6 +83,9 @@ class Decoder(srd.Decoder):
 
     def putpb(self, data):
         self.put(self.start_sample, self.samplenum, self.out_proto, data)
+
+    def putbin(self, data):
+        self.put(self.start_sample, self.samplenum, self.out_bin, data)
 
     def putb(self, data):
         self.put(self.start_sample, self.samplenum, self.out_ann, data)
@@ -95,6 +103,33 @@ class Decoder(srd.Decoder):
 
         return 'I²S: %d %d-bit samples received at %sHz' % \
             (self.samplesreceived, self.wordlength, samplerate)
+
+    def wav_header(self):
+        # Chunk descriptor
+        h  = b'RIFF'
+        h += b'\x24\x80\x00\x00' # Chunk size (2084)
+        h += b'WAVE'
+        # Fmt subchunk
+        h += b'fmt '
+        h += b'\x10\x00\x00\x00' # Subchunk size (16 bytes)
+        h += b'\x01\x00'         # Audio format (0x0001 == PCM)
+        h += b'\x02\x00'         # Number of channels (2)
+        h += b'\x80\x3e\x00\x00' # Samplerate (16000)
+        h += b'\x00\x7d\x00\x00' # Byterate (32000)
+        h += b'\x04\x00'         # Blockalign (4)
+        h += b'\x10\x00'         # Bits per sample (16)
+        # Data subchunk
+        h += b'data'
+        h += b'\xff\xff\x00\x00' # Subchunk size (65535 bytes) TODO
+        return h
+
+    def wav_sample(self, sample):
+        # TODO: This currently assumes U32 samples, and converts to S16.
+        s = sample >> 16
+        if s >= 0x8000:
+            s -= 0x10000
+        lo, hi = s & 0xff, (s >> 8) & 0xff
+        return bytes([lo, hi])
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
@@ -118,6 +153,11 @@ class Decoder(srd.Decoder):
 
             # Only submit the sample, if we received the beginning of it.
             if self.start_sample != None:
+
+                if not self.wrote_wav_header:
+                    self.put(0, 0, self.out_bin, (0, self.wav_header()))
+                    self.wrote_wav_header = True
+
                 self.samplesreceived += 1
 
                 idx = 0 if self.oldws else 1
@@ -128,6 +168,7 @@ class Decoder(srd.Decoder):
                 self.putpb(['DATA', [c3, self.data]])
                 self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
                                  '%s: %s' % (c3, v), c3]])
+                self.putbin((0, self.wav_sample(self.data)))
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:
