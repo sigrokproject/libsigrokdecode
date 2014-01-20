@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -104,6 +104,11 @@ class Decoder(srd.Decoder):
         ['Stop bits', 'UART stop bits'],
         ['Warnings', 'Warnings'],
     ]
+    binary = (
+        ('rx', 'RX dump'),
+        ('tx', 'TX dump'),
+        ('rxtx', 'RX/TX dump'),
+    )
 
     def putx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
@@ -116,6 +121,10 @@ class Decoder(srd.Decoder):
     def putp(self, data):
         s, halfbit = self.samplenum, int(self.bit_width / 2)
         self.put(s - halfbit, s + halfbit, self.out_proto, data)
+
+    def putbin(self, rxtx, data):
+        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
+        self.put(s - halfbit, self.samplenum + halfbit, self.out_bin, data)
 
     def __init__(self, **kwargs):
         self.samplerate = None
@@ -133,6 +142,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
@@ -234,6 +244,9 @@ class Decoder(srd.Decoder):
             self.putx(rxtx, [rxtx, [bin(b)[2:].zfill(8)]])
         else:
             raise Exception('Invalid data format option: %s' % f)
+
+        self.putbin(rxtx, (rxtx, bytes([b])))
+        self.putbin(rxtx, (2, bytes([b])))
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
