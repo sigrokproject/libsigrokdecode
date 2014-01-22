@@ -36,7 +36,6 @@
 #endif
 #include "../config.h"
 
-
 int debug = FALSE;
 int statistics = FALSE;
 
@@ -406,7 +405,7 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 			/* Only annotations and binary can have a class. */
 			return FALSE;
 		idx = 0;
-		while(l) {
+		while (l) {
 			decoder_class = l->data;
 			if (!strcmp(decoder_class[0], op->class)) {
 				op->class_idx = idx;
@@ -456,7 +455,7 @@ int main(int argc, char **argv)
 	pdlist = NULL;
 	opt_infile = NULL;
 	pd = NULL;
-	while((c = getopt(argc, argv, "dP:p:o:i:O:f:S")) != -1) {
+	while ((c = getopt(argc, argv, "dP:p:o:i:O:f:S")) != -1) {
 		switch(c) {
 		case 'd':
 			debug = TRUE;
@@ -559,5 +558,3 @@ int main(int argc, char **argv)
 
 	return ret;
 }
-
-
