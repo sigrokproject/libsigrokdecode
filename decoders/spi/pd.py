@@ -79,10 +79,10 @@ class Decoder(srd.Decoder):
         'format': ['Data format', 'hex'],
     }
     annotations = [
-        ['MISO/MOSI data', 'MISO/MOSI SPI data'],
-        ['MISO data', 'MISO SPI data'],
-        ['MOSI data', 'MOSI SPI data'],
-        ['Warnings', 'Human-readable warnings'],
+        ['miso-mosi-data', 'MISO/MOSI SPI data'],
+        ['miso-data', 'MISO SPI data'],
+        ['mosi-data', 'MOSI SPI data'],
+        ['warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self):

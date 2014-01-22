@@ -95,12 +95,12 @@ class Decoder(srd.Decoder):
         # TODO: Options to invert the signal(s).
     }
     annotations = [
-        ['RX data', 'UART RX data'],
-        ['TX data', 'UART TX data'],
-        ['Start bits', 'UART start bits'],
-        ['Parity bits', 'UART parity bits'],
-        ['Stop bits', 'UART stop bits'],
-        ['Warnings', 'Warnings'],
+        ['rx-data', 'UART RX data'],
+        ['tx-data', 'UART TX data'],
+        ['start-bits', 'UART start bits'],
+        ['parity-bits', 'UART parity bits'],
+        ['stop-bits', 'UART stop bits'],
+        ['warnings', 'Warnings'],
     ]
     binary = (
         ('rx', 'RX dump'),

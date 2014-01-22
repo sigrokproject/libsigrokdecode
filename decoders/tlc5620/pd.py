@@ -46,11 +46,11 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['dac_select', 'DAC select'],
+        ['dac-select', 'DAC select'],
         ['gain', 'Gain'],
         ['value', 'DAC value'],
-        ['data_latch', 'Data latch point'],
-        ['ldac_fall', 'LDAC falling edge'],
+        ['data-latch', 'Data latch point'],
+        ['ldac-fall', 'LDAC falling edge'],
     ]
 
     def __init__(self, **kwargs):

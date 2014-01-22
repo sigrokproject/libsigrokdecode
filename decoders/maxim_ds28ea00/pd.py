@@ -53,7 +53,7 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['Text', 'Human-readable text'],
+        ['text', 'Human-readable text'],
     ]
 
     def __init__(self, **kwargs):

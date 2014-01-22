@@ -204,8 +204,8 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['XFP field names and values', 'XFP structure field names and values'],
-        ['XFP fields', 'XFP structure fields'],
+        ['fieldnames-and-values', 'XFP structure field names and values'],
+        ['fields', 'XFP structure fields'],
     ]
 
     def __init__(self, **kwargs):

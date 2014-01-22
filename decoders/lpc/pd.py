@@ -125,7 +125,7 @@ class Decoder(srd.Decoder):
     annotations = [
         ['warnings', 'Warnings'],
         ['start', 'Start'],
-        ['cycle_type', 'Cycle-type/direction'],
+        ['cycle-type', 'Cycle-type/direction'],
         ['addr', 'Address'],
         ['tar1', 'Turn-around cycle 1'],
         ['sync', 'Sync'],

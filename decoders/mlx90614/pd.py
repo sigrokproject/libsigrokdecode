@@ -33,8 +33,8 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['Celsius', 'Temperature in degrees Celsius'],
-        ['Kelvin', 'Temperature in Kelvin'],
+        ['celsius', 'Temperature in degrees Celsius'],
+        ['kelvin', 'Temperature in Kelvin'],
     ]
 
     def __init__(self, **kwargs):

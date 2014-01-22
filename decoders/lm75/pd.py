@@ -60,11 +60,11 @@ class Decoder(srd.Decoder):
         'resolution': ['Resolution', 9], # 9-12 bit, sensor/config dependent
     }
     annotations = [
-        ['Celsius', 'Temperature in degrees Celsius'],
-        ['Kelvin', 'Temperature in Kelvin'],
-        ['Text (verbose)', 'Human-readable text (verbose)'],
-        ['Text', 'Human-readable text'],
-        ['Warnings', 'Human-readable warnings'],
+        ['celsius', 'Temperature in degrees Celsius'],
+        ['kelvin', 'Temperature in Kelvin'],
+        ['text-verbose', 'Human-readable text (verbose)'],
+        ['text', 'Human-readable text'],
+        ['warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):

@@ -33,9 +33,9 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['Text (verbose)', 'Human-readable text (verbose)'],
-        ['Text', 'Human-readable text'],
-        ['Warnings', 'Human-readable warnings'],
+        ['text-verbose', 'Human-readable text (verbose)'],
+        ['text', 'Human-readable text'],
+        ['warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):

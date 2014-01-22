@@ -95,9 +95,9 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['Text', 'Human-readable text'],
-        ['Verbose decode', 'Decoded register bits, read/write data'],
-        ['Warnings', 'Human-readable warnings'],
+        ['text', 'Human-readable text'],
+        ['verbose-decode', 'Decoded register bits, read/write data'],
+        ['warnings', 'Human-readable warnings'],
     ]
 
     def __init__(self, **kwargs):

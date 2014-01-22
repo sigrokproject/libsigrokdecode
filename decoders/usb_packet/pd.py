@@ -149,7 +149,7 @@ class Decoder(srd.Decoder):
         'signalling': ['Signalling', 'full-speed'],
     }
     annotations = [
-        ['Text', 'Human-readable text']
+        ['text', 'Human-readable text']
     ]
 
     def __init__(self):
