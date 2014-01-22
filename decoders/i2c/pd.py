@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# I²C protocol decoder
-
 # TODO: Look into arbitration, collision detection, clock synchronisation, etc.
 # TODO: Implement support for 10bit slave addresses.
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).

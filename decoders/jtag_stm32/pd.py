@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# ST STM32 JTAG protocol decoder
-
 import sigrokdecode as srd
 
 # JTAG debug port data registers (in IR[3:0]) and their sizes (in bits)

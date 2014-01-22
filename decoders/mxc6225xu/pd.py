@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# MEMSIC MXC6225XU protocol decoder
-
 import sigrokdecode as srd
 
 # Definitions of various bits in MXC6225XU registers.

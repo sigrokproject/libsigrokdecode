@@ -18,8 +18,6 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-# Generic I²C filtering protocol decoder
-
 # TODO: Support for filtering out multiple slave/direction pairs?
 
 import sigrokdecode as srd

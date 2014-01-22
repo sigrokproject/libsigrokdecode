@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# National LM75 (and compatibles) temperature sensor protocol decoder
-
 # TODO: Better support for various LM75 compatible devices.
 
 import sigrokdecode as srd

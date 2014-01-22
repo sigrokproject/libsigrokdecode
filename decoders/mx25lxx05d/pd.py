@@ -18,10 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Macronix MX25Lxx05D SPI (NOR) flash chip protocol decoder
-
-# Note: Works for MX25L1605D/MX25L3205D/MX25L6405D.
-
 import sigrokdecode as srd
 
 # Dict which maps command IDs to their names and descriptions.

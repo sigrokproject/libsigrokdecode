@@ -17,8 +17,6 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-# XFP protocol decoder
-
 import sigrokdecode as srd
 import os
 

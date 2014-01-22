@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Epson RTC-8564 JE/NB protocol decoder
-
 import sigrokdecode as srd
 
 # Return the specified BCD number (max. 8 bits) as integer.

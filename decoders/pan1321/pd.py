@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# Panasonic PAN1321 Bluetooth module protocol decoder
-
 import sigrokdecode as srd
 
 # ...

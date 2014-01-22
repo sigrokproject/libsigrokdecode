@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-# 1-Wire protocol decoder (network layer)
-
 import sigrokdecode as srd
 
 # Dictionary of ROM commands and their names, next state.
