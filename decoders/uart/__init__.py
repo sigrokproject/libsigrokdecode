@@ -19,13 +19,11 @@
 ##
 
 '''
-UART protocol decoder.
-
-Universal Asynchronous Receiver Transmitter (UART) is a simple serial
+UART (Universal Asynchronous Receiver Transmitter) is a simple serial
 communication protocol which allows two devices to talk to each other.
 
 This decoder should work on all "UART-like" async protocols with one
-start bit (0), 7-9 databits, an (optional) parity bit, and one or more
+start bit (0), 5-9 databits, an (optional) parity bit, and one or more
 stop bits (1), in this order.
 
 It can be run on one signal line (RX or TX) only, or on two lines (RX + TX).

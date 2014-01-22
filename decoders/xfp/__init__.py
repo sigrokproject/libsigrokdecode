@@ -19,7 +19,7 @@
 ##
 
 '''
-XFP I²C management interface structure decoder.
+This PD decodes the XFP I²C management interface structures/protocol.
 
 XFP modules include an I²C interface, used to monitor and control various
 aspects of the module. The specification defines an I²C slave at address

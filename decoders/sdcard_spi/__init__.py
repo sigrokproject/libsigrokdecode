@@ -19,9 +19,8 @@
 ##
 
 '''
-SD card (SPI mode) low-level protocol decoder.
-
-TODO: Description.
+This decoder stacks on top of the 'spi' PD and decodes the SD card
+(SPI mode) low-level protocol.
 
 Most SD cards can be accessed via two different protocols/modes: SD mode
 or SPI mode.
@@ -65,9 +64,6 @@ SPI mode properties (differences to SD mode):
  * In SPI mode cards cannot guarantee their speed class (the host should
    assume class 0, no matter what the card indicates).
  * The RCA register is not accessible in SPI mode.
-
-Details:
-TODO
 '''
 
 from .pd import *

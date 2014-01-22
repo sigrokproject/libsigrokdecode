@@ -19,14 +19,8 @@
 ##
 
 '''
-AVR ISP protocol decoder.
-
-TODO: Description.
-
-TODO: SPI is MSB-first.
-
-Details:
-TODO
+This decoder stacks on top of the 'spi' PD and decodes the In-System
+Programming (ISP) protocol of some Atmel AVR 8-bit microcontrollers.
 '''
 
 from .pd import *

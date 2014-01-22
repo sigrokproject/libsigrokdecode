@@ -19,9 +19,8 @@
 ##
 
 '''
-Nintendo Wii Nunchuk protocol decoder.
-
-TODO: Description.
+This decoder stacks on top of the 'i2c' PD and decodes the Nintendo Wii
+Nunchuk controller protocol.
 
 Details:
 http://wiibrew.org/wiki/Wiimote/Extension_Controllers/Nunchuck

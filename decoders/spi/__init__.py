@@ -19,11 +19,9 @@
 ##
 
 '''
-Serial Peripheral Interface protocol decoder.
-
-This protocol decoder supports synchronous SPI(-like) protocols with a
-clock line, a MISO and MOSI line for data transfer in two directions,
-and an optional CS# pin.
+The SPI (Serial Peripheral Interface) protocol decoder supports synchronous
+SPI(-like) protocols with a clock line, a MISO and MOSI line for data
+transfer in two directions, and an optional CS# pin.
 
 If CS# is supplied, data is only decoded when CS# is asserted (clock
 transitions where CS# is not asserted are ignored). If CS# is not supplied,

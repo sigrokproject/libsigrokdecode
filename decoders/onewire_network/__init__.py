@@ -19,7 +19,8 @@
 ##
 
 '''
-1-Wire protocol decoder (network layer).
+This decoder stacks on top of the 'onewire_link' PD and decodes the
+1-Wire protocol (network layer).
 
 The 1-Wire protocol enables bidirectional communication over a single wire
 (and ground) between a single master and one or multiple slaves. The protocol
@@ -30,11 +31,6 @@ is layered:
  - Transport layer (transport data between 1-Wire master and device)
 
 Network layer:
-
-Protocol output format:
-TODO.
-
-Annotations:
 
 The following link layer annotations are shown:
 

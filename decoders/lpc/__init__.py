@@ -19,7 +19,8 @@
 ##
 
 '''
-Low-Pin Count protocol decoder.
+LPC (Low-Pin Count) is a protocol for low-bandwidth devices used on
+some PC mainboards, such as the "BIOS chip" or the so-called "Super I/O".
 '''
 
 from .pd import *

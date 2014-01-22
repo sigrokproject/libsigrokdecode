@@ -19,13 +19,8 @@
 ##
 
 '''
-Maxim DS28EA00 protocol decoder.
-
-The Maxim DS28EA00 is a 1-Wire digital thermometer with Sequence Detect
-and PIO functionality.
-
-Details:
-TODO
+This decoder stacks on top of the 'onewire_network' PD and decodes the
+Maxim DS28EA00 1-Wire digital thermometer protocol.
 '''
 
 from .pd import *

@@ -19,9 +19,8 @@
 ##
 
 '''
-ST STM32 JTAG protocol decoder.
-
-TODO.
+This decoder stacks on top of the 'jtag' PD and decodes JTAG data specific to
+the STM32 microcontroller series.
 
 Details:
 https://en.wikipedia.org/wiki/STM32

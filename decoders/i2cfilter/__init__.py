@@ -18,9 +18,9 @@
 ##
 
 '''
-Generic I²C filtering protocol decoder.
+This is a generic I²C filtering protocol decoder.
 
-Takes input from the I²C protocol decoder and removes all traffic
+It takes input from the I²C protocol decoder and removes all traffic
 except that from/to the specified slave address and/or direction.
 
 It then outputs the filtered data again as OUTPUT_PROTO of type/format 'i2c'

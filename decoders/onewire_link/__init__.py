@@ -19,7 +19,7 @@
 ##
 
 '''
-1-Wire protocol decoder (link layer).
+This protocol decoder handles the 1-Wire link layer.
 
 The 1-Wire protocol enables bidirectional communication over a single wire
 (and ground) between a single master and one or multiple slaves. The protocol
@@ -28,8 +28,6 @@ is layered:
  - Link layer (reset, presence detection, reading/writing bits)
  - Network layer (skip/search/match device ROM addresses)
  - Transport layer (transport data between 1-Wire master and device)
-
-This protocol decoder handles the 1-Wire link layer.
 
 Sample rate:
 A sufficiently high samplerate is required to properly detect all the elements

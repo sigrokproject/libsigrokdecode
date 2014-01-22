@@ -19,11 +19,11 @@
 ##
 
 '''
-MIDI protocol decoder.
+This decoder stacks on top of the 'uart' PD and decodes the MIDI
+(Musical Instrument Digital Interface) protocol.
 
-The MIDI protocol is layered on top of the UART (async serial) protocol,
-with a fixed baud rate of 31250 baud (+/- 1%) and 8n1 settings. Bytes are
-sent LSB-first.
+MIDI is layered on top of the UART (async serial) protocol, with a fixed
+baud rate of 31250 baud (+/- 1%) and 8n1 settings. Bytes are sent LSB-first.
 '''
 
 from .pd import *

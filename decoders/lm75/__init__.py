@@ -19,15 +19,8 @@
 ##
 
 '''
-National LM75 (and compatibles) temperature sensor protocol decoder.
-
-TODO: Description.
-
-Protocol output format:
-TODO.
-
-Details:
-TODO.
+This decoder stacks on top of the 'i2c' PD and decodes the National LM75
+(and compatibles) temperature sensor protocol.
 '''
 
 from .pd import *

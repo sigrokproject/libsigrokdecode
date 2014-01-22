@@ -19,10 +19,8 @@
 ##
 
 '''
-Melexis MLX90614 protocol decoder.
-
-Details:
-TODO
+This decoder stacks on top of the 'i2c' PD and decodes the Melexis MLX90614
+infrared thermometer protocol.
 '''
 
 from .pd import *

@@ -19,7 +19,8 @@
 ##
 
 '''
-USB (low-speed and full-speed) packet protocol decoder.
+This decoder stacks on top of the 'usb_signalling' PD and decodes the USB
+(low-speed and full-speed) packet protocol.
 
 Protocol layer (USB spec, chapter 8):
 
@@ -34,9 +35,6 @@ that is part of the SYNC field, and end with an EOP (End Of Packet).
 PID: A PID (packet identifier) follows the SYNC field of every packet. A PID
 consists of a 4-bit packet type field, and a 4 bit check field.
 The check field is the one's complement of the packet type field.
-
-Protocol output format:
-TODO
 
 Details:
 https://en.wikipedia.org/wiki/USB

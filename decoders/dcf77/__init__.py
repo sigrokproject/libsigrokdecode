@@ -19,7 +19,8 @@
 ##
 
 '''
-TODO.
+This PD decodes the DCF77 protocol (a European long-wave time signal that
+uses a 77.5kHz carrier frequency).
 
 Details:
 http://en.wikipedia.org/wiki/DCF77

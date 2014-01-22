@@ -19,7 +19,7 @@
 ##
 
 '''
-USB (low-speed and full-speed) signalling protocol decoder.
+This PD decodes the USB (low-speed and full-speed) signalling protocol.
 
 Electrical/signalling layer (USB spec, chapter 7):
 
@@ -42,9 +42,6 @@ Data is transferred at a rate of 1.5Mbit/s (low-speed) / 12Mbit/s (full-speed).
 
 The SE0 transmitted to signal an end-of-packet is two bit intervals long
 (low-speed: 1.25uS - 1.50uS, full-speed: 160ns - 175ns).
-
-Protocol output format:
-TODO
 
 Details:
 https://en.wikipedia.org/wiki/USB
