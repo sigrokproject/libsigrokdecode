@@ -79,7 +79,6 @@ class Decoder(srd.Decoder):
         'format': ['Data format', 'hex'],
     }
     annotations = [
-        ['miso-mosi-data', 'MISO/MOSI SPI data'],
         ['miso-data', 'MISO SPI data'],
         ['mosi-data', 'MOSI SPI data'],
         ['warnings', 'Human-readable warnings'],
@@ -148,9 +147,8 @@ class Decoder(srd.Decoder):
         self.putpw(['DATA', self.mosidata, self.misodata])
 
         # Annotations
-        self.putw([0, ['%02X/%02X' % (self.mosidata, self.misodata)]])
-        self.putw([1, ['%02X' % self.misodata]])
-        self.putw([2, ['%02X' % self.mosidata]])
+        self.putw([0, ['%02X' % self.misodata]])
+        self.putw([1, ['%02X' % self.mosidata]])
 
         # Meta bitrate
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.startsample + 1)
@@ -158,7 +156,7 @@ class Decoder(srd.Decoder):
         self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
         if self.cs_was_deasserted_during_data_word:
-            self.putw([3, ['CS# was deasserted during this data word!']])
+            self.putw([2, ['CS# was deasserted during this data word!']])
 
         # Reset decoder state.
         self.mosidata = self.misodata = self.bitcount = 0
