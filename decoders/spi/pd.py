@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
-## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -30,7 +30,8 @@ SPI packet:
 Commands:
  - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
    The data is _usually_ 8 bits (but can also be fewer or more bits).
-   Both data items are Python numbers, not strings.
+   Both data items are Python numbers (not strings), or None if the respective
+   probe was not supplied.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings.
 
@@ -38,6 +39,8 @@ Examples:
  ['CS-CHANGE', 1, 0]
  ['DATA', 0xff, 0x3a]
  ['DATA', 0x65, 0x00]
+ ['DATA', 0xa8, None]
+ ['DATA', None, 0x55]
  ['CS-CHANGE', 0, 1]
 '''
 
@@ -61,13 +64,13 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['spi']
     probes = [
-        {'id': 'miso', 'name': 'MISO',
-         'desc': 'SPI MISO line (Master in, slave out)'},
-        {'id': 'mosi', 'name': 'MOSI',
-         'desc': 'SPI MOSI line (Master out, slave in)'},
         {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
     ]
     optional_probes = [
+        {'id': 'miso', 'name': 'MISO',
+         'desc': 'SPI MISO line (master in, slave out)'},
+        {'id': 'mosi', 'name': 'MOSI',
+         'desc': 'SPI MOSI line (master out, slave in)'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'SPI chip-select line'},
     ]
     options = {
@@ -95,6 +98,9 @@ class Decoder(srd.Decoder):
         self.cs_was_deasserted_during_data_word = 0
         self.oldcs = -1
         self.oldpins = None
+        self.have_cs = None
+        self.have_miso = None
+        self.have_mosi = None
         self.state = 'IDLE'
 
     def metadata(self, key, value):
@@ -126,16 +132,18 @@ class Decoder(srd.Decoder):
         ws = self.options['wordsize']
 
         # Receive MOSI bit into our shift register.
-        if self.options['bitorder'] == 'msb-first':
-            self.mosidata |= mosi << (ws - 1 - self.bitcount)
-        else:
-            self.mosidata |= mosi << self.bitcount
+        if self.have_mosi:
+            if self.options['bitorder'] == 'msb-first':
+                self.mosidata |= mosi << (ws - 1 - self.bitcount)
+            else:
+                self.mosidata |= mosi << self.bitcount
 
         # Receive MISO bit into our shift register.
-        if self.options['bitorder'] == 'msb-first':
-            self.misodata |= miso << (ws - 1 - self.bitcount)
-        else:
-            self.misodata |= miso << self.bitcount
+        if self.have_miso:
+            if self.options['bitorder'] == 'msb-first':
+                self.misodata |= miso << (ws - 1 - self.bitcount)
+            else:
+                self.misodata |= miso << self.bitcount
 
         self.bitcount += 1
 
@@ -143,23 +151,30 @@ class Decoder(srd.Decoder):
         if self.bitcount != ws:
             return
 
-        # Pass MOSI and MISO to the next PD up the stack
-        self.putpw(['DATA', self.mosidata, self.misodata])
+        si = self.mosidata if self.have_mosi else None
+        so = self.misodata if self.have_miso else None
 
-        # Annotations
-        self.putw([0, ['%02X' % self.misodata]])
-        self.putw([1, ['%02X' % self.mosidata]])
+        # Pass MOSI and MISO to the next PD up the stack.
+        self.putpw(['DATA', si, so])
 
-        # Meta bitrate
+        # Annotations.
+        if self.have_miso:
+            self.putw([0, ['%02X' % self.misodata]])
+        if self.have_mosi:
+            self.putw([1, ['%02X' % self.mosidata]])
+
+        # Meta bitrate.
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.startsample + 1)
         bitrate = int(1 / elapsed * self.options['wordsize'])
         self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
-        if self.cs_was_deasserted_during_data_word:
+        if self.have_cs and self.cs_was_deasserted_during_data_word:
             self.putw([2, ['CS# was deasserted during this data word!']])
 
         # Reset decoder state.
-        self.mosidata = self.misodata = self.bitcount = 0
+        self.misodata = 0 if self.have_miso else None
+        self.mosidata = 0 if self.have_mosi else None
+        self.bitcount = 0
 
     def find_clk_edge(self, miso, mosi, sck, cs):
         if self.have_cs and self.oldcs != cs:
@@ -168,7 +183,9 @@ class Decoder(srd.Decoder):
                      ['CS-CHANGE', self.oldcs, cs])
             self.oldcs = cs
             # Reset decoder state when CS# changes (and the CS# pin is used).
-            self.mosidata = self.misodata = self.bitcount= 0
+            self.misodata = 0 if self.have_miso else None
+            self.mosidata = 0 if self.have_mosi else None
+            self.bitcount = 0
 
         # Ignore sample if the clock pin hasn't changed.
         if sck == self.oldsck:
@@ -193,13 +210,15 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         if self.samplerate is None:
             raise Exception("Cannot decode without samplerate.")
-        # TODO: Either MISO or MOSI could be optional. CS# is optional.
+        # Either MISO or MOSI can be omitted (but not both). CS# is optional.
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).
             if self.oldpins == pins:
                 continue
-            self.oldpins, (miso, mosi, sck, cs) = pins, pins
+            self.oldpins, (sck, miso, mosi, cs) = pins, pins
+            self.have_miso = (miso in (0, 1))
+            self.have_mosi = (mosi in (0, 1))
             self.have_cs = (cs in (0, 1))
 
             # State machine.
