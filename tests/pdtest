@@ -406,7 +406,7 @@ if len(sys.argv) == 1:
 
 opt_all = opt_run = opt_show = opt_list = opt_fix = False
 report_dir = None
-opts, args = getopt(sys.argv[1:], "dvarslfRS:")
+opts, args = getopt(sys.argv[1:], "dvarslfR:S:")
 for opt, arg in opts:
     if opt == '-d':
         DEBUG += 1
