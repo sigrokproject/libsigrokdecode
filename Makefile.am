@@ -59,13 +59,15 @@ ChangeLog:
 
 dist-hook: ChangeLog
 	$(MKDIR_P) $(distdir)/tools
-	cp tools/install-decoders $(distdir)/tools
+	cp ${top_srcdir}/tools/install-decoders $(distdir)/tools
 	$(MKDIR_P) $(distdir)/decoders
-	tools/install-decoders -o $(distdir)/decoders
+	${top_srcdir}/tools/install-decoders -i ${top_srcdir}/decoders \
+		-o $(distdir)/decoders
 
 install-decoders:
 	$(MKDIR_P) $(DESTDIR)$(DECODERS_DIR)
-	tools/install-decoders -o $(DESTDIR)$(DECODERS_DIR)
+	${top_srcdir}/tools/install-decoders -i ${top_srcdir}/decoders \
+		-o $(DESTDIR)$(DECODERS_DIR)
 
 install-data-hook: install-decoders
 
