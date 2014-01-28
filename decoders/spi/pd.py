@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['spi']
     probes = [
-        {'id': 'sck', 'name': 'CLK', 'desc': 'SPI clock line'},
+        {'id': 'clk', 'name': 'CLK', 'desc': 'SPI clock line'},
     ]
     optional_probes = [
         {'id': 'miso', 'name': 'MISO',
@@ -89,7 +89,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.oldsck = 1
+        self.oldclk = 1
         self.bitcount = 0
         self.mosidata = 0
         self.misodata = 0
@@ -119,7 +119,7 @@ class Decoder(srd.Decoder):
     def putw(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 
-    def handle_bit(self, miso, mosi, sck, cs):
+    def handle_bit(self, miso, mosi, clk, cs):
         # If this is the first bit, save its sample number.
         if self.bitcount == 0:
             self.startsample = self.samplenum
@@ -176,7 +176,7 @@ class Decoder(srd.Decoder):
         self.mosidata = 0 if self.have_mosi else None
         self.bitcount = 0
 
-    def find_clk_edge(self, miso, mosi, sck, cs):
+    def find_clk_edge(self, miso, mosi, clk, cs):
         if self.have_cs and self.oldcs != cs:
             # Send all CS# pin value changes.
             self.put(self.samplenum, self.samplenum, self.out_proto,
@@ -188,24 +188,24 @@ class Decoder(srd.Decoder):
             self.bitcount = 0
 
         # Ignore sample if the clock pin hasn't changed.
-        if sck == self.oldsck:
+        if clk == self.oldclk:
             return
 
-        self.oldsck = sck
+        self.oldclk = clk
 
         # Sample data on rising/falling clock edge (depends on mode).
         mode = spi_mode[self.options['cpol'], self.options['cpha']]
-        if mode == 0 and sck == 0:   # Sample on rising clock edge
+        if mode == 0 and clk == 0:   # Sample on rising clock edge
             return
-        elif mode == 1 and sck == 1: # Sample on falling clock edge
+        elif mode == 1 and clk == 1: # Sample on falling clock edge
             return
-        elif mode == 2 and sck == 1: # Sample on falling clock edge
+        elif mode == 2 and clk == 1: # Sample on falling clock edge
             return
-        elif mode == 3 and sck == 0: # Sample on rising clock edge
+        elif mode == 3 and clk == 0: # Sample on rising clock edge
             return
 
         # Found the correct clock edge, now get the SPI bit(s).
-        self.handle_bit(miso, mosi, sck, cs)
+        self.handle_bit(miso, mosi, clk, cs)
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
@@ -216,14 +216,14 @@ class Decoder(srd.Decoder):
             # Ignore identical samples early on (for performance reasons).
             if self.oldpins == pins:
                 continue
-            self.oldpins, (sck, miso, mosi, cs) = pins, pins
+            self.oldpins, (clk, miso, mosi, cs) = pins, pins
             self.have_miso = (miso in (0, 1))
             self.have_mosi = (mosi in (0, 1))
             self.have_cs = (cs in (0, 1))
 
             # State machine.
             if self.state == 'IDLE':
-                self.find_clk_edge(miso, mosi, sck, cs)
+                self.find_clk_edge(miso, mosi, clk, cs)
             else:
                 raise Exception('Invalid state: %s' % self.state)
 
