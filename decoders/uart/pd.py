@@ -77,13 +77,13 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']
-    probes = [
+    probes = []
+    optional_probes = [
         # Allow specifying only one of the signals, e.g. if only one data
         # direction exists (or is relevant).
         {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
     ]
-    optional_probes = []
     options = {
         'baudrate': ['Baud rate', 115200],
         'num_data_bits': ['Data bits', 8], # Valid: 5-9.
@@ -293,7 +293,6 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         if self.samplerate is None:
             raise Exception("Cannot decode without samplerate.")
-        # TODO: Either RX or TX could be omitted (optional probe).
         for (self.samplenum, pins) in data:
 
             # Note: Ignoring identical samples here for performance reasons
@@ -302,8 +301,17 @@ class Decoder(srd.Decoder):
             #     continue
             self.oldpins, (rx, tx) = pins, pins
 
+            # Either RX or TX (but not both) can be omitted.
+            has_pin = [rx in (0, 1), tx in (0, 1)]
+            if has_pin == [False, False]:
+                raise Exception('Either TX or RX (or both) pins required.')
+
             # State machine.
             for rxtx in (RX, TX):
+                # Don't try to handle RX (or TX) if not supplied.
+                if not has_pin[rxtx]:
+                    continue
+
                 signal = rx if (rxtx == RX) else tx
 
                 if self.state[rxtx] == 'WAIT FOR START BIT':
