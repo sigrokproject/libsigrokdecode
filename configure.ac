@@ -134,21 +134,6 @@ AC_SUBST([LIBSIGROK_LIBS])
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
 AC_CHECK_HEADER([sys/resource.h], [], [build_runtc="no"])
 
-# Checks for typedefs, structures, and compiler characteristics.
-AC_C_INLINE
-AC_TYPE_INT8_T
-AC_TYPE_INT16_T
-AC_TYPE_INT32_T
-AC_TYPE_INT64_T
-AC_TYPE_UINT8_T
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT64_T
-AC_TYPE_SIZE_T
-
-# Checks for library functions.
-AC_CHECK_FUNCS([memset strtoull])
-
 AC_SUBST(DECODERS_DIR, "$datadir/libsigrokdecode/decoders")
 AC_SUBST(MAKEFLAGS, '--no-print-directory')
 AC_SUBST(AM_LIBTOOLFLAGS, '--silent')
