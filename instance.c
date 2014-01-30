@@ -305,6 +305,16 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		        (i < num_required_probes) ? "required" : "optional");
 	}
 
+	/* Report an error if not all required probes were specified. */
+	for (i = 0; i < num_required_probes; i++) {
+		if (new_probemap[i] != -1)
+			continue;
+		p = g_slist_nth(di->decoder->probes, i)->data;
+		srd_err("Required probe '%s' (index %d) was not specified.",
+			p->id, i);
+		return SRD_ERR;
+	}
+
 	g_free(di->dec_probemap);
 	di->dec_probemap = new_probemap;
 
