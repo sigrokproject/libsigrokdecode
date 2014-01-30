@@ -62,6 +62,9 @@ SRD_PRIV int srd_info(const char *format, ...);
 SRD_PRIV int srd_warn(const char *format, ...);
 SRD_PRIV int srd_err(const char *format, ...);
 
+/* module_sigrokdecode.c */
+PyMODINIT_FUNC PyInit_sigrokdecode(void);
+
 /* util.c */
 SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
         char **outstr);

@@ -125,8 +125,7 @@ SRD_API int srd_session_start(struct srd_session *sess)
 	return ret;
 }
 
-/** @private */
-SRD_PRIV int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
+static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 		GVariant *data)
 {
 	PyObject *py_ret;

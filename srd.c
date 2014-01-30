@@ -35,9 +35,6 @@ extern int max_session_id;
 /* decoder.c */
 extern SRD_PRIV GSList *pd_list;
 
-/* module_sigrokdecode.c */
-extern PyMODINIT_FUNC PyInit_sigrokdecode(void);
-
 /** @endcond */
 
 /**
