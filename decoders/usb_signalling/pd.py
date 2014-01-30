@@ -22,7 +22,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 Packet:
 [<ptype>, <pdata>]
@@ -107,7 +107,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
@@ -118,14 +118,14 @@ class Decoder(srd.Decoder):
             self.halfbit = int(self.bitwidth / 2)
 
     def putpx(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_proto, data)
+        self.put(self.samplenum, self.samplenum, self.out_python, data)
 
     def putx(self, data):
         self.put(self.samplenum, self.samplenum, self.out_ann, data)
 
     def putpm(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(self.ss_block - h, s + h, self.out_proto, data)
+        self.put(self.ss_block - h, s + h, self.out_python, data)
 
     def putm(self, data):
         s, h = self.samplenum, self.halfbit
@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
 
     def putpb(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(s - h, s + h, self.out_proto, data)
+        self.put(s - h, s + h, self.out_python, data)
 
     def putb(self, data):
         s, h = self.samplenum, self.halfbit

@@ -49,7 +49,7 @@ class Decoder(srd.Decoder):
 
     def start(self, metadata):
         self.samplerate = metadata['samplerate']
-        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def decode(self, ss, es, data):

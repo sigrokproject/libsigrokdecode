@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 Packet:
 [<ptype>, <pdata>]
@@ -95,17 +95,17 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putpb(self, data):
-        self.put(self.ss_item, self.es_item, self.out_proto, data)
+        self.put(self.ss_item, self.es_item, self.out_python, data)
 
     def putb(self, data):
         self.put(self.ss_item, self.es_item, self.out_ann, data)
 
     def putpw(self, data):
-        self.put(self.ss_word, self.es_word, self.out_proto, data)
+        self.put(self.ss_word, self.es_word, self.out_python, data)
 
     def putw(self, data):
         self.put(self.ss_word, self.es_word, self.out_ann, data)
@@ -142,7 +142,7 @@ class Decoder(srd.Decoder):
         if self.itemcount < ws:
             return
 
-        # Output annotations/proto for a word (a collection of items).
+        # Output annotations/python for a word (a collection of items).
         word = 0
         for i in range(ws):
             if endian == 'little':

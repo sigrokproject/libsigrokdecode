@@ -22,7 +22,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 SPI packet:
 [<cmd>, <data1>, <data2>]
@@ -108,13 +108,13 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
     def putpw(self, data):
-        self.put(self.startsample, self.samplenum, self.out_proto, data)
+        self.put(self.startsample, self.samplenum, self.out_python, data)
 
     def putw(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
@@ -179,7 +179,7 @@ class Decoder(srd.Decoder):
     def find_clk_edge(self, miso, mosi, clk, cs):
         if self.have_cs and self.oldcs != cs:
             # Send all CS# pin value changes.
-            self.put(self.samplenum, self.samplenum, self.out_proto,
+            self.put(self.samplenum, self.samplenum, self.out_python,
                      ['CS-CHANGE', self.oldcs, cs])
             self.oldcs = cs
             # Reset decoder state when CS# changes (and the CS# pin is used).

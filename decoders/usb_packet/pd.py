@@ -22,7 +22,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 Packet:
 [<ptype>, <pdata>]
@@ -162,19 +162,19 @@ class Decoder(srd.Decoder):
         self.state = 'WAIT FOR SOP'
 
     def putpb(self, data):
-        self.put(self.ss, self.es, self.out_proto, data)
+        self.put(self.ss, self.es, self.out_python, data)
 
     def putb(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def putpp(self, data):
-        self.put(self.ss_packet, self.es_packet, self.out_proto, data)
+        self.put(self.ss_packet, self.es_packet, self.out_python, data)
 
     def putp(self, data):
         self.put(self.ss_packet, self.es_packet, self.out_ann, data)
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_packet(self):
@@ -251,7 +251,7 @@ class Decoder(srd.Decoder):
                 data = data[8:]
             self.packet_summary += ' ]'
 
-            # Convenience proto output (no annotation) for all bytes together.
+            # Convenience python output (no annotation) for all bytes together.
             self.ss, self.es = self.bits[16][1], self.bits[-16][2]
             self.putpb(['DATABYTES', databytes])
             self.packet.append(databytes)

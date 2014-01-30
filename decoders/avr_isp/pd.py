@@ -49,7 +49,7 @@ class Decoder(srd.Decoder):
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
 
     def start(self):
-        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):

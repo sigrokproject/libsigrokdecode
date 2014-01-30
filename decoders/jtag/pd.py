@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 JTAG packet:
 [<packet-type>, <data>]
@@ -96,14 +96,14 @@ class Decoder(srd.Decoder):
         self.first = True
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
         self.put(self.ss_item, self.es_item, self.out_ann, data)
 
     def putp(self, data):
-        self.put(self.ss_item, self.es_item, self.out_proto, data)
+        self.put(self.ss_item, self.es_item, self.out_python, data)
 
     def advance_state_machine(self, tms):
         self.oldstate = self.state

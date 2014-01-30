@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 Packet:
 [<ptype>, <pdata>]
@@ -71,7 +71,7 @@ class Decoder(srd.Decoder):
         self.wrote_wav_header = False
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
@@ -80,7 +80,7 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def putpb(self, data):
-        self.put(self.start_sample, self.samplenum, self.out_proto, data)
+        self.put(self.start_sample, self.samplenum, self.out_python, data)
 
     def putbin(self, data):
         self.put(self.start_sample, self.samplenum, self.out_bin, data)

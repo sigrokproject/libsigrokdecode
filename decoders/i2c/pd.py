@@ -26,7 +26,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 I²C packet:
 [<cmd>, <data>]
@@ -117,7 +117,7 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_bitrate = self.register(srd.OUTPUT_META,
@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 
     def putp(self, data):
-        self.put(self.startsample, self.samplenum, self.out_proto, data)
+        self.put(self.startsample, self.samplenum, self.out_python, data)
 
     def putb(self, data):
         self.put(self.startsample, self.samplenum, self.out_binary, data)

@@ -96,7 +96,7 @@ class Decoder(srd.Decoder):
         self.read_buf = []
 
     def start(self):
-        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):

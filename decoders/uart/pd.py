@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 '''
-Protocol output format:
+OUTPUT_PYTHON format:
 
 UART packet:
 [<packet-type>, <rxtx>, <packet-data>]
@@ -118,7 +118,7 @@ class Decoder(srd.Decoder):
 
     def putp(self, data):
         s, halfbit = self.samplenum, int(self.bit_width / 2)
-        self.put(s - halfbit, s + halfbit, self.out_proto, data)
+        self.put(s - halfbit, s + halfbit, self.out_python, data)
 
     def putbin(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
@@ -139,7 +139,7 @@ class Decoder(srd.Decoder):
         self.oldpins = [1, 1]
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 

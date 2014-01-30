@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
         self.packets = [] # Local cache of I²C packets
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON, proto_id='i2c')
+        self.out_python = self.register(srd.OUTPUT_PYTHON, proto_id='i2c')
         if self.options['address'] not in range(0, 127 + 1):
             raise Exception('Invalid slave (must be 0..127).')
         if self.options['direction'] not in ('both', 'read', 'write'):
@@ -86,7 +86,7 @@ class Decoder(srd.Decoder):
             # TODO: START->STOP chunks with both read and write (Repeat START)
             # Otherwise, send out the whole chunk of I²C packets.
             for p in self.packets:
-                self.put(p[0], p[1], self.out_proto, p[2])
+                self.put(p[0], p[1], self.out_python, p[2])
 
             self.packets = []
         else:

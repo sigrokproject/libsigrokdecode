@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
         self.rom = 0x0000000000000000
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
@@ -69,7 +69,7 @@ class Decoder(srd.Decoder):
 
     def puty(self, data):
         # Helper function for most protocol packets.
-        self.put(self.beg, self.end, self.out_proto, data)
+        self.put(self.beg, self.end, self.out_python, data)
 
     def decode(self, ss, es, data):
         code, val = data
@@ -80,7 +80,7 @@ class Decoder(srd.Decoder):
             self.bit_cnt = 0
             self.put(ss, es, self.out_ann,
                      [0, ['Reset/presence: %s' % ('true' if val else 'false')]])
-            self.put(ss, es, self.out_proto, ['RESET/PRESENCE', val])
+            self.put(ss, es, self.out_python, ['RESET/PRESENCE', val])
             self.state = 'COMMAND'
             return
 

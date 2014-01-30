@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
         self.put(0, 0, self.out_ann, data)
 
     def putpb(self, data):
-        self.put(self.fall, self.samplenum, self.out_proto, data)
+        self.put(self.fall, self.samplenum, self.out_python, data)
 
     def putb(self, data):
         self.put(self.fall, self.samplenum, self.out_ann, data)
@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
         self.put(self.fall, self.rise, self.out_ann, data)
 
     def putprs(self, data):
-        self.put(self.rise, self.samplenum, self.out_proto, data)
+        self.put(self.rise, self.samplenum, self.out_python, data)
 
     def putrs(self, data):
         self.put(self.rise, self.samplenum, self.out_ann, data)
@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
         self.rise = 0
 
     def start(self):
-        self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):

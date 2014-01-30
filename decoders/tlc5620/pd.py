@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
         self.dac_select = self.gain = self.dac_value = None
 
     def start(self):
-        # self.out_proto = self.register(srd.OUTPUT_PYTHON)
+        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_11bits(self):

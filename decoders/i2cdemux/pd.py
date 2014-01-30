@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
         self.streamcount = 0 # Number of created output streams
 
     def start(self):
-        self.out_proto = []
+        self.out_python = []
 
     # Grab I²C packets into a local cache, until an I²C STOP condition
     # packet comes along. At some point before that STOP condition, there
@@ -63,8 +63,8 @@ class Decoder(srd.Decoder):
 
             # We're never seen this slave, add a new stream.
             self.slaves.append(databyte)
-            self.out_proto.append(self.register(srd.OUTPUT_PYTHON,
-                                  proto_id='i2c-%s' % hex(databyte)))
+            self.out_python.append(self.register(srd.OUTPUT_PYTHON,
+                                   proto_id='i2c-%s' % hex(databyte)))
             self.stream = self.streamcount
             self.streamcount += 1
         elif cmd == 'STOP':
@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
 
             # Send the whole chunk of I²C packets to the correct stream.
             for p in self.packets:
-                self.put(p[0], p[1], self.out_proto[self.stream], p[2])
+                self.put(p[0], p[1], self.out_python[self.stream], p[2])
 
             self.packets = []
             self.stream = -1
