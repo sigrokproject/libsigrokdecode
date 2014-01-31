@@ -86,6 +86,11 @@ class Decoder(srd.Decoder):
         ['mosi-data', 'MOSI SPI data'],
         ['warnings', 'Human-readable warnings'],
     ]
+    annotation_rows = (
+        ('miso', 'MISO', (0,)),
+        ('mosi', 'MOSI', (1,)),
+        ('other', 'Other', (2,)),
+    )
 
     def __init__(self):
         self.samplerate = None
