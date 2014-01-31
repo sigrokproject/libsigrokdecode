@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -61,6 +61,11 @@ class Decoder(srd.Decoder):
         ['unknown-bits', 'Unknown bits'],
         ['warnings', 'Human-readable warnings'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (17, 18)),
+        ('fields', 'Fields', tuple(range(0, 16 + 1))),
+        ('warnings', 'Warnings', (19,)),
+    )
 
     def __init__(self, **kwargs):
         self.samplerate = None
