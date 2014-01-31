@@ -169,6 +169,12 @@ struct srd_decoder {
 	GSList *annotations;
 
 	/**
+	 * List of annotation rows (row items: id, description, and a list
+	 * of annotation classes belonging to this row).
+	 */
+	GSList *annotation_rows;
+
+	/**
 	 * List of NULL-terminated char[], containing descriptions of the
 	 * supported binary output.
 	 */
@@ -203,6 +209,12 @@ struct srd_decoder_option {
 	char *id;
 	char *desc;
 	GVariant *def;
+};
+
+struct srd_decoder_annotation_row {
+	char *id;
+	char *desc;
+	GSList *ann_classes;
 };
 
 struct srd_decoder_inst {

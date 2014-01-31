@@ -250,13 +250,15 @@ err_out:
  */
 SRD_API int srd_decoder_load(const char *module_name)
 {
-	PyObject *py_basedec, *py_method, *py_attr, *py_annlist, *py_ann, \
-		*py_bin_classes, *py_bin_class;
+	PyObject *py_basedec, *py_method, *py_attr, *py_annlist, *py_ann;
+	PyObject *py_bin_classes, *py_bin_class, *py_ann_rows, *py_ann_row;
+	PyObject *py_ann_classes, *py_long;
 	struct srd_decoder *d;
-	int len, ret, i;
-	char **ann, **bin;
+	int ret, i, j;
+	char **ann, **bin, *ann_row_id, *ann_row_desc;
 	struct srd_probe *p;
-	GSList *l;
+	GSList *l, *ann_classes;
+	struct srd_decoder_annotation_row *ann_row;
 
 	if (!srd_check_init())
 		return SRD_ERR;
@@ -385,8 +387,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 					"be a list.", module_name);
 			goto err_out;
 		}
-		len = PyList_Size(py_annlist);
-		for (i = 0; i < len; i++) {
+		for (i = 0; i < PyList_Size(py_annlist); i++) {
 			py_ann = PyList_GetItem(py_annlist, i);
 			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
 				srd_err("Protocol decoder %s annotation %d should "
@@ -401,6 +402,59 @@ SRD_API int srd_decoder_load(const char *module_name)
 		}
 	}
 
+	/* Convert annotation_rows to GSList of 'struct srd_decoder_annotation_row'. */
+	d->annotation_rows = NULL;
+	if (PyObject_HasAttrString(d->py_dec, "annotation_rows")) {
+		py_ann_rows = PyObject_GetAttrString(d->py_dec, "annotation_rows");
+		if (!PyTuple_Check(py_ann_rows)) {
+			srd_err("Protocol decoder %s annotation row list "
+				"must be a tuple.", module_name);
+			goto err_out;
+		}
+		for (i = 0; i < PyTuple_Size(py_ann_rows); i++) {
+			py_ann_row = PyTuple_GetItem(py_ann_rows, i);
+			if (!PyTuple_Check(py_ann_row)) {
+				srd_err("Protocol decoder %s annotation rows "
+					"must be tuples.", module_name);
+				goto err_out;
+			}
+			if (PyTuple_Size(py_ann_row) != 3
+					|| !PyUnicode_Check(PyTuple_GetItem(py_ann_row, 0))
+					|| !PyUnicode_Check(PyTuple_GetItem(py_ann_row, 1))
+					|| !PyTuple_Check(PyTuple_GetItem(py_ann_row, 2))) {
+				srd_err("Protocol decoder %s annotation rows "
+					"must contain tuples containing two "
+					"strings and a tuple.", module_name);
+				goto err_out;
+			}
+
+			if (py_str_as_str(PyTuple_GetItem(py_ann_row, 0), &ann_row_id) != SRD_OK)
+				goto err_out;
+
+			if (py_str_as_str(PyTuple_GetItem(py_ann_row, 1), &ann_row_desc) != SRD_OK)
+				goto err_out;
+
+			py_ann_classes = PyTuple_GetItem(py_ann_row, 2);
+			ann_classes = NULL;
+			for (j = 0; j < PyTuple_Size(py_ann_classes); j++) {
+				py_long = PyTuple_GetItem(py_ann_classes, j);
+				if (!PyLong_Check(py_long)) {
+					srd_err("Protocol decoder %s annotation row class "
+						"list must only contain numbers.", module_name);
+					goto err_out;
+				}
+				ann_classes = g_slist_append(ann_classes,
+					GINT_TO_POINTER(PyLong_AsLong(py_long)));
+			}
+
+			ann_row = g_malloc0(sizeof(struct srd_decoder_annotation_row));
+			ann_row->id = ann_row_id;
+			ann_row->desc = ann_row_desc;
+			ann_row->ann_classes = ann_classes;
+			d->annotation_rows = g_slist_append(d->annotation_rows, ann_row);
+		}
+	}
+
 	/* Convert binary class to GSList of char *. */
 	d->binary = NULL;
 	if (PyObject_HasAttrString(d->py_dec, "binary")) {
@@ -410,8 +464,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 					"be a tuple.", module_name);
 			goto err_out;
 		}
-		len = PyTuple_Size(py_bin_classes);
-		for (i = 0; i < len; i++) {
+		for (i = 0; i < PyTuple_Size(py_bin_classes); i++) {
 			py_bin_class = PyTuple_GetItem(py_bin_classes, i);
 			if (!PyTuple_Check(py_bin_class)) {
 				srd_err("Protocol decoder %s binary classes "
