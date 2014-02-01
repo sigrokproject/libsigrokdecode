@@ -41,7 +41,17 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['text', 'Human-readable text'],
+        ['reg-0x00', 'Register 0x00'],
+        ['reg-0x01', 'Register 0x01'],
+        ['reg-0x02', 'Register 0x02'],
+        ['reg-0x03', 'Register 0x03'],
+        ['reg-0x04', 'Register 0x04'],
+        ['reg-0x05', 'Register 0x05'],
+        ['reg-0x06', 'Register 0x06'],
+        ['reg-0x07', 'Register 0x07'],
+        ['reg-0x08', 'Register 0x08'],
+        ['read', 'Read date/time'],
+        ['write', 'Write date/time'],
     ]
 
     def __init__(self, **kwargs):
@@ -86,25 +96,25 @@ class Decoder(srd.Decoder):
         ann += 'TIE = %d: INT# pin output %s when a fixed-cycle interrupt '\
                'event occurs\n' % (tie, s)
 
-        self.putx([0, [ann]])
+        self.putx([1, [ann]])
 
     def handle_reg_0x02(self, b): # Seconds / Voltage-low flag
         self.seconds = bcd2int(b & 0x7f)
-        self.putx([0, ['Seconds: %d' % self.seconds]])
+        self.putx([2, ['Seconds: %d' % self.seconds]])
         vl = 1 if (b & (1 << 7)) else 0
-        self.putx([0, ['Voltage low (VL) bit: %d' % vl]])
+        self.putx([2, ['Voltage low (VL) bit: %d' % vl]])
 
     def handle_reg_0x03(self, b): # Minutes
         self.minutes = bcd2int(b & 0x7f)
-        self.putx([0, ['Minutes: %d' % self.minutes]])
+        self.putx([3, ['Minutes: %d' % self.minutes]])
 
     def handle_reg_0x04(self, b): # Hours
         self.hours = bcd2int(b & 0x3f)
-        self.putx([0, ['Hours: %d' % self.hours]])
+        self.putx([4, ['Hours: %d' % self.hours]])
 
     def handle_reg_0x05(self, b): # Days
         self.days = bcd2int(b & 0x3f)
-        self.putx([0, ['Days: %d' % self.days]])
+        self.putx([5, ['Days: %d' % self.days]])
 
     def handle_reg_0x06(self, b): # Day counter
         pass
@@ -112,11 +122,11 @@ class Decoder(srd.Decoder):
     def handle_reg_0x07(self, b): # Months / century
         # TODO: Handle century bit.
         self.months = bcd2int(b & 0x1f)
-        self.putx([0, ['Months: %d' % self.months]])
+        self.putx([7, ['Months: %d' % self.months]])
 
     def handle_reg_0x08(self, b): # Years
         self.years = bcd2int(b & 0xff)
-        self.putx([0, ['Years: %d' % self.years]])
+        self.putx([8, ['Years: %d' % self.years]])
 
     def handle_reg_0x09(self, b): # Alarm, minute
         pass
@@ -180,7 +190,7 @@ class Decoder(srd.Decoder):
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [0, ['Written date/time: %s' % d]])
+                         [9, ['Write date/time: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO
@@ -202,7 +212,7 @@ class Decoder(srd.Decoder):
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [0, ['Read date/time: %s' % d]])
+                         [10, ['Read date/time: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO?
