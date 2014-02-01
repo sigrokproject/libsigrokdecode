@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -106,35 +106,36 @@ class Decoder(srd.Decoder):
         self.putx([1, [ann]])
 
     def handle_reg_0x02(self, b): # Seconds / Voltage-low flag
-        self.seconds = bcd2int(b & 0x7f)
-        self.putx([2, ['Seconds: %d' % self.seconds]])
+        s = self.seconds = bcd2int(b & 0x7f)
+        self.putx([2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s]])
         vl = 1 if (b & (1 << 7)) else 0
-        self.putx([11, ['Voltage low (VL) bit: %d' % vl]])
+        self.putx([11, ['Voltage low: %d' % vl, 'Volt low: %d' % vl,
+                        'VL: %d' % vl]])
 
     def handle_reg_0x03(self, b): # Minutes
-        self.minutes = bcd2int(b & 0x7f)
-        self.putx([3, ['Minutes: %d' % self.minutes]])
+        m = self.minutes = bcd2int(b & 0x7f)
+        self.putx([3, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m]])
 
     def handle_reg_0x04(self, b): # Hours
-        self.hours = bcd2int(b & 0x3f)
-        self.putx([4, ['Hours: %d' % self.hours]])
+        h = self.hours = bcd2int(b & 0x3f)
+        self.putx([4, ['Hour: %d' % h, 'H: %d' % h]])
 
     def handle_reg_0x05(self, b): # Days
-        self.days = bcd2int(b & 0x3f)
-        self.putx([5, ['Days: %d' % self.days]])
+        d = self.days = bcd2int(b & 0x3f)
+        self.putx([5, ['Day: %d' % d, 'D: %d' % d]])
 
     def handle_reg_0x06(self, b): # Weekdays
-        self.weekdays = bcd2int(b & 0x07)
-        self.putx([6, ['Weekdays: %d' % self.weekdays]])
+        w = self.weekdays = bcd2int(b & 0x07)
+        self.putx([6, ['Weekday: %d' % w, 'WD: %d' % w]])
 
     def handle_reg_0x07(self, b): # Months / century
         # TODO: Handle century bit.
-        self.months = bcd2int(b & 0x1f)
-        self.putx([7, ['Months: %d' % self.months]])
+        m = self.months = bcd2int(b & 0x1f)
+        self.putx([7, ['Month: %d' % m, 'Mon: %d' % m]])
 
     def handle_reg_0x08(self, b): # Years
-        self.years = bcd2int(b & 0xff)
-        self.putx([8, ['Years: %d' % self.years]])
+        y = self.years = bcd2int(b & 0xff)
+        self.putx([8, ['Year: %d' % y, 'Y: %d' % y]])
 
     def handle_reg_0x09(self, b): # Alarm, minute
         pass
@@ -198,7 +199,8 @@ class Decoder(srd.Decoder):
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [9, ['Write date/time: %s' % d]])
+                         [9, ['Write date/time: %s' % d, 'Write: %s' % d,
+                              'W: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO
@@ -220,7 +222,8 @@ class Decoder(srd.Decoder):
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [10, ['Read date/time: %s' % d]])
+                         [10, ['Read date/time: %s' % d, 'Read: %s' % d,
+                               'R: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO?
