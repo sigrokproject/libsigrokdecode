@@ -35,9 +35,9 @@ class Decoder(srd.Decoder):
     outputs = ['rtc8564']
     probes = []
     optional_probes = [
-        {'id': 'clkout', 'name': 'CLKOUT', 'desc': 'TODO.'},
-        {'id': 'clkoe', 'name': 'CLKOE', 'desc': 'TODO.'},
-        {'id': 'int', 'name': 'INT#', 'desc': 'TODO.'},
+        {'id': 'clkout', 'name': 'CLKOUT', 'desc': 'Clock output'},
+        {'id': 'clkoe', 'name': 'CLKOE', 'desc': 'Clock output enable'},
+        {'id': 'int', 'name': 'INT#', 'desc': 'Interrupt'},
     ]
     options = {}
     annotations = [

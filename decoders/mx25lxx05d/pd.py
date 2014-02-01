@@ -90,8 +90,8 @@ class Decoder(srd.Decoder):
     outputs = ['mx25lxx05d']
     probes = []
     optional_probes = [
-        {'id': 'hold', 'name': 'HOLD#', 'desc': 'TODO.'},
-        {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'TODO.'},
+        {'id': 'hold', 'name': 'HOLD#', 'desc': 'Pause device w/o deselecting it'},
+        {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'Write protect'},
     ]
     options = {}
     annotations = [

@@ -105,21 +105,21 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['lpc']
     probes = [
-        {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'TODO'},
-        {'id': 'lclk',   'name': 'LCLK',    'desc': 'TODO'},
-        {'id': 'lad0',   'name': 'LAD[0]',  'desc': 'TODO'},
-        {'id': 'lad1',   'name': 'LAD[1]',  'desc': 'TODO'},
-        {'id': 'lad2',   'name': 'LAD[2]',  'desc': 'TODO'},
-        {'id': 'lad3',   'name': 'LAD[3]',  'desc': 'TODO'},
+        {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'Frame'},
+        {'id': 'lclk',   'name': 'LCLK',    'desc': 'Clock'},
+        {'id': 'lad0',   'name': 'LAD[0]',  'desc': 'Addr/control/data 0'},
+        {'id': 'lad1',   'name': 'LAD[1]',  'desc': 'Addr/control/data 1'},
+        {'id': 'lad2',   'name': 'LAD[2]',  'desc': 'Addr/control/data 2'},
+        {'id': 'lad3',   'name': 'LAD[3]',  'desc': 'Addr/control/data 3'},
     ]
     optional_probes = [
-        {'id': 'lreset', 'name': 'LRESET#', 'desc': 'TODO'},
-        {'id': 'ldrq',   'name': 'LDRQ#',   'desc': 'TODO'},
-        {'id': 'serirq', 'name': 'SERIRQ',  'desc': 'TODO'},
-        {'id': 'clkrun', 'name': 'CLKRUN#', 'desc': 'TODO'},
-        {'id': 'lpme',   'name': 'LPME#',   'desc': 'TODO'},
-        {'id': 'lpcpd',  'name': 'LPCPD#',  'desc': 'TODO'},
-        {'id': 'lsmi',   'name': 'LSMI#',   'desc': 'TODO'},
+        {'id': 'lreset', 'name': 'LRESET#', 'desc': 'Reset'},
+        {'id': 'ldrq',   'name': 'LDRQ#',   'desc': 'Encoded DMA / bus master request'},
+        {'id': 'serirq', 'name': 'SERIRQ',  'desc': 'Serialized IRQ'},
+        {'id': 'clkrun', 'name': 'CLKRUN#', 'desc': 'Clock run'},
+        {'id': 'lpme',   'name': 'LPME#',   'desc': 'LPC power management event'},
+        {'id': 'lpcpd',  'name': 'LPCPD#',  'desc': 'Power down'},
+        {'id': 'lsmi',   'name': 'LSMI#',   'desc': 'System Management Interrupt'},
     ]
     options = {}
     annotations = [
