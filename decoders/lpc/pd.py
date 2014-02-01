@@ -132,6 +132,10 @@ class Decoder(srd.Decoder):
         ['data', 'Data'],
         ['tar2', 'Turn-around cycle 2'],
     ]
+    annotation_rows = (
+        ('data', 'Data', (1, 2, 3, 4, 5, 6, 7)),
+        ('warnings', 'Warnings', (0,)),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
