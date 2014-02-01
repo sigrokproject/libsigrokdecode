@@ -66,6 +66,7 @@ class Decoder(srd.Decoder):
         self.minutes = -1
         self.seconds = -1
         self.days = -1
+        self.weekdays = -1
         self.months = -1
         self.years = -1
 
@@ -122,8 +123,9 @@ class Decoder(srd.Decoder):
         self.days = bcd2int(b & 0x3f)
         self.putx([5, ['Days: %d' % self.days]])
 
-    def handle_reg_0x06(self, b): # Day counter
-        pass
+    def handle_reg_0x06(self, b): # Weekdays
+        self.weekdays = bcd2int(b & 0x07)
+        self.putx([6, ['Weekdays: %d' % self.weekdays]])
 
     def handle_reg_0x07(self, b): # Months / century
         # TODO: Handle century bit.
