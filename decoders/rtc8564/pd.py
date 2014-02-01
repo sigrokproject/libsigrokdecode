@@ -52,7 +52,13 @@ class Decoder(srd.Decoder):
         ['reg-0x08', 'Register 0x08'],
         ['read', 'Read date/time'],
         ['write', 'Write date/time'],
+        ['bits', 'Bits'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (11,)),
+        ('regs', 'Registers', tuple(range(0, 8 + 1))),
+        ('date-time', 'Date/time', (9, 10)),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
@@ -102,7 +108,7 @@ class Decoder(srd.Decoder):
         self.seconds = bcd2int(b & 0x7f)
         self.putx([2, ['Seconds: %d' % self.seconds]])
         vl = 1 if (b & (1 << 7)) else 0
-        self.putx([2, ['Voltage low (VL) bit: %d' % vl]])
+        self.putx([11, ['Voltage low (VL) bit: %d' % vl]])
 
     def handle_reg_0x03(self, b): # Minutes
         self.minutes = bcd2int(b & 0x7f)
