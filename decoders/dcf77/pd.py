@@ -227,7 +227,7 @@ class Decoder(srd.Decoder):
             if c == 49:
                 m = bcd2int(self.tmp)
                 mn = calendar.month_name[m] # month_name[1] == January
-                self.putx([14, ['Month: %d (%s)' % (m, mn),
+                self.putb([14, ['Month: %d (%s)' % (m, mn),
                                 'Mon: %d (%s)' % (m, mn)]])
         elif c in range(50, 57 + 1):
             # Year (0-99): DCF77 bits 50-57 (BCD format).
