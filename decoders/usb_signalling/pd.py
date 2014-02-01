@@ -90,6 +90,10 @@ class Decoder(srd.Decoder):
         ['bit', 'Bit'],
         ['stuffbit', 'Stuff bit'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (1, 2, 3, 4)),
+        ('symbols', 'Symbols', (0,)),
+    )
 
     def __init__(self):
         self.samplerate = None
@@ -159,12 +163,14 @@ class Decoder(srd.Decoder):
         if self.consecutive_ones == 6 and b == '0':
             # Stuff bit.
             self.putpb(['STUFF BIT', None])
-            self.putb([4, ['SB: %s/%s' % (sym, b)]])
+            self.putb([4, ['SB: %s' % b]])
+            self.putb([0, ['%s' % sym]])
             self.consecutive_ones = 0
         else:
             # Normal bit (not a stuff bit).
             self.putpb(['BIT', b])
-            self.putb([3, ['%s/%s' % (sym, b)]])
+            self.putb([3, ['%s' % b]])
+            self.putb([0, ['%s' % sym]])
             if b == '1':
                 self.consecutive_ones += 1
             else:
