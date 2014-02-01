@@ -97,20 +97,22 @@ class Decoder(srd.Decoder):
     annotations = [
         ['rx-data', 'RX data'],
         ['tx-data', 'TX data'],
-        ['rx-start-bits', 'RX start bits'],
-        ['tx-start-bits', 'TX start bits'],
-        ['rx-parity-bits', 'RX parity bits'],
-        ['tx-parity-bits', 'TX parity bits'],
-        ['rx-stop-bits', 'RX stop bits'],
-        ['tx-stop-bits', 'TX stop bits'],
+        ['rx-start', 'RX start bits'],
+        ['tx-start', 'TX start bits'],
+        ['rx-parity-ok', 'RX parity OK bits'],
+        ['tx-parity-ok', 'TX parity OK bits'],
+        ['rx-parity-err', 'RX parity error bits'],
+        ['tx-parity-err', 'TX parity error bits'],
+        ['rx-stop', 'RX stop bits'],
+        ['tx-stop', 'TX stop bits'],
         ['rx-warnings', 'RX warnings'],
         ['tx-warnings', 'TX warnings'],
     ]
     annotation_rows = (
-        ('rx-data', 'RX', (0, 2, 4, 6)),
-        ('tx-data', 'TX', (1, 3, 5, 7)),
-        ('rx-warnings', 'RX warnings', (8,)),
-        ('tx-warnings', 'TX warnings', (9,)),
+        ('rx-data', 'RX', (0, 2, 4, 6, 8)),
+        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
+        ('rx-warnings', 'RX warnings', (10,)),
+        ('tx-warnings', 'TX warnings', (11,)),
     )
     binary = (
         ('rx', 'RX dump'),
@@ -277,7 +279,7 @@ class Decoder(srd.Decoder):
         else:
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
-            self.putg([rxtx + 8, ['Parity error', 'Parity err', 'PE']])
+            self.putg([rxtx + 6, ['Parity error', 'Parity err', 'PE']])
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
@@ -292,7 +294,7 @@ class Decoder(srd.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
             self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
-            self.putg([rxtx + 6, ['Frame error', 'Frame err', 'FE']])
+            self.putg([rxtx + 8, ['Frame error', 'Frame err', 'FE']])
             # TODO: Abort? Ignore the frame? Other?
 
         self.state[rxtx] = 'WAIT FOR START BIT'
