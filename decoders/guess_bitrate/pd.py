@@ -47,12 +47,17 @@ class Decoder(srd.Decoder):
         self.first_transition = True
         self.bitwidth = None
 
-    def start(self, metadata):
-        self.samplerate = metadata['samplerate']
+    def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value;
+
     def decode(self, ss, es, data):
+        if self.samplerate is None:
+            raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
 
             data = pins[0]
