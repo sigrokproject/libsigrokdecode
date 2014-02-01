@@ -177,12 +177,12 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = ss, es
 
+        if len(self.mosi_bytes) == 0:
+            self.cmd_ss = ss
+
         # Append new bytes.
         self.mosi_bytes.append(mosi)
         self.miso_bytes.append(miso)
-
-        if len(self.mosi_bytes) == 0:
-            self.cmd_ss = ss
 
         # All commands consist of 4 bytes.
         if len(self.mosi_bytes) < 4:
