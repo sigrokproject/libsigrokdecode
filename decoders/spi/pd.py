@@ -64,14 +64,12 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['spi']
     probes = [
-        {'id': 'clk', 'name': 'CLK', 'desc': 'SPI clock line'},
+        {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
     ]
     optional_probes = [
-        {'id': 'miso', 'name': 'MISO',
-         'desc': 'SPI MISO line (master in, slave out)'},
-        {'id': 'mosi', 'name': 'MOSI',
-         'desc': 'SPI MOSI line (master out, slave in)'},
-        {'id': 'cs', 'name': 'CS#', 'desc': 'SPI chip-select line'},
+        {'id': 'miso', 'name': 'MISO', 'desc': 'Master in, slave out'},
+        {'id': 'mosi', 'name': 'MOSI', 'desc': 'Master out, slave in'},
+        {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},
     ]
     options = {
         'cs_polarity': ['CS# polarity', 'active-low'],
