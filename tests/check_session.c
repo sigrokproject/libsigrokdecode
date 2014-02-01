@@ -22,6 +22,7 @@
 #include "../libsigrokdecode-internal.h"
 #include <stdlib.h>
 #include <check.h>
+#include "lib.h"
 
 static void setup(void)
 {

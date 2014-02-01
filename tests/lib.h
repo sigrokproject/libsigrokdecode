@@ -18,29 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include "../libsigrokdecode.h" /* First, to avoid compiler warning. */
-#include <stdlib.h>
-#include <check.h>
-#include "lib.h"
+#ifndef LIBSIGROKDECODE_TESTS_LIB_H
+#define LIBSIGROKDECODE_TESTS_LIB_H
 
-int main(void)
-{
-	int ret;
-	Suite *s;
-	SRunner *srunner;
+Suite *suite_core(void);
+Suite *suite_decoder(void);
+Suite *suite_inst(void);
+Suite *suite_session(void);
 
-	s = suite_create("mastersuite");
-	srunner = srunner_create(s);
-
-	/* Add all testsuites to the master suite. */
-	srunner_add_suite(srunner, suite_core());
-	srunner_add_suite(srunner, suite_decoder());
-	srunner_add_suite(srunner, suite_inst());
-	srunner_add_suite(srunner, suite_session());
-
-	srunner_run_all(srunner, CK_VERBOSE);
-	ret = srunner_ntests_failed(srunner);
-	srunner_free(srunner);
-
-	return (ret == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
+#endif
