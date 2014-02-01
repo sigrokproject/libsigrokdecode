@@ -55,6 +55,11 @@ class Decoder(srd.Decoder):
         ['presence', 'Presence'],
         ['overdrive', 'Overdrive mode notifications'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (0, 2, 3)),
+        ('info', 'Info', (4,)),
+        ('warnings', 'Warnings', (1,)),
+    )
 
     def putm(self, data):
         self.put(0, 0, self.out_ann, data)
