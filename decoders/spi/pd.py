@@ -32,12 +32,18 @@ Commands:
    The data is _usually_ 8 bits (but can also be fewer or more bits).
    Both data items are Python numbers (not strings), or None if the respective
    probe was not supplied.
+ - 'BITS': <data1>/<data2> contain a list of bit values in this MISO/MOSI data
+   item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings.
 
 Examples:
  ['CS-CHANGE', 1, 0]
  ['DATA', 0xff, 0x3a]
+ ['BITS', [[1, 80, 82], [1, 83, 84], [1, 85, 86], [1, 87, 88],
+           [1, 89, 90], [1, 91, 92], [1, 93, 94], [1, 95, 96]],
+          [[0, 80, 82], [0, 83, 84], [1, 85, 86], [1, 87, 88],
+           [1, 89, 90], [0, 91, 92], [1, 93, 94], [0, 95, 96]]]
  ['DATA', 0x65, 0x00]
  ['DATA', 0xa8, None]
  ['DATA', None, 0x55]
@@ -80,14 +86,18 @@ class Decoder(srd.Decoder):
         'format': ['Data format', 'hex'],
     }
     annotations = [
-        ['miso-data', 'MISO SPI data'],
-        ['mosi-data', 'MOSI SPI data'],
+        ['miso-data', 'MISO data'],
+        ['mosi-data', 'MOSI data'],
+        ['miso-bits', 'MISO bits'],
+        ['mosi-bits', 'MOSI bits'],
         ['warnings', 'Human-readable warnings'],
     ]
     annotation_rows = (
-        ('miso', 'MISO', (0,)),
-        ('mosi', 'MOSI', (1,)),
-        ('other', 'Other', (2,)),
+        ('miso-data', 'MISO data', (0,)),
+        ('miso-bits', 'MISO bits', (2,)),
+        ('mosi-data', 'MOSI data', (1,)),
+        ('mosi-bits', 'MOSI bits', (3,)),
+        ('other', 'Other', (4,)),
     )
 
     def __init__(self):
@@ -96,6 +106,8 @@ class Decoder(srd.Decoder):
         self.bitcount = 0
         self.mosidata = 0
         self.misodata = 0
+        self.mosibits = []
+        self.misobits = []
         self.startsample = -1
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
@@ -122,8 +134,14 @@ class Decoder(srd.Decoder):
     def putw(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 
+    def putmisobit(self, i, data):
+        self.put(self.misobits[i][1], self.misobits[i][2], self.out_ann, data)
+
+    def putmosibit(self, i, data):
+        self.put(self.mosibits[i][1], self.mosibits[i][2], self.out_ann, data)
+
     def handle_bit(self, miso, mosi, clk, cs):
-        # If this is the first bit, save its sample number.
+        # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
             self.startsample = self.samplenum
             if self.have_cs:
@@ -148,6 +166,18 @@ class Decoder(srd.Decoder):
             else:
                 self.misodata |= miso << self.bitcount
 
+        if self.have_miso:
+            self.misobits.append([miso, self.samplenum, -1])
+        if self.have_mosi:
+            self.mosibits.append([mosi, self.samplenum, -1])
+        if self.bitcount != 0:
+            if self.have_miso:
+                self.misobits[self.bitcount - 1][2] = self.samplenum
+                self.putmisobit(self.bitcount - 1, [3, ['%d' % miso]])
+            if self.have_mosi:
+                self.mosibits[self.bitcount - 1][2] = self.samplenum
+                self.putmosibit(self.bitcount - 1, [2, ['%d' % mosi]])
+
         self.bitcount += 1
 
         # Continue to receive if not enough bits were received, yet.
@@ -156,9 +186,12 @@ class Decoder(srd.Decoder):
 
         si = self.mosidata if self.have_mosi else None
         so = self.misodata if self.have_miso else None
+        si_bits = self.mosibits if self.have_mosi else None
+        so_bits = self.misobits if self.have_miso else None
 
         # Pass MOSI and MISO to the next PD up the stack.
         self.putpw(['DATA', si, so])
+        self.putpw(['BITS', si_bits, so_bits])
 
         # Annotations.
         if self.have_miso:
@@ -172,11 +205,13 @@ class Decoder(srd.Decoder):
         self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
         if self.have_cs and self.cs_was_deasserted_during_data_word:
-            self.putw([2, ['CS# was deasserted during this data word!']])
+            self.putw([4, ['CS# was deasserted during this data word!']])
 
         # Reset decoder state.
         self.misodata = 0 if self.have_miso else None
         self.mosidata = 0 if self.have_mosi else None
+        self.misobits = [] if self.have_miso else None
+        self.mosibits = [] if self.have_mosi else None
         self.bitcount = 0
 
     def find_clk_edge(self, miso, mosi, clk, cs):
