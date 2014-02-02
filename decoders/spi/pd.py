@@ -266,6 +266,10 @@ class Decoder(srd.Decoder):
             self.have_mosi = (mosi in (0, 1))
             self.have_cs = (cs in (0, 1))
 
+            # Either MISO or MOSI (but not both) can be omitted.
+            if not (self.have_miso or self.have_mosi):
+                raise Exception('Either MISO or MOSI (or both) pins required.')
+
             # State machine.
             if self.state == 'IDLE':
                 self.find_clk_edge(miso, mosi, clk, cs)
