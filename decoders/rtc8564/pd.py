@@ -105,7 +105,7 @@ class Decoder(srd.Decoder):
 
         self.putx([1, [ann]])
 
-    def handle_reg_0x02(self, b): # Seconds / Voltage-low flag
+    def handle_reg_0x02(self, b): # Seconds / Voltage-low bit
         s = self.seconds = bcd2int(b & 0x7f)
         self.putx([2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s]])
         vl = 1 if (b & (1 << 7)) else 0
@@ -128,10 +128,11 @@ class Decoder(srd.Decoder):
         w = self.weekdays = bcd2int(b & 0x07)
         self.putx([6, ['Weekday: %d' % w, 'WD: %d' % w]])
 
-    def handle_reg_0x07(self, b): # Months / century
-        # TODO: Handle century bit.
+    def handle_reg_0x07(self, b): # Months / century bit
         m = self.months = bcd2int(b & 0x1f)
         self.putx([7, ['Month: %d' % m, 'Mon: %d' % m]])
+        c = 1 if (b & (1 << 7)) else 0
+        self.putx([11, ['Century: %d' % c, 'Cent: %d' % c, 'C: %d' % c]])
 
     def handle_reg_0x08(self, b): # Years
         y = self.years = bcd2int(b & 0xff)
