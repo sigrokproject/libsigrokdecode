@@ -150,9 +150,11 @@ class Decoder(srd.Decoder):
 
         # Dataword annotations.
         if self.have_miso:
-            self.putw([0, ['%02X' % self.misodata]])
+            ss, es = self.misobits[0][1], self.misobits[-1][2]
+            self.put(ss, es, self.out_ann, [0, ['%02X' % self.misodata]])
         if self.have_mosi:
-            self.putw([1, ['%02X' % self.mosidata]])
+            ss, es = self.mosibits[0][1], self.mosibits[-1][2]
+            self.put(ss, es, self.out_ann, [1, ['%02X' % self.mosidata]])
 
     def reset_decoder_state(self):
         self.misodata = 0 if self.have_miso else None
@@ -187,7 +189,7 @@ class Decoder(srd.Decoder):
             else:
                 self.mosidata |= mosi << self.bitcount
 
-        # Guesstimate the endsample for this bit (can be overridden later).
+        # Guesstimate the endsample for this bit (can be overridden below).
         es = self.samplenum
         if self.bitcount > 0:
             es += self.samplenum - self.misobits[self.bitcount - 1][1]
