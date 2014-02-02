@@ -110,6 +110,7 @@ class Decoder(srd.Decoder):
         self.bit_ss, self.bit_es = 0, 0
         self.cmd_ss, self.cmd_es = 0, 0
         self.cmd_token = []
+        self.cmd_token_bits = []
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.blocklen = 0
         self.read_buf = []
@@ -139,6 +140,7 @@ class Decoder(srd.Decoder):
             self.cmd_ss = self.ss
 
         self.cmd_token.append(mosi)
+        self.cmd_token_bits.append(self.mosi_bits)
         # TODO: Record MISO too?
 
         # All command tokens are 6 bytes long.
@@ -156,39 +158,45 @@ class Decoder(srd.Decoder):
         # TODO
         self.putx([64, [s + ': %02x %02x %02x %02x %02x %02x' % tuple(t)]])
 
-        # Start bit
-        self.startbit = (t[0] & (1 << 7)) >> 7
-        self.putb([70, ['Start bit: %d' % self.startbit]])
-        if self.startbit != 0:
+        def tb(byte, bit):
+            return self.cmd_token_bits[5 - byte][7 - bit]
+
+        # Bits[47:47]: Start bit (always 0)
+        bit, self.bit_ss, self.bit_es = tb(5, 7)[0], tb(5, 7)[1], tb(5, 7)[2]
+        self.putb([70, ['Start bit: %d' % bit]])
+        if bit != 0:
             # TODO
             self.putb([1, ['Warning: Start bit != 0']])
 
-        # Transmitter bit
-        self.transmitterbit = (t[0] & (1 << 6)) >> 6
-        self.putb([70, ['Transmitter bit: %d' % self.transmitterbit]])
-        if self.transmitterbit != 0:
+        # Bits[46:46]: Transmitter bit (1 == host)
+        bit, self.bit_ss, self.bit_es = tb(5, 6)[0], tb(5, 6)[1], tb(5, 6)[2]
+        self.putb([70, ['Transmitter bit: %d' % bit]])
+        if bit != 1:
             # TODO
             self.putb([1, ['Warning: Transmitter bit != 1']])
 
-        # Command index
-        cmd = self.cmd_index = t[0] & 0x3f
+        # Bits[45:40]: Command index (BCD; valid: 0-63)
+        cmd = self.cmd_index = t[5] & 0x3f
         # TODO
+        self.bit_ss, self.bit_es = tb(5, 5)[1], tb(5, 0)[2]
         self.putb([70, ['Command: %s%d (%s)' % (s, cmd, cmd_name[cmd])]])
 
-        # Argument
+        # Bits[39:8]: Argument
         self.arg = (t[1] << 24) | (t[2] << 16) | (t[3] << 8) | t[4]
+        self.bit_ss, self.bit_es = tb(4, 7)[1], tb(1, 0)[2]
         self.putb([70, ['Argument: 0x%04x' % self.arg]])
         # TODO: Sanity check on argument? Must be per-cmd?
 
-        # CRC
+        # Bits[7:1]: CRC
         # TODO: Check CRC.
-        self.crc = t[5] >> 1
-        self.putb([70, ['CRC: 0x%01x' % self.crc]])
+        crc = t[5] >> 1
+        self.bit_ss, self.bit_es = tb(0, 7)[1], tb(0, 1)[2]
+        self.putb([70, ['CRC: 0x%01x' % crc]])
 
-        # End bit
-        self.endbit = t[5] & (1 << 0)
-        self.putb([70, ['End bit: %d' % self.endbit]])
-        if self.endbit != 1:
+        # Bits[0:0]: End bit (always 1)
+        bit, self.bit_ss, self.bit_es = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
+        self.putb([70, ['End bit: %d' % bit]])
+        if bit != 1:
             # TODO
             self.putb([1, ['Warning: End bit != 1']])
 
@@ -201,6 +209,7 @@ class Decoder(srd.Decoder):
             self.is_acmd = False
 
         self.cmd_token = []
+        self.cmd_token_bits = []
 
     def handle_cmd0(self, ):
         # CMD0: GO_IDLE_STATE
@@ -383,8 +392,14 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
 
-        # For now, ignore non-data packets.
-        if ptype != 'DATA':
+        # For now, only use DATA and BITS packets.
+        if ptype not in ('DATA', 'BITS'):
+            return
+
+        # Store the individual bit values and ss/es numbers. The next packet
+        # is guaranteed to be a 'DATA' packet belonging to this 'BITS' one.
+        if ptype == 'BITS':
+            self.miso_bits, self.mosi_bits = miso, mosi
             return
 
         self.ss, self.es = ss, es
