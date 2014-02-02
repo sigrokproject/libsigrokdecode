@@ -140,6 +140,13 @@ class Decoder(srd.Decoder):
     def putmosibit(self, i, data):
         self.put(self.mosibits[i][1], self.mosibits[i][2], self.out_ann, data)
 
+    def reset_decoder_state(self):
+        self.misodata = 0 if self.have_miso else None
+        self.mosidata = 0 if self.have_mosi else None
+        self.misobits = [] if self.have_miso else None
+        self.mosibits = [] if self.have_mosi else None
+        self.bitcount = 0
+
     def handle_bit(self, miso, mosi, clk, cs):
         # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
@@ -207,12 +214,7 @@ class Decoder(srd.Decoder):
         if self.have_cs and self.cs_was_deasserted_during_data_word:
             self.putw([4, ['CS# was deasserted during this data word!']])
 
-        # Reset decoder state.
-        self.misodata = 0 if self.have_miso else None
-        self.mosidata = 0 if self.have_mosi else None
-        self.misobits = [] if self.have_miso else None
-        self.mosibits = [] if self.have_mosi else None
-        self.bitcount = 0
+        self.reset_decoder_state()
 
     def find_clk_edge(self, miso, mosi, clk, cs):
         if self.have_cs and self.oldcs != cs:
@@ -221,9 +223,7 @@ class Decoder(srd.Decoder):
                      ['CS-CHANGE', self.oldcs, cs])
             self.oldcs = cs
             # Reset decoder state when CS# changes (and the CS# pin is used).
-            self.misodata = 0 if self.have_miso else None
-            self.mosidata = 0 if self.have_mosi else None
-            self.bitcount = 0
+            self.reset_decoder_state()
 
         # Ignore sample if the clock pin hasn't changed.
         if clk == self.oldclk:
