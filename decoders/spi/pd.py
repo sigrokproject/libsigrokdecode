@@ -104,18 +104,15 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.oldclk = 1
         self.bitcount = 0
-        self.mosidata = 0
-        self.misodata = 0
-        self.mosibits = []
+        self.misodata = self.mosidata = 0
         self.misobits = []
+        self.mosibits = []
         self.startsample = -1
         self.samplenum = -1
         self.cs_was_deasserted_during_data_word = 0
         self.oldcs = -1
         self.oldpins = None
-        self.have_cs = None
-        self.have_miso = None
-        self.have_mosi = None
+        self.have_cs = self.have_miso = self.have_mosi = None
         self.state = 'IDLE'
 
     def metadata(self, key, value):
@@ -134,11 +131,28 @@ class Decoder(srd.Decoder):
     def putw(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 
-    def putmisobit(self, i, data):
-        self.put(self.misobits[i][1], self.misobits[i][2], self.out_ann, data)
+    def putdata(self):
+        # Pass MISO and MOSI bits and then data to the next PD up the stack.
+        so = self.misodata if self.have_miso else None
+        si = self.mosidata if self.have_mosi else None
+        so_bits = self.misobits if self.have_miso else None
+        si_bits = self.mosibits if self.have_mosi else None
+        self.putpw(['BITS', si_bits, so_bits])
+        self.putpw(['DATA', si, so])
 
-    def putmosibit(self, i, data):
-        self.put(self.mosibits[i][1], self.mosibits[i][2], self.out_ann, data)
+        # Bit annotations.
+        if self.have_miso:
+            for bit in self.misobits:
+                self.put(bit[1], bit[2], self.out_ann, [2, ['%d' % bit[0]]])
+        if self.have_mosi:
+            for bit in self.mosibits:
+                self.put(bit[1], bit[2], self.out_ann, [3, ['%d' % bit[0]]])
+
+        # Dataword annotations.
+        if self.have_miso:
+            self.putw([0, ['%02X' % self.misodata]])
+        if self.have_mosi:
+            self.putw([1, ['%02X' % self.mosidata]])
 
     def reset_decoder_state(self):
         self.misodata = 0 if self.have_miso else None
@@ -159,13 +173,6 @@ class Decoder(srd.Decoder):
 
         ws = self.options['wordsize']
 
-        # Receive MOSI bit into our shift register.
-        if self.have_mosi:
-            if self.options['bitorder'] == 'msb-first':
-                self.mosidata |= mosi << (ws - 1 - self.bitcount)
-            else:
-                self.mosidata |= mosi << self.bitcount
-
         # Receive MISO bit into our shift register.
         if self.have_miso:
             if self.options['bitorder'] == 'msb-first':
@@ -173,17 +180,27 @@ class Decoder(srd.Decoder):
             else:
                 self.misodata |= miso << self.bitcount
 
-        if self.have_miso:
-            self.misobits.append([miso, self.samplenum, -1])
+        # Receive MOSI bit into our shift register.
         if self.have_mosi:
-            self.mosibits.append([mosi, self.samplenum, -1])
-        if self.bitcount != 0:
-            if self.have_miso:
-                self.misobits[self.bitcount - 1][2] = self.samplenum
-                self.putmisobit(self.bitcount - 1, [3, ['%d' % miso]])
-            if self.have_mosi:
-                self.mosibits[self.bitcount - 1][2] = self.samplenum
-                self.putmosibit(self.bitcount - 1, [2, ['%d' % mosi]])
+            if self.options['bitorder'] == 'msb-first':
+                self.mosidata |= mosi << (ws - 1 - self.bitcount)
+            else:
+                self.mosidata |= mosi << self.bitcount
+
+        # Guesstimate the endsample for this bit (can be overridden later).
+        es = self.samplenum
+        if self.bitcount > 0:
+            es += self.samplenum - self.misobits[self.bitcount - 1][1]
+
+        if self.have_miso:
+            self.misobits.append([miso, self.samplenum, es])
+        if self.have_mosi:
+            self.mosibits.append([mosi, self.samplenum, es])
+
+        if self.bitcount > 0 and self.have_miso:
+            self.misobits[self.bitcount - 1][2] = self.samplenum
+        if self.bitcount > 0 and self.have_mosi:
+            self.mosibits[self.bitcount - 1][2] = self.samplenum
 
         self.bitcount += 1
 
@@ -191,23 +208,11 @@ class Decoder(srd.Decoder):
         if self.bitcount != ws:
             return
 
-        si = self.mosidata if self.have_mosi else None
-        so = self.misodata if self.have_miso else None
-        si_bits = self.mosibits if self.have_mosi else None
-        so_bits = self.misobits if self.have_miso else None
-
-        # Pass MOSI and MISO to the next PD up the stack.
-        self.putpw(['DATA', si, so])
-        self.putpw(['BITS', si_bits, so_bits])
-
-        # Annotations.
-        if self.have_miso:
-            self.putw([0, ['%02X' % self.misodata]])
-        if self.have_mosi:
-            self.putw([1, ['%02X' % self.mosidata]])
+        self.putdata()
 
         # Meta bitrate.
-        elapsed = 1 / float(self.samplerate) * (self.samplenum - self.startsample + 1)
+        elapsed = 1 / float(self.samplerate)
+        elapsed *= (self.samplenum - self.startsample + 1)
         bitrate = int(1 / elapsed * self.options['wordsize'])
         self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
