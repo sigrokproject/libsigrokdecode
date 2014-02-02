@@ -96,6 +96,12 @@ class Decoder(srd.Decoder):
         ['r7', 'R7 reply'],
         ['bits', 'Bits'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (70,)),
+        ('cmd-reply', 'Commands/replies',
+            tuple(range(0, 63 + 1)) + tuple(range(65, 69 + 1))),
+        ('cmd-token', 'Command tokens', (64,)),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
