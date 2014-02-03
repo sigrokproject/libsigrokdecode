@@ -95,9 +95,10 @@ class Decoder(srd.Decoder):
         ['r3', 'R3 reply'],
         ['r7', 'R7 reply'],
         ['bits', 'Bits'],
+        ['bit-warnings', 'Bit warnings'],
     ]
     annotation_rows = (
-        ('bits', 'Bits', (70,)),
+        ('bits', 'Bits', (70, 71)),
         ('cmd-reply', 'Commands/replies',
             tuple(range(0, 63 + 1)) + tuple(range(65, 69 + 1))),
         ('cmd-token', 'Command tokens', (64,)),
@@ -163,21 +164,20 @@ class Decoder(srd.Decoder):
 
         # Bits[47:47]: Start bit (always 0)
         bit, self.bit_ss, self.bit_es = tb(5, 7)[0], tb(5, 7)[1], tb(5, 7)[2]
-        self.putb([70, ['Start bit: %d' % bit]])
-        if bit != 0:
-            # TODO
-            self.putb([1, ['Warning: Start bit != 0']])
+        if bit == 0:
+            self.putb([70, ['Start bit: %d' % bit]])
+        else:
+            self.putb([71, ['Start bit: %s (Warning: Must be 0!)' % bit]])
 
         # Bits[46:46]: Transmitter bit (1 == host)
         bit, self.bit_ss, self.bit_es = tb(5, 6)[0], tb(5, 6)[1], tb(5, 6)[2]
-        self.putb([70, ['Transmitter bit: %d' % bit]])
-        if bit != 1:
-            # TODO
-            self.putb([1, ['Warning: Transmitter bit != 1']])
+        if bit == 1:
+            self.putb([70, ['Transmitter bit: %d' % bit]])
+        else:
+            self.putb([71, ['Transmitter bit: %d (Warning: Must be 1!)' % bit]])
 
         # Bits[45:40]: Command index (BCD; valid: 0-63)
         cmd = self.cmd_index = t[0] & 0x3f
-        # TODO
         self.bit_ss, self.bit_es = tb(5, 5)[1], tb(5, 0)[2]
         self.putb([70, ['Command: %s%d (%s)' % (s, cmd, cmd_name[cmd])]])
 
@@ -185,7 +185,6 @@ class Decoder(srd.Decoder):
         self.arg = (t[1] << 24) | (t[2] << 16) | (t[3] << 8) | t[4]
         self.bit_ss, self.bit_es = tb(4, 7)[1], tb(1, 0)[2]
         self.putb([70, ['Argument: 0x%04x' % self.arg]])
-        # TODO: Sanity check on argument? Must be per-cmd?
 
         # Bits[7:1]: CRC
         # TODO: Check CRC.
@@ -196,9 +195,10 @@ class Decoder(srd.Decoder):
         # Bits[0:0]: End bit (always 1)
         bit, self.bit_ss, self.bit_es = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
         self.putb([70, ['End bit: %d' % bit]])
-        if bit != 1:
-            # TODO
-            self.putb([1, ['Warning: End bit != 1']])
+        if bit == 1:
+            self.putb([70, ['End bit: %d' % bit]])
+        else:
+            self.putb([71, ['End bit: %d (Warning: Must be 1!)' % bit]])
 
         # Handle command.
         if cmd in (0, 1, 9, 16, 17, 41, 49, 55, 59):
