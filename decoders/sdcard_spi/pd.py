@@ -88,7 +88,7 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = ann_cmd_list() + [
-        ['cmd-token', 'Command token'],
+        ['cmd-desc', 'Command description'],
         ['r1', 'R1 reply'],
         ['r1b', 'R1B reply'],
         ['r2', 'R2 reply'],
@@ -142,7 +142,6 @@ class Decoder(srd.Decoder):
 
         self.cmd_token.append(mosi)
         self.cmd_token_bits.append(self.mosi_bits)
-        # TODO: Record MISO too?
 
         # All command tokens are 6 bytes long.
         if len(self.cmd_token) < 6:
@@ -150,14 +149,10 @@ class Decoder(srd.Decoder):
 
         self.cmd_es = self.es
 
-        # Received all 6 bytes of the command token. Now decode it.
-
         t = self.cmd_token
 
         # CMD or ACMD?
         s = 'ACMD' if self.is_acmd else 'CMD'
-        # TODO
-        self.putx([64, [s + ': %02x %02x %02x %02x %02x %02x' % tuple(t)]])
 
         def tb(byte, bit):
             return self.cmd_token_bits[5 - byte][7 - bit]
@@ -186,11 +181,11 @@ class Decoder(srd.Decoder):
         self.bit_ss, self.bit_es = tb(4, 7)[1], tb(1, 0)[2]
         self.putb([70, ['Argument: 0x%04x' % self.arg]])
 
-        # Bits[7:1]: CRC
-        # TODO: Check CRC.
+        # Bits[7:1]: CRC7
+        # TODO: Check CRC7.
         crc = t[5] >> 1
         self.bit_ss, self.bit_es = tb(0, 7)[1], tb(0, 1)[2]
-        self.putb([70, ['CRC: 0x%01x' % crc]])
+        self.putb([70, ['CRC7: 0x%01x' % crc]])
 
         # Bits[0:0]: End bit (always 1)
         bit, self.bit_ss, self.bit_es = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
@@ -203,29 +198,34 @@ class Decoder(srd.Decoder):
         # Handle command.
         if cmd in (0, 1, 9, 16, 17, 41, 49, 55, 59):
             self.state = 'HANDLE CMD%d' % cmd
+            a = '%s%d (%s)' % (s, cmd, cmd_name[cmd])
+        else:
+            self.state = 'HANDLE CMD999'
+            a = '%s%d: %02x %02x %02x %02x %02x %02x' % ((s, cmd) + tuple(t))
+
+        self.putx([cmd, [a]])
 
         # ...
         if self.is_acmd and cmd != 55:
             self.is_acmd = False
 
-        self.cmd_token = []
-        self.cmd_token_bits = []
-
     def handle_cmd0(self, ):
         # CMD0: GO_IDLE_STATE
-        # TODO
-        self.putx([0, ['CMD0: Card reset / idle state']])
+        self.putx([64, ['Reset the SD card']])
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd1(self):
         # CMD1: SEND_OP_COND
-        # TODO
+        self.putx([64, ['Send HCS info and activate the card init process']])
         hcs = (self.arg & (1 << 30)) >> 30
-        self.putb([1, ['HCS bit = %d' % hcs]])
+        self.bit_ss = self.cmd_token_bits[5 - 4][7 - 6][1]
+        self.bit_es = self.cmd_token_bits[5 - 4][7 - 6][2]
+        self.putb([70, ['HCS: %d' % hcs]])
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd9(self):
         # CMD9: SEND_CSD (128 bits / 16 bytes)
+        self.putx([64, ['Ask card to send its card specific data (CSD)']])
         if len(self.read_buf) == 0:
             self.cmd_ss = self.ss
         self.read_buf.append(self.miso)
@@ -243,6 +243,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd10(self):
         # CMD10: SEND_CID (128 bits / 16 bytes)
+        self.putx([64, ['Ask card to send its card identification (CID)']])
         self.read_buf.append(self.miso)
         if len(self.read_buf) < 16:
             return
@@ -253,18 +254,17 @@ class Decoder(srd.Decoder):
 
     def handle_cmd16(self):
         # CMD16: SET_BLOCKLEN
-        self.blocklen = self.arg # TODO
+        self.blocklen = self.arg
         # TODO: Sanity check on block length.
-        self.putx([16, ['Block length: %d' % self.blocklen]])
+        self.putx([64, ['Set the block length to %d bytes' % self.blocklen]])
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd17(self):
         # CMD17: READ_SINGLE_BLOCK
+        self.putx([64, ['Read a block from address 0x%04x' % self.arg]])
         if len(self.read_buf) == 0:
             self.cmd_ss = self.ss
         self.read_buf.append(self.miso)
-        if len(self.read_buf) == 1:
-            self.putx([0, ['Read block at address: 0x%04x' % self.arg]])
         if len(self.read_buf) < self.blocklen + 2: # FIXME
             return
         self.cmd_es = self.es
@@ -275,6 +275,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd41(self):
         # ACMD41: SD_SEND_OP_COND
+        self.putx([64, ['Send HCS info and activate the card init process']])
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd49(self):
@@ -282,6 +283,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd55(self):
         # CMD55: APP_CMD
+        self.putx([64, ['Next command is an application-specific command']])
         self.is_acmd = True
         self.state = 'GET RESPONSE R1'
 
@@ -289,7 +291,10 @@ class Decoder(srd.Decoder):
         # CMD59: CRC_ON_OFF
         crc_on_off = self.arg & (1 << 0)
         s = 'on' if crc_on_off == 1 else 'off'
-        self.putb([59, ['SD card CRC option: %s' % s]])
+        self.putx([64, ['Turn the SD card CRC option %s' % s]])
+        self.state = 'GET RESPONSE R1'
+
+    def handle_cmd999(self):
         self.state = 'GET RESPONSE R1'
 
     def handle_cid_register(self):
@@ -424,6 +429,8 @@ class Decoder(srd.Decoder):
             s = 'handle_cmd%s' % self.state[10:].lower()
             handle_cmd = getattr(self, s)
             handle_cmd()
+            self.cmd_token = []
+            self.cmd_token_bits = []
         elif self.state.startswith('GET RESPONSE'):
             # Ignore stray 0xff bytes, some devices seem to send those!?
             if miso == 0xff: # TODO?
