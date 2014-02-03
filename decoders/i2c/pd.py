@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2010-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2010-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ I²C packet:
  - 'STOP' (STOP condition)
  - 'ACK' (ACK bit)
  - 'NACK' (NACK bit)
+ - 'BITS' (<data>: list of data/address bits and their ss/es numbers)
 
 <data> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
 command. Slave addresses do not include bit 0 (the READ/WRITE indication bit).
@@ -55,10 +56,11 @@ proto = {
     'STOP':            [2, 'Stop',          'P'],
     'ACK':             [3, 'ACK',           'A'],
     'NACK':            [4, 'NACK',          'N'],
-    'ADDRESS READ':    [5, 'Address read',  'AR'],
-    'ADDRESS WRITE':   [6, 'Address write', 'AW'],
-    'DATA READ':       [7, 'Data read',     'DR'],
-    'DATA WRITE':      [8, 'Data write',    'DW'],
+    'BIT':             [5, 'Bit',           'B'],
+    'ADDRESS READ':    [6, 'Address read',  'AR'],
+    'ADDRESS WRITE':   [7, 'Address write', 'AW'],
+    'DATA READ':       [8, 'Data read',     'DR'],
+    'DATA WRITE':      [9, 'Data write',    'DW'],
 }
 
 class Decoder(srd.Decoder):
@@ -84,12 +86,18 @@ class Decoder(srd.Decoder):
         ['stop', 'Stop condition'],
         ['ack', 'ACK'],
         ['nack', 'NACK'],
+        ['bit', 'Data/address bit'],
         ['address-read', 'Address read'],
         ['address-write', 'Address write'],
         ['data-read', 'Data read'],
         ['data-write', 'Data write'],
         ['warnings', 'Human-readable warnings'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (5,)),
+        ('addr-data', 'Address/Data', (0, 1, 2, 3, 4, 6, 7, 8, 9)),
+        ('warnings', 'Warnings', (10,)),
+    )
     binary = (
         ('address-read', 'Address read'),
         ('address-write', 'Address write'),
@@ -99,18 +107,18 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.samplerate = None
-        self.startsample = -1
+        self.ss = self.es = self.byte_ss = -1
         self.samplenum = None
         self.bitcount = 0
         self.databyte = 0
         self.wr = -1
         self.is_repeat_start = 0
         self.state = 'FIND START'
-        self.oldscl = 1
-        self.oldsda = 1
+        self.oldscl = self.oldsda = 1
         self.oldpins = [1, 1]
         self.pdu_start = None
         self.pdu_bits = 0
+        self.bits = []
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -124,13 +132,13 @@ class Decoder(srd.Decoder):
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
     def putx(self, data):
-        self.put(self.startsample, self.samplenum, self.out_ann, data)
+        self.put(self.ss, self.es, self.out_ann, data)
 
     def putp(self, data):
-        self.put(self.startsample, self.samplenum, self.out_python, data)
+        self.put(self.ss, self.es, self.out_python, data)
 
     def putb(self, data):
-        self.put(self.startsample, self.samplenum, self.out_binary, data)
+        self.put(self.ss, self.es, self.out_binary, data)
 
     def is_start_condition(self, scl, sda):
         # START condition (S): SDA = falling, SCL = high
@@ -151,7 +159,7 @@ class Decoder(srd.Decoder):
         return False
 
     def found_start(self, scl, sda):
-        self.startsample = self.samplenum
+        self.ss, self.es = self.samplenum, self.samplenum
         self.pdu_start = self.samplenum
         self.pdu_bits = 0
         cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
@@ -161,6 +169,7 @@ class Decoder(srd.Decoder):
         self.bitcount = self.databyte = 0
         self.is_repeat_start = 1
         self.wr = -1
+        self.bits = []
 
     # Gather 8 bits of data plus the ACK/NACK bit.
     def found_address_or_data(self, scl, sda):
@@ -168,16 +177,23 @@ class Decoder(srd.Decoder):
         self.databyte <<= 1
         self.databyte |= sda
 
+        # Remember the start of the first data/address bit.
         if self.bitcount == 0:
-            self.startsample = self.samplenum
+            self.byte_ss = self.samplenum
+
+        # Store individual bits and their start/end samplenumbers.
+        # In the list, index 0 represents the LSB (I²C transmits MSB-first).
+        self.bits.insert(0, [sda, self.samplenum, self.samplenum])
+        if self.bitcount > 0:
+            self.bits[1][2] = self.samplenum
+        if self.bitcount == 7:
+            self.bitwidth = self.bits[1][2] - self.bits[2][2]
+            self.bits[0][2] += self.bitwidth
 
         # Return if we haven't collected all 8 + 1 bits, yet.
-        self.bitcount += 1
-        if self.bitcount != 8:
+        if self.bitcount < 7:
+            self.bitcount += 1
             return
-
-        # We triggered on the ACK/NACK bit, but won't report that until later.
-        self.startsample -= 1
 
         d = self.databyte
         if self.state == 'FIND ADDRESS':
@@ -200,18 +216,32 @@ class Decoder(srd.Decoder):
             cmd = 'DATA READ'
             bin_class = 2
 
+        self.ss, self.es = self.byte_ss, self.samplenum + self.bitwidth
+
+        self.putp(['BITS', self.bits])
         self.putp([cmd, d])
-        self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
-                  '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
+
         self.putb((bin_class, bytes([d])))
 
+        for bit in self.bits:
+            self.put(bit[1], bit[2], self.out_ann, [5, ['%d' % bit[0]]])
+
+        if cmd.startswith('ADDRESS'):
+            self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
+            w = ['Write', 'Wr', 'W'] if self.wr else ['Read', 'Rd', 'R']
+            self.putx([proto[cmd][0], w])
+            self.ss, self.es = self.byte_ss, self.samplenum
+
+        self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
+                   '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
+
         # Done with this packet.
-        self.startsample = -1
         self.bitcount = self.databyte = 0
+        self.bits = []
         self.state = 'FIND ACK'
 
     def get_ack(self, scl, sda):
-        self.startsample = self.samplenum
+        self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
         cmd = 'NACK' if (sda == 1) else 'ACK'
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
@@ -223,15 +253,16 @@ class Decoder(srd.Decoder):
         # Meta bitrate
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
         bitrate = int(1 / elapsed * self.pdu_bits)
-        self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
+        self.put(self.byte_ss, self.samplenum, self.out_bitrate, bitrate)
 
-        self.startsample = self.samplenum
         cmd = 'STOP'
+        self.ss, self.es = self.samplenum, self.samplenum
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND START'
         self.is_repeat_start = 0
         self.wr = -1
+        self.bits = []
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
@@ -244,8 +275,6 @@ class Decoder(srd.Decoder):
             self.oldpins, (scl, sda) = pins, pins
 
             self.pdu_bits += 1
-
-            # TODO: Wait until the bus is idle (SDA = SCL = 1) first?
 
             # State machine.
             if self.state == 'FIND START':
@@ -268,6 +297,5 @@ class Decoder(srd.Decoder):
                 raise Exception('Invalid state: %s' % self.state)
 
             # Save current SDA/SCL values for the next round.
-            self.oldscl = scl
-            self.oldsda = sda
+            self.oldscl, self.oldsda = scl, sda
 
