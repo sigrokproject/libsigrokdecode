@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -54,6 +54,9 @@ device_name = {
     0x16: 'MX25L6405D',
 }
 
+def cmd_annotation_classes():
+    return [[cmd[0].lower(), cmd[1]] for cmd in cmds.values()]
+
 def decode_status_reg(data):
     # TODO: Additional per-bit(s) self.put() calls with correct start/end.
 
@@ -94,10 +97,10 @@ class Decoder(srd.Decoder):
         {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'Write protect'},
     ]
     options = {}
-    annotations = [
-        ['text', 'Human-readable text'],
-        ['verbose-decode', 'Decoded register bits, read/write data'],
-        ['warnings', 'Human-readable warnings'],
+    annotations = cmd_annotation_classes() + [
+        ['bits', 'Bits'],
+        ['bits2', 'Bits2'],
+        ['warnings', 'Warnings'],
     ]
 
     def __init__(self, **kwargs):
@@ -126,17 +129,17 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([2, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
-            self.putx([0, ['Manufacturer ID: 0x%02x' % miso]])
+            self.putx([2, ['Manufacturer ID: 0x%02x' % miso]])
         elif self.cmdstate == 3:
             # Byte 3: Slave sends the memory type (0x20 for this chip).
-            self.putx([0, ['Memory type: 0x%02x' % miso]])
+            self.putx([2, ['Memory type: 0x%02x' % miso]])
         elif self.cmdstate == 4:
             # Byte 4: Slave sends the device ID.
             self.device_id = miso
-            self.putx([0, ['Device ID: 0x%02x' % miso]])
+            self.putx([2, ['Device ID: 0x%02x' % miso]])
 
         if self.cmdstate == 4:
             # TODO: Check self.device_id is valid & exists in device_names.
@@ -154,12 +157,12 @@ class Decoder(srd.Decoder):
         # When done, the master de-asserts CS# again.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([3, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate >= 2:
             # Bytes 2-x: Slave sends status register as long as master clocks.
             if self.cmdstate <= 3: # TODO: While CS# asserted.
-                self.putx([0, ['Status register: 0x%02x' % miso]])
-                self.putx([1, [decode_status_reg(miso)]])
+                self.putx([24, ['Status register: 0x%02x' % miso]])
+                self.putx([25, [decode_status_reg(miso)]])
 
             if self.cmdstate == 3: # TODO: If CS# got de-asserted.
                 self.state = None
@@ -175,14 +178,14 @@ class Decoder(srd.Decoder):
         # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([5, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
             # self.putx([0, ['Read address, byte %d: 0x%02x' % \
             #                (4 - self.cmdstate, mosi)]])
             if self.cmdstate == 4:
-                self.putx([0, ['Read address: 0x%06x' % self.addr]])
+                self.putx([24, ['Read address: 0x%06x' % self.addr]])
                 self.addr = 0
         elif self.cmdstate >= 5:
             # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
@@ -194,8 +197,8 @@ class Decoder(srd.Decoder):
             if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
                 # s = ', '.join(map(hex, self.data))
                 s = ''.join(map(chr, self.data))
-                self.putx([0, ['Read data']])
-                self.putx([1, ['Read data: %s' % s]])
+                self.putx([24, ['Read data']])
+                self.putx([25, ['Read data: %s' % s]])
                 self.data = []
                 self.state = None
                 return
@@ -215,7 +218,7 @@ class Decoder(srd.Decoder):
             # Byte 1: Master sends command ID.
             self.addr = 0
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([8, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
@@ -224,12 +227,12 @@ class Decoder(srd.Decoder):
 
         if self.cmdstate == 4:
             d = 'Erase sector %d (0x%06x)' % (self.addr, self.addr)
-            self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
+            self.put(self.start_sample, self.es, self.out_ann, [24, [d]])
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
                 # Sector addresses must be 4K-aligned (same for all 3 chips).
                 d = 'Warning: Invalid sector address!'
-                self.put(self.start_sample, self.es, self.out_ann, [2, [d]])
+                self.put(self.start_sample, self.es, self.out_ann, [101, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -248,14 +251,14 @@ class Decoder(srd.Decoder):
         # page address, sends >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([12, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
             # self.putx([0, ['Page address, byte %d: 0x%02x' % \
             #                (4 - self.cmdstate, mosi)]])
             if self.cmdstate == 4:
-                self.putx([0, ['Page address: 0x%06x' % self.addr]])
+                self.putx([24, ['Page address: 0x%06x' % self.addr]])
                 self.addr = 0
         elif self.cmdstate >= 5:
             # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
@@ -267,8 +270,8 @@ class Decoder(srd.Decoder):
             if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
                 # s = ', '.join(map(hex, self.data))
                 s = ''.join(map(chr, self.data))
-                self.putx([0, ['Page data']])
-                self.putx([1, ['Page data: %s' % s]])
+                self.putx([24, ['Page data']])
+                self.putx([25, ['Page data: %s' % s]])
                 self.data = []
                 self.state = None
                 return
@@ -288,33 +291,33 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.start_sample = self.ss
-            self.putx([0, ['Command: %s' % cmds[self.state][1]]])
+            self.putx([16, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
             # TODO: Check dummy bytes? Check reply from device?
-            self.putx([0, ['Dummy byte: %s' % mosi]])
+            self.putx([24, ['Dummy byte: %s' % mosi]])
         elif self.cmdstate == 4:
             # Byte 4: Master sends 0x00 or 0x01.
             # 0x00: Master wants manufacturer ID as first reply byte.
             # 0x01: Master wants device ID as first reply byte.
             self.manufacturer_id_first = True if (mosi == 0x00) else False
             d = 'manufacturer' if (mosi == 0x00) else 'device'
-            self.putx([0, ['Master wants %s ID first' % d]])
+            self.putx([24, ['Master wants %s ID first' % d]])
         elif self.cmdstate == 5:
             # Byte 5: Slave sends manufacturer ID (or device ID).
             self.ids = [miso]
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            self.putx([0, ['%s ID' % d]])
+            self.putx([24, ['%s ID' % d]])
         elif self.cmdstate == 6:
             # Byte 6: Slave sends device ID (or manufacturer ID).
             self.ids.append(miso)
             d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            self.putx([0, ['%s ID' % d]])
+            self.putx([24, ['%s ID' % d]])
 
         if self.cmdstate == 6:
             self.end_sample = self.es
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            self.putx([0, ['Device: Macronix %s' % device_name[id]]])
+            self.putx([24, ['Device: Macronix %s' % device_name[id]]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -369,6 +372,6 @@ class Decoder(srd.Decoder):
             handle_reg = getattr(self, s)
             handle_reg(mosi, miso)
         else:
-            self.putx([0, ['Unknown command: 0x%02x' % mosi]])
+            self.putx([24, ['Unknown command: 0x%02x' % mosi]])
             self.state = None
 
