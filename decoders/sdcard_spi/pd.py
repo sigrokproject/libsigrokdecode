@@ -176,7 +176,7 @@ class Decoder(srd.Decoder):
             self.putb([1, ['Warning: Transmitter bit != 1']])
 
         # Bits[45:40]: Command index (BCD; valid: 0-63)
-        cmd = self.cmd_index = t[5] & 0x3f
+        cmd = self.cmd_index = t[0] & 0x3f
         # TODO
         self.bit_ss, self.bit_es = tb(5, 5)[1], tb(5, 0)[2]
         self.putb([70, ['Command: %s%d (%s)' % (s, cmd, cmd_name[cmd])]])
