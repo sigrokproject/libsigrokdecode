@@ -115,6 +115,7 @@ class Decoder(srd.Decoder):
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.blocklen = 0
         self.read_buf = []
+        self.cmd_str = ''
 
     def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -122,6 +123,9 @@ class Decoder(srd.Decoder):
 
     def putx(self, data):
         self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
+
+    def putc(self, cmd, desc):
+        self.putx([cmd, ['%s: %s' % (self.cmd_str, desc)]])
 
     def putb(self, data):
         self.put(self.bit_ss, self.bit_es, self.out_ann, data)
@@ -198,25 +202,24 @@ class Decoder(srd.Decoder):
         # Handle command.
         if cmd in (0, 1, 9, 16, 17, 41, 49, 55, 59):
             self.state = 'HANDLE CMD%d' % cmd
-            a = '%s%d (%s)' % (s, cmd, cmd_name[cmd])
+            self.cmd_str = '%s%d (%s)' % (s, cmd, cmd_name[cmd])
         else:
             self.state = 'HANDLE CMD999'
             a = '%s%d: %02x %02x %02x %02x %02x %02x' % ((s, cmd) + tuple(t))
-
-        self.putx([cmd, [a]])
+            self.putx([cmd, [a]])
 
         # ...
         if self.is_acmd and cmd != 55:
             self.is_acmd = False
 
-    def handle_cmd0(self, ):
+    def handle_cmd0(self):
         # CMD0: GO_IDLE_STATE
-        self.putx([64, ['Reset the SD card']])
+        self.putc(0, 'Reset the SD card')
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd1(self):
         # CMD1: SEND_OP_COND
-        self.putx([64, ['Send HCS info and activate the card init process']])
+        self.putc(1, 'Send HCS info and activate the card init process')
         hcs = (self.arg & (1 << 30)) >> 30
         self.bit_ss = self.cmd_token_bits[5 - 4][7 - 6][1]
         self.bit_es = self.cmd_token_bits[5 - 4][7 - 6][2]
@@ -225,7 +228,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd9(self):
         # CMD9: SEND_CSD (128 bits / 16 bytes)
-        self.putx([64, ['Ask card to send its card specific data (CSD)']])
+        self.putc(9, 'Ask card to send its card specific data (CSD)')
         if len(self.read_buf) == 0:
             self.cmd_ss = self.ss
         self.read_buf.append(self.miso)
@@ -243,7 +246,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd10(self):
         # CMD10: SEND_CID (128 bits / 16 bytes)
-        self.putx([64, ['Ask card to send its card identification (CID)']])
+        self.putc(10, 'Ask card to send its card identification (CID)')
         self.read_buf.append(self.miso)
         if len(self.read_buf) < 16:
             return
@@ -256,12 +259,12 @@ class Decoder(srd.Decoder):
         # CMD16: SET_BLOCKLEN
         self.blocklen = self.arg
         # TODO: Sanity check on block length.
-        self.putx([64, ['Set the block length to %d bytes' % self.blocklen]])
+        self.putc(16, 'Set the block length to %d bytes' % self.blocklen)
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd17(self):
         # CMD17: READ_SINGLE_BLOCK
-        self.putx([64, ['Read a block from address 0x%04x' % self.arg]])
+        self.putc(17, 'Read a block from address 0x%04x' % self.arg)
         if len(self.read_buf) == 0:
             self.cmd_ss = self.ss
         self.read_buf.append(self.miso)
@@ -275,7 +278,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd41(self):
         # ACMD41: SD_SEND_OP_COND
-        self.putx([64, ['Send HCS info and activate the card init process']])
+        self.putc(41, 'Send HCS info and activate the card init process')
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd49(self):
@@ -283,7 +286,7 @@ class Decoder(srd.Decoder):
 
     def handle_cmd55(self):
         # CMD55: APP_CMD
-        self.putx([64, ['Next command is an application-specific command']])
+        self.putc(55, 'Next command is an application-specific command')
         self.is_acmd = True
         self.state = 'GET RESPONSE R1'
 
@@ -291,7 +294,7 @@ class Decoder(srd.Decoder):
         # CMD59: CRC_ON_OFF
         crc_on_off = self.arg & (1 << 0)
         s = 'on' if crc_on_off == 1 else 'off'
-        self.putx([64, ['Turn the SD card CRC option %s' % s]])
+        self.putc(59, 'Turn the SD card CRC option %s' % s)
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd999(self):
