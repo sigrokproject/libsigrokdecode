@@ -102,6 +102,11 @@ class Decoder(srd.Decoder):
         ['bits2', 'Bits2'],
         ['warnings', 'Warnings'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', (24, 25)),
+        ('commands', 'Commands', tuple(range(23 + 1))),
+        ('warnings', 'Warnings', (26,)),
+    )
 
     def __init__(self, **kwargs):
         self.state = None
