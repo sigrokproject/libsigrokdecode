@@ -48,6 +48,11 @@ class Decoder(srd.Decoder):
         ['refb', 'Read extended fuse bits'],
         ['warnings', 'Warnings'],
     ]
+    annotation_rows = (
+        ('bits', 'Bits', ()),
+        ('commands', 'Commands', tuple(range(7 + 1))),
+        ('warnings', 'Warnings', (8,)),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
