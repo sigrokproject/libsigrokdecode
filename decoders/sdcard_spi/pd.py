@@ -333,7 +333,7 @@ class Decoder(srd.Decoder):
         # The R1 response token format (1 byte).
         # Sent by the card after every command except for SEND_STATUS.
 
-        self.cmd_ss, self.cmd_es = self.ss, self.es
+        self.cmd_ss, self.cmd_es = self.miso_bits[0][1], self.miso_bits[7][2]
         self.putx([65, ['R1: 0x%02x' % res]])
 
         def putbit(bit, data):
