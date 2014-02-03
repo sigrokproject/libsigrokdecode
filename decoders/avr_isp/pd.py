@@ -47,11 +47,13 @@ class Decoder(srd.Decoder):
         ['rhfb', 'Read high fuse bits'],
         ['refb', 'Read extended fuse bits'],
         ['warnings', 'Warnings'],
+        ['dev', 'Device'],
     ]
     annotation_rows = (
         ('bits', 'Bits', ()),
         ('commands', 'Commands', tuple(range(7 + 1))),
         ('warnings', 'Warnings', (8,)),
+        ('dev', 'Device', (9,)),
     )
 
     def __init__(self, **kwargs):
@@ -59,6 +61,7 @@ class Decoder(srd.Decoder):
         self.mosi_bytes, self.miso_bytes = [], []
         self.cmd_ss, self.cmd_es = 0, 0
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
+        self.device_ss = None
 
     def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -102,6 +105,7 @@ class Decoder(srd.Decoder):
 
         # Store for later.
         self.mm = cmd[3]
+        self.device_ss = self.cmd_ss
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != cmd[1] or ret[0] != self.yy:
@@ -112,9 +116,9 @@ class Decoder(srd.Decoder):
         self.part_number = ret[3]
         self.putx([3, ['Part number: 0x%02x' % ret[3]]])
 
-        # TODO: Fix range.
         p = part[(self.part_fam_flash_size, self.part_number)]
-        self.putx([3, ['Device: Atmel %s' % p]])
+        data = [9, ['Device: Atmel %s' % p]]
+        self.put(self.device_ss, self.cmd_es, self.out_ann, data)
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != self.xx or ret[0] != self.mm:
