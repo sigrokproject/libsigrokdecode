@@ -334,38 +334,43 @@ class Decoder(srd.Decoder):
         # Sent by the card after every command except for SEND_STATUS.
 
         self.cmd_ss, self.cmd_es = self.ss, self.es
-
         self.putx([65, ['R1: 0x%02x' % res]])
 
-        # TODO: Configurable whether all bits are decoded.
+        def putbit(bit, data):
+            b = self.miso_bits[7 - bit]
+            self.bit_ss, self.bit_es = b[1], b[2]
+            self.putb([70, data])
 
-        # 'In idle state' bit
+        # Bit 0: 'In idle state' bit
         s = '' if (res & (1 << 0)) else 'not '
-        self.putb([0, ['Card is %sin idle state' % s]])
+        putbit(0, ['Card is %sin idle state' % s])
 
-        # 'Erase reset' bit
+        # Bit 1: 'Erase reset' bit
         s = '' if (res & (1 << 1)) else 'not '
-        self.putb([0, ['Erase sequence %scleared' % s]])
+        putbit(1, ['Erase sequence %scleared' % s])
 
-        # 'Illegal command' bit
+        # Bit 2: 'Illegal command' bit
         s = 'I' if (res & (1 << 2)) else 'No i'
-        self.putb([0, ['%sllegal command detected' % s]])
+        putbit(2, ['%sllegal command detected' % s])
 
-        # 'Communication CRC error' bit
+        # Bit 3: 'Communication CRC error' bit
         s = 'failed' if (res & (1 << 3)) else 'was successful'
-        self.putb([0, ['CRC check of last command %s' % s]])
+        putbit(3, ['CRC check of last command %s' % s])
 
-        # 'Erase sequence error' bit
+        # Bit 4: 'Erase sequence error' bit
         s = 'E' if (res & (1 << 4)) else 'No e'
-        self.putb([0, ['%srror in the sequence of erase commands' % s]])
+        putbit(4, ['%srror in the sequence of erase commands' % s])
 
-        # 'Address error' bit
+        # Bit 5: 'Address error' bit
         s = 'M' if (res & (1 << 4)) else 'No m'
-        self.putb([0, ['%sisaligned address used in command' % s]])
+        putbit(5, ['%sisaligned address used in command' % s])
 
-        # 'Parameter error' bit
+        # Bit 6: 'Parameter error' bit
         s = '' if (res & (1 << 4)) else 'not '
-        self.putb([0, ['Command argument %soutside allowed range' % s]])
+        putbit(6, ['Command argument %soutside allowed range' % s])
+
+        # Bit 7: Always set to 0
+        putbit(7, ['Bit 7 (always 0)'])
 
         self.state = 'IDLE'
 
