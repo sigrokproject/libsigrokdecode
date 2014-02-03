@@ -52,11 +52,15 @@ class Decoder(srd.Decoder):
         ['reg-0x08', 'Register 0x08'],
         ['read', 'Read date/time'],
         ['write', 'Write date/time'],
-        ['bits', 'Bits'],
+        ['bit-reserved', 'Reserved bit'],
+        ['bit-vl', 'VL bit'],
+        ['bit-century', 'Century bit'],
+        ['reg-read', 'Register read'],
+        ['reg-write', 'Register write'],
     ]
     annotation_rows = (
-        ('bits', 'Bits', (11,)),
-        ('regs', 'Registers', tuple(range(0, 8 + 1))),
+        ('bits', 'Bits', tuple(range(0, 8 + 1)) + (11, 12, 13)),
+        ('regs', 'Register access', (14, 15)),
         ('date-time', 'Date/time', (9, 10)),
     )
 
@@ -69,6 +73,7 @@ class Decoder(srd.Decoder):
         self.weekdays = -1
         self.months = -1
         self.years = -1
+        self.bits = []
 
     def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -76,6 +81,13 @@ class Decoder(srd.Decoder):
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
+
+    def putd(self, bit1, bit2, data):
+        self.put(self.bits[bit1][1], self.bits[bit2][2], self.out_ann, data)
+
+    def putr(self, bit):
+        self.put(self.bits[bit][1], self.bits[bit][2], self.out_ann,
+                 [11, ['Reserved bit', 'Reserved', 'Rsvd', 'R']])
 
     def handle_reg_0x00(self, b): # Control register 1
         pass
@@ -106,33 +118,42 @@ class Decoder(srd.Decoder):
         self.putx([1, [ann]])
 
     def handle_reg_0x02(self, b): # Seconds / Voltage-low bit
-        s = self.seconds = bcd2int(b & 0x7f)
-        self.putx([2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s]])
         vl = 1 if (b & (1 << 7)) else 0
-        self.putx([11, ['Voltage low: %d' % vl, 'Volt low: %d' % vl,
+        self.putd(7, 7, [12, ['Voltage low: %d' % vl, 'Volt. low: %d' % vl,
                         'VL: %d' % vl]])
+        s = self.seconds = bcd2int(b & 0x7f)
+        self.putd(6, 0, [2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s]])
 
     def handle_reg_0x03(self, b): # Minutes
+        self.putr(7)
         m = self.minutes = bcd2int(b & 0x7f)
-        self.putx([3, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m]])
+        self.putd(6, 0, [3, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m]])
 
     def handle_reg_0x04(self, b): # Hours
+        self.putr(7)
+        self.putr(6)
         h = self.hours = bcd2int(b & 0x3f)
-        self.putx([4, ['Hour: %d' % h, 'H: %d' % h]])
+        self.putd(5, 0, [4, ['Hour: %d' % h, 'H: %d' % h]])
 
     def handle_reg_0x05(self, b): # Days
+        self.putr(7)
+        self.putr(6)
         d = self.days = bcd2int(b & 0x3f)
-        self.putx([5, ['Day: %d' % d, 'D: %d' % d]])
+        self.putd(5, 0, [5, ['Day: %d' % d, 'D: %d' % d]])
 
     def handle_reg_0x06(self, b): # Weekdays
+        for i in (7, 6, 5, 4, 3):
+            self.putr(i)
         w = self.weekdays = bcd2int(b & 0x07)
-        self.putx([6, ['Weekday: %d' % w, 'WD: %d' % w]])
+        self.putd(2, 0, [6, ['Weekday: %d' % w, 'WD: %d' % w]])
 
     def handle_reg_0x07(self, b): # Months / century bit
-        m = self.months = bcd2int(b & 0x1f)
-        self.putx([7, ['Month: %d' % m, 'Mon: %d' % m]])
         c = 1 if (b & (1 << 7)) else 0
-        self.putx([11, ['Century: %d' % c, 'Cent: %d' % c, 'C: %d' % c]])
+        self.putd(7, 7, [13, ['Century: %d' % c, 'Cent: %d' % c, 'C: %d' % c]])
+        self.putr(6)
+        self.putr(5)
+        m = self.months = bcd2int(b & 0x1f)
+        self.putd(4, 0, [7, ['Month: %d' % m, 'Mon: %d' % m]])
 
     def handle_reg_0x08(self, b): # Years
         y = self.years = bcd2int(b & 0xff)
@@ -161,6 +182,12 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         cmd, databyte = data
+
+        # Collect the 'BITS' packet, then return. The next packet is
+        # guaranteed to belong to these bits we just stored.
+        if cmd == 'BITS':
+            self.bits = databyte
+            return
 
         # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
@@ -191,6 +218,9 @@ class Decoder(srd.Decoder):
                 return
             # Otherwise: Get data bytes until a STOP condition occurs.
             if cmd == 'DATA WRITE':
+                r, s = self.reg, '%02X: %02X' % (self.reg, databyte)
+                self.putx([15, ['Write register %s' % s, 'Write reg %s' % s,
+                                'WR %s' % s, 'WR', 'W']])
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
                 handle_reg(databyte)
                 self.reg += 1
@@ -215,6 +245,9 @@ class Decoder(srd.Decoder):
                 pass # TODO
         elif self.state == 'READ RTC REGS2':
             if cmd == 'DATA READ':
+                r, s = self.reg, '%02X: %02X' % (self.reg, databyte)
+                self.putx([15, ['Read register %s' % s, 'Read reg %s' % s,
+                                'RR %s' % s, 'RR', 'R']])
                 handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
                 handle_reg(databyte)
                 self.reg += 1
