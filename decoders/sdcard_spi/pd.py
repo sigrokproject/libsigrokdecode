@@ -159,7 +159,7 @@ class Decoder(srd.Decoder):
         s = 'ACMD' if self.is_acmd else 'CMD'
 
         def tb(byte, bit):
-            return self.cmd_token_bits[5 - byte][7 - bit]
+            return self.cmd_token_bits[5 - byte][bit]
 
         # Bits[47:47]: Start bit (always 0)
         bit, self.bit_ss, self.bit_es = tb(5, 7)[0], tb(5, 7)[1], tb(5, 7)[2]
@@ -221,8 +221,8 @@ class Decoder(srd.Decoder):
         # CMD1: SEND_OP_COND
         self.putc(1, 'Send HCS info and activate the card init process')
         hcs = (self.arg & (1 << 30)) >> 30
-        self.bit_ss = self.cmd_token_bits[5 - 4][7 - 6][1]
-        self.bit_es = self.cmd_token_bits[5 - 4][7 - 6][2]
+        self.bit_ss = self.cmd_token_bits[5 - 4][6][1]
+        self.bit_es = self.cmd_token_bits[5 - 4][6][2]
         self.putb([70, ['HCS: %d' % hcs]])
         self.state = 'GET RESPONSE R1'
 
@@ -341,11 +341,11 @@ class Decoder(srd.Decoder):
         # The R1 response token format (1 byte).
         # Sent by the card after every command except for SEND_STATUS.
 
-        self.cmd_ss, self.cmd_es = self.miso_bits[0][1], self.miso_bits[7][2]
+        self.cmd_ss, self.cmd_es = self.miso_bits[7][1], self.miso_bits[0][2]
         self.putx([65, ['R1: 0x%02x' % res]])
 
         def putbit(bit, data):
-            b = self.miso_bits[7 - bit]
+            b = self.miso_bits[bit]
             self.bit_ss, self.bit_es = b[1], b[2]
             self.putb([70, data])
 
