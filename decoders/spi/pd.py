@@ -42,8 +42,8 @@ Examples:
  ['DATA', 0xff, 0x3a]
  ['BITS', [[1, 80, 82], [1, 83, 84], [1, 85, 86], [1, 87, 88],
            [1, 89, 90], [1, 91, 92], [1, 93, 94], [1, 95, 96]],
-          [[0, 80, 82], [0, 83, 84], [1, 85, 86], [1, 87, 88],
-           [1, 89, 90], [0, 91, 92], [1, 93, 94], [0, 95, 96]]]
+          [[0, 80, 82], [1, 83, 84], [0, 85, 86], [1, 87, 88],
+           [1, 89, 90], [1, 91, 92], [0, 93, 94], [0, 95, 96]]]
  ['DATA', 0x65, 0x00]
  ['DATA', 0xa8, None]
  ['DATA', None, 0x55]
@@ -150,10 +150,10 @@ class Decoder(srd.Decoder):
 
         # Dataword annotations.
         if self.have_miso:
-            ss, es = self.misobits[0][1], self.misobits[-1][2]
+            ss, es = self.misobits[-1][1], self.misobits[0][2]
             self.put(ss, es, self.out_ann, [0, ['%02X' % self.misodata]])
         if self.have_mosi:
-            ss, es = self.mosibits[0][1], self.mosibits[-1][2]
+            ss, es = self.mosibits[-1][1], self.mosibits[0][2]
             self.put(ss, es, self.out_ann, [1, ['%02X' % self.mosidata]])
 
     def reset_decoder_state(self):
@@ -193,17 +193,17 @@ class Decoder(srd.Decoder):
         # Guesstimate the endsample for this bit (can be overridden below).
         es = self.samplenum
         if self.bitcount > 0:
-            es += self.samplenum - self.misobits[self.bitcount - 1][1]
+            es += self.samplenum - self.misobits[0][1]
 
         if self.have_miso:
-            self.misobits.append([miso, self.samplenum, es])
+            self.misobits.insert(0, [miso, self.samplenum, es])
         if self.have_mosi:
-            self.mosibits.append([mosi, self.samplenum, es])
+            self.mosibits.insert(0, [mosi, self.samplenum, es])
 
         if self.bitcount > 0 and self.have_miso:
-            self.misobits[self.bitcount - 1][2] = self.samplenum
+            self.misobits[1][2] = self.samplenum
         if self.bitcount > 0 and self.have_mosi:
-            self.mosibits[self.bitcount - 1][2] = self.samplenum
+            self.mosibits[1][2] = self.samplenum
 
         self.bitcount += 1
 
