@@ -109,7 +109,7 @@ class Decoder(srd.Decoder):
         self.mosibits = []
         self.startsample = -1
         self.samplenum = -1
-        self.cs_was_deasserted_during_data_word = 0
+        self.cs_was_deasserted = False
         self.oldcs = -1
         self.oldpins = None
         self.have_cs = self.have_miso = self.have_mosi = None
@@ -167,11 +167,12 @@ class Decoder(srd.Decoder):
         # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
             self.startsample = self.samplenum
+            self.cs_was_deasserted = False
             if self.have_cs:
                 active_low = (self.options['cs_polarity'] == 'active-low')
-                deasserted = cs if active_low else not cs
+                deasserted = (cs == 1) if active_low else (cs == 0)
                 if deasserted:
-                    self.cs_was_deasserted_during_data_word = 1
+                    self.cs_was_deasserted = True
 
         ws = self.options['wordsize']
 
@@ -218,7 +219,7 @@ class Decoder(srd.Decoder):
         bitrate = int(1 / elapsed * self.options['wordsize'])
         self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
 
-        if self.have_cs and self.cs_was_deasserted_during_data_word:
+        if self.have_cs and self.cs_was_deasserted:
             self.putw([4, ['CS# was deasserted during this data word!']])
 
         self.reset_decoder_state()
