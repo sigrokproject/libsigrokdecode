@@ -120,44 +120,45 @@ class Decoder(srd.Decoder):
     def handle_reg_0x02(self, b): # Seconds / Voltage-low bit
         vl = 1 if (b & (1 << 7)) else 0
         self.putd(7, 7, [12, ['Voltage low: %d' % vl, 'Volt. low: %d' % vl,
-                        'VL: %d' % vl]])
+                        'VL: %d' % vl, 'VL']])
         s = self.seconds = bcd2int(b & 0x7f)
-        self.putd(6, 0, [2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s]])
+        self.putd(6, 0, [2, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s, 'S']])
 
     def handle_reg_0x03(self, b): # Minutes
         self.putr(7)
         m = self.minutes = bcd2int(b & 0x7f)
-        self.putd(6, 0, [3, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m]])
+        self.putd(6, 0, [3, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m, 'M']])
 
     def handle_reg_0x04(self, b): # Hours
         self.putr(7)
         self.putr(6)
         h = self.hours = bcd2int(b & 0x3f)
-        self.putd(5, 0, [4, ['Hour: %d' % h, 'H: %d' % h]])
+        self.putd(5, 0, [4, ['Hour: %d' % h, 'H: %d' % h, 'H']])
 
     def handle_reg_0x05(self, b): # Days
         self.putr(7)
         self.putr(6)
         d = self.days = bcd2int(b & 0x3f)
-        self.putd(5, 0, [5, ['Day: %d' % d, 'D: %d' % d]])
+        self.putd(5, 0, [5, ['Day: %d' % d, 'D: %d' % d, 'D']])
 
     def handle_reg_0x06(self, b): # Weekdays
         for i in (7, 6, 5, 4, 3):
             self.putr(i)
         w = self.weekdays = bcd2int(b & 0x07)
-        self.putd(2, 0, [6, ['Weekday: %d' % w, 'WD: %d' % w]])
+        self.putd(2, 0, [6, ['Weekday: %d' % w, 'WD: %d' % w, 'WD', 'W']])
 
     def handle_reg_0x07(self, b): # Months / century bit
         c = 1 if (b & (1 << 7)) else 0
-        self.putd(7, 7, [13, ['Century: %d' % c, 'Cent: %d' % c, 'C: %d' % c]])
+        self.putd(7, 7, [13, ['Century bit: %d' % c, 'Century: %d' % c,
+                              'Cent: %d' % c, 'C: %d' % c, 'C']])
         self.putr(6)
         self.putr(5)
         m = self.months = bcd2int(b & 0x1f)
-        self.putd(4, 0, [7, ['Month: %d' % m, 'Mon: %d' % m]])
+        self.putd(4, 0, [7, ['Month: %d' % m, 'Mon: %d' % m, 'M: %d' % m, 'M']])
 
     def handle_reg_0x08(self, b): # Years
         y = self.years = bcd2int(b & 0xff)
-        self.putx([8, ['Year: %d' % y, 'Y: %d' % y]])
+        self.putx([8, ['Year: %d' % y, 'Y: %d' % y, 'Y']])
 
     def handle_reg_0x09(self, b): # Alarm, minute
         pass
