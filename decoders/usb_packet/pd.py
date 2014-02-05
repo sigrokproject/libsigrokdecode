@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2011 Gareth McMullin <gareth@blacksphere.co.nz>
-## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -127,6 +127,14 @@ def get_category(pidname):
     else:
         return 'SPECIAL'
 
+def ann_index(pidname):
+    l = ['OUT', 'IN', 'SOF', 'SETUP', 'DATA0', 'DATA1', 'DATA2', 'MDATA',
+         'ACK', 'NAK', 'STALL', 'NYET', 'PRE', 'ERR', 'SPLIT', 'PING',
+         'Reserved']
+    if pidname not in l:
+        return 28
+    return l.index(pidname) + 11
+
 def bitstr_to_num(bitstr):
     if not bitstr:
         return 0
@@ -149,8 +157,40 @@ class Decoder(srd.Decoder):
         'signalling': ['Signalling', 'full-speed'],
     }
     annotations = [
-        ['text', 'Human-readable text']
+        ['sync-ok', 'SYNC'],
+        ['sync-err', 'SYNC (error)'],
+        ['pid', 'PID'],
+        ['framenum', 'FRAMENUM'],
+        ['addr', 'ADDR'],
+        ['ep', 'EP'],
+        ['crc5-ok', 'CRC5'],
+        ['crc5-err', 'CRC5 (error)'],
+        ['data', 'DATA'],
+        ['crc16-ok', 'CRC16'],
+        ['crc16-err', 'CRC16 (error)'],
+        ['packet-out', 'Packet: OUT'],
+        ['packet-in', 'Packet: IN'],
+        ['packet-sof', 'Packet: SOF'],
+        ['packet-setup', 'Packet: SETUP'],
+        ['packet-data0', 'Packet: DATA0'],
+        ['packet-data1', 'Packet: DATA1'],
+        ['packet-data2', 'Packet: DATA2'],
+        ['packet-mdata', 'Packet: MDATA'],
+        ['packet-ack', 'Packet: ACK'],
+        ['packet-nack', 'Packet: NACK'],
+        ['packet-stall', 'Packet: STALL'],
+        ['packet-nyet', 'Packet: NYET'],
+        ['packet-pre', 'Packet: PRE'],
+        ['packet-err', 'Packet: ERR'],
+        ['packet-split', 'Packet: SPLIT'],
+        ['packet-ping', 'Packet: PING'],
+        ['packet-reserved', 'Packet: Reserved'],
+        ['packet-invalid', 'Packet: Invalid'],
     ]
+    annotation_rows = (
+        ('fields', 'Packet fields', tuple(range(11 + 1))),
+        ('packet', 'Packets', tuple(range(12, 28 + 1))),
+    )
 
     def __init__(self):
         self.samplenum = 0
@@ -188,7 +228,7 @@ class Decoder(srd.Decoder):
         # The SYNC pattern for low-speed/full-speed is KJKJKJKK (00000001).
         if sync != '00000001':
             self.putpb(['SYNC ERROR', sync])
-            self.putb([0, ['SYNC ERROR: %s' % sync]])
+            self.putb([1, ['SYNC ERROR: %s' % sync]])
         else:
             self.putpb(['SYNC', sync])
             self.putb([0, ['SYNC: %s' % sync]])
@@ -199,7 +239,7 @@ class Decoder(srd.Decoder):
         pidname = pids.get(pid, (pid, ''))[0]
         self.ss, self.es = self.bits[8][1], self.bits[15][2]
         self.putpb(['PID', pidname])
-        self.putb([0, ['PID: %s' % pidname]])
+        self.putb([2, ['PID: %s' % pidname]])
         self.packet.append(pid)
         self.packet_summary += pidname
 
@@ -209,7 +249,7 @@ class Decoder(srd.Decoder):
                 framenum = bitstr_to_num(packet[16:26 + 1])
                 self.ss, self.es = self.bits[16][1], self.bits[26][2]
                 self.putpb(['FRAMENUM', framenum])
-                self.putb([0, ['Frame: %d' % framenum]])
+                self.putb([3, ['Frame: %d' % framenum]])
                 self.packet.append(framenum)
                 self.packet_summary += ' %d' % framenum
             else:
@@ -217,7 +257,7 @@ class Decoder(srd.Decoder):
                 addr = bitstr_to_num(packet[16:22 + 1])
                 self.ss, self.es = self.bits[16][1], self.bits[22][2]
                 self.putpb(['ADDR', addr])
-                self.putb([0, ['Addr: %d' % addr]])
+                self.putb([4, ['Addr: %d' % addr]])
                 self.packet.append(addr)
                 self.packet_summary += ' ADDR %d' % addr
 
@@ -225,7 +265,7 @@ class Decoder(srd.Decoder):
                 ep = bitstr_to_num(packet[23:26 + 1])
                 self.ss, self.es = self.bits[23][1], self.bits[26][2]
                 self.putpb(['EP', ep])
-                self.putb([0, ['EP: %d' % ep]])
+                self.putb([5, ['EP: %d' % ep]])
                 self.packet.append(ep)
                 self.packet_summary += ' EP %d' % ep
 
@@ -233,7 +273,7 @@ class Decoder(srd.Decoder):
             crc5 = bitstr_to_num(packet[27:31 + 1])
             self.ss, self.es = self.bits[27][1], self.bits[31][2]
             self.putpb(['CRC5', crc5])
-            self.putb([0, ['CRC5: 0x%02x' % crc5]])
+            self.putb([6, ['CRC5: 0x%02x' % crc5]])
             self.packet.append(crc5)
         elif pidname in ('DATA0', 'DATA1', 'DATA2', 'MDATA'):
             # Bits[16:packetlen-16]: Data
@@ -245,7 +285,7 @@ class Decoder(srd.Decoder):
                 db = bitstr_to_num(data[i:i + 8])
                 self.ss, self.es = self.bits[16 + i][1], self.bits[23 + i][2]
                 self.putpb(['DATABYTE', db])
-                self.putb([0, ['Databyte: %02x' % db]])
+                self.putb([8, ['Databyte: %02x' % db]])
                 databytes.append(db)
                 self.packet_summary += ' %02x' % db
                 data = data[8:]
@@ -260,7 +300,7 @@ class Decoder(srd.Decoder):
             crc16 = bitstr_to_num(packet[-16:])
             self.ss, self.es = self.bits[-16][1], self.bits[-1][2]
             self.putpb(['CRC16', crc16])
-            self.putb([0, ['CRC16: 0x%04x' % crc16]])
+            self.putb([9, ['CRC16: 0x%04x' % crc16]])
             self.packet.append(crc16)
         elif pidname in ('ACK', 'NAK', 'STALL', 'NYET', 'ERR'):
             pass # Nothing to do, these only have SYNC+PID+EOP fields.
@@ -270,7 +310,7 @@ class Decoder(srd.Decoder):
         # Output a (summary of) the whole packet.
         pcategory, pname, pinfo = get_category(pidname), pidname, self.packet
         self.putpp(['PACKET', [pcategory, pname, pinfo]])
-        self.putp([0, ['PACKET: %s' % self.packet_summary]])
+        self.putp([ann_index(pidname), ['%s' % self.packet_summary]])
 
         self.packet, self.packet_summary = [], ''
 
