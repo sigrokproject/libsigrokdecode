@@ -55,7 +55,7 @@ Packet:
  - 'DATA', 'DATA2', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
  - 'DATA', 'MDATA', [<sync>, <pid>, <databytes>, <crc16>, <eop>]
  - 'HANDSHAKE', 'ACK', [<sync>, <pid>, <eop>]
- - 'HANDSHAKE', 'NACK', [<sync>, <pid>, <eop>]
+ - 'HANDSHAKE', 'NAK', [<sync>, <pid>, <eop>]
  - 'HANDSHAKE', 'STALL', [<sync>, <pid>, <eop>]
  - 'HANDSHAKE', 'NYET', [<sync>, <pid>, <eop>]
  - 'SPECIAL', 'PRE', [<sync>, <pid>, <addr>, <ep>, <crc5>, <eop>]
@@ -122,7 +122,7 @@ def get_category(pidname):
         return 'TOKEN'
     elif pidname in ('DATA0', 'DATA1', 'DATA2', 'MDATA'):
         return 'DATA'
-    elif pidname in ('ACK', 'NACK', 'STALL', 'NYET'):
+    elif pidname in ('ACK', 'NAK', 'STALL', 'NYET'):
         return 'HANDSHAKE'
     else:
         return 'SPECIAL'
@@ -177,7 +177,7 @@ class Decoder(srd.Decoder):
         ['packet-data2', 'Packet: DATA2'],
         ['packet-mdata', 'Packet: MDATA'],
         ['packet-ack', 'Packet: ACK'],
-        ['packet-nack', 'Packet: NACK'],
+        ['packet-nak', 'Packet: NAK'],
         ['packet-stall', 'Packet: STALL'],
         ['packet-nyet', 'Packet: NYET'],
         ['packet-pre', 'Packet: PRE'],
