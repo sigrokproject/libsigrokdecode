@@ -30,6 +30,7 @@ This is the list of <packet-type>s and their respective <packet-data>:
  - 'STARTBIT': The data is the (integer) value of the start bit (0/1).
  - 'DATA': The data is the (integer) value of the UART data. Valid values
    range from 0 to 512 (as the data can be up to 9 bits in size).
+ - 'DATABITS': List of data bits and their ss/es numbers.
  - 'PARITYBIT': The data is the (integer) value of the parity bit (0/1).
  - 'STOPBIT': The data is the (integer) value of the stop bit (0 or 1).
  - 'INVALID STARTBIT': The data is the (integer) value of the start bit (0/1).
@@ -107,11 +108,15 @@ class Decoder(srd.Decoder):
         ['tx-stop', 'TX stop bits'],
         ['rx-warnings', 'RX warnings'],
         ['tx-warnings', 'TX warnings'],
+        ['rx-data-bits', 'RX data bits'],
+        ['tx-data-bits', 'TX data bits'],
     ]
     annotation_rows = (
         ('rx-data', 'RX', (0, 2, 4, 6, 8)),
-        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
+        ('rx-data-bits', 'RX bits', (12,)),
         ('rx-warnings', 'RX warnings', (10,)),
+        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
+        ('tx-data-bits', 'TX bits', (13,)),
         ('tx-warnings', 'TX warnings', (11,)),
     )
     binary = (
@@ -123,6 +128,10 @@ class Decoder(srd.Decoder):
     def putx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
         self.put(s - halfbit, self.samplenum + halfbit, self.out_ann, data)
+
+    def putpx(self, rxtx, data):
+        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
+        self.put(s - halfbit, self.samplenum + halfbit, self.out_python, data)
 
     def putg(self, data):
         s, halfbit = self.samplenum, int(self.bit_width / 2)
@@ -149,6 +158,7 @@ class Decoder(srd.Decoder):
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.oldbit = [1, 1]
         self.oldpins = [1, 1]
+        self.databits = [[], []]
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -231,6 +241,12 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid bit order value: %s',
                             self.options['bit_order'])
 
+        self.putg([rxtx + 12, ['%d' % signal]])
+
+        # Store individual data bits and their start/end samplenumbers.
+        s, halfbit = self.samplenum, int(self.bit_width / 2)
+        self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
+
         # Return here, unless we already received all data bits.
         if self.cur_data_bit[rxtx] < self.options['num_data_bits'] - 1:
             self.cur_data_bit[rxtx] += 1
@@ -238,7 +254,8 @@ class Decoder(srd.Decoder):
 
         self.state[rxtx] = 'GET PARITY BIT'
 
-        self.putp(['DATA', rxtx, self.databyte[rxtx]])
+        self.putpx(rxtx, ['DATABITS', rxtx, self.databits[rxtx]])
+        self.putpx(rxtx, ['DATA', rxtx, self.databyte[rxtx]])
 
         b, f = self.databyte[rxtx], self.options['format']
         if f == 'ascii':
@@ -257,6 +274,8 @@ class Decoder(srd.Decoder):
 
         self.putbin(rxtx, (rxtx, bytes([b])))
         self.putbin(rxtx, (2, bytes([b])))
+
+        self.databits = [[], []]
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
