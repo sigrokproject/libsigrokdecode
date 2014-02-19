@@ -193,7 +193,10 @@ class Decoder(srd.Decoder):
         # Guesstimate the endsample for this bit (can be overridden below).
         es = self.samplenum
         if self.bitcount > 0:
-            es += self.samplenum - self.misobits[0][1]
+            if self.have_miso:
+                es += self.samplenum - self.misobits[0][1]
+            elif self.have_mosi:
+                es += self.samplenum - self.mosibits[0][1]
 
         if self.have_miso:
             self.misobits.insert(0, [miso, self.samplenum, es])
