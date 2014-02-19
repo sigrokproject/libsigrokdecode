@@ -69,12 +69,6 @@ cmd_name = {
     51: 'SEND_SCR',
 }
 
-def ann_cmd_list():
-    l = []
-    for i in range(63 + 1):
-        l.append(['cmd%d' % i, 'CMD%d' % i])
-    return l
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'sdcard_spi'
@@ -87,7 +81,8 @@ class Decoder(srd.Decoder):
     probes = []
     optional_probes = []
     options = {}
-    annotations = ann_cmd_list() + [
+    annotations = \
+        [['cmd%d' % i, 'CMD%d' % i] for i in range(63 + 1)] + [
         ['cmd-desc', 'Command description'],
         ['r1', 'R1 reply'],
         ['r1b', 'R1B reply'],
