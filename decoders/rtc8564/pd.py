@@ -40,16 +40,8 @@ class Decoder(srd.Decoder):
         {'id': 'int', 'name': 'INT#', 'desc': 'Interrupt'},
     ]
     options = {}
-    annotations = [
-        ['reg-0x00', 'Register 0x00'],
-        ['reg-0x01', 'Register 0x01'],
-        ['reg-0x02', 'Register 0x02'],
-        ['reg-0x03', 'Register 0x03'],
-        ['reg-0x04', 'Register 0x04'],
-        ['reg-0x05', 'Register 0x05'],
-        ['reg-0x06', 'Register 0x06'],
-        ['reg-0x07', 'Register 0x07'],
-        ['reg-0x08', 'Register 0x08'],
+    annotations = \
+        [['reg-0x%02x' % i, 'Register 0x%02x' % i] for i in range(8 + 1)] + [
         ['read', 'Read date/time'],
         ['write', 'Write date/time'],
         ['bit-reserved', 'Reserved bit'],
