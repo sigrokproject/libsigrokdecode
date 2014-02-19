@@ -53,12 +53,6 @@ jtag_states = [
         'SHIFT-IR', 'EXIT1-IR', 'EXIT2-IR',
 ]
 
-def get_annotation_classes():
-    l = []
-    for s in jtag_states:
-        l.append([s.lower(), s])
-    return l
-
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'jtag'
@@ -80,7 +74,7 @@ class Decoder(srd.Decoder):
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     ]
     options = {}
-    annotations = get_annotation_classes()
+    annotations = [[s.lower(), s] for s in jtag_states]
 
     def __init__(self, **kwargs):
         # self.state = 'TEST-LOGIC-RESET'
