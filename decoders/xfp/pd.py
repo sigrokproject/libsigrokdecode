@@ -18,7 +18,6 @@
 ##
 
 import sigrokdecode as srd
-import os
 
 MODULE_ID = {
     0x01: 'GBIC',
