@@ -125,9 +125,6 @@ class Decoder(srd.Decoder):
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
-    def putpw(self, data):
-        self.put(self.startsample, self.samplenum, self.out_python, data)
-
     def putw(self, data):
         self.put(self.startsample, self.samplenum, self.out_ann, data)
 
@@ -137,8 +134,14 @@ class Decoder(srd.Decoder):
         si = self.mosidata if self.have_mosi else None
         so_bits = self.misobits if self.have_miso else None
         si_bits = self.mosibits if self.have_mosi else None
-        self.putpw(['BITS', si_bits, so_bits])
-        self.putpw(['DATA', si, so])
+
+        if self.have_miso:
+            ss, es = self.misobits[-1][1], self.misobits[0][2]
+        if self.have_mosi:
+            ss, es = self.mosibits[-1][1], self.mosibits[0][2]
+
+        self.put(ss, es, self.out_python, ['BITS', si_bits, so_bits])
+        self.put(ss, es, self.out_python, ['DATA', si, so])
 
         # Bit annotations.
         if self.have_miso:
@@ -150,10 +153,8 @@ class Decoder(srd.Decoder):
 
         # Dataword annotations.
         if self.have_miso:
-            ss, es = self.misobits[-1][1], self.misobits[0][2]
             self.put(ss, es, self.out_ann, [0, ['%02X' % self.misodata]])
         if self.have_mosi:
-            ss, es = self.mosibits[-1][1], self.mosibits[0][2]
             self.put(ss, es, self.out_ann, [1, ['%02X' % self.mosidata]])
 
     def reset_decoder_state(self):
