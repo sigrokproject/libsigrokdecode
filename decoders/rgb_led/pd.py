@@ -21,11 +21,11 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version =1
+    api_version = 1
     id = 'rgb_led'
     name = 'RGB LED (SPI mode)'
     longname = 'RGB LED string decoder (SPI mode)'
-    desc = ''
+    desc = 'Generic RGB LED string protocol (RGB values clocked over SPI).'
     license = 'gplv2'
     inputs = ['spi']
     outputs = ['rgb_led']
@@ -33,8 +33,7 @@ class Decoder(srd.Decoder):
     optional_probes = []
     options = {}
     annotations = [
-        ['text', 'Human-readable text'],
-        ['warnings', 'Human-readable warnings'],
+        ['rgb', 'RGB values'],
     ]
 
     def __init__(self, **kwargs):
@@ -50,7 +49,7 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
 
-        # Only care about data packets
+        # Only care about data packets.
         if ptype != 'DATA':
             return
         self.ss, self.es = ss, es
@@ -63,7 +62,7 @@ class Decoder(srd.Decoder):
         if len(self.mosi_bytes) != 3:
             return
 
-        red, green, blue =  self.mosi_bytes
+        red, green, blue = self.mosi_bytes
         rgb_value  = int(red) << 16
         rgb_value |= int(green) << 8
         rgb_value |= int(blue)

@@ -19,8 +19,9 @@
 ##
 
 '''
-This protocol decoder can decode generic RGB LED string values that are
-clocked over SPI in RGB values.
+This decoder stacks on top of the 'spi' PD and decodes generic RGB LED string
+values that are clocked over SPI in RGB values.
 '''
 
 from .pd import *
+
