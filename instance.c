@@ -224,19 +224,22 @@ static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
  * @param new_probes A GHashTable of probes to set. Key is probe name, value is
  *                   the probe number. Samples passed to this instance will be
  *                   arranged in this order.
+ * @param unit_size Number of bytes per sample in the data stream to be passed
+ *                  to the decoder. The highest probe index specified in the
+ *                  probe map must lie within a sample unit.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @since 0.1.0
  */
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-		GHashTable *new_probes)
+		GHashTable *new_probes, int unit_size)
 {
 	GVariant *probe_val;
 	GList *l;
 	GSList *sl;
 	struct srd_probe *p;
-	int *new_probemap, new_probenum, num_required_probes, num_probes, i;
+	int *new_probemap, new_probenum, num_required_probes, i;
 	char *probe_id;
 
 	srd_dbg("set probes called for instance %s with list of %d probes",
@@ -267,7 +270,6 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 	for (i = 0; i < di->dec_num_probes; i++)
 		new_probemap[i] = -1;
 
-	num_probes = 0;
 	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
 		probe_id = l->data;
 		probe_val = g_hash_table_lookup(new_probes, probe_id);
@@ -279,6 +281,12 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 			return SRD_ERR_ARG;
 		}
 		new_probenum = g_variant_get_int32(probe_val);
+		if (new_probenum >= 8 * unit_size) {
+			srd_err("Probe index %d not within data unit (%d bit).",
+				new_probenum, 8 * unit_size);
+			g_free(new_probemap);
+			return SRD_ERR_ARG;
+		}
 		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
 				(GCompareFunc)compare_probe_id))) {
 			/* Fall back on optional probes. */
@@ -294,9 +302,8 @@ SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
 		new_probemap[p->order] = new_probenum;
 		srd_dbg("Setting probe mapping: %s (index %d) = probe %d.",
 			p->id, p->order, new_probenum);
-		num_probes++;
 	}
-	di->data_unitsize = (num_probes + 7) / 8;
+	di->data_unitsize = unit_size;
 
 	srd_dbg("Final probe map:");
 	num_required_probes = g_slist_length(di->decoder->probes);

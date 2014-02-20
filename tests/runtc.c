@@ -319,6 +319,7 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	GHashTable *probes, *opts;
 	GSList *pdl, *l;
 	int idx;
+	int max_probe;
 	char **decoder_class;
 
 	if (op->outfile) {
@@ -372,13 +373,17 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 		if (pd->probes) {
 			probes = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 					(GDestroyNotify)g_variant_unref);
+			max_probe = 0;
 			for (l = pd->probes; l; l = l->next) {
 				probe = l->data;
+				if (probe->probe > max_probe)
+					max_probe = probe->probe;
 				gvar = g_variant_new_int32(probe->probe);
 				g_variant_ref_sink(gvar);
 				g_hash_table_insert(probes, probe->name, gvar);
 			}
-			if (srd_inst_probe_set_all(di, probes) != SRD_OK)
+			if (srd_inst_probe_set_all(di, probes,
+					(max_probe + 8) / 8) != SRD_OK)
 				return FALSE;
 			g_hash_table_destroy(probes);
 		}

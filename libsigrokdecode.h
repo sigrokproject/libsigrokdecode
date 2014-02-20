@@ -312,7 +312,7 @@ SRD_API int srd_decoder_unload_all(void);
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options);
 SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-		GHashTable *probes);
+		GHashTable *probes, int unit_size);
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *id, GHashTable *options);
 SRD_API int srd_inst_stack(struct srd_session *sess,
