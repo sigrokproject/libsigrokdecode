@@ -75,14 +75,9 @@ class Decoder(srd.Decoder):
     inputs      = ['logic']
     outputs     = ['z80']
     probes = [
-        {'id': 'd0', 'name': 'D0',  'desc': 'Data bus line 0'},
-        {'id': 'd1', 'name': 'D1',  'desc': 'Data bus line 1'},
-        {'id': 'd2', 'name': 'D2',  'desc': 'Data bus line 2'},
-        {'id': 'd3', 'name': 'D3',  'desc': 'Data bus line 3'},
-        {'id': 'd4', 'name': 'D4',  'desc': 'Data bus line 4'},
-        {'id': 'd5', 'name': 'D5',  'desc': 'Data bus line 5'},
-        {'id': 'd6', 'name': 'D6',  'desc': 'Data bus line 6'},
-        {'id': 'd7', 'name': 'D7',  'desc': 'Data bus line 7'},
+        {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data bus line %d' % i}
+            for i in range(8)
+    ] + [
         {'id': 'm1', 'name': '/M1', 'desc': 'Machine cycle 1'},
         {'id': 'rd', 'name': '/RD', 'desc': 'Memory or I/O read'},
         {'id': 'wr', 'name': '/WR', 'desc': 'Memory or I/O write'},
@@ -90,22 +85,9 @@ class Decoder(srd.Decoder):
     optional_probes = [
         {'id': 'mreq', 'name': '/MREQ', 'desc': 'Memory request'},
         {'id': 'iorq', 'name': '/IORQ', 'desc': 'I/O request'},
-        {'id': 'a0',   'name': 'A0',    'desc': 'Address bus line 0'},
-        {'id': 'a1',   'name': 'A1',    'desc': 'Address bus line 1'},
-        {'id': 'a2',   'name': 'A2',    'desc': 'Address bus line 2'},
-        {'id': 'a3',   'name': 'A3',    'desc': 'Address bus line 3'},
-        {'id': 'a4',   'name': 'A4',    'desc': 'Address bus line 4'},
-        {'id': 'a5',   'name': 'A5',    'desc': 'Address bus line 5'},
-        {'id': 'a6',   'name': 'A6',    'desc': 'Address bus line 6'},
-        {'id': 'a7',   'name': 'A7',    'desc': 'Address bus line 7'},
-        {'id': 'a8',   'name': 'A8',    'desc': 'Address bus line 8'},
-        {'id': 'a9',   'name': 'A9',    'desc': 'Address bus line 9'},
-        {'id': 'a10',  'name': 'A10',   'desc': 'Address bus line 10'},
-        {'id': 'a11',  'name': 'A11',   'desc': 'Address bus line 11'},
-        {'id': 'a12',  'name': 'A12',   'desc': 'Address bus line 12'},
-        {'id': 'a13',  'name': 'A13',   'desc': 'Address bus line 13'},
-        {'id': 'a14',  'name': 'A14',   'desc': 'Address bus line 14'},
-        {'id': 'a15',  'name': 'A15',   'desc': 'Address bus line 15'},
+    ] + [
+        {'id': 'a%d' % i, 'name': 'A%d' % i, 'desc': 'Address bus line %d' % i}
+            for i in range(16)
     ]
     options = {}
     annotations = [
