@@ -139,6 +139,7 @@ class Decoder(srd.Decoder):
         self.ann_dasm   = None
         self.prev_cycle = Cycle.NONE
         self.op_state   = OpState.IDLE
+        self.instr_len  = 0
 
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
@@ -175,6 +176,7 @@ class Decoder(srd.Decoder):
         self.pend_addr  = bus_addr
 
     def on_cycle_end(self):
+        self.instr_len += 1
         self.op_state = getattr(self, 'on_state_' + self.op_state)()
         if self.ann_dasm is not None:
             self.put_disasm()
@@ -196,8 +198,8 @@ class Decoder(srd.Decoder):
         self.ann_dasm  = None
 
     def put_disasm(self):
-        text = formatter.format(self.mnemonic, r=self.arg_reg,
-                                d=self.arg_dis, i=self.arg_imm,
+        text = formatter.format(self.mnemonic, r=self.arg_reg, d=self.arg_dis,
+                                j=self.arg_dis+self.instr_len, i=self.arg_imm,
                                 ro=self.arg_read, wo=self.arg_write)
         self.put_text(self.dasm_start, self.ann_dasm, text)
         self.ann_dasm   = None
@@ -226,6 +228,7 @@ class Decoder(srd.Decoder):
         self.write_pend = False
         self.dasm_start = self.samplenum
         self.op_prefix  = 0
+        self.instr_len  = 0
         if self.bus_data in (0xCB, 0xED, 0xDD, 0xFD):
             return OpState.PRE1
         else:

@@ -24,17 +24,19 @@ Instruction tuple: (d, i, ro, wo, rep, format string)
   used for the displacement and the immediate operand, respectively. An
   operand consisting of more than one byte is assembled in little endian
   order.
-  The format string should refer to the {d} and {i} operands by name.
-  Displacements are interpreted as signed integers, whereas immediate
-  operands are always read as unsigned. The tables for instructions
-  operating on the IX/IY index registers additionally use {r} in the
-  format string as a placeholder for the register name.
   The placeholders ro and wo are the number of bytes the instruction
   is expected to read or write, respectively. These counts are used
   for both memory and I/O access, but not for immediate operands.
   A negative value indicates that the operand byte order is big endian
   rather than the usual little endian.
   The placeholder rep is a boolean used to mark repeating instructions.
+  The format string should refer to the {d} and {i} operands by name.
+  Displacements are interpreted as signed integers, whereas immediate
+  operands are always read as unsigned. The tables for instructions
+  operating on the IX/IY index registers additionally use {r} in the
+  format string as a placeholder for the register name.
+  Relative jump instructions may specify {j} instead of {d} to output
+  the displacement relative to the start of the instruction.
 '''
 
 # Instructions without a prefix
@@ -56,7 +58,7 @@ main_instructions = {
     0x0E: (0, 1, 0, 0, False, 'LD C,{i:02H}h'),
     0x0F: (0, 0, 0, 0, False, 'RRCA'),
 
-    0x10: (1, 0, 0, 0, False, 'DJNZ {d:+d}'),
+    0x10: (1, 0, 0, 0, False, 'DJNZ ${j:+d}'),
     0x11: (0, 2, 0, 0, False, 'LD DE,{i:04H}h'),
     0x12: (0, 0, 0, 1, False, 'LD (DE),A'),
     0x13: (0, 0, 0, 0, False, 'INC DE'),
@@ -64,7 +66,7 @@ main_instructions = {
     0x15: (0, 0, 0, 0, False, 'DEC D'),
     0x16: (0, 1, 0, 0, False, 'LD D,{i:02H}h'),
     0x17: (0, 0, 0, 0, False, 'RLA'),
-    0x18: (1, 0, 0, 0, False, 'JR {d:+d}'),
+    0x18: (1, 0, 0, 0, False, 'JR ${j:+d}'),
     0x19: (0, 0, 0, 0, False, 'ADD HL,DE'),
     0x1A: (0, 0, 1, 0, False, 'LD A,(DE)'),
     0x1B: (0, 0, 0, 0, False, 'DEC DE'),
@@ -73,7 +75,7 @@ main_instructions = {
     0x1E: (0, 1, 0, 0, False, 'LD E,{i:02H}h'),
     0x1F: (0, 0, 0, 0, False, 'RRA'),
 
-    0x20: (1, 0, 0, 0, False, 'JR NZ,{d:+d}'),
+    0x20: (1, 0, 0, 0, False, 'JR NZ,${j:+d}'),
     0x21: (0, 2, 0, 0, False, 'LD HL,{i:04H}h'),
     0x22: (0, 2, 0, 2, False, 'LD ({i:04H}h),HL'),
     0x23: (0, 0, 0, 0, False, 'INC HL'),
@@ -81,7 +83,7 @@ main_instructions = {
     0x25: (0, 0, 0, 0, False, 'DEC H'),
     0x26: (0, 1, 0, 0, False, 'LD H,{i:02H}h'),
     0x27: (0, 0, 0, 0, False, 'DAA'),
-    0x28: (1, 0, 0, 0, False, 'JR Z,{d:+d}'),
+    0x28: (1, 0, 0, 0, False, 'JR Z,${j:+d}'),
     0x29: (0, 0, 0, 0, False, 'ADD HL,HL'),
     0x2A: (0, 2, 2, 0, False, 'LD HL,({i:04H}h)'),
     0x2B: (0, 0, 0, 0, False, 'DEC HL'),
@@ -90,7 +92,7 @@ main_instructions = {
     0x2E: (0, 1, 0, 0, False, 'LD L,{i:02H}h'),
     0x2F: (0, 0, 0, 0, False, 'CPL'),
 
-    0x30: (1, 0, 0, 0, False, 'JR NC,{d:+d}'),
+    0x30: (1, 0, 0, 0, False, 'JR NC,${j:+d}'),
     0x31: (0, 2, 0, 0, False, 'LD SP,{i:04H}h'),
     0x32: (0, 2, 0, 1, False, 'LD ({i:04H}h),A'),
     0x33: (0, 0, 0, 0, False, 'INC SP'),
@@ -98,7 +100,7 @@ main_instructions = {
     0x35: (0, 0, 1, 1, False, 'DEC (HL)'),
     0x36: (0, 1, 0, 1, False, 'LD (HL),{i:02H}h'),
     0x37: (0, 0, 0, 0, False, 'SCF'),
-    0x38: (1, 0, 0, 0, False, 'JR C,{d:+d}'),
+    0x38: (1, 0, 0, 0, False, 'JR C,${j:+d}'),
     0x39: (0, 0, 0, 0, False, 'ADD HL,SP'),
     0x3A: (0, 2, 1, 0, False, 'LD A,({i:04H}h)'),
     0x3B: (0, 0, 0, 0, False, 'DEC SP'),
