@@ -20,6 +20,7 @@
 import sigrokdecode as srd
 from functools import reduce
 from .tables import instr_table_by_prefix
+import string
 
 class Ann:
     ADDR, MEMRD, MEMWR, IORD, IOWR, INSTR, ROP, WOP, WARN = range(9)
@@ -46,6 +47,18 @@ class OpState:
     WOP1    = 'WOP1'    # first byte of write operand
     WOP2    = 'WOP2'    # second byte of write operand
     RESTART = 'RESTART' # restart instruction decoding
+
+# Provide custom format type 'H' for hexadecimal output
+# with leading decimal digit (assembler syntax).
+class AsmFormatter(string.Formatter):
+    def format_field(self, value, format_spec):
+        if format_spec.endswith('H'):
+            result = format(value, format_spec[:-1] + 'X')
+            return result if result[0] in string.digits else '0' + result
+        else:
+            return format(value, format_spec)
+
+formatter = AsmFormatter()
 
 ann_data_cycle_map = {
     Cycle.MEMRD:  Ann.MEMRD,
@@ -183,9 +196,9 @@ class Decoder(srd.Decoder):
         self.ann_dasm  = None
 
     def put_disasm(self):
-        text = self.mnemonic.format(r=self.arg_reg, d=self.arg_dis,
-                                    i=self.arg_imm, ro=self.arg_read,
-                                    wo=self.arg_write)
+        text = formatter.format(self.mnemonic, r=self.arg_reg,
+                                d=self.arg_dis, i=self.arg_imm,
+                                ro=self.arg_read, wo=self.arg_write)
         self.put_text(self.dasm_start, self.ann_dasm, text)
         self.ann_dasm   = None
         self.dasm_start = self.samplenum
