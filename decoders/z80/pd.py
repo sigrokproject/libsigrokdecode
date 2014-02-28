@@ -319,14 +319,15 @@ class Decoder(srd.Decoder):
 
     def on_state_ROP1(self):
         self.arg_read = self.pend_data
+        if self.want_read < 2:
+            self.mnemonic = '{ro:02X}'
+            self.ann_dasm = Ann.ROP
         if self.want_write > 0:
             return OpState.WOP1
         if self.want_read > 1:
             return OpState.ROP2
         if self.op_repeat and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
             return OpState.ROP1
-        self.mnemonic = '{ro:02X}'
-        self.ann_dasm = Ann.ROP
         return OpState.RESTART
 
     def on_state_ROP2(self):
@@ -343,11 +344,11 @@ class Decoder(srd.Decoder):
             return OpState.ROP2
         if self.want_write > 1:
             return OpState.WOP2
+        self.mnemonic = '{wo:02X}'
+        self.ann_dasm = Ann.WOP
         if self.want_read > 0 and self.op_repeat and \
                 self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
             return OpState.ROP1
-        self.mnemonic = '{wo:02X}'
-        self.ann_dasm = Ann.WOP
         return OpState.RESTART
 
     def on_state_WOP2(self):
