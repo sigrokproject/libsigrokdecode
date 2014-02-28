@@ -291,9 +291,9 @@ class Decoder(srd.Decoder):
         if self.want_imm > 0:
             return OpState.IMM1
         self.ann_dasm = Ann.INSTR
-        if self.want_read > 0:
+        if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
             return OpState.ROP1
-        if self.want_write > 0:
+        if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
             return OpState.WOP1
         return OpState.RESTART
 
@@ -302,18 +302,18 @@ class Decoder(srd.Decoder):
         if self.want_imm > 1:
             return OpState.IMM2
         self.ann_dasm = Ann.INSTR
-        if self.want_read > 0:
+        if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
             return OpState.ROP1
-        if self.want_write > 0:
+        if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
             return OpState.WOP1
         return OpState.RESTART
 
     def on_state_IMM2(self):
         self.arg_imm |= self.pend_data << 8
         self.ann_dasm = Ann.INSTR
-        if self.want_read > 0:
+        if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
             return OpState.ROP1
-        if self.want_write > 0:
+        if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
             return OpState.WOP1
         return OpState.RESTART
 
@@ -334,7 +334,7 @@ class Decoder(srd.Decoder):
         self.arg_read |= self.pend_data << 8
         self.mnemonic = '{ro:04X}'
         self.ann_dasm = Ann.ROP
-        if self.want_write > 0:
+        if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
             return OpState.WOP1
         return OpState.RESTART
 
