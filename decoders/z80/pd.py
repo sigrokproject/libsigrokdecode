@@ -80,13 +80,13 @@ def signed_byte(byte):
 
 class Decoder(srd.Decoder):
     api_version = 1
-    id          = 'z80'
-    name        = 'Z80'
-    longname    = 'Zilog Z80 CPU'
-    desc        = 'Zilog Z80 microprocessor disassembly.'
-    license     = 'gplv2+'
-    inputs      = ['logic']
-    outputs     = ['z80']
+    id       = 'z80'
+    name     = 'Z80'
+    longname = 'Zilog Z80 CPU'
+    desc     = 'Zilog Z80 microprocessor disassembly.'
+    license  = 'gplv2+'
+    inputs   = ['logic']
+    outputs  = ['z80']
     probes = [
         {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data bus line %d' % i}
             for i in range(8)
@@ -104,15 +104,15 @@ class Decoder(srd.Decoder):
     ]
     options = {}
     annotations = [
-        ['addr',    'Memory or I/O address'],
-        ['memrd',   'Byte read from memory'],
-        ['memwr',   'Byte written to memory'],
-        ['iord',    'Byte read from I/O port'],
-        ['iowr',    'Byte written to I/O port'],
-        ['instr',   'Z80 CPU instruction'],
-        ['rop',     'Value of input operand'],
-        ['wop',     'Value of output operand'],
-        ['warning', 'Warning message'],
+        ['addr',  'Memory or I/O address'],
+        ['memrd', 'Byte read from memory'],
+        ['memwr', 'Byte written to memory'],
+        ['iord',  'Byte read from I/O port'],
+        ['iowr',  'Byte written to I/O port'],
+        ['instr', 'Z80 CPU instruction'],
+        ['rop',   'Value of input operand'],
+        ['wop',   'Value of output operand'],
+        ['warn',  'Warning message'],
     ]
     annotation_rows = (
         ('addrbus', 'Address bus', (Ann.ADDR,)),
