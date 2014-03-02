@@ -33,21 +33,6 @@ class Pin:
 class Cycle:
     NONE, MEMRD, MEMWR, IORD, IOWR, FETCH, INTACK = range(7)
 
-class OpState:
-    IDLE    = 'IDLE'    # no current instruction
-    PRE1    = 'PRE1'    # first prefix
-    PRE2    = 'PRE2'    # second prefix
-    PREDIS  = 'PREDIS'  # pre-opcode displacement
-    OPCODE  = 'OPCODE'  # opcode byte
-    POSTDIS = 'POSTDIS' # post-opcode displacement
-    IMM1    = 'IMM1'    # first byte of immediate
-    IMM2    = 'IMM2'    # second byte of immediate
-    ROP1    = 'ROP1'    # first byte of read operand
-    ROP2    = 'ROP2'    # second byte of read operand
-    WOP1    = 'WOP1'    # first byte of write operand
-    WOP2    = 'WOP2'    # second byte of write operand
-    RESTART = 'RESTART' # restart instruction decoding
-
 # Provide custom format type 'H' for hexadecimal output
 # with leading decimal digit (assembler syntax).
 class AsmFormatter(string.Formatter):
@@ -124,7 +109,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.prev_cycle = Cycle.NONE
-        self.op_state   = OpState.IDLE
+        self.op_state   = self.state_IDLE
 
     def start(self):
         self.out_ann    = self.register(srd.OUTPUT_ANN)
@@ -138,7 +123,7 @@ class Decoder(srd.Decoder):
         self.ann_data   = None
         self.ann_dasm   = None
         self.prev_cycle = Cycle.NONE
-        self.op_state   = OpState.IDLE
+        self.op_state   = self.state_IDLE
         self.instr_len  = 0
 
     def decode(self, ss, es, data):
@@ -177,11 +162,11 @@ class Decoder(srd.Decoder):
 
     def on_cycle_end(self):
         self.instr_len += 1
-        self.op_state = getattr(self, 'on_state_' + self.op_state)()
+        self.op_state = self.op_state()
         if self.ann_dasm is not None:
             self.put_disasm()
-        if self.op_state == OpState.RESTART:
-            self.op_state = self.on_state_IDLE()
+        if self.op_state == self.state_RESTART:
+            self.op_state = self.state_IDLE()
 
         if self.ann_data is not None:
             self.put_text(self.data_start, self.ann_data,
@@ -208,9 +193,12 @@ class Decoder(srd.Decoder):
     def put_text(self, ss, ann_idx, ann_text):
         self.put(ss, self.samplenum, self.out_ann, [ann_idx, [ann_text]])
 
-    def on_state_IDLE(self):
+    def state_RESTART(self):
+        return self.state_IDLE
+
+    def state_IDLE(self):
         if self.prev_cycle != Cycle.FETCH:
-            return OpState.IDLE
+            return self.state_IDLE
         self.want_dis   = 0
         self.want_imm   = 0
         self.want_read  = 0
@@ -230,132 +218,132 @@ class Decoder(srd.Decoder):
         self.op_prefix  = 0
         self.instr_len  = 0
         if self.bus_data in (0xCB, 0xED, 0xDD, 0xFD):
-            return OpState.PRE1
+            return self.state_PRE1
         else:
-            return OpState.OPCODE
+            return self.state_OPCODE
 
-    def on_state_PRE1(self):
+    def state_PRE1(self):
         if self.prev_cycle != Cycle.FETCH:
             self.mnemonic = 'Prefix not followed by fetch'
             self.ann_dasm = Ann.WARN
-            return OpState.RESTART
+            return self.state_RESTART
         self.op_prefix = self.pend_data
         if self.op_prefix in (0xDD, 0xFD):
             if self.bus_data == 0xCB:
-                return OpState.PRE2
+                return self.state_PRE2
             if self.bus_data in (0xDD, 0xED, 0xFD):
-                return OpState.PRE1
-        return OpState.OPCODE
+                return self.state_PRE1
+        return self.state_OPCODE
 
-    def on_state_PRE2(self):
+    def state_PRE2(self):
         if self.prev_cycle != Cycle.MEMRD:
             self.mnemonic = 'Missing displacement'
             self.ann_dasm = Ann.WARN
-            return OpState.RESTART
+            return self.state_RESTART
         self.op_prefix = (self.op_prefix << 8) | self.pend_data
-        return OpState.PREDIS
+        return self.state_PREDIS
 
-    def on_state_PREDIS(self):
+    def state_PREDIS(self):
         if self.prev_cycle != Cycle.MEMRD:
             self.mnemonic = 'Missing opcode'
             self.ann_dasm = Ann.WARN
-            return OpState.RESTART
+            return self.state_RESTART
         self.arg_dis = signed_byte(self.pend_data)
-        return OpState.OPCODE
+        return self.state_OPCODE
 
-    def on_state_OPCODE(self):
+    def state_OPCODE(self):
         (table, self.arg_reg) = instr_table_by_prefix[self.op_prefix]
         self.op_prefix = 0
         instruction = table.get(self.pend_data, None)
         if instruction is None:
             self.mnemonic = 'Invalid instruction'
             self.ann_dasm = Ann.WARN
-            return OpState.RESTART
+            return self.state_RESTART
         (self.want_dis, self.want_imm, self.want_read, want_write,
                 self.op_repeat, self.mnemonic) = instruction
         self.want_write = abs(want_write)
         self.want_wr_be = (want_write < 0)
         if self.want_dis > 0:
-            return OpState.POSTDIS
+            return self.state_POSTDIS
         if self.want_imm > 0:
-            return OpState.IMM1
+            return self.state_IMM1
         self.ann_dasm = Ann.INSTR
         if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
+            return self.state_ROP1
         if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
-            return OpState.WOP1
-        return OpState.RESTART
+            return self.state_WOP1
+        return self.state_RESTART
 
-    def on_state_POSTDIS(self):
+    def state_POSTDIS(self):
         self.arg_dis = signed_byte(self.pend_data)
         if self.want_imm > 0:
-            return OpState.IMM1
+            return self.state_IMM1
         self.ann_dasm = Ann.INSTR
         if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
+            return self.state_ROP1
         if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
-            return OpState.WOP1
-        return OpState.RESTART
+            return self.state_WOP1
+        return self.state_RESTART
 
-    def on_state_IMM1(self):
+    def state_IMM1(self):
         self.arg_imm = self.pend_data
         if self.want_imm > 1:
-            return OpState.IMM2
+            return self.state_IMM2
         self.ann_dasm = Ann.INSTR
         if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
+            return self.state_ROP1
         if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
-            return OpState.WOP1
-        return OpState.RESTART
+            return self.state_WOP1
+        return self.state_RESTART
 
-    def on_state_IMM2(self):
+    def state_IMM2(self):
         self.arg_imm |= self.pend_data << 8
         self.ann_dasm = Ann.INSTR
         if self.want_read > 0 and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
+            return self.state_ROP1
         if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
-            return OpState.WOP1
-        return OpState.RESTART
+            return self.state_WOP1
+        return self.state_RESTART
 
-    def on_state_ROP1(self):
+    def state_ROP1(self):
         self.arg_read = self.pend_data
         if self.want_read < 2:
             self.mnemonic = '{ro:02X}'
             self.ann_dasm = Ann.ROP
         if self.want_write > 0:
-            return OpState.WOP1
+            return self.state_WOP1
         if self.want_read > 1:
-            return OpState.ROP2
+            return self.state_ROP2
         if self.op_repeat and self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
-        return OpState.RESTART
+            return self.state_ROP1
+        return self.state_RESTART
 
-    def on_state_ROP2(self):
+    def state_ROP2(self):
         self.arg_read |= self.pend_data << 8
         self.mnemonic = '{ro:04X}'
         self.ann_dasm = Ann.ROP
         if self.want_write > 0 and self.prev_cycle in (Cycle.MEMWR, Cycle.IOWR):
-            return OpState.WOP1
-        return OpState.RESTART
+            return self.state_WOP1
+        return self.state_RESTART
 
-    def on_state_WOP1(self):
+    def state_WOP1(self):
         self.arg_write = self.pend_data
         if self.want_read > 1:
-            return OpState.ROP2
+            return self.state_ROP2
         if self.want_write > 1:
-            return OpState.WOP2
+            return self.state_WOP2
         self.mnemonic = '{wo:02X}'
         self.ann_dasm = Ann.WOP
         if self.want_read > 0 and self.op_repeat and \
                 self.prev_cycle in (Cycle.MEMRD, Cycle.IORD):
-            return OpState.ROP1
-        return OpState.RESTART
+            return self.state_ROP1
+        return self.state_RESTART
 
-    def on_state_WOP2(self):
+    def state_WOP2(self):
         if self.want_wr_be:
             self.arg_write = (self.arg_write << 8) | self.pend_data
         else:
             self.arg_write |= self.pend_data << 8
         self.mnemonic = '{wo:04X}'
         self.ann_dasm = Ann.WOP
-        return OpState.RESTART
+        return self.state_RESTART
