@@ -38,15 +38,15 @@ class Decoder(srd.Decoder):
     options = {
         'overdrive': ['Overdrive mode', 'no'],
         # Time options (specified in microseconds):
-        'cnt_normal_bit': ['Normal mode sample bit time (us)', 15],
-        'cnt_normal_slot': ['Normal mode data slot time (us)', 60],
-        'cnt_normal_presence': ['Normal mode sample presence time (us)', 75],
-        'cnt_normal_reset': ['Normal mode reset time (us)', 480],
-        'cnt_overdrive_bit': ['Overdrive mode sample bit time (us)', 2],
-        # 'cnt_overdrive_slot': ['Overdrive mode data slot time (us)', 7.3],
-        'cnt_overdrive_slot': ['Overdrive mode data slot time (us)', 7],
-        'cnt_overdrive_presence': ['Overdrive mode sample presence time (us)', 10],
-        'cnt_overdrive_reset': ['Overdrive mode reset time (us)', 48],
+        'cnt_normal_bit': ['Normal mode sample bit time (µs)', 15],
+        'cnt_normal_slot': ['Normal mode data slot time (µs)', 60],
+        'cnt_normal_presence': ['Normal mode sample presence time (µs)', 75],
+        'cnt_normal_reset': ['Normal mode reset time (µs)', 480],
+        'cnt_overdrive_bit': ['Overdrive mode sample bit time (µs)', 2],
+        # 'cnt_overdrive_slot': ['Overdrive mode data slot time (µs)', 7.3],
+        'cnt_overdrive_slot': ['Overdrive mode data slot time (µs)', 7],
+        'cnt_overdrive_presence': ['Overdrive mode sample presence time (µs)', 10],
+        'cnt_overdrive_reset': ['Overdrive mode reset time (µs)', 48],
     }
     annotations = [
         ['bit', 'Bit'],
