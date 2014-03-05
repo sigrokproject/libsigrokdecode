@@ -125,7 +125,11 @@ class Decoder(srd.Decoder):
         elif distance in range(s - margin, s + margin + 1):
             return 's'
         else:
-            raise Exception('Invalid edge distance: %d' % distance)
+            return 'e' # Error, invalid edge distance.
+
+    def reset_decoder_state(self):
+        self.edges, self.bits, self.bits_ss_es = [], [], []
+        self.state = 'IDLE'
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
@@ -146,6 +150,9 @@ class Decoder(srd.Decoder):
                 self.old_ir = self.ir
                 continue
             edge = self.edge_type()
+            if edge == 'e':
+                self.reset_decoder_state() # Reset state machine upon errors.
+                continue
             if self.state == 'MID1':
                 self.state = 'START1' if edge == 's' else 'MID0'
                 bit = None if edge == 's' else 0
@@ -169,8 +176,7 @@ class Decoder(srd.Decoder):
 
             if len(self.bits) == 14 + 1:
                 self.handle_bits()
-                self.edges, self.bits, self.bits_ss_es = [], [], []
-                self.state = 'IDLE'
+                self.reset_decoder_state()
 
             self.old_ir = self.ir
 
