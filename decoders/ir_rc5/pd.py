@@ -174,7 +174,7 @@ class Decoder(srd.Decoder):
             if bit != None:
                 self.bits.append([self.samplenum, bit])
 
-            if len(self.bits) == 14 + 1:
+            if len(self.bits) == 14:
                 self.handle_bits()
                 self.reset_decoder_state()
 
