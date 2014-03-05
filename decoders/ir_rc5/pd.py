@@ -145,20 +145,21 @@ class Decoder(srd.Decoder):
                 self.state = 'MID1'
                 self.old_ir = self.ir
                 continue
+            edge = self.edge_type()
             if self.state == 'MID1':
-                self.state = 'START1' if self.edge_type() == 's' else 'MID0'
-                bit = None if self.edge_type() == 's' else 0
+                self.state = 'START1' if edge == 's' else 'MID0'
+                bit = None if edge == 's' else 0
             elif self.state == 'MID0':
-                self.state = 'START0' if self.edge_type() == 's' else 'MID1'
-                bit = None if self.edge_type() == 's' else 1
+                self.state = 'START0' if edge == 's' else 'MID1'
+                bit = None if edge == 's' else 1
             elif self.state == 'START1':
-                if self.edge_type() == 's':
+                if edge == 's':
                     self.state = 'MID1'
-                bit = 1 if self.edge_type() == 's' else None
+                bit = 1 if edge == 's' else None
             elif self.state == 'START0':
-                if self.edge_type() == 's':
+                if edge == 's':
                     self.state = 'MID0'
-                bit = 0 if self.edge_type() == 's' else None
+                bit = 0 if edge == 's' else None
             else:
                 raise Exception('Invalid state: %s' % self.state)
 
