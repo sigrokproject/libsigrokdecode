@@ -104,14 +104,14 @@ class Decoder(srd.Decoder):
         self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
 
     def handle_bit(self, tick):
-        ret = 0xff
+        ret = None
         if tick in range(self.dazero - self.margin, self.dazero + self.margin):
             ret = 0
         elif tick in range(self.daone - self.margin, self.daone + self.margin):
             ret = 1
-        if ret < 2:
+        if ret in (0, 1):
             self.putb([0, ['%d' % ret]])
-            self.data = self.data * 2 + ret
+            self.data |= (ret << self.count) # LSB-first
             self.count = self.count + 1
         self.ss_bit = self.samplenum
 
@@ -122,7 +122,7 @@ class Decoder(srd.Decoder):
             self.ss_start = self.samplenum
             return True
         if ret == 0:
-            self.putd(self.data & 0xff)
+            self.putd(self.data >> 8)
         else:
             self.putx([11, ['%s error: 0x%04X' % (name, self.data)]])
         self.data = self.count = 0
