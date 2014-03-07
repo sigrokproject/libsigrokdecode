@@ -22,40 +22,36 @@ import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
     api_version = 1
-    id = 'ir_nec6122'
-    name = 'IR NEC 6122'
-    longname = '1-Wire Infrared remote controller NEC 6122'
-    desc = 'Unidirectional, asynchronous serial bus.'
+    id = 'ir_nec'
+    name = 'IR NEC'
+    longname = 'IR NEC'
+    desc = 'NEC infrared remote control protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['ir_nec6122']
+    outputs = ['ir_nec']
     probes = [
         {'id': 'ir', 'name': 'IR', 'desc': 'Data line'},
     ]
     optional_probes = []
     options = {
-        'level': ['Tirgger Level L/H', 0],
-        'cnt_peroid': ['Peroid time (us)', 13500],
-        'cnt_repeat': ['Repeat time (us)', 11250],
-        'cnt_repeat_end': ['Repeat end time (us)', 562],
-        'cnt_accuracy': ['Accuracy range (us)', 100],
-        'cnt_dazero': ['Data 0 time (us)', 1125],
-        'cnt_daone': ['Data 1 time (us)', 2250],
+        'cnt_lc': ['Leader code time (µs)', 13500],
+        'cnt_rc': ['Repeat code time (µs)', 11250],
+        'cnt_rc_end': ['Repeat code end time (µs)', 562],
+        'cnt_accuracy': ['Accuracy range (µs)', 100],
+        'cnt_dazero': ['Data 0 time (µs)', 1125],
+        'cnt_daone': ['Data 1 time (µs)', 2250],
         'polarity': ['Polarity', 'active-low'],
-            }
+    }
     annotations = [
         ['bit', 'Bit'],
-        ['preoid', 'Preoid'],
+        ['lc', 'Leader code'],
         ['info', 'Info'],
         ['error', 'Error'],
     ]
     annotation_rows = (
-        ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),
         ('bits', 'Bits', (0,)),
+        ('fields', 'Fields', (1, 2, 3)),
     )
-
-    def putx(self, data):
-        self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def putx(self, data):
         self.put(self.ss_start, self.samplenum, self.out_ann, data)
@@ -64,14 +60,10 @@ class Decoder(srd.Decoder):
         self.put(self.ss_bit, self.samplenum, self.out_ann, data)
 
     def __init__(self, **kwargs):
-        self.olddata = None
-        self.ss_edge = 0
         self.ss_bit = 0
-        self.first_transition = True
-        self.bitwidth = None
         self.state = 'IDLE'
-        self.data = 0;
-        self.count = 0;
+        self.data = 0
+        self.count = 0
         self.ss_start = 0
         self.act_polar = 0
 
@@ -88,12 +80,12 @@ class Decoder(srd.Decoder):
 
         x = float(self.options['cnt_accuracy']) / 1000000.0
         self.margin = int(samplerate * x) - 1
-        x = float(self.options['cnt_peroid']) / 1000000.0
-        self.preoid = int(samplerate * x) - 1
-        x = float(self.options['cnt_repeat']) / 1000000.0
-        self.repeat = int(samplerate * x) - 1
-        x = float(self.options['cnt_repeat_end']) / 1000000.0
-        self.repeat_end = int(samplerate * x) - 1
+        x = float(self.options['cnt_lc']) / 1000000.0
+        self.lc = int(samplerate * x) - 1
+        x = float(self.options['cnt_rc']) / 1000000.0
+        self.rc = int(samplerate * x) - 1
+        x = float(self.options['cnt_rc_end']) / 1000000.0
+        self.rc_end = int(samplerate * x) - 1
         x = float(self.options['cnt_dazero']) / 1000000.0
         self.dazero = int(samplerate * x) - 1
         x = float(self.options['cnt_daone']) / 1000000.0
@@ -103,11 +95,9 @@ class Decoder(srd.Decoder):
 
     def handle_bits(self, tick):
         ret = 0xff
-        if tick in range(self.dazero - self.margin,
-                self.dazero + self.margin):
+        if tick in range(self.dazero - self.margin, self.dazero + self.margin):
             ret = 0
-        elif tick in range(self.daone - self.margin,
-                self.daone + self.margin):
+        elif tick in range(self.daone - self.margin, self.daone + self.margin):
             ret = 1
 
         if ret < 2:
@@ -116,7 +106,7 @@ class Decoder(srd.Decoder):
             self.count = self.count + 1
 
         self.ss_bit = self.samplenum
-        return ret;
+        return ret
 
     def data_judge(self, name):
         buf = int((self.data & 0xff00) / 0x100)
@@ -126,7 +116,7 @@ class Decoder(srd.Decoder):
             self.putx([2, ['%s: 0x%02x' % (name, buf)]])
         else:
             self.putx([3, ['%s Error: 0x%04x' % (name, self.data)]])
-            
+
         self.data = self.count = 0
         self.ss_bit = self.ss_start = self.samplenum
         return ret
@@ -136,7 +126,7 @@ class Decoder(srd.Decoder):
             raise Exception("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
             self.ir = pins[0]
-            
+
             # Wait for any edge (rising or falling).
             if self.old_ir == self.ir:
                 continue
@@ -145,24 +135,22 @@ class Decoder(srd.Decoder):
                 b = self.samplenum - self.ss_bit
                 # State machine.
                 if self.state == 'IDLE':
-                    if b in range(self.preoid - self.margin, 
-                            self.preoid + self.margin):
-                        self.putx([1, ['Preoid', 'Pre', 'P']])
+                    if b in range(self.lc - self.margin, self.lc + self.margin):
+                        self.putx([1, ['Leader code', 'Leader', 'LC', 'L']])
                         self.data = self.count = 0
                         self.state = 'ADDRESS'
-                    elif b in range(self.repeat - self.margin,
-                            self.repeat + self.margin):
-                        self.putx([1, ['Repeat', 'Rep', 'R']])
+                    elif b in range(self.rc - self.margin, self.rc + self.margin):
+                        self.putx([1, ['Repeat code', 'Repeat', 'RC', 'R']])
                         self.data = self.count = 0
                     self.ss_bit = self.ss_start = self.samplenum
                 elif self.state == 'ADDRESS':
                     self.handle_bits(b)
                     if self.count > 15:
                         if self.data_judge(self.state) == 0:
-                            self.state = 'CODE'
+                            self.state = 'COMMAND'
                         else:
                             self.state = 'IDLE'
-                elif self.state == 'CODE':
+                elif self.state == 'COMMAND':
                     self.handle_bits(b)
                     if self.count > 15:
                         self.data_judge(self.state)

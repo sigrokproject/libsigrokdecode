@@ -19,7 +19,7 @@
 ##
 
 '''
-NEC 6121/6122 is a biphase/manchester based infrared remote control protocol.
+NEC is a pulse-distance based infrared remote control protocol.
 '''
 
 from .pd import *
