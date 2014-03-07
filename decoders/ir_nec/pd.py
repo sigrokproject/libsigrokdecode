@@ -19,6 +19,7 @@
 ##
 
 import sigrokdecode as srd
+from .lists import *
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -48,12 +49,14 @@ class Decoder(srd.Decoder):
         ['cmd', 'Command'],
         ['cmd-inv', 'Command#'],
         ['repeat-code', 'Repeat code'],
+        ['remote', 'Remote'],
         ['warnings', 'Warnings'],
     ]
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3, 4)),
         ('fields', 'Fields', (5, 6, 7, 8, 9, 10)),
-        ('warnings', 'Warnings', (11,)),
+        ('remote', 'Remote', (11,)),
+        ('warnings', 'Warnings', (12,)),
     )
 
     def putx(self, data):
@@ -82,10 +85,22 @@ class Decoder(srd.Decoder):
         self.put(self.ss_other_edge, self.samplenum, self.out_ann,
                  [idx, [p + ' pause', '%s-pause' % p[0], '%sP' % p[0], 'P']])
 
+    def putremote(self):
+        dev = address.get(self.addr, 'Unknown device')
+        buttons = command.get(self.addr, None)
+        if buttons is None:
+            btn = ['Unknown', 'Unk']
+        else:
+            btn = buttons.get(self.cmd, ['Unknown', 'Unk'])
+        self.put(self.ss_remote, self.ss_bit + self.stop, self.out_ann,
+                 [11, ['%s: %s' % (dev, btn[0]), '%s: %s' % (dev, btn[1]),
+                 '%s' % btn[1]]])
+
     def __init__(self, **kwargs):
         self.state = 'IDLE'
-        self.ss_bit = self.ss_start = self.ss_other_edge = 0
+        self.ss_bit = self.ss_start = self.ss_other_edge = self.ss_remote = 0
         self.data = self.count = self.active = self.old_ir = None
+        self.addr = self.cmd = None
 
     def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -118,13 +133,17 @@ class Decoder(srd.Decoder):
     def data_ok(self):
         ret, name = (self.data >> 8) & (self.data & 0xff), self.state.title()
         if self.count == 8:
+            if self.state == 'ADDRESS':
+                self.addr = self.data
+            if self.state == 'COMMAND':
+                self.cmd = self.data
             self.putd(self.data)
             self.ss_start = self.samplenum
             return True
         if ret == 0:
             self.putd(self.data >> 8)
         else:
-            self.putx([11, ['%s error: 0x%04X' % (name, self.data)]])
+            self.putx([12, ['%s error: 0x%04X' % (name, self.data)]])
         self.data = self.count = 0
         self.ss_bit = self.ss_start = self.samplenum
         return ret == 0
@@ -150,6 +169,7 @@ class Decoder(srd.Decoder):
                 if b in range(self.lc - self.margin, self.lc + self.margin):
                     self.putpause('Long')
                     self.putx([5, ['Leader code', 'Leader', 'LC', 'L']])
+                    self.ss_remote = self.ss_start
                     self.data = self.count = 0
                     self.state = 'ADDRESS'
                 elif b in range(self.rc - self.margin, self.rc + self.margin):
@@ -177,6 +197,7 @@ class Decoder(srd.Decoder):
                     self.state = 'STOP' if self.data_ok() else 'IDLE'
             elif self.state == 'STOP':
                 self.putstop(self.ss_bit)
+                self.putremote()
                 self.ss_bit = self.ss_start = self.samplenum
                 self.state = 'IDLE'
             else:
