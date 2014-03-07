@@ -38,13 +38,22 @@ class Decoder(srd.Decoder):
     }
     annotations = [
         ['bit', 'Bit'],
-        ['lc', 'Leader code'],
-        ['info', 'Info'],
-        ['error', 'Error'],
+        ['agc-pulse', 'AGC pulse'],
+        ['longpause', 'Long pause'],
+        ['shortpause', 'Short pause'],
+        ['stop-bit', 'Stop bit'],
+        ['leader-code', 'Leader code'],
+        ['addr', 'Address'],
+        ['addr-inv', 'Address#'],
+        ['cmd', 'Command'],
+        ['cmd-inv', 'Command#'],
+        ['repeat-code', 'Repeat code'],
+        ['warnings', 'Warnings'],
     ]
     annotation_rows = (
-        ('bits', 'Bits', (0,)),
-        ('fields', 'Fields', (1, 2, 3)),
+        ('bits', 'Bits', (0, 1, 2, 3, 4)),
+        ('fields', 'Fields', (5, 6, 7, 8, 9, 10)),
+        ('warnings', 'Warnings', (11,)),
     )
 
     def putx(self, data):
@@ -53,9 +62,29 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.put(self.ss_bit, self.samplenum, self.out_ann, data)
 
+    def putd(self, data):
+        name = self.state.title()
+        d = {'ADDRESS': 6, 'ADDRESS#': 7, 'COMMAND': 8, 'COMMAND#': 9}
+        s = {'ADDRESS': ['ADDR', 'A'], 'ADDRESS#': ['ADDR#', 'A#'],
+             'COMMAND': ['CMD', 'C'], 'COMMAND#': ['CMD#', 'C#']}
+        self.putx([d[self.state], ['%s: 0x%02X' % (name, data),
+                  '%s: 0x%02X' % (s[self.state][0], data),
+                  '%s: 0x%02X' % (s[self.state][1], data), s[self.state][1]]])
+
+    def putstop(self, ss):
+        self.put(ss, ss + self.stop, self.out_ann,
+                 [4, ['Stop bit', 'Stop', 'St', 'S']])
+
+    def putpause(self, p):
+        self.put(self.ss_start, self.ss_other_edge, self.out_ann,
+                 [1, ['AGC pulse', 'AGC', 'A']])
+        idx = 2 if p == 'Long' else 3
+        self.put(self.ss_other_edge, self.samplenum, self.out_ann,
+                 [idx, [p + ' pause', '%s-pause' % p[0], '%sP' % p[0], 'P']])
+
     def __init__(self, **kwargs):
         self.state = 'IDLE'
-        self.ss_bit = self.ss_start = 0
+        self.ss_bit = self.ss_start = self.ss_other_edge = 0
         self.data = self.count = self.active = self.old_ir = None
 
     def start(self):
@@ -72,31 +101,33 @@ class Decoder(srd.Decoder):
         self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
         self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
         self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
+        self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
 
-    def handle_bits(self, tick):
+    def handle_bit(self, tick):
         ret = 0xff
         if tick in range(self.dazero - self.margin, self.dazero + self.margin):
             ret = 0
         elif tick in range(self.daone - self.margin, self.daone + self.margin):
             ret = 1
-
         if ret < 2:
             self.putb([0, ['%d' % ret]])
             self.data = self.data * 2 + ret
             self.count = self.count + 1
-
         self.ss_bit = self.samplenum
-        return ret
 
-    def data_judge(self):
+    def data_ok(self):
         ret, name = (self.data >> 8) & (self.data & 0xff), self.state.title()
+        if self.count == 8:
+            self.putd(self.data)
+            self.ss_start = self.samplenum
+            return True
         if ret == 0:
-            self.putx([2, ['%s: 0x%02x' % (name, self.data >> 8)]])
+            self.putd(self.data & 0xff)
         else:
-            self.putx([3, ['%s error: 0x%04x' % (name, self.data)]])
+            self.putx([11, ['%s error: 0x%04X' % (name, self.data)]])
         self.data = self.count = 0
         self.ss_bit = self.ss_start = self.samplenum
-        return ret
+        return ret == 0
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
@@ -104,8 +135,11 @@ class Decoder(srd.Decoder):
         for (self.samplenum, pins) in data:
             self.ir = pins[0]
 
-            # Wait for an "active" edge (default: falling edge).
-            if self.old_ir == self.ir or self.ir != self.active:
+            # Wait for an "interesting" edge, but also record the other ones.
+            if self.old_ir == self.ir:
+                continue
+            if self.ir != self.active:
+                self.ss_other_edge = self.samplenum
                 self.old_ir = self.ir
                 continue
 
@@ -114,22 +148,39 @@ class Decoder(srd.Decoder):
             # State machine.
             if self.state == 'IDLE':
                 if b in range(self.lc - self.margin, self.lc + self.margin):
-                    self.putx([1, ['Leader code', 'Leader', 'LC', 'L']])
+                    self.putpause('Long')
+                    self.putx([5, ['Leader code', 'Leader', 'LC', 'L']])
                     self.data = self.count = 0
                     self.state = 'ADDRESS'
                 elif b in range(self.rc - self.margin, self.rc + self.margin):
-                    self.putx([1, ['Repeat code', 'Repeat', 'RC', 'R']])
+                    self.putpause('Short')
+                    self.putstop(self.samplenum)
+                    self.samplenum += self.stop
+                    self.putx([10, ['Repeat code', 'Repeat', 'RC', 'R']])
                     self.data = self.count = 0
                 self.ss_bit = self.ss_start = self.samplenum
             elif self.state == 'ADDRESS':
-                self.handle_bits(b)
-                if self.count > 15:
-                    self.state = 'COMMAND' if self.data_judge() == 0 else 'IDLE'
+                self.handle_bit(b)
+                if self.count == 8:
+                    self.state = 'ADDRESS#' if self.data_ok() else 'IDLE'
+            elif self.state == 'ADDRESS#':
+                self.handle_bit(b)
+                if self.count == 16:
+                    self.state = 'COMMAND' if self.data_ok() else 'IDLE'
             elif self.state == 'COMMAND':
-                self.handle_bits(b)
-                if self.count > 15:
-                    self.data_judge()
-                    self.state = 'IDLE'
+                self.handle_bit(b)
+                if self.count == 8:
+                    self.state = 'COMMAND#' if self.data_ok() else 'IDLE'
+            elif self.state == 'COMMAND#':
+                self.handle_bit(b)
+                if self.count == 16:
+                    self.state = 'STOP' if self.data_ok() else 'IDLE'
+            elif self.state == 'STOP':
+                self.putstop(self.ss_bit)
+                self.ss_bit = self.ss_start = self.samplenum
+                self.state = 'IDLE'
+            else:
+                raise Exception('Invalid state: %s' % self.state)
 
             self.old_ir = self.ir
 
