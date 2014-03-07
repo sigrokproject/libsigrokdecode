@@ -34,12 +34,6 @@ class Decoder(srd.Decoder):
     ]
     optional_probes = []
     options = {
-        'cnt_lc': ['Leader code time (µs)', 13500],
-        'cnt_rc': ['Repeat code time (µs)', 11250],
-        'cnt_rc_end': ['Repeat code end time (µs)', 562],
-        'cnt_accuracy': ['Accuracy range (µs)', 100],
-        'cnt_dazero': ['Data 0 time (µs)', 1125],
-        'cnt_daone': ['Data 1 time (µs)', 2250],
         'polarity': ['Polarity', 'active-low'],
     }
     annotations = [
@@ -60,38 +54,24 @@ class Decoder(srd.Decoder):
         self.put(self.ss_bit, self.samplenum, self.out_ann, data)
 
     def __init__(self, **kwargs):
-        self.ss_bit = 0
         self.state = 'IDLE'
-        self.data = 0
-        self.count = 0
-        self.ss_start = 0
-        self.act_polar = 0
+        self.ss_bit = self.ss_start = 0
+        self.data = self.count = self.active = self.old_ir = None
 
     def start(self):
         # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.act_polar = 1 if self.options['polarity'] == 'active-low' else 0
-        self.old_ir = self.act_polar 
+        self.active = 0 if self.options['polarity'] == 'active-low' else 1
+        self.old_ir = 1 if self.active == 0 else 0
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-        samplerate = float(self.samplerate)
-
-        x = float(self.options['cnt_accuracy']) / 1000000.0
-        self.margin = int(samplerate * x) - 1
-        x = float(self.options['cnt_lc']) / 1000000.0
-        self.lc = int(samplerate * x) - 1
-        x = float(self.options['cnt_rc']) / 1000000.0
-        self.rc = int(samplerate * x) - 1
-        x = float(self.options['cnt_rc_end']) / 1000000.0
-        self.rc_end = int(samplerate * x) - 1
-        x = float(self.options['cnt_dazero']) / 1000000.0
-        self.dazero = int(samplerate * x) - 1
-        x = float(self.options['cnt_daone']) / 1000000.0
-        self.daone = int(samplerate * x) - 1
-        x = float(10000) / 1000000.0
-        self.end = int(samplerate * x) - 1
+        self.margin = int(self.samplerate * 0.0001) - 1 # 0.1ms
+        self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
+        self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
+        self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
+        self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
 
     def handle_bits(self, tick):
         ret = 0xff
@@ -108,15 +88,12 @@ class Decoder(srd.Decoder):
         self.ss_bit = self.samplenum
         return ret
 
-    def data_judge(self, name):
-        buf = int((self.data & 0xff00) / 0x100)
-        nbuf = int(self.data & 0xff)
-        ret = buf & nbuf
+    def data_judge(self):
+        ret, name = (self.data >> 8) & (self.data & 0xff), self.state.title()
         if ret == 0:
-            self.putx([2, ['%s: 0x%02x' % (name, buf)]])
+            self.putx([2, ['%s: 0x%02x' % (name, self.data >> 8)]])
         else:
-            self.putx([3, ['%s Error: 0x%04x' % (name, self.data)]])
-
+            self.putx([3, ['%s error: 0x%04x' % (name, self.data)]])
         self.data = self.count = 0
         self.ss_bit = self.ss_start = self.samplenum
         return ret
@@ -127,34 +104,32 @@ class Decoder(srd.Decoder):
         for (self.samplenum, pins) in data:
             self.ir = pins[0]
 
-            # Wait for any edge (rising or falling).
-            if self.old_ir == self.ir:
+            # Wait for an "active" edge (default: falling edge).
+            if self.old_ir == self.ir or self.ir != self.active:
+                self.old_ir = self.ir
                 continue
 
-            if self.old_ir == self.act_polar:
-                b = self.samplenum - self.ss_bit
-                # State machine.
-                if self.state == 'IDLE':
-                    if b in range(self.lc - self.margin, self.lc + self.margin):
-                        self.putx([1, ['Leader code', 'Leader', 'LC', 'L']])
-                        self.data = self.count = 0
-                        self.state = 'ADDRESS'
-                    elif b in range(self.rc - self.margin, self.rc + self.margin):
-                        self.putx([1, ['Repeat code', 'Repeat', 'RC', 'R']])
-                        self.data = self.count = 0
-                    self.ss_bit = self.ss_start = self.samplenum
-                elif self.state == 'ADDRESS':
-                    self.handle_bits(b)
-                    if self.count > 15:
-                        if self.data_judge(self.state) == 0:
-                            self.state = 'COMMAND'
-                        else:
-                            self.state = 'IDLE'
-                elif self.state == 'COMMAND':
-                    self.handle_bits(b)
-                    if self.count > 15:
-                        self.data_judge(self.state)
-                        self.state = 'IDLE'
+            b = self.samplenum - self.ss_bit
+
+            # State machine.
+            if self.state == 'IDLE':
+                if b in range(self.lc - self.margin, self.lc + self.margin):
+                    self.putx([1, ['Leader code', 'Leader', 'LC', 'L']])
+                    self.data = self.count = 0
+                    self.state = 'ADDRESS'
+                elif b in range(self.rc - self.margin, self.rc + self.margin):
+                    self.putx([1, ['Repeat code', 'Repeat', 'RC', 'R']])
+                    self.data = self.count = 0
+                self.ss_bit = self.ss_start = self.samplenum
+            elif self.state == 'ADDRESS':
+                self.handle_bits(b)
+                if self.count > 15:
+                    self.state = 'COMMAND' if self.data_judge() == 0 else 'IDLE'
+            elif self.state == 'COMMAND':
+                self.handle_bits(b)
+                if self.count > 15:
+                    self.data_judge()
+                    self.state = 'IDLE'
 
             self.old_ir = self.ir
 
