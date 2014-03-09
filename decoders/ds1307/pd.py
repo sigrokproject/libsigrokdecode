@@ -44,9 +44,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['ds1307']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['text', 'Human-readable text'],
     ]

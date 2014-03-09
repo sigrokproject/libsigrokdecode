@@ -29,9 +29,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mlx90614']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['celsius', 'Temperature in degrees Celsius'],
         ['kelvin', 'Temperature in Kelvin'],

@@ -151,8 +151,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['usb_signalling']
     outputs = ['usb_packet']
-    probes = []
-    optional_probes = []
     options = (
         {'id': 'signalling', 'desc': 'Signalling', 'default': 'full-speed'},
     )

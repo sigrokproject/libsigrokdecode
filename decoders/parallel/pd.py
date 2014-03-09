@@ -70,7 +70,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['parallel']
-    probes = []
     optional_probes = probe_list(8)
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',

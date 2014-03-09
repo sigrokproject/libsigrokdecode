@@ -79,7 +79,6 @@ class Decoder(srd.Decoder):
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
-    optional_probes = []
     options = (
         {'id': 'signalling', 'desc': 'Signalling',
             'default': 'full-speed', 'values': ('full-speed', 'low-speed')},

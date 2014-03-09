@@ -29,9 +29,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['nunchuck']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['text-verbose', 'Human-readable text (verbose)'],
         ['text', 'Human-readable text'],

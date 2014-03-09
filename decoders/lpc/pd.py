@@ -121,7 +121,6 @@ class Decoder(srd.Decoder):
         {'id': 'lpcpd',  'name': 'LPCPD#',  'desc': 'Power down'},
         {'id': 'lsmi',   'name': 'LSMI#',   'desc': 'System Management Interrupt'},
     ]
-    options = {}
     annotations = [
         ['warnings', 'Warnings'],
         ['start', 'Start'],

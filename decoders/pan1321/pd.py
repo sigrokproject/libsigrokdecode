@@ -33,9 +33,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['text-verbose', 'Human-readable text (verbose)'],
         ['text', 'Human-readable text'],

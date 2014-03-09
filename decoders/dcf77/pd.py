@@ -37,8 +37,6 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
     ]
-    optional_probes = []
-    options = {}
     annotations = [
         ['start-of-minute', 'Start of minute'],
         ['special-bits', 'Special bits (civil warnings, weather forecast)'],

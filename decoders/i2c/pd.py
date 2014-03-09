@@ -76,7 +76,6 @@ class Decoder(srd.Decoder):
         {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
     ]
-    optional_probes = []
     options = (
         {'id': 'address_format', 'desc': 'Displayed slave address format',
             'default': 'shifted', 'values': ('shifted', 'unshifted')},

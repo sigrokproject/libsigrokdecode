@@ -44,7 +44,6 @@ class Decoder(srd.Decoder):
         {'id': 'load', 'name': 'LOAD', 'desc': 'Serial interface load control'},
         {'id': 'ldac', 'name': 'LDAC', 'desc': 'Load DAC'},
     ]
-    options = {}
     annotations = [
         ['dac-select', 'DAC select'],
         ['gain', 'Gain'],

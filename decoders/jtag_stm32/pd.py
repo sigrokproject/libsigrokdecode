@@ -127,9 +127,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['jtag']
     outputs = ['jtag_stm32']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['text', 'Human-readable text'],
     ]

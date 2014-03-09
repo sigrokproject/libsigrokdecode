@@ -78,7 +78,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']
-    probes = []
     optional_probes = [
         # Allow specifying only one of the signals, e.g. if only one data
         # direction exists (or is relevant).

@@ -91,12 +91,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi', 'logic']
     outputs = ['mx25lxx05d']
-    probes = []
     optional_probes = [
         {'id': 'hold', 'name': 'HOLD#', 'desc': 'Pause device w/o deselecting it'},
         {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'Write protect'},
     ]
-    options = {}
     annotations = cmd_annotation_classes() + [
         ['bits', 'Bits'],
         ['bits2', 'Bits2'],

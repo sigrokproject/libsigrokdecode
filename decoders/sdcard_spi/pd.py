@@ -78,9 +78,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['sdcard_spi']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = \
         [['cmd%d' % i, 'CMD%d' % i] for i in range(63 + 1)] + [
         ['cmd-desc', 'Command description'],

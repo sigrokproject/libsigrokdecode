@@ -47,8 +47,6 @@ class Decoder(srd.Decoder):
         {'id': 'ws', 'name': 'WS', 'desc': 'Word select line'},
         {'id': 'sd', 'name': 'SD', 'desc': 'Serial data line'},
     ]
-    optional_probes = []
-    options = {}
     annotations = [
         ['left', 'Left channel'],
         ['right', 'Right channel'],

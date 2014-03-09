@@ -41,9 +41,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['onewire_link']
     outputs = ['onewire_network']
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = [
         ['text', 'Human-readable text'],
     ]

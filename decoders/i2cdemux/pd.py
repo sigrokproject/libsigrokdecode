@@ -29,9 +29,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
-    probes = []
-    optional_probes = []
-    options = {}
     annotations = []
 
     def __init__(self, **kwargs):

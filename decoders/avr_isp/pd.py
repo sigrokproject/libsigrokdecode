@@ -32,11 +32,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi', 'logic']
     outputs = ['avr_isp']
-    probes = []
     optional_probes = [
         {'id': 'reset', 'name': 'RESET#', 'desc': 'Target AVR MCU reset'},
     ]
-    options = {}
     annotations = [
         ['pe', 'Programming enable'],
         ['rsb0', 'Read signature byte 0'],

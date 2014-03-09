@@ -32,8 +32,6 @@ class Decoder(srd.Decoder):
     probes = [
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     ]
-    optional_probes = []
-    options = {}
     annotations = [
         ['bitrate', 'Bitrate / baudrate'],
     ]

@@ -33,13 +33,11 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['rtc8564']
-    probes = []
     optional_probes = [
         {'id': 'clkout', 'name': 'CLKOUT', 'desc': 'Clock output'},
         {'id': 'clkoe', 'name': 'CLKOE', 'desc': 'Clock output enable'},
         {'id': 'int', 'name': 'INT#', 'desc': 'Interrupt'},
     ]
-    options = {}
     annotations = \
         [['reg-0x%02x' % i, 'Register 0x%02x' % i] for i in range(8 + 1)] + [
         ['read', 'Read date/time'],

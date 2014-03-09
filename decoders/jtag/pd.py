@@ -73,7 +73,6 @@ class Decoder(srd.Decoder):
         {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     ]
-    options = {}
     annotations = [[s.lower(), s] for s in jtag_states]
 
     def __init__(self, **kwargs):

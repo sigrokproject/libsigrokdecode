@@ -87,7 +87,6 @@ class Decoder(srd.Decoder):
         {'id': 'a%d' % i, 'name': 'A%d' % i, 'desc': 'Address bus line %d' % i}
             for i in range(16)
     ]
-    options = {}
     annotations = [
         ['addr',  'Memory or I/O address'],
         ['memrd', 'Byte read from memory'],
