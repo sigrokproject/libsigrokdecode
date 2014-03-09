@@ -55,10 +55,11 @@ class Decoder(srd.Decoder):
         {'id': 'a1', 'name': 'A1', 'desc': 'I²C slave address input 1'},
         {'id': 'a2', 'name': 'A2', 'desc': 'I²C slave address input 2'},
     ]
-    options = {
-        'sensor': ['Sensor type', 'lm75'],
-        'resolution': ['Resolution', 9], # 9-12 bit, sensor/config dependent
-    }
+    options = (
+        {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75'},
+        {'id': 'resolution', 'desc': 'Resolution', 'default': 9,
+            'values': (9, 10, 11, 12)},
+    )
     annotations = [
         ['celsius', 'Temperature in degrees Celsius'],
         ['kelvin', 'Temperature in Kelvin'],

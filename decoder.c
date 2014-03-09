@@ -152,91 +152,137 @@ static int get_probes(const struct srd_decoder *d, const char *attr,
 
 static int get_options(struct srd_decoder *d)
 {
-	PyObject *py_opts, *py_keys, *py_values, *py_val, *py_desc, *py_default;
-	Py_ssize_t i;
+	PyObject *py_opts, *py_opt, *py_val, *py_default, *py_item;
+	Py_ssize_t opt, i;
 	struct srd_decoder_option *o;
-	gint64 def_long;
-	int num_keys, overflow, ret;
-	char *key, *def_str;
-
-	ret = SRD_ERR_PYTHON;
-	key = NULL;
+	GVariant *gvar;
+	gint64 lval;
+	double dval;
+	int overflow;
+	char *sval;
 
 	if (!PyObject_HasAttrString(d->py_dec, "options"))
-		/* That's fine. */
+		/* No options, that's fine. */
 		return SRD_OK;
 
-	/* If present, options must be a dictionary. */
+	/* If present, options must be a tuple. */
 	py_opts = PyObject_GetAttrString(d->py_dec, "options");
-	if (!PyDict_Check(py_opts)) {
-		srd_err("Protocol decoder %s options attribute is not "
-			"a dictionary.", d->name);
-		goto err_out;
+	if (!PyTuple_Check(py_opts)) {
+		srd_err("Protocol decoder %s: options attribute is not "
+				"a tuple.", d->id);
+		return SRD_ERR_PYTHON;
 	}
 
-	py_keys = PyDict_Keys(py_opts);
-	py_values = PyDict_Values(py_opts);
-	num_keys = PyList_Size(py_keys);
-	for (i = 0; i < num_keys; i++) {
-		py_str_as_str(PyList_GetItem(py_keys, i), &key);
-		srd_dbg("option '%s'", key);
-		py_val = PyList_GetItem(py_values, i);
-		if (!PyList_Check(py_val) || PyList_Size(py_val) != 2) {
-			srd_err("Protocol decoder %s option '%s' value must be "
-					"a list with two elements.", d->name, key);
-			goto err_out;
+	for (opt = 0; opt < PyTuple_Size(py_opts); opt++) {
+		py_opt = PyTuple_GetItem(py_opts, opt);
+		if (!PyDict_Check(py_opt)) {
+			srd_err("Protocol decoder %s options: each option "
+					"must consist of a dictionary.", d->name);
+			return SRD_ERR_PYTHON;
 		}
-		py_desc = PyList_GetItem(py_val, 0);
-		if (!PyUnicode_Check(py_desc)) {
-			srd_err("Protocol decoder %s option '%s' has no "
-					"description.", d->name, key);
-			goto err_out;
+		if (!(py_val = PyDict_GetItemString(py_opt, "id"))) {
+			srd_err("Protocol decoder %s option %d has no "
+					"id.", d->name);
+			return SRD_ERR_PYTHON;
 		}
-		py_default = PyList_GetItem(py_val, 1);
-		if (!PyUnicode_Check(py_default) && !PyLong_Check(py_default)) {
-			srd_err("Protocol decoder %s option '%s' has default "
-					"of unsupported type '%s'.", d->name, key,
-					Py_TYPE(py_default)->tp_name);
-			goto err_out;
-		}
-		if (!(o = g_try_malloc(sizeof(struct srd_decoder_option)))) {
-			srd_err("option malloc failed");
-			goto err_out;
-		}
-		o->id = g_strdup(key);
-		py_str_as_str(py_desc, &o->desc);
-		if (PyUnicode_Check(py_default)) {
-			/* UTF-8 string */
-			py_str_as_str(py_default, &def_str);
-			o->def = g_variant_new_string(def_str);
-			g_free(def_str);
-		} else {
-			/* Long */
-			def_long = PyLong_AsLongAndOverflow(py_default, &overflow);
-			if (overflow) {
-				/* Value is < LONG_MIN or > LONG_MAX */
-				PyErr_Clear();
-				srd_err("Protocol decoder %s option '%s' has "
-						"invalid default value.", d->name, key);
-				goto err_out;
+		o = g_malloc0(sizeof(struct srd_decoder_option));
+		py_str_as_str(py_val, &o->id);
+
+		if ((py_val = PyDict_GetItemString(py_opt, "desc")))
+			py_str_as_str(py_val, &o->desc);
+
+		if ((py_default = PyDict_GetItemString(py_opt, "default"))) {
+			if (PyUnicode_Check(py_default)) {
+				/* UTF-8 string */
+				py_str_as_str(py_default, &sval);
+				o->def = g_variant_new_string(sval);
+				g_free(sval);
+			} else if (PyLong_Check(py_default)) {
+				/* Long */
+				lval = PyLong_AsLongAndOverflow(py_default, &overflow);
+				if (overflow) {
+					/* Value is < LONG_MIN or > LONG_MAX */
+					PyErr_Clear();
+					srd_err("Protocol decoder %s option 'default' has "
+							"invalid default value.", d->name);
+					return SRD_ERR_PYTHON;
+				}
+				o->def = g_variant_new_int64(lval);
+			} else if (PyFloat_Check(py_default)) {
+				/* Float */
+				if ((dval = PyFloat_AsDouble(py_default)) == -1.0) {
+					PyErr_Clear();
+					srd_err("Protocol decoder %s option 'default' has "
+							"invalid default value.", d->name);
+					return SRD_ERR_PYTHON;
+				}
+				o->def = g_variant_new_double(dval);
+			} else {
+				srd_err("Protocol decoder %s option 'default' has "
+						"value of unsupported type '%s'.", d->name,
+						Py_TYPE(py_default)->tp_name);
+				return SRD_ERR_PYTHON;
 			}
-			o->def = g_variant_new_int64(def_long);
+			g_variant_ref_sink(o->def);
 		}
-		g_variant_ref_sink(o->def);
+
+		if ((py_val = PyDict_GetItemString(py_opt, "values"))) {
+			/* A default is required if a list of values is
+			 * given, since it's used to verify their type. */
+			if (!o->def) {
+				srd_err("No default for option '%s'", o->id);
+				return SRD_ERR_PYTHON;
+			}
+			if (!PyTuple_Check(py_val)) {
+				srd_err("Option '%s' values should be a tuple.", o->id);
+				return SRD_ERR_PYTHON;
+			}
+			for (i = 0; i < PyTuple_Size(py_val); i++) {
+				py_item = PyTuple_GetItem(py_val, i);
+				if (Py_TYPE(py_default) != Py_TYPE(py_item)) {
+					srd_err("All values for option '%s' must be "
+							"of the same type as the default.",
+							o->id);
+					return SRD_ERR_PYTHON;
+				}
+				if (PyUnicode_Check(py_item)) {
+					/* UTF-8 string */
+					py_str_as_str(py_item, &sval);
+					gvar = g_variant_new_string(sval);
+					g_variant_ref_sink(gvar);
+					g_free(sval);
+					o->values = g_slist_append(o->values, gvar);
+				} else if (PyLong_Check(py_item)) {
+					/* Long */
+					lval = PyLong_AsLongAndOverflow(py_default, &overflow);
+					if (overflow) {
+						/* Value is < LONG_MIN or > LONG_MAX */
+						PyErr_Clear();
+						srd_err("Protocol decoder %s option 'values' "
+								"has invalid value.", d->name);
+						return SRD_ERR_PYTHON;
+					}
+					gvar = g_variant_new_int64(lval);
+					g_variant_ref_sink(gvar);
+					o->values = g_slist_append(o->values, gvar);
+				} else if (PyFloat_Check(py_default)) {
+					/* Float */
+					if ((dval = PyFloat_AsDouble(py_default)) == -1.0) {
+						PyErr_Clear();
+						srd_err("Protocol decoder %s option 'default' has "
+								"invalid default value.", d->name);
+						return SRD_ERR_PYTHON;
+					}
+					gvar = g_variant_new_double(dval);
+					g_variant_ref_sink(gvar);
+					o->values = g_slist_append(o->values, gvar);
+				}
+			}
+		}
 		d->options = g_slist_append(d->options, o);
-		g_free(key);
-		key = NULL;
 	}
-	Py_DecRef(py_keys);
-	Py_DecRef(py_values);
 
-	ret = SRD_OK;
-
-err_out:
-	Py_XDECREF(py_opts);
-	g_free(key);
-
-	return ret;
+	return SRD_OK;
 }
 
 /**
@@ -338,6 +384,23 @@ SRD_API int srd_decoder_load(const char *module_name)
 	}
 	Py_CLEAR(py_method);
 
+	/* Store required fields in newly allocated strings. */
+	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
+		goto err_out;
+
+	if (py_attr_as_str(d->py_dec, "name", &(d->name)) != SRD_OK)
+		goto err_out;
+
+	if (py_attr_as_str(d->py_dec, "longname", &(d->longname)) != SRD_OK)
+		goto err_out;
+
+	if (py_attr_as_str(d->py_dec, "desc", &(d->desc)) != SRD_OK)
+		goto err_out;
+
+	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK)
+		goto err_out;
+
+	/* All options and their default values. */
 	if (get_options(d) != SRD_OK)
 		goto err_out;
 
@@ -361,22 +424,6 @@ SRD_API int srd_decoder_load(const char *module_name)
 		p = l->data;
 		p->order += g_slist_length(d->probes);
 	}
-
-	/* Store required fields in newly allocated strings. */
-	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
-		goto err_out;
-
-	if (py_attr_as_str(d->py_dec, "name", &(d->name)) != SRD_OK)
-		goto err_out;
-
-	if (py_attr_as_str(d->py_dec, "longname", &(d->longname)) != SRD_OK)
-		goto err_out;
-
-	if (py_attr_as_str(d->py_dec, "desc", &(d->desc)) != SRD_OK)
-		goto err_out;
-
-	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK)
-		goto err_out;
 
 	/* Convert annotation class attribute to GSList of char **. */
 	d->annotations = NULL;

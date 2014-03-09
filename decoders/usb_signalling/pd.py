@@ -80,9 +80,10 @@ class Decoder(srd.Decoder):
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
     ]
     optional_probes = []
-    options = {
-        'signalling': ['Signalling', 'full-speed'],
-    }
+    options = (
+        {'id': 'signalling', 'desc': 'Signalling',
+            'default': 'full-speed', 'values': ('full-speed', 'low-speed')},
+    )
     annotations = [
         ['sym', 'Symbol'],
         ['sop', 'Start of packet (SOP)'],

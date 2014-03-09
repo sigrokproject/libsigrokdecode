@@ -33,10 +33,10 @@ class Decoder(srd.Decoder):
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},
     ]
     optional_probes = []
-    options = {
-        'bitrate': ['Bitrate', 1000000], # 1Mbit/s
-        'sample_point': ['Sample point', 70], # 70%
-    }
+    options = (
+        {'id': 'bitrate', 'desc': 'Bitrate', 'default': 1000000}, # 1Mbit/s
+        {'id': 'sample_point', 'desc': 'Sample point', 'default': 70}, # 70%
+    )
     annotations = [
         ['data', 'CAN payload data'],
         ['sof', 'Start of frame'],

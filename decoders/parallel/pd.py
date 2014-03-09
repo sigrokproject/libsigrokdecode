@@ -72,12 +72,14 @@ class Decoder(srd.Decoder):
     outputs = ['parallel']
     probes = []
     optional_probes = probe_list(8)
-    options = {
-        'clock_edge': ['Clock edge to sample on', 'rising'],
-        'wordsize': ['Word size of the data', 1],
-        'endianness': ['Endianness of the data', 'little'],
-        'format': ['Data format', 'hex'],
-    }
+    options = (
+        {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
+            'default': 'rising', 'values': ('rising', 'falling')},
+        {'id': 'wordsize', 'desc': 'Word size of the data',
+            'default': 1},
+        {'id': 'endianness', 'desc': 'Endianness of the data',
+            'default': 'little', 'values': ('little', 'big')},
+    )
     annotations = [
         ['items', 'Items'],
         ['words', 'Words'],

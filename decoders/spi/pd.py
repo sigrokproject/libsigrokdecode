@@ -77,14 +77,17 @@ class Decoder(srd.Decoder):
         {'id': 'mosi', 'name': 'MOSI', 'desc': 'Master out, slave in'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},
     ]
-    options = {
-        'cs_polarity': ['CS# polarity', 'active-low'],
-        'cpol': ['Clock polarity', 0],
-        'cpha': ['Clock phase', 0],
-        'bitorder': ['Bit order within the SPI data', 'msb-first'],
-        'wordsize': ['Word size of SPI data', 8], # 1-64?
-        'format': ['Data format', 'hex'],
-    }
+    options = (
+        {'id': 'cs_polarity', 'desc': 'CS# polarity', 'default': 'active-low',
+            'values': ('active-low', 'active-high')},
+        {'id': 'cpol', 'desc': 'Clock polarity', 'default': 0,
+            'values': (0, 1)},
+        {'id': 'cpha', 'desc': 'Clock phase', 'default': 0,
+            'values': (0, 1)},
+        {'id': 'bitorder', 'desc': 'Bit order within the SPI data',
+            'default': 'msb-first', 'values': ('msb-first', 'lsb-first')},
+        {'id': 'wordsize', 'desc': 'Word size of SPI data', 'default': 8},
+    )
     annotations = [
         ['miso-data', 'MISO data'],
         ['mosi-data', 'MOSI data'],

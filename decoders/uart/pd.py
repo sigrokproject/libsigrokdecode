@@ -85,16 +85,22 @@ class Decoder(srd.Decoder):
         {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
     ]
-    options = {
-        'baudrate': ['Baud rate', 115200],
-        'num_data_bits': ['Data bits', 8], # Valid: 5-9.
-        'parity_type': ['Parity type', 'none'],
-        'parity_check': ['Check parity?', 'yes'], # TODO: Bool supported?
-        'num_stop_bits': ['Stop bit(s)', '1'], # String! 0, 0.5, 1, 1.5.
-        'bit_order': ['Bit order', 'lsb-first'],
-        'format': ['Data format', 'ascii'], # ascii/dec/hex/oct/bin
+    options = (
+        {'id': 'baudrate', 'desc': 'Baud rate', 'default': 115200},
+        {'id': 'num_data_bits', 'desc': 'Data bits', 'default': 8,
+            'values': (5, 6, 7, 8, 9)},
+        {'id': 'parity_type', 'desc': 'Parity type', 'default': 'none',
+            'values': ('none', 'odd', 'even', 'zero', 'one')},
+        {'id': 'parity_check', 'desc': 'Check parity?', 'default': 'yes',
+            'values': ('yes', 'no')},
+        {'id': 'num_stop_bits', 'desc': 'Stop bits', 'default': 1.0,
+            'values': (0.0, 0.5, 1.0, 1.5)},
+        {'id': 'bit_order', 'desc': 'Bit order', 'default': 'lsb-first',
+            'values': ('lsb-first', 'msb-first')},
+        {'id': 'format', 'desc': 'Data format', 'default': 'ascii',
+            'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
         # TODO: Options to invert the signal(s).
-    }
+    )
     annotations = [
         ['rx-data', 'RX data'],
         ['tx-data', 'TX data'],

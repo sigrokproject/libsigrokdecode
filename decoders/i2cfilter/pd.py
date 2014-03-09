@@ -33,10 +33,12 @@ class Decoder(srd.Decoder):
     outputs = ['i2c']
     probes = []
     optional_probes = []
-    options = {
-        'address': ['Address to filter out of the I²C stream', 0],
-        'direction': ['Direction to filter (read/write/both)', 'both']
-    }
+    options = (
+        {'id': 'address', 'desc': 'Address to filter out of the I²C stream',
+            'default': 0},
+        {'id': 'direction', 'desc': 'Direction to filter', 'default': 'both',
+            'values': ('read', 'write', 'both')}
+    )
     annotations = []
 
     def __init__(self, **kwargs):

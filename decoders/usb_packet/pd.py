@@ -153,9 +153,9 @@ class Decoder(srd.Decoder):
     outputs = ['usb_packet']
     probes = []
     optional_probes = []
-    options = {
-        'signalling': ['Signalling', 'full-speed'],
-    }
+    options = (
+        {'id': 'signalling', 'desc': 'Signalling', 'default': 'full-speed'},
+    )
     annotations = [
         ['sync-ok', 'SYNC'],
         ['sync-err', 'SYNC (error)'],

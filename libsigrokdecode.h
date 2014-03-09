@@ -209,6 +209,7 @@ struct srd_decoder_option {
 	char *id;
 	char *desc;
 	GVariant *def;
+    GSList *values;
 };
 
 struct srd_decoder_annotation_row {

@@ -35,19 +35,36 @@ class Decoder(srd.Decoder):
     optional_probes = [
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power supply pin'},
     ]
-    options = {
-        'overdrive': ['Overdrive mode', 'no'],
+    options = (
+        {'id': 'overdrive',
+            'desc': 'Overdrive mode',
+            'default': 'no'},
         # Time options (specified in microseconds):
-        'cnt_normal_bit': ['Normal mode sample bit time (µs)', 15],
-        'cnt_normal_slot': ['Normal mode data slot time (µs)', 60],
-        'cnt_normal_presence': ['Normal mode sample presence time (µs)', 75],
-        'cnt_normal_reset': ['Normal mode reset time (µs)', 480],
-        'cnt_overdrive_bit': ['Overdrive mode sample bit time (µs)', 2],
-        # 'cnt_overdrive_slot': ['Overdrive mode data slot time (µs)', 7.3],
-        'cnt_overdrive_slot': ['Overdrive mode data slot time (µs)', 7],
-        'cnt_overdrive_presence': ['Overdrive mode sample presence time (µs)', 10],
-        'cnt_overdrive_reset': ['Overdrive mode reset time (µs)', 48],
-    }
+        {'id': 'cnt_normal_bit',
+            'desc': 'Normal mode sample bit time (μs)',
+            'default': 15},
+        {'id': 'cnt_normal_slot',
+            'desc': 'Normal mode data slot time (μs)',
+            'default': 60},
+        {'id': 'cnt_normal_presence',
+            'desc': 'Normal mode sample presence time (μs)',
+            'default': 75},
+        {'id': 'cnt_normal_reset',
+            'desc': 'Normal mode reset time (μs)',
+            'default': 480},
+        {'id': 'cnt_overdrive_bit',
+            'desc': 'Overdrive mode sample bit time (μs)',
+            'default': 2},
+        {'id': 'cnt_overdrive_slot',
+            'desc': 'Overdrive mode data slot time (μs)',
+            'default': 7.3},
+        {'id': 'cnt_overdrive_presence',
+            'desc': 'Overdrive mode sample presence time (μs)',
+            'default': 10},
+        {'id': 'cnt_overdrive_reset',
+            'desc': 'Overdrive mode reset time (μs)',
+            'default': 48},
+    )
     annotations = [
         ['bit', 'Bit'],
         ['warnings', 'Warnings'],

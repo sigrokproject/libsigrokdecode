@@ -64,15 +64,14 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options)
 {
-	PyObject *py_dec_options, *py_dec_optkeys, *py_di_options, *py_optval;
-	PyObject *py_optlist, *py_classval;
-	Py_UNICODE *py_ustr;
+    struct srd_decoder_option *sdo;
+	PyObject *py_di_options, *py_optval;
 	GVariant *value;
-	unsigned long long int val_ull;
+    GSList *l;
+    double val_double;
 	gint64 val_int;
-	int num_optkeys, ret, size, i;
+	int ret;
 	const char *val_str;
-	char *dbg, *key;
 
 	if (!di) {
 		srd_err("Invalid decoder instance.");
@@ -97,17 +96,10 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	}
 
 	ret = SRD_ERR_PYTHON;
-	key = NULL;
-	py_dec_options = py_dec_optkeys = py_di_options = py_optval = NULL;
-	py_optlist = py_classval = NULL;
-	py_dec_options = PyObject_GetAttrString(di->decoder->py_dec, "options");
-
-	/* All of these are synthesized objects, so they're good. */
-	py_dec_optkeys = PyDict_Keys(py_dec_options);
-	num_optkeys = PyList_Size(py_dec_optkeys);
+    py_optval = NULL;
 
 	/*
-	 * The 'options' dictionary is a class variable, but we need to
+	 * The 'options' tuple is a class variable, but we need to
 	 * change it. Changing it directly will affect the entire class,
 	 * so we need to create a new object for it, and populate that
 	 * instead.
@@ -117,89 +109,58 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	Py_DECREF(py_di_options);
 	py_di_options = PyDict_New();
 	PyObject_SetAttrString(di->py_inst, "options", py_di_options);
-	for (i = 0; i < num_optkeys; i++) {
-		/* Get the default class value for this option. */
-		py_str_as_str(PyList_GetItem(py_dec_optkeys, i), &key);
-		if (!(py_optlist = PyDict_GetItemString(py_dec_options, key)))
-			goto err_out;
-		if (!(py_classval = PyList_GetItem(py_optlist, 1)))
-			goto err_out;
-		if (!PyUnicode_Check(py_classval) && !PyLong_Check(py_classval)) {
-			srd_err("Options of type %s are not yet supported.",
-				Py_TYPE(py_classval)->tp_name);
-			goto err_out;
-		}
 
-		if ((value = g_hash_table_lookup(options, key))) {
-			dbg = g_variant_print(value, TRUE);
-			srd_dbg("got option '%s' = %s", key, dbg);
-			g_free(dbg);
-			/* An override for this option was provided. */
-			if (PyUnicode_Check(py_classval)) {
-				if (!g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
-					srd_err("Option '%s' requires a string value.", key);
-					goto err_out;
-				}
-				val_str = g_variant_get_string(value, NULL);
-				if (!(py_optval = PyUnicode_FromString(val_str))) {
-					/* Some UTF-8 encoding error. */
-					PyErr_Clear();
-					srd_err("Option '%s' requires a UTF-8 string value.", key);
-					goto err_out;
-				}
-			} else if (PyLong_Check(py_classval)) {
-				if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
-					srd_err("Option '%s' requires an integer value.", key);
-					goto err_out;
-				}
-				val_int = g_variant_get_int64(value);
-				if (!(py_optval = PyLong_FromLong(val_int))) {
-					/* ValueError Exception */
-					PyErr_Clear();
-					srd_err("Option '%s' has invalid integer value.", key);
-					goto err_out;
-				}
-			}
-			g_hash_table_remove(options, key);
-		} else {
-			/* Use the class default for this option. */
-			if (PyUnicode_Check(py_classval)) {
-				/* Make a brand new copy of the string. */
-				py_ustr = PyUnicode_AS_UNICODE(py_classval);
-				size = PyUnicode_GET_SIZE(py_classval);
-				py_optval = PyUnicode_FromUnicode(py_ustr, size);
-			} else if (PyLong_Check(py_classval)) {
-				/* Make a brand new copy of the integer. */
-				val_ull = PyLong_AsUnsignedLongLong(py_classval);
-				if (val_ull == (unsigned long long)-1) {
-					/* OverFlowError exception */
-					PyErr_Clear();
-					srd_err("Invalid integer value for %s: "
-						"expected integer.", key);
-					goto err_out;
-				}
-				if (!(py_optval = PyLong_FromUnsignedLongLong(val_ull)))
-					goto err_out;
-			}
-		}
-
-		/*
-		 * If we got here, py_optval holds a known good new reference
-		 * to the instance option to set.
-		 */
-		if (PyDict_SetItemString(py_di_options, key, py_optval) == -1)
+    for (l = di->decoder->options; l; l = l->next) {
+        sdo = l->data;
+        if ((value = g_hash_table_lookup(options, sdo->id))) {
+            /* A value was supplied for this option. */
+            if (!g_variant_type_equal(g_variant_get_type(value),
+                    g_variant_get_type(sdo->def))) {
+                srd_err("Option '%s' should have the same type "
+                        "as the default value.", sdo->id);
+                goto err_out;
+            }
+        } else {
+            /* Use default for this option. */
+            value = sdo->def;
+        }
+        if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
+            val_str = g_variant_get_string(value, NULL);
+            if (!(py_optval = PyUnicode_FromString(val_str))) {
+                /* Some UTF-8 encoding error. */
+                PyErr_Clear();
+                srd_err("Option '%s' requires a UTF-8 string value.", sdo->id);
+                goto err_out;
+            }
+        } else if (g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
+            val_int = g_variant_get_int64(value);
+            if (!(py_optval = PyLong_FromLong(val_int))) {
+                /* ValueError Exception */
+                PyErr_Clear();
+                srd_err("Option '%s' has invalid integer value.", sdo->id);
+                goto err_out;
+            }
+        } else if (g_variant_is_of_type(value, G_VARIANT_TYPE_DOUBLE)) {
+            val_double = g_variant_get_int64(value);
+            if (!(py_optval = PyFloat_FromDouble(val_double))) {
+                /* ValueError Exception */
+                PyErr_Clear();
+                srd_err("Option '%s' has invalid float value.", sdo->id);
+                goto err_out;
+            }
+        }
+		if (PyDict_SetItemString(py_di_options, sdo->id, py_optval) == -1)
 			goto err_out;
-		g_free(key);
-		key = NULL;
-	}
+        /* Not harmful even if we used the default. */
+        g_hash_table_remove(options, sdo->id);
+    }
+    if (g_hash_table_size(options) != 0)
+        srd_warn("Unknown options specified for '%s'", di->inst_id);
 
 	ret = SRD_OK;
 
 err_out:
-	Py_XDECREF(py_di_options);
-	Py_XDECREF(py_dec_optkeys);
-	Py_XDECREF(py_dec_options);
-	g_free(key);
+	Py_XDECREF(py_optval);
 	if (PyErr_Occurred()) {
 		srd_exception_catch("Stray exception in srd_inst_option_set().");
 		ret = SRD_ERR_PYTHON;

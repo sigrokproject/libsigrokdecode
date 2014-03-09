@@ -77,9 +77,10 @@ class Decoder(srd.Decoder):
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
     ]
     optional_probes = []
-    options = {
-        'address_format': ['Displayed slave address format', 'shifted'],
-    }
+    options = (
+        {'id': 'address_format', 'desc': 'Displayed slave address format',
+            'default': 'shifted', 'values': ('shifted', 'unshifted')},
+    )
     annotations = [
         ['start', 'Start condition'],
         ['repeat-start', 'Repeat start condition'],
