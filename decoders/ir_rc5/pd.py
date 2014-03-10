@@ -34,10 +34,12 @@ class Decoder(srd.Decoder):
         {'id': 'ir', 'name': 'IR', 'desc': 'IR data line'},
     ]
     optional_probes = []
-    options = {
-        'polarity': ['Polarity', 'active-low'],
-        'protocol': ['Protocol type', 'standard'],
-    }
+    options = (
+        {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
+            'values': ('active-low', 'active-high')},
+        {'id': 'protocol', 'desc': 'Protocol type', 'default': 'standard',
+            'values': ('standard', 'extended')},
+    )
     annotations = [
         ['bit', 'Bit'],
         ['startbit1', 'Startbit 1'],
