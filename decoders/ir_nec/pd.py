@@ -30,28 +30,28 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ir_nec']
-    probes = [
+    probes = (
         {'id': 'ir', 'name': 'IR', 'desc': 'Data line'},
-    ]
-    optional_probes = []
-    options = {
-        'polarity': ['Polarity', 'active-low'],
-    }
-    annotations = [
-        ['bit', 'Bit'],
-        ['agc-pulse', 'AGC pulse'],
-        ['longpause', 'Long pause'],
-        ['shortpause', 'Short pause'],
-        ['stop-bit', 'Stop bit'],
-        ['leader-code', 'Leader code'],
-        ['addr', 'Address'],
-        ['addr-inv', 'Address#'],
-        ['cmd', 'Command'],
-        ['cmd-inv', 'Command#'],
-        ['repeat-code', 'Repeat code'],
-        ['remote', 'Remote'],
-        ['warnings', 'Warnings'],
-    ]
+    )
+    options = (
+        {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
+            'values': ('active-low', 'active-high')},
+    )
+    annotations = (
+        ('bit', 'Bit'),
+        ('agc-pulse', 'AGC pulse'),
+        ('longpause', 'Long pause'),
+        ('shortpause', 'Short pause'),
+        ('stop-bit', 'Stop bit'),
+        ('leader-code', 'Leader code'),
+        ('addr', 'Address'),
+        ('addr-inv', 'Address#'),
+        ('cmd', 'Command'),
+        ('cmd-inv', 'Command#'),
+        ('repeat-code', 'Repeat code'),
+        ('remote', 'Remote'),
+        ('warnings', 'Warnings'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3, 4)),
         ('fields', 'Fields', (5, 6, 7, 8, 9, 10)),
