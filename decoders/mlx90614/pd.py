@@ -29,10 +29,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mlx90614']
-    annotations = [
-        ['celsius', 'Temperature in degrees Celsius'],
-        ['kelvin', 'Temperature in Kelvin'],
-    ]
+    annotations = (
+        ('celsius', 'Temperature in degrees Celsius'),
+        ('kelvin', 'Temperature in Kelvin'),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IGNORE START REPEAT'

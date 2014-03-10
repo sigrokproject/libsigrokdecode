@@ -104,15 +104,15 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['lpc']
-    probes = [
+    probes = (
         {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'Frame'},
         {'id': 'lclk',   'name': 'LCLK',    'desc': 'Clock'},
         {'id': 'lad0',   'name': 'LAD[0]',  'desc': 'Addr/control/data 0'},
         {'id': 'lad1',   'name': 'LAD[1]',  'desc': 'Addr/control/data 1'},
         {'id': 'lad2',   'name': 'LAD[2]',  'desc': 'Addr/control/data 2'},
         {'id': 'lad3',   'name': 'LAD[3]',  'desc': 'Addr/control/data 3'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'lreset', 'name': 'LRESET#', 'desc': 'Reset'},
         {'id': 'ldrq',   'name': 'LDRQ#',   'desc': 'Encoded DMA / bus master request'},
         {'id': 'serirq', 'name': 'SERIRQ',  'desc': 'Serialized IRQ'},
@@ -120,17 +120,17 @@ class Decoder(srd.Decoder):
         {'id': 'lpme',   'name': 'LPME#',   'desc': 'LPC power management event'},
         {'id': 'lpcpd',  'name': 'LPCPD#',  'desc': 'Power down'},
         {'id': 'lsmi',   'name': 'LSMI#',   'desc': 'System Management Interrupt'},
-    ]
-    annotations = [
-        ['warnings', 'Warnings'],
-        ['start', 'Start'],
-        ['cycle-type', 'Cycle-type/direction'],
-        ['addr', 'Address'],
-        ['tar1', 'Turn-around cycle 1'],
-        ['sync', 'Sync'],
-        ['data', 'Data'],
-        ['tar2', 'Turn-around cycle 2'],
-    ]
+    )
+    annotations = (
+        ('warnings', 'Warnings'),
+        ('start', 'Start'),
+        ('cycle-type', 'Cycle-type/direction'),
+        ('addr', 'Address'),
+        ('tar1', 'Turn-around cycle 1'),
+        ('sync', 'Sync'),
+        ('data', 'Data'),
+        ('tar2', 'Turn-around cycle 2'),
+    )
     annotation_rows = (
         ('data', 'Data', (1, 2, 3, 4, 5, 6, 7)),
         ('warnings', 'Warnings', (0,)),

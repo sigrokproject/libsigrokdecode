@@ -75,21 +75,21 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb_signalling']
-    probes = [
+    probes = (
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
-    ]
+    )
     options = (
         {'id': 'signalling', 'desc': 'Signalling',
             'default': 'full-speed', 'values': ('full-speed', 'low-speed')},
     )
-    annotations = [
-        ['sym', 'Symbol'],
-        ['sop', 'Start of packet (SOP)'],
-        ['eop', 'End of packet (EOP)'],
-        ['bit', 'Bit'],
-        ['stuffbit', 'Stuff bit'],
-    ]
+    annotations = (
+        ('sym', 'Symbol'),
+        ('sop', 'Start of packet (SOP)'),
+        ('eop', 'End of packet (EOP)'),
+        ('bit', 'Bit'),
+        ('stuffbit', 'Stuff bit'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (1, 2, 3, 4)),
         ('symbols', 'Symbols', (0,)),

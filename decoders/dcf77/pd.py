@@ -34,31 +34,31 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dcf77']
-    probes = [
+    probes = (
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},
-    ]
-    annotations = [
-        ['start-of-minute', 'Start of minute'],
-        ['special-bits', 'Special bits (civil warnings, weather forecast)'],
-        ['call-bit', 'Call bit'],
-        ['summer-time', 'Summer time announcement'],
-        ['cest', 'CEST bit'],
-        ['cet', 'CET bit'],
-        ['leap-second', 'Leap second bit'],
-        ['start-of-time', 'Start of encoded time'],
-        ['minute', 'Minute'],
-        ['minute-parity', 'Minute parity bit'],
-        ['hour', 'Hour'],
-        ['hour-parity', 'Hour parity bit'],
-        ['day', 'Day of month'],
-        ['day-of-week', 'Day of week'],
-        ['month', 'Month'],
-        ['year', 'Year'],
-        ['date-parity', 'Date parity bit'],
-        ['raw-bits', 'Raw bits'],
-        ['unknown-bits', 'Unknown bits'],
-        ['warnings', 'Human-readable warnings'],
-    ]
+    )
+    annotations = (
+        ('start-of-minute', 'Start of minute'),
+        ('special-bits', 'Special bits (civil warnings, weather forecast)'),
+        ('call-bit', 'Call bit'),
+        ('summer-time', 'Summer time announcement'),
+        ('cest', 'CEST bit'),
+        ('cet', 'CET bit'),
+        ('leap-second', 'Leap second bit'),
+        ('start-of-time', 'Start of encoded time'),
+        ('minute', 'Minute'),
+        ('minute-parity', 'Minute parity bit'),
+        ('hour', 'Hour'),
+        ('hour-parity', 'Hour parity bit'),
+        ('day', 'Day of month'),
+        ('day-of-week', 'Day of week'),
+        ('month', 'Month'),
+        ('year', 'Year'),
+        ('date-parity', 'Date parity bit'),
+        ('raw-bits', 'Raw bits'),
+        ('unknown-bits', 'Unknown bits'),
+        ('warnings', 'Human-readable warnings'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (17, 18)),
         ('fields', 'Fields', tuple(range(0, 16 + 1))),

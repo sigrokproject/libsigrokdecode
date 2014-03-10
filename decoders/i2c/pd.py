@@ -72,27 +72,27 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']
-    probes = [
+    probes = (
         {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},
-    ]
+    )
     options = (
         {'id': 'address_format', 'desc': 'Displayed slave address format',
             'default': 'shifted', 'values': ('shifted', 'unshifted')},
     )
-    annotations = [
-        ['start', 'Start condition'],
-        ['repeat-start', 'Repeat start condition'],
-        ['stop', 'Stop condition'],
-        ['ack', 'ACK'],
-        ['nack', 'NACK'],
-        ['bit', 'Data/address bit'],
-        ['address-read', 'Address read'],
-        ['address-write', 'Address write'],
-        ['data-read', 'Data read'],
-        ['data-write', 'Data write'],
-        ['warnings', 'Human-readable warnings'],
-    ]
+    annotations = (
+        ('start', 'Start condition'),
+        ('repeat-start', 'Repeat start condition'),
+        ('stop', 'Stop condition'),
+        ('ack', 'ACK'),
+        ('nack', 'NACK'),
+        ('bit', 'Data/address bit'),
+        ('address-read', 'Address read'),
+        ('address-write', 'Address write'),
+        ('data-read', 'Data read'),
+        ('data-write', 'Data write'),
+        ('warnings', 'Human-readable warnings'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (5,)),
         ('addr-data', 'Address/Data', (0, 1, 2, 3, 4, 6, 7, 8, 9)),

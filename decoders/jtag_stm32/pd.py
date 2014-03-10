@@ -127,9 +127,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['jtag']
     outputs = ['jtag_stm32']
-    annotations = [
-        ['text', 'Human-readable text'],
-    ]
+    annotations = (
+        ('text', 'Human-readable text'),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'

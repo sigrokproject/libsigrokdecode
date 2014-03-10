@@ -69,14 +69,14 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']
-    probes = [
+    probes = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'miso', 'name': 'MISO', 'desc': 'Master in, slave out'},
         {'id': 'mosi', 'name': 'MOSI', 'desc': 'Master out, slave in'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},
-    ]
+    )
     options = (
         {'id': 'cs_polarity', 'desc': 'CS# polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
@@ -88,13 +88,13 @@ class Decoder(srd.Decoder):
             'default': 'msb-first', 'values': ('msb-first', 'lsb-first')},
         {'id': 'wordsize', 'desc': 'Word size of SPI data', 'default': 8},
     )
-    annotations = [
-        ['miso-data', 'MISO data'],
-        ['mosi-data', 'MOSI data'],
-        ['miso-bits', 'MISO bits'],
-        ['mosi-bits', 'MOSI bits'],
-        ['warnings', 'Human-readable warnings'],
-    ]
+    annotations = (
+        ('miso-data', 'MISO data'),
+        ('mosi-data', 'MOSI data'),
+        ('miso-bits', 'MISO bits'),
+        ('mosi-bits', 'MOSI bits'),
+        ('warnings', 'Human-readable warnings'),
+    )
     annotation_rows = (
         ('miso-data', 'MISO data', (0,)),
         ('miso-bits', 'MISO bits', (2,)),

@@ -42,16 +42,16 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2s']
-    probes = [
+    probes = (
         {'id': 'sck', 'name': 'SCK', 'desc': 'Bit clock line'},
         {'id': 'ws', 'name': 'WS', 'desc': 'Word select line'},
         {'id': 'sd', 'name': 'SD', 'desc': 'Serial data line'},
-    ]
-    annotations = [
-        ['left', 'Left channel'],
-        ['right', 'Right channel'],
-        ['warnings', 'Warnings'],
-    ]
+    )
+    annotations = (
+        ('left', 'Left channel'),
+        ('right', 'Right channel'),
+        ('warnings', 'Warnings'),
+    )
     binary = (
         ('wav', 'WAV file'),
     )

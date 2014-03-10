@@ -62,18 +62,18 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['jtag']
-    probes = [
+    probes = (
         {'id': 'tdi',  'name': 'TDI',  'desc': 'Test data input'},
         {'id': 'tdo',  'name': 'TDO',  'desc': 'Test data output'},
         {'id': 'tck',  'name': 'TCK',  'desc': 'Test clock'},
         {'id': 'tms',  'name': 'TMS',  'desc': 'Test mode select'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
         {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
-    ]
-    annotations = [[s.lower(), s] for s in jtag_states]
+    )
+    annotations = tuple([tuple([s.lower(), s]) for s in jtag_states])
 
     def __init__(self, **kwargs):
         # self.state = 'TEST-LOGIC-RESET'

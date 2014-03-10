@@ -59,7 +59,7 @@ def probe_list(num_probes):
     for i in range(num_probes):
         d = {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data line %d' % i}
         l.append(d)
-    return l
+    return tuple(l)
 
 class Decoder(srd.Decoder):
     api_version = 1
@@ -79,10 +79,10 @@ class Decoder(srd.Decoder):
         {'id': 'endianness', 'desc': 'Endianness of the data',
             'default': 'little', 'values': ('little', 'big')},
     )
-    annotations = [
-        ['items', 'Items'],
-        ['words', 'Words'],
-    ]
+    annotations = (
+        ('items', 'Items'),
+        ('words', 'Words'),
+    )
 
     def __init__(self):
         self.oldclk = None

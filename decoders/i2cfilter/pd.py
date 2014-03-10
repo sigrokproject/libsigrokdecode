@@ -37,7 +37,6 @@ class Decoder(srd.Decoder):
         {'id': 'direction', 'desc': 'Direction to filter', 'default': 'both',
             'values': ('read', 'write', 'both')}
     )
-    annotations = []
 
     def __init__(self, **kwargs):
         self.state = None

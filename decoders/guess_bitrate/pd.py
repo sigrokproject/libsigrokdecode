@@ -29,12 +29,12 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['guess_bitrate']
-    probes = [
+    probes = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
-    ]
-    annotations = [
-        ['bitrate', 'Bitrate / baudrate'],
-    ]
+    )
+    annotations = (
+        ('bitrate', 'Bitrate / baudrate'),
+    )
 
     def putx(self, data):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)

@@ -44,15 +44,15 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['onewire_network']
     outputs = ['maxim_ds28ea00']
-    optional_probes = [
+    optional_probes = (
         {'id': 'pioa', 'name': 'PIOA/DONE#',
          'desc': 'PIOA channel and chain output'},
         {'id': 'piob', 'name': 'PIOB/EN#',
          'desc': 'PIOB channel and chain output'},
-    ]
-    annotations = [
-        ['text', 'Human-readable text'],
-    ]
+    )
+    annotations = (
+        ('text', 'Human-readable text'),
+    )
 
     def __init__(self, **kwargs):
         self.trn_beg = 0

@@ -81,10 +81,10 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['edid']
-    annotations = [
-        ['fields', 'EDID structure fields'],
-        ['sections', 'EDID structure sections'],
-    ]
+    annotations = (
+        ('fields', 'EDID structure fields'),
+        ('sections', 'EDID structure sections'),
+    )
 
     def __init__(self, **kwargs):
         self.state = None

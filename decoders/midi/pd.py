@@ -33,9 +33,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['midi']
-    annotations = [
-        ['text-verbose', 'Human-readable text (verbose)'],
-    ]
+    annotations = (
+        ('text-verbose', 'Human-readable text (verbose)'),
+    )
 
     def __init__(self, **kwargs):
         self.cmd = []

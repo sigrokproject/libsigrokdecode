@@ -32,21 +32,21 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi', 'logic']
     outputs = ['avr_isp']
-    optional_probes = [
+    optional_probes = (
         {'id': 'reset', 'name': 'RESET#', 'desc': 'Target AVR MCU reset'},
-    ]
-    annotations = [
-        ['pe', 'Programming enable'],
-        ['rsb0', 'Read signature byte 0'],
-        ['rsb1', 'Read signature byte 1'],
-        ['rsb2', 'Read signature byte 2'],
-        ['ce', 'Chip erase'],
-        ['rfb', 'Read fuse bits'],
-        ['rhfb', 'Read high fuse bits'],
-        ['refb', 'Read extended fuse bits'],
-        ['warnings', 'Warnings'],
-        ['dev', 'Device'],
-    ]
+    )
+    annotations = (
+        ('pe', 'Programming enable'),
+        ('rsb0', 'Read signature byte 0'),
+        ('rsb1', 'Read signature byte 1'),
+        ('rsb2', 'Read signature byte 2'),
+        ('ce', 'Chip erase'),
+        ('rfb', 'Read fuse bits'),
+        ('rhfb', 'Read high fuse bits'),
+        ('refb', 'Read extended fuse bits'),
+        ('warnings', 'Warnings'),
+        ('dev', 'Device'),
+    )
     annotation_rows = (
         ('bits', 'Bits', ()),
         ('commands', 'Commands', tuple(range(7 + 1))),

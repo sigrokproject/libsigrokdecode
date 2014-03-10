@@ -41,9 +41,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['onewire_link']
     outputs = ['onewire_network']
-    annotations = [
-        ['text', 'Human-readable text'],
-    ]
+    annotations = (
+        ('text', 'Human-readable text'),
+    )
 
     def __init__(self, **kwargs):
         self.beg = 0

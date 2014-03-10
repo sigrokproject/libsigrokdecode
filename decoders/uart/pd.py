@@ -78,12 +78,12 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']
-    optional_probes = [
+    optional_probes = (
         # Allow specifying only one of the signals, e.g. if only one data
         # direction exists (or is relevant).
         {'id': 'rx', 'name': 'RX', 'desc': 'UART receive line'},
         {'id': 'tx', 'name': 'TX', 'desc': 'UART transmit line'},
-    ]
+    )
     options = (
         {'id': 'baudrate', 'desc': 'Baud rate', 'default': 115200},
         {'id': 'num_data_bits', 'desc': 'Data bits', 'default': 8,
@@ -100,22 +100,22 @@ class Decoder(srd.Decoder):
             'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
         # TODO: Options to invert the signal(s).
     )
-    annotations = [
-        ['rx-data', 'RX data'],
-        ['tx-data', 'TX data'],
-        ['rx-start', 'RX start bits'],
-        ['tx-start', 'TX start bits'],
-        ['rx-parity-ok', 'RX parity OK bits'],
-        ['tx-parity-ok', 'TX parity OK bits'],
-        ['rx-parity-err', 'RX parity error bits'],
-        ['tx-parity-err', 'TX parity error bits'],
-        ['rx-stop', 'RX stop bits'],
-        ['tx-stop', 'TX stop bits'],
-        ['rx-warnings', 'RX warnings'],
-        ['tx-warnings', 'TX warnings'],
-        ['rx-data-bits', 'RX data bits'],
-        ['tx-data-bits', 'TX data bits'],
-    ]
+    annotations = (
+        ('rx-data', 'RX data'),
+        ('tx-data', 'TX data'),
+        ('rx-start', 'RX start bits'),
+        ('tx-start', 'TX start bits'),
+        ('rx-parity-ok', 'RX parity OK bits'),
+        ('tx-parity-ok', 'TX parity OK bits'),
+        ('rx-parity-err', 'RX parity error bits'),
+        ('tx-parity-err', 'TX parity error bits'),
+        ('rx-stop', 'RX stop bits'),
+        ('tx-stop', 'TX stop bits'),
+        ('rx-warnings', 'RX warnings'),
+        ('tx-warnings', 'TX warnings'),
+        ('rx-data-bits', 'RX data bits'),
+        ('tx-data-bits', 'TX data bits'),
+    )
     annotation_rows = (
         ('rx-data', 'RX', (0, 2, 4, 6, 8)),
         ('rx-data-bits', 'RX bits', (12,)),

@@ -29,7 +29,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
-    annotations = []
 
     def __init__(self, **kwargs):
         self.packets = [] # Local cache of I²C packets

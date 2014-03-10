@@ -72,32 +72,36 @@ class Decoder(srd.Decoder):
     license  = 'gplv2+'
     inputs   = ['logic']
     outputs  = ['z80']
-    probes = [
-        {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data bus line %d' % i}
-            for i in range(8)
-    ] + [
+    probes = tuple({
+            'id': 'd%d' % i,
+            'name': 'D%d' % i,
+            'desc': 'Data bus line %d' % i
+            } for i in range(8)
+    ) + (
         {'id': 'm1', 'name': '/M1', 'desc': 'Machine cycle 1'},
         {'id': 'rd', 'name': '/RD', 'desc': 'Memory or I/O read'},
         {'id': 'wr', 'name': '/WR', 'desc': 'Memory or I/O write'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'mreq', 'name': '/MREQ', 'desc': 'Memory request'},
         {'id': 'iorq', 'name': '/IORQ', 'desc': 'I/O request'},
-    ] + [
-        {'id': 'a%d' % i, 'name': 'A%d' % i, 'desc': 'Address bus line %d' % i}
-            for i in range(16)
-    ]
-    annotations = [
-        ['addr',  'Memory or I/O address'],
-        ['memrd', 'Byte read from memory'],
-        ['memwr', 'Byte written to memory'],
-        ['iord',  'Byte read from I/O port'],
-        ['iowr',  'Byte written to I/O port'],
-        ['instr', 'Z80 CPU instruction'],
-        ['rop',   'Value of input operand'],
-        ['wop',   'Value of output operand'],
-        ['warn',  'Warning message'],
-    ]
+    ) + tuple({
+        'id': 'a%d' % i,
+        'name': 'A%d' % i,
+        'desc': 'Address bus line %d' % i
+        } for i in range(16)
+    )
+    annotations = (
+        ('addr',  'Memory or I/O address'),
+        ('memrd', 'Byte read from memory'),
+        ('memwr', 'Byte written to memory'),
+        ('iord',  'Byte read from I/O port'),
+        ('iowr',  'Byte written to I/O port'),
+        ('instr', 'Z80 CPU instruction'),
+        ('rop',   'Value of input operand'),
+        ('wop',   'Value of output operand'),
+        ('warn',  'Warning message'),
+    )
     annotation_rows = (
         ('addrbus', 'Address bus', (Ann.ADDR,)),
         ('databus', 'Data bus', (Ann.MEMRD, Ann.MEMWR, Ann.IORD, Ann.IOWR)),

@@ -69,6 +69,13 @@ cmd_name = {
     51: 'SEND_SCR',
 }
 
+def cmd_list():
+    l = []
+    for i in range(63 + 1):
+        l.append(('cmd%d' % i, 'CMD%d' % i))
+
+    return tuple(l)
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'sdcard_spi'
@@ -78,17 +85,16 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['sdcard_spi']
-    annotations = \
-        [['cmd%d' % i, 'CMD%d' % i] for i in range(63 + 1)] + [
-        ['cmd-desc', 'Command description'],
-        ['r1', 'R1 reply'],
-        ['r1b', 'R1B reply'],
-        ['r2', 'R2 reply'],
-        ['r3', 'R3 reply'],
-        ['r7', 'R7 reply'],
-        ['bits', 'Bits'],
-        ['bit-warnings', 'Bit warnings'],
-    ]
+    annotations = cmd_list() + (
+        ('cmd-desc', 'Command description'),
+        ('r1', 'R1 reply'),
+        ('r1b', 'R1B reply'),
+        ('r2', 'R2 reply'),
+        ('r3', 'R3 reply'),
+        ('r7', 'R7 reply'),
+        ('bits', 'Bits'),
+        ('bit-warnings', 'Bit warnings'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (70, 71)),
         ('cmd-reply', 'Commands/replies',

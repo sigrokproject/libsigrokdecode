@@ -36,21 +36,21 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['tlc5620']
-    probes = [
+    probes = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Serial interface clock'},
         {'id': 'data', 'name': 'DATA', 'desc': 'Serial interface data'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'load', 'name': 'LOAD', 'desc': 'Serial interface load control'},
         {'id': 'ldac', 'name': 'LDAC', 'desc': 'Load DAC'},
-    ]
-    annotations = [
-        ['dac-select', 'DAC select'],
-        ['gain', 'Gain'],
-        ['value', 'DAC value'],
-        ['data-latch', 'Data latch point'],
-        ['ldac-fall', 'LDAC falling edge'],
-    ]
+    )
+    annotations = (
+        ('dac-select', 'DAC select'),
+        ('gain', 'Gain'),
+        ('value', 'DAC value'),
+        ('data-latch', 'Data latch point'),
+        ('ldac-fall', 'LDAC falling edge'),
+    )
 
     def __init__(self, **kwargs):
         self.oldpins = self.oldclk = self.oldload = self.oldldac = None

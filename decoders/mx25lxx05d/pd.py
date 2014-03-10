@@ -55,7 +55,7 @@ device_name = {
 }
 
 def cmd_annotation_classes():
-    return [[cmd[0].lower(), cmd[1]] for cmd in cmds.values()]
+    return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
 
 def decode_status_reg(data):
     # TODO: Additional per-bit(s) self.put() calls with correct start/end.
@@ -91,15 +91,15 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi', 'logic']
     outputs = ['mx25lxx05d']
-    optional_probes = [
+    optional_probes = (
         {'id': 'hold', 'name': 'HOLD#', 'desc': 'Pause device w/o deselecting it'},
         {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'Write protect'},
-    ]
-    annotations = cmd_annotation_classes() + [
-        ['bits', 'Bits'],
-        ['bits2', 'Bits2'],
-        ['warnings', 'Warnings'],
-    ]
+    )
+    annotations = cmd_annotation_classes() + (
+        ('bits', 'Bits'),
+        ('bits2', 'Bits2'),
+        ('warnings', 'Warnings'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (24, 25)),
         ('commands', 'Commands', tuple(range(23 + 1))),

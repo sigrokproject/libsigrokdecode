@@ -29,12 +29,12 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['onewire_link']
-    probes = [
+    probes = (
         {'id': 'owr', 'name': 'OWR', 'desc': '1-Wire signal line'},
-    ]
-    optional_probes = [
+    )
+    optional_probes = (
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power supply pin'},
-    ]
+    )
     options = (
         {'id': 'overdrive',
             'desc': 'Overdrive mode',
@@ -65,13 +65,13 @@ class Decoder(srd.Decoder):
             'desc': 'Overdrive mode reset time (μs)',
             'default': 48},
     )
-    annotations = [
-        ['bit', 'Bit'],
-        ['warnings', 'Warnings'],
-        ['reset', 'Reset'],
-        ['presence', 'Presence'],
-        ['overdrive', 'Overdrive mode notifications'],
-    ]
+    annotations = (
+        ('bit', 'Bit'),
+        ('warnings', 'Warnings'),
+        ('reset', 'Reset'),
+        ('presence', 'Presence'),
+        ('overdrive', 'Overdrive mode notifications'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (0, 2, 3)),
         ('info', 'Info', (4,)),

@@ -199,10 +199,10 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['xfp']
-    annotations = [
-        ['fieldnames-and-values', 'XFP structure field names and values'],
-        ['fields', 'XFP structure fields'],
-    ]
+    annotations = (
+        ('fieldnames-and-values', 'XFP structure field names and values'),
+        ('fields', 'XFP structure fields'),
+    )
 
     def __init__(self, **kwargs):
         # Received data items, used as an index into samplenum/data

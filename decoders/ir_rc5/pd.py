@@ -30,25 +30,24 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ir_rc5']
-    probes = [
+    probes = (
         {'id': 'ir', 'name': 'IR', 'desc': 'IR data line'},
-    ]
-    optional_probes = []
+    )
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
         {'id': 'protocol', 'desc': 'Protocol type', 'default': 'standard',
             'values': ('standard', 'extended')},
     )
-    annotations = [
-        ['bit', 'Bit'],
-        ['startbit1', 'Startbit 1'],
-        ['startbit2', 'Startbit 2'],
-        ['togglebit-0', 'Toggle bit 0'],
-        ['togglebit-1', 'Toggle bit 1'],
-        ['address', 'Address'],
-        ['command', 'Command'],
-    ]
+    annotations = (
+        ('bit', 'Bit'),
+        ('startbit1', 'Startbit 1'),
+        ('startbit2', 'Startbit 2'),
+        ('togglebit-0', 'Toggle bit 0'),
+        ('togglebit-1', 'Toggle bit 1'),
+        ('address', 'Address'),
+        ('command', 'Command'),
+    )
     annotation_rows = (
         ('bits', 'Bits', (0,)),
         ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),

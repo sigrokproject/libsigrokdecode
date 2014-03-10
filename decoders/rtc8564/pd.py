@@ -24,6 +24,13 @@ import sigrokdecode as srd
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
 
+def reg_list():
+    l = []
+    for i in range(8 + 1):
+        l.append(('reg-0x%02x' % i, 'Register 0x%02x' % i))
+
+    return tuple(l)
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'rtc8564'
@@ -33,21 +40,20 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['rtc8564']
-    optional_probes = [
+    optional_probes = (
         {'id': 'clkout', 'name': 'CLKOUT', 'desc': 'Clock output'},
         {'id': 'clkoe', 'name': 'CLKOE', 'desc': 'Clock output enable'},
         {'id': 'int', 'name': 'INT#', 'desc': 'Interrupt'},
-    ]
-    annotations = \
-        [['reg-0x%02x' % i, 'Register 0x%02x' % i] for i in range(8 + 1)] + [
-        ['read', 'Read date/time'],
-        ['write', 'Write date/time'],
-        ['bit-reserved', 'Reserved bit'],
-        ['bit-vl', 'VL bit'],
-        ['bit-century', 'Century bit'],
-        ['reg-read', 'Register read'],
-        ['reg-write', 'Register write'],
-    ]
+    )
+    annotations = reg_list() + (
+        ('read', 'Read date/time'),
+        ('write', 'Write date/time'),
+        ('bit-reserved', 'Reserved bit'),
+        ('bit-vl', 'VL bit'),
+        ('bit-century', 'Century bit'),
+        ('reg-read', 'Register read'),
+        ('reg-write', 'Register write'),
+    )
     annotation_rows = (
         ('bits', 'Bits', tuple(range(0, 8 + 1)) + (11, 12, 13)),
         ('regs', 'Register access', (14, 15)),

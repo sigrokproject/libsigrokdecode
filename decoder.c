@@ -102,19 +102,19 @@ static int get_probes(const struct srd_decoder *d, const char *attr,
 		return SRD_OK;
 
 	py_probelist = PyObject_GetAttrString(d->py_dec, attr);
-	if (!PyList_Check(py_probelist)) {
-		srd_err("Protocol decoder %s %s attribute is not a list.",
+	if (!PyTuple_Check(py_probelist)) {
+		srd_err("Protocol decoder %s %s attribute is not a tuple.",
 				d->name, attr);
 		return SRD_ERR_PYTHON;
 	}
 
-	if ((num_probes = PyList_Size(py_probelist)) == 0)
+	if ((num_probes = PyTuple_Size(py_probelist)) == 0)
 		/* Empty probelist. */
 		return SRD_OK;
 
 	ret = SRD_OK;
 	for (i = 0; i < num_probes; i++) {
-		py_entry = PyList_GetItem(py_probelist, i);
+		py_entry = PyTuple_GetItem(py_probelist, i);
 		if (!PyDict_Check(py_entry)) {
 			srd_err("Protocol decoder %s %s attribute is not "
 				"a list with dict elements.", d->name, attr);
@@ -429,16 +429,16 @@ SRD_API int srd_decoder_load(const char *module_name)
 	d->annotations = NULL;
 	if (PyObject_HasAttrString(d->py_dec, "annotations")) {
 		py_annlist = PyObject_GetAttrString(d->py_dec, "annotations");
-		if (!PyList_Check(py_annlist)) {
+		if (!PyTuple_Check(py_annlist)) {
 			srd_err("Protocol decoder %s annotations should "
-					"be a list.", module_name);
+					"be a tuple.", module_name);
 			goto err_out;
 		}
-		for (i = 0; i < PyList_Size(py_annlist); i++) {
-			py_ann = PyList_GetItem(py_annlist, i);
-			if (!PyList_Check(py_ann) || PyList_Size(py_ann) != 2) {
+		for (i = 0; i < PyTuple_Size(py_annlist); i++) {
+			py_ann = PyTuple_GetItem(py_annlist, i);
+			if (!PyTuple_Check(py_ann) || PyTuple_Size(py_ann) != 2) {
 				srd_err("Protocol decoder %s annotation %d should "
-						"be a list with two elements.", module_name, i + 1);
+						"be a tuple with two elements.", module_name, i + 1);
 				goto err_out;
 			}
 

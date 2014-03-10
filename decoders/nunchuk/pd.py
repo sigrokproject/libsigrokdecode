@@ -29,11 +29,11 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['nunchuck']
-    annotations = [
-        ['text-verbose', 'Human-readable text (verbose)'],
-        ['text', 'Human-readable text'],
-        ['warnings', 'Human-readable warnings'],
-    ]
+    annotations = (
+        ('text-verbose', 'Human-readable text (verbose)'),
+        ('text', 'Human-readable text'),
+        ('warnings', 'Human-readable warnings'),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'

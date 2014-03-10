@@ -29,9 +29,9 @@ class Decoder(srd.Decoder):
     license = 'gplv2'
     inputs = ['spi']
     outputs = ['rgb_led_spi']
-    annotations = [
-        ['rgb', 'RGB values'],
-    ]
+    annotations = (
+        ('rgb', 'RGB values'),
+    )
 
     def __init__(self, **kwargs):
         self.cmd_ss, self.cmd_es = 0, 0

@@ -29,32 +29,32 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['can']
-    probes = [
+    probes = (
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},
-    ]
+    )
     options = (
         {'id': 'bitrate', 'desc': 'Bitrate', 'default': 1000000}, # 1Mbit/s
         {'id': 'sample_point', 'desc': 'Sample point', 'default': 70}, # 70%
     )
-    annotations = [
-        ['data', 'CAN payload data'],
-        ['sof', 'Start of frame'],
-        ['eof', 'End of frame'],
-        ['id', 'Identifier'],
-        ['ext-id', 'Extended identifier'],
-        ['full-id', 'Full identifier'],
-        ['ide', 'Identifier extension bit'],
-        ['reserved-bit', 'Reserved bit 0 and 1'],
-        ['rtr', 'Remote transmission request'],
-        ['srr', 'Substitute remote request'],
-        ['dlc', 'Data length count'],
-        ['crc-sequence', 'CRC sequence'],
-        ['crc-delimiter', 'CRC delimiter'],
-        ['ack-slot', 'ACK slot'],
-        ['ack-delimiter', 'ACK delimiter'],
-        ['stuff-bit', 'Stuff bit'],
-        ['warnings', 'Human-readable warnings'],
-    ]
+    annotations = (
+        ('data', 'CAN payload data'),
+        ('sof', 'Start of frame'),
+        ('eof', 'End of frame'),
+        ('id', 'Identifier'),
+        ('ext-id', 'Extended identifier'),
+        ('full-id', 'Full identifier'),
+        ('ide', 'Identifier extension bit'),
+        ('reserved-bit', 'Reserved bit 0 and 1'),
+        ('rtr', 'Remote transmission request'),
+        ('srr', 'Substitute remote request'),
+        ('dlc', 'Data length count'),
+        ('crc-sequence', 'CRC sequence'),
+        ('crc-delimiter', 'CRC delimiter'),
+        ('ack-slot', 'ACK slot'),
+        ('ack-delimiter', 'ACK delimiter'),
+        ('stuff-bit', 'Stuff bit'),
+        ('warnings', 'Human-readable warnings'),
+    )
 
     def __init__(self, **kwargs):
         self.samplerate = None
