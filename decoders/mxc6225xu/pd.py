@@ -68,9 +68,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mxc6225xu']
-    optional_probes = (
-        {'id': 'int', 'name': 'INT', 'desc': 'DTOS interrupt output pin'},
-    )
     annotations = (
         ('text', 'Human-readable text'),
     )

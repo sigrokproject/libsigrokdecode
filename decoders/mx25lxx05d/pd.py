@@ -89,12 +89,8 @@ class Decoder(srd.Decoder):
     longname = 'Macronix MX25Lxx05D'
     desc = 'SPI (NOR) flash chip protocol.'
     license = 'gplv2+'
-    inputs = ['spi', 'logic']
+    inputs = ['logic']
     outputs = ['mx25lxx05d']
-    optional_probes = (
-        {'id': 'hold', 'name': 'HOLD#', 'desc': 'Pause device w/o deselecting it'},
-        {'id': 'wp_acc', 'name': 'WP#/ACC', 'desc': 'Write protect'},
-    )
     annotations = cmd_annotation_classes() + (
         ('bits', 'Bits'),
         ('bits2', 'Bits2'),

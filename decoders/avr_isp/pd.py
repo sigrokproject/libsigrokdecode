@@ -30,11 +30,8 @@ class Decoder(srd.Decoder):
     longname = 'AVR In-System Programming'
     desc = 'Protocol for in-system programming Atmel AVR MCUs.'
     license = 'gplv2+'
-    inputs = ['spi', 'logic']
+    inputs = ['spi']
     outputs = ['avr_isp']
-    optional_probes = (
-        {'id': 'reset', 'name': 'RESET#', 'desc': 'Target AVR MCU reset'},
-    )
     annotations = (
         ('pe', 'Programming enable'),
         ('rsb0', 'Read signature byte 0'),

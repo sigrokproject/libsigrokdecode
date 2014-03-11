@@ -48,12 +48,6 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['lm75']
-    optional_probes = (
-        {'id': 'os', 'name': 'OS', 'desc': 'Overtemperature shutdown'},
-        {'id': 'a0', 'name': 'A0', 'desc': 'I²C slave address input 0'},
-        {'id': 'a1', 'name': 'A1', 'desc': 'I²C slave address input 1'},
-        {'id': 'a2', 'name': 'A2', 'desc': 'I²C slave address input 2'},
-    )
     options = (
         {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75'},
         {'id': 'resolution', 'desc': 'Resolution', 'default': 9,
