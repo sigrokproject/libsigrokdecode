@@ -141,7 +141,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
                 goto err_out;
             }
         } else if (g_variant_is_of_type(value, G_VARIANT_TYPE_DOUBLE)) {
-            val_double = g_variant_get_int64(value);
+            val_double = g_variant_get_double(value);
             if (!(py_optval = PyFloat_FromDouble(val_double))) {
                 /* ValueError Exception */
                 PyErr_Clear();
