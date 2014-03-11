@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'bitrate', 'desc': 'Bitrate', 'default': 1000000}, # 1Mbit/s
-        {'id': 'sample_point', 'desc': 'Sample point', 'default': 70}, # 70%
+        {'id': 'sample_point', 'desc': 'Sample point', 'default': 70.0}, # 70%
     )
     annotations = (
         ('data', 'CAN payload data'),
