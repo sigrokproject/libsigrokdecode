@@ -254,7 +254,7 @@ static int get_options(struct srd_decoder *d)
 					o->values = g_slist_append(o->values, gvar);
 				} else if (PyLong_Check(py_item)) {
 					/* Long */
-					lval = PyLong_AsLongAndOverflow(py_default, &overflow);
+					lval = PyLong_AsLongAndOverflow(py_item, &overflow);
 					if (overflow) {
 						/* Value is < LONG_MIN or > LONG_MAX */
 						PyErr_Clear();
@@ -265,9 +265,9 @@ static int get_options(struct srd_decoder *d)
 					gvar = g_variant_new_int64(lval);
 					g_variant_ref_sink(gvar);
 					o->values = g_slist_append(o->values, gvar);
-				} else if (PyFloat_Check(py_default)) {
+				} else if (PyFloat_Check(py_item)) {
 					/* Float */
-					if ((dval = PyFloat_AsDouble(py_default)) == -1.0) {
+					if ((dval = PyFloat_AsDouble(py_item)) == -1.0) {
 						PyErr_Clear();
 						srd_err("Protocol decoder %s option 'default' has "
 								"invalid default value.", d->name);
