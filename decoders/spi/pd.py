@@ -84,9 +84,9 @@ class Decoder(srd.Decoder):
             'values': (0, 1)},
         {'id': 'cpha', 'desc': 'Clock phase', 'default': 0,
             'values': (0, 1)},
-        {'id': 'bitorder', 'desc': 'Bit order within the SPI data',
+        {'id': 'bitorder', 'desc': 'Bit order',
             'default': 'msb-first', 'values': ('msb-first', 'lsb-first')},
-        {'id': 'wordsize', 'desc': 'Word size of SPI data', 'default': 8},
+        {'id': 'wordsize', 'desc': 'Word size', 'default': 8},
     )
     annotations = (
         ('miso-data', 'MISO data'),

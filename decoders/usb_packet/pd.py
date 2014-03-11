@@ -152,7 +152,8 @@ class Decoder(srd.Decoder):
     inputs = ['usb_signalling']
     outputs = ['usb_packet']
     options = (
-        {'id': 'signalling', 'desc': 'Signalling', 'default': 'full-speed'},
+        {'id': 'signalling', 'desc': 'Signalling',
+            'default': 'full-speed', 'values': ('full-speed', 'low-speed')},
     )
     annotations = (
         ('sync-ok', 'SYNC'),

@@ -74,9 +74,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},
-        {'id': 'wordsize', 'desc': 'Word size of the data',
-            'default': 1},
-        {'id': 'endianness', 'desc': 'Endianness of the data',
+        {'id': 'wordsize', 'desc': 'Data wordsize', 'default': 1},
+        {'id': 'endianness', 'desc': 'Data endianness',
             'default': 'little', 'values': ('little', 'big')},
     )
     annotations = (

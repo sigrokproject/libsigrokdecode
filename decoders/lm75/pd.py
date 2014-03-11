@@ -49,8 +49,9 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = ['lm75']
     options = (
-        {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75'},
-        {'id': 'resolution', 'desc': 'Resolution', 'default': 9,
+        {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75',
+            'values': ('lm75',)},
+        {'id': 'resolution', 'desc': 'Resolution (bits)', 'default': 9,
             'values': (9, 10, 11, 12)},
     )
     annotations = (
