@@ -293,21 +293,22 @@ def run_tests(tests, fix=False):
                         # message on stderr about it
                         results[-1]['error'] = "Unknown error: runtc %d" % p.returncode
                     if 'error' not in results[-1]:
-                        match = os.path.join(decoders_dir, op['pd'], 'test', op['match'])
+                        matchfile = os.path.join(decoders_dir, op['pd'], 'test', op['match'])
+                        DBG("Comparing with %s" % matchfile)
                         try:
                             diff = diff_error = None
                             if op['type'] in ('annotation', 'python'):
-                                diff = diff_text(match, outfile)
+                                diff = diff_text(matchfile, outfile)
                             elif op['type'] == 'binary':
-                                diff = compare_binary(match, outfile)
+                                diff = compare_binary(matchfile, outfile)
                             else:
                                 diff = ["Unsupported output type '%s'." % op['type']]
                         except Exception as e:
                             diff_error = e
                         if fix:
                             if diff or diff_error:
-                                copy(outfile, match)
-                                DBG("Wrote %s" % match)
+                                copy(outfile, matchfile)
+                                DBG("Wrote %s" % matchfile)
                         else:
                             if diff:
                                 results[-1]['diff'] = diff
@@ -447,7 +448,7 @@ try:
         if not os.path.isdir(dumps_dir):
             ERR("Could not find sigrok-dumps repository at %s" % dumps_dir)
             sys.exit(1)
-        results, errors = run_tests(testlist)
+        results, errors = run_tests(testlist, fix=opt_fix)
         ret = errors
     elif opt_show:
         show_tests(testlist)
