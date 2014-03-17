@@ -30,6 +30,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <dirent.h>
 #include <glib.h>
 #ifdef __LINUX__
 #include <sched.h>
@@ -38,6 +39,7 @@
 
 int debug = FALSE;
 int statistics = FALSE;
+char *coverage_report;
 
 struct probe {
 	char *name;
@@ -64,6 +66,14 @@ struct output {
 	int outfd;
 };
 
+struct cvg {
+	int lines;
+	int missed;
+};
+
+
+struct cvg *get_mod_cov(PyObject *py_cov, char *module_name);
+
 
 static void logmsg(char *prefix, FILE *out, const char *format, va_list args)
 {
@@ -80,7 +90,7 @@ static void DBG(const char *format, ...)
 	if (!debug)
 		return;
 	va_start(args, format);
-	logmsg("DBG: ", stdout, format, args);
+	logmsg("DBG: runtc: ", stdout, format, args);
 	va_end(args);
 }
 
@@ -130,6 +140,7 @@ static void usage(char *msg)
 	printf("  -i <input file>\n");
 	printf("  -O <output-pd:output-type[:output-class]>\n");
 	printf("  -f <output file> (optional)\n");
+	printf("  -c <coverage report> (optional)\n");
 	exit(msg ? 1 : 0);
 
 }
@@ -439,9 +450,169 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	return TRUE;
 }
 
+static PyObject *start_coverage(GSList *pdlist)
+{
+	PyObject *py_mod, *py_pdlist, *py_pd, *py_func, *py_args, *py_kwargs, *py_cov;
+	GSList *l;
+	struct pd *pd;
+
+	DBG("Starting coverage.");
+
+	if (!(py_mod = PyImport_ImportModule("coverage")))
+		return NULL;
+
+	if (!(py_pdlist = PyList_New(0)))
+		return NULL;
+	for (l = pdlist; l; l = l->next) {
+		pd = l->data;
+		py_pd = PyUnicode_FromFormat("*/%s/*.py", pd->name);
+		if (PyList_Append(py_pdlist, py_pd) < 0)
+			return NULL;
+		Py_DecRef(py_pd);
+	}
+	if (!(py_func = PyObject_GetAttrString(py_mod, "coverage")))
+		return NULL;
+	if (!(py_args = PyTuple_New(0)))
+		return NULL;
+	if (!(py_kwargs = Py_BuildValue("{sO}", "include", py_pdlist)))
+		return NULL;
+	if (!(py_cov = PyObject_Call(py_func, py_args, py_kwargs)))
+		return NULL;
+	if (!(PyObject_CallMethod(py_cov, "start", NULL)))
+		return NULL;
+	Py_DecRef(py_pdlist);
+	Py_DecRef(py_args);
+	Py_DecRef(py_kwargs);
+	Py_DecRef(py_func);
+
+	return py_cov;
+}
+
+struct cvg *get_mod_cov(PyObject *py_cov, char *module_name)
+{
+	PyObject *py_mod, *py_pathlist, *py_path, *py_func, *py_pd, *py_result;
+	DIR *d;
+	struct dirent *de;
+	struct cvg *cvg_mod;
+	int lines, missed, i;
+	char *path;
+
+	if (!(py_mod = PyImport_ImportModule(module_name)))
+		return NULL;
+
+	cvg_mod = NULL;
+	py_pathlist = PyObject_GetAttrString(py_mod, "__path__");
+	for (i = 0; i < PyList_Size(py_pathlist); i++) {
+		py_path = PyList_GetItem(py_pathlist, i);
+		path = PyUnicode_AsUTF8AndSize(py_path, NULL);
+		if (!(d = opendir(path))) {
+			ERR("Invalid module path '%s'", path);
+			return NULL;
+		}
+		while ((de = readdir(d))) {
+			if (strncmp(de->d_name + strlen(de->d_name) - 3, ".py", 3))
+				continue;
+
+			if (!(py_func = PyObject_GetAttrString(py_cov, "analysis2")))
+				return NULL;
+			if (!(py_pd = PyUnicode_FromFormat("%s/%s", path, de->d_name)))
+				return NULL;
+			if (!(py_result = PyObject_CallFunction(py_func, "O", py_pd)))
+				return NULL;
+			Py_DecRef(py_pd);
+			Py_DecRef(py_func);
+
+			if (!cvg_mod)
+				cvg_mod = calloc(1, sizeof(struct cvg));
+			if (PyTuple_Size(py_result) != 5) {
+				ERR("Invalid result from coverage of '%s/%s'", path, de->d_name);
+				return NULL;
+			}
+			lines = PyList_Size(PyTuple_GetItem(py_result, 1));
+			missed = PyList_Size(PyTuple_GetItem(py_result, 3));
+			DBG("Coverage for %s/%s: %d lines, %d missed.", module_name, de->d_name, lines, missed);
+			cvg_mod->lines += lines;
+			cvg_mod->missed += missed;
+			Py_DecRef(py_result);
+		}
+	}
+
+	Py_DecRef(py_mod);
+
+	return cvg_mod;
+}
+
+static int report_coverage(PyObject *py_cov, GSList *pdlist)
+{
+	PyObject *py_func, *py_mod, *py_args, *py_kwargs, *py_outfile, *py_pct;
+	GSList *l;
+	struct pd *pd;
+	struct cvg *cvg_mod, *cvg_all;
+	float total;
+
+	DBG("Making coverage report.");
+
+	/* Get coverage for each module in the stack. */
+	cvg_all = calloc(1, sizeof(struct cvg));
+	for (l = pdlist; l; l = l->next) {
+		pd = l->data;
+		if (!(cvg_mod = get_mod_cov(py_cov, pd->name)))
+			return FALSE;
+		cvg_all->lines += cvg_mod->lines;
+		cvg_all->missed += cvg_mod->missed;
+		DBG("Coverage for module %s: %d lines, %d missed", pd->name,
+				cvg_mod->lines, cvg_mod->missed);
+	}
+
+	/* Machine-readable stats on stdout. */
+	total = 100 - ((float)cvg_all->missed / (float)cvg_all->lines * 100);
+	printf("coverage: lines=%d missed=%d coverage=%.0f%%\n",
+			cvg_all->lines, cvg_all->missed, total);
+
+	/* Write text report to file. */
+	/* io.open(coverage_report, "w") */
+	if (!(py_mod = PyImport_ImportModule("io")))
+		return FALSE;
+	if (!(py_func = PyObject_GetAttrString(py_mod, "open")))
+		return FALSE;
+	if (!(py_args = PyTuple_New(0)))
+		return FALSE;
+	if (!(py_kwargs = Py_BuildValue("{ssss}", "file", coverage_report,
+			"mode", "w")))
+		return FALSE;
+	if (!(py_outfile = PyObject_Call(py_func, py_args, py_kwargs)))
+		return FALSE;
+	Py_DecRef(py_kwargs);
+	Py_DecRef(py_func);
+
+	/* py_cov.report(file=py_outfile) */
+	if (!(py_func = PyObject_GetAttrString(py_cov, "report")))
+		return FALSE;
+	if (!(py_kwargs = Py_BuildValue("{sO}", "file", py_outfile)))
+		return FALSE;
+	if (!(py_pct = PyObject_Call(py_func, py_args, py_kwargs)))
+		return FALSE;
+	Py_DecRef(py_pct);
+	Py_DecRef(py_kwargs);
+	Py_DecRef(py_func);
+
+	/* py_outfile.close() */
+	if (!(py_func = PyObject_GetAttrString(py_outfile, "close")))
+		return FALSE;
+	if (!PyObject_Call(py_func, py_args, NULL))
+		return FALSE;
+	Py_DecRef(py_outfile);
+	Py_DecRef(py_func);
+	Py_DecRef(py_args);
+	Py_DecRef(py_mod);
+
+	return TRUE;
+}
+
 int main(int argc, char **argv)
 {
 	struct sr_context *ctx;
+	PyObject *coverage;
 	GSList *pdlist;
 	struct pd *pd;
 	struct probe *probe;
@@ -460,7 +631,8 @@ int main(int argc, char **argv)
 	pdlist = NULL;
 	opt_infile = NULL;
 	pd = NULL;
-	while ((c = getopt(argc, argv, "dP:p:o:i:O:f:S")) != -1) {
+	coverage = NULL;
+	while ((c = getopt(argc, argv, "dP:p:o:i:O:f:c:S")) != -1) {
 		switch(c) {
 		case 'd':
 			debug = TRUE;
@@ -530,6 +702,9 @@ int main(int argc, char **argv)
 			op->outfile = g_strdup(optarg);
 			op->outfd = -1;
 			break;
+		case 'c':
+			coverage_report = optarg;
+			break;
 		case 'S':
 			statistics = TRUE;
 			break;
@@ -554,9 +729,36 @@ int main(int argc, char **argv)
 	if (srd_init(DECODERS_DIR) != SRD_OK)
 		return 1;
 
+	if (coverage_report) {
+		if (!(coverage = start_coverage(pdlist))) {
+			DBG("Failed to start coverage.");
+			if (PyErr_Occurred()) {
+				PyErr_PrintEx(0);
+				PyErr_Clear();
+			}
+		}
+	}
+
 	ret = 0;
 	if (!run_testcase(opt_infile, pdlist, op))
 		ret = 1;
+
+	if (coverage) {
+		DBG("Stopping coverage.");
+
+		if (!(PyObject_CallMethod(coverage, "stop", NULL)))
+			ERR("Failed to stop coverage.");
+		else if (!(report_coverage(coverage, pdlist)))
+			ERR("Failed to make coverage report.");
+		else
+			DBG("Coverage report in %s", coverage_report);
+
+		if (PyErr_Occurred()) {
+			PyErr_PrintEx(0);
+			PyErr_Clear();
+		}
+		Py_DecRef(coverage);
+	}
 
 	srd_exit();
 	sr_exit(ctx);
