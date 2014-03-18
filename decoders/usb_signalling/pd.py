@@ -66,6 +66,13 @@ bitrates = {
     'full-speed': 12000000, # 12Mb/s (+/- 0.25%)
 }
 
+sym_idx = {
+    'J': 0,
+    'K': 1,
+    'SE0': 2,
+    'SE1': 3,
+}
+
 class Decoder(srd.Decoder):
     api_version = 1
     id = 'usb_signalling'
@@ -84,15 +91,18 @@ class Decoder(srd.Decoder):
             'default': 'full-speed', 'values': ('full-speed', 'low-speed')},
     )
     annotations = (
-        ('sym', 'Symbol'),
+        ('sym-j', 'J symbol'),
+        ('sym-k', 'K symbol'),
+        ('sym-se0', 'SE0 symbol'),
+        ('sym-se1', 'SE1 symbol'),
         ('sop', 'Start of packet (SOP)'),
         ('eop', 'End of packet (EOP)'),
         ('bit', 'Bit'),
         ('stuffbit', 'Stuff bit'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (1, 2, 3, 4)),
-        ('symbols', 'Symbols', (0,)),
+        ('bits', 'Bits', (4, 5, 6, 7)),
+        ('symbols', 'Symbols', (0, 1, 2, 3)),
     )
 
     def __init__(self):
@@ -156,21 +166,21 @@ class Decoder(srd.Decoder):
         self.ss_sop = self.samplenum
         self.set_new_target_samplenum()
         self.putpx(['SOP', None])
-        self.putx([1, ['SOP', 'S']])
+        self.putx([4, ['SOP', 'S']])
         self.state = 'GET BIT'
 
     def handle_bit(self, sym, b):
         if self.consecutive_ones == 6 and b == '0':
             # Stuff bit.
             self.putpb(['STUFF BIT', None])
-            self.putb([4, ['Stuff bit: %s' % b, 'SB: %s' % b, '%s' % b]])
-            self.putb([0, ['%s' % sym]])
+            self.putb([7, ['Stuff bit: %s' % b, 'SB: %s' % b, '%s' % b]])
+            self.putb([sym_idx[sym], ['%s' % sym]])
             self.consecutive_ones = 0
         else:
             # Normal bit (not a stuff bit).
             self.putpb(['BIT', b])
-            self.putb([3, ['%s' % b]])
-            self.putb([0, ['%s' % sym]])
+            self.putb([6, ['%s' % b]])
+            self.putb([sym_idx[sym], ['%s' % sym]])
             if b == '1':
                 self.consecutive_ones += 1
             else:
@@ -180,14 +190,14 @@ class Decoder(srd.Decoder):
         # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
         self.syms.append(sym)
         self.putpb(['SYM', sym])
-        self.putb([0, ['%s' % sym, '%s' % sym[0]]])
+        self.putb([sym_idx[sym], ['%s' % sym, '%s' % sym[0]]])
         self.bitnum += 1
         self.set_new_target_samplenum()
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
             # Got an EOP.
             self.putpm(['EOP', None])
-            self.putm([2, ['EOP', 'E']])
+            self.putm([5, ['EOP', 'E']])
             self.bitnum, self.syms, self.state = 0, [], 'IDLE'
             self.consecutive_ones = 0
 
