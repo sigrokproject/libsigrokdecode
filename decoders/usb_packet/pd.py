@@ -227,10 +227,11 @@ class Decoder(srd.Decoder):
         # The SYNC pattern for low-speed/full-speed is KJKJKJKK (00000001).
         if sync != '00000001':
             self.putpb(['SYNC ERROR', sync])
-            self.putb([1, ['SYNC ERROR: %s' % sync]])
+            self.putb([1, ['SYNC ERROR: %s' % sync, 'SYNC ERR: %s' % sync,
+                           'SYNC ERR', 'SE', 'S']])
         else:
             self.putpb(['SYNC', sync])
-            self.putb([0, ['SYNC: %s' % sync]])
+            self.putb([0, ['SYNC: %s' % sync, 'SYNC', 'S']])
         self.packet.append(sync)
 
         # Bits[8:15]: PID
@@ -238,7 +239,7 @@ class Decoder(srd.Decoder):
         pidname = pids.get(pid, (pid, ''))[0]
         self.ss, self.es = self.bits[8][1], self.bits[15][2]
         self.putpb(['PID', pidname])
-        self.putb([2, ['PID: %s' % pidname]])
+        self.putb([2, ['PID: %s' % pidname, pidname, pidname[0]]])
         self.packet.append(pid)
         self.packet_summary += pidname
 
@@ -248,7 +249,7 @@ class Decoder(srd.Decoder):
                 framenum = bitstr_to_num(packet[16:26 + 1])
                 self.ss, self.es = self.bits[16][1], self.bits[26][2]
                 self.putpb(['FRAMENUM', framenum])
-                self.putb([3, ['Frame: %d' % framenum]])
+                self.putb([3, ['Frame: %d' % framenum, 'Frame', 'Fr', 'F']])
                 self.packet.append(framenum)
                 self.packet_summary += ' %d' % framenum
             else:
@@ -256,7 +257,8 @@ class Decoder(srd.Decoder):
                 addr = bitstr_to_num(packet[16:22 + 1])
                 self.ss, self.es = self.bits[16][1], self.bits[22][2]
                 self.putpb(['ADDR', addr])
-                self.putb([4, ['Addr: %d' % addr]])
+                self.putb([4, ['Address: %d' % addr, 'Addr: %d' % addr,
+                               'Addr', 'A']])
                 self.packet.append(addr)
                 self.packet_summary += ' ADDR %d' % addr
 
@@ -264,7 +266,7 @@ class Decoder(srd.Decoder):
                 ep = bitstr_to_num(packet[23:26 + 1])
                 self.ss, self.es = self.bits[23][1], self.bits[26][2]
                 self.putpb(['EP', ep])
-                self.putb([5, ['EP: %d' % ep]])
+                self.putb([5, ['Endpoint: %d' % ep, 'EP: %d' % ep, 'EP', 'E']])
                 self.packet.append(ep)
                 self.packet_summary += ' EP %d' % ep
 
@@ -272,7 +274,7 @@ class Decoder(srd.Decoder):
             crc5 = bitstr_to_num(packet[27:31 + 1])
             self.ss, self.es = self.bits[27][1], self.bits[31][2]
             self.putpb(['CRC5', crc5])
-            self.putb([6, ['CRC5: 0x%02x' % crc5]])
+            self.putb([6, ['CRC5: 0x%02X' % crc5, 'CRC5', 'C']])
             self.packet.append(crc5)
         elif pidname in ('DATA0', 'DATA1', 'DATA2', 'MDATA'):
             # Bits[16:packetlen-16]: Data
@@ -284,13 +286,14 @@ class Decoder(srd.Decoder):
                 db = bitstr_to_num(data[i:i + 8])
                 self.ss, self.es = self.bits[16 + i][1], self.bits[23 + i][2]
                 self.putpb(['DATABYTE', db])
-                self.putb([8, ['Databyte: %02x' % db]])
+                self.putb([8, ['Databyte: %02X' % db, 'Data: %02X' % db,
+                               'DB: %02X' % db, '%02X' % db]])
                 databytes.append(db)
-                self.packet_summary += ' %02x' % db
+                self.packet_summary += ' %02X' % db
                 data = data[8:]
             self.packet_summary += ' ]'
 
-            # Convenience python output (no annotation) for all bytes together.
+            # Convenience Python output (no annotation) for all bytes together.
             self.ss, self.es = self.bits[16][1], self.bits[-16][2]
             self.putpb(['DATABYTES', databytes])
             self.packet.append(databytes)
@@ -299,7 +302,7 @@ class Decoder(srd.Decoder):
             crc16 = bitstr_to_num(packet[-16:])
             self.ss, self.es = self.bits[-16][1], self.bits[-1][2]
             self.putpb(['CRC16', crc16])
-            self.putb([9, ['CRC16: 0x%04x' % crc16]])
+            self.putb([9, ['CRC16: 0x%04X' % crc16, 'CRC16', 'C']])
             self.packet.append(crc16)
         elif pidname in ('ACK', 'NAK', 'STALL', 'NYET', 'ERR'):
             pass # Nothing to do, these only have SYNC+PID+EOP fields.
