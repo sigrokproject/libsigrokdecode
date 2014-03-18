@@ -67,12 +67,17 @@ struct output {
 };
 
 struct cvg {
-	int lines;
-	int missed;
+	int num_lines;
+	int num_missed;
+	float coverage;
+	GSList *missed_lines;
 };
 
 
 struct cvg *get_mod_cov(PyObject *py_cov, char *module_name);
+void cvg_add(struct cvg *dst, struct cvg *src);
+struct cvg *cvg_new(void);
+gboolean find_missed_line(struct cvg *cvg, char *linespec);
 
 
 static void logmsg(char *prefix, FILE *out, const char *format, va_list args)
@@ -490,12 +495,13 @@ static PyObject *start_coverage(GSList *pdlist)
 
 struct cvg *get_mod_cov(PyObject *py_cov, char *module_name)
 {
-	PyObject *py_mod, *py_pathlist, *py_path, *py_func, *py_pd, *py_result;
+	PyObject *py_mod, *py_pathlist, *py_path, *py_func, *py_pd;
+	PyObject *py_result, *py_missed, *py_item;
 	DIR *d;
 	struct dirent *de;
 	struct cvg *cvg_mod;
-	int lines, missed, i;
-	char *path;
+	int num_lines, num_missed, linenum, i, j;
+	char *path, *linespec;
 
 	if (!(py_mod = PyImport_ImportModule(module_name)))
 		return NULL;
@@ -504,7 +510,8 @@ struct cvg *get_mod_cov(PyObject *py_cov, char *module_name)
 	py_pathlist = PyObject_GetAttrString(py_mod, "__path__");
 	for (i = 0; i < PyList_Size(py_pathlist); i++) {
 		py_path = PyList_GetItem(py_pathlist, i);
-		path = PyUnicode_AsUTF8AndSize(py_path, NULL);
+        PyUnicode_FSConverter(PyList_GetItem(py_pathlist, i), &py_path);
+		path = PyBytes_AS_STRING(py_path);
 		if (!(d = opendir(path))) {
 			ERR("Invalid module path '%s'", path);
 			return NULL;
@@ -523,51 +530,114 @@ struct cvg *get_mod_cov(PyObject *py_cov, char *module_name)
 			Py_DecRef(py_func);
 
 			if (!cvg_mod)
-				cvg_mod = calloc(1, sizeof(struct cvg));
+				cvg_mod = cvg_new();
 			if (PyTuple_Size(py_result) != 5) {
 				ERR("Invalid result from coverage of '%s/%s'", path, de->d_name);
 				return NULL;
 			}
-			lines = PyList_Size(PyTuple_GetItem(py_result, 1));
-			missed = PyList_Size(PyTuple_GetItem(py_result, 3));
-			DBG("Coverage for %s/%s: %d lines, %d missed.", module_name, de->d_name, lines, missed);
-			cvg_mod->lines += lines;
-			cvg_mod->missed += missed;
+			num_lines = PyList_Size(PyTuple_GetItem(py_result, 1));
+			py_missed = PyTuple_GetItem(py_result, 3);
+			num_missed = PyList_Size(py_missed);
+			cvg_mod->num_lines += num_lines;
+			cvg_mod->num_missed += num_missed;
+			for (j = 0; j < num_missed; j++) {
+				py_item = PyList_GetItem(py_missed, j);
+				linenum = PyLong_AsLong(py_item);
+				linespec = g_strdup_printf("%s/%s:%d", module_name,
+						de->d_name, linenum);
+				cvg_mod->missed_lines = g_slist_append(cvg_mod->missed_lines, linespec);
+			}
+			DBG("Coverage for %s/%s: %d lines, %d missed.",
+					module_name, de->d_name, num_lines, num_missed);
 			Py_DecRef(py_result);
 		}
 	}
+	if (cvg_mod->num_lines)
+		cvg_mod->coverage = 100 - ((float)cvg_mod->num_missed / (float)cvg_mod->num_lines * 100);
 
 	Py_DecRef(py_mod);
+    Py_DecRef(py_path);
 
 	return cvg_mod;
+}
+
+struct cvg *cvg_new(void)
+{
+	struct cvg *cvg;
+
+	cvg = calloc(1, sizeof(struct cvg));
+
+	return cvg;
+}
+
+gboolean find_missed_line(struct cvg *cvg, char *linespec)
+{
+	GSList *l;
+
+	for (l = cvg->missed_lines; l; l = l->next)
+		if (!strcmp(l->data, linespec))
+			return TRUE;
+
+	return FALSE;
+}
+
+void cvg_add(struct cvg *dst, struct cvg *src)
+{
+	GSList *l;
+	char *linespec;
+
+
+	dst->num_lines += src->num_lines;
+	dst->num_missed += src->num_missed;
+	for (l = src->missed_lines; l; l = l->next) {
+		linespec = l->data;
+		if (!find_missed_line(dst, linespec))
+			dst->missed_lines = g_slist_append(dst->missed_lines, linespec);
+	}
+
 }
 
 static int report_coverage(PyObject *py_cov, GSList *pdlist)
 {
 	PyObject *py_func, *py_mod, *py_args, *py_kwargs, *py_outfile, *py_pct;
-	GSList *l;
+	GSList *l, *ml;
 	struct pd *pd;
 	struct cvg *cvg_mod, *cvg_all;
-	float total;
+	float total_coverage;
+	int lines, missed, cnt;
 
 	DBG("Making coverage report.");
 
 	/* Get coverage for each module in the stack. */
-	cvg_all = calloc(1, sizeof(struct cvg));
-	for (l = pdlist; l; l = l->next) {
+	lines = missed = 0;
+	cvg_all = cvg_new();
+	for (cnt = 0, l = pdlist; l; l = l->next, cnt++) {
 		pd = l->data;
 		if (!(cvg_mod = get_mod_cov(py_cov, pd->name)))
 			return FALSE;
-		cvg_all->lines += cvg_mod->lines;
-		cvg_all->missed += cvg_mod->missed;
+		printf("coverage: scope=%s coverage=%.0f%% lines=%d missed=%d "
+				"missed_lines=", pd->name, cvg_mod->coverage,
+				cvg_mod->num_lines, cvg_mod->num_missed);
+		for (ml = cvg_mod->missed_lines; ml; ml = ml->next) {
+			if (ml != cvg_mod->missed_lines)
+				printf(",");
+			printf("%s", (char *)ml->data);
+		}
+		printf("\n");
+		lines += cvg_mod->num_lines;
+		missed += cvg_mod->num_missed;
+		cvg_add(cvg_all, cvg_mod);
 		DBG("Coverage for module %s: %d lines, %d missed", pd->name,
-				cvg_mod->lines, cvg_mod->missed);
+				cvg_mod->num_lines, cvg_mod->num_missed);
 	}
+	lines /= cnt;
+	missed /= cnt;
+	total_coverage = 100 - ((float)missed / (float)lines * 100);
 
 	/* Machine-readable stats on stdout. */
-	total = 100 - ((float)cvg_all->missed / (float)cvg_all->lines * 100);
-	printf("coverage: lines=%d missed=%d coverage=%.0f%%\n",
-			cvg_all->lines, cvg_all->missed, total);
+	printf("coverage: scope=all coverage=%.0f%% lines=%d missed=%d\n",
+			total_coverage, cvg_all->num_lines, cvg_all->num_missed);
+
 
 	/* Write text report to file. */
 	/* io.open(coverage_report, "w") */
