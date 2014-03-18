@@ -156,14 +156,14 @@ class Decoder(srd.Decoder):
         self.ss_sop = self.samplenum
         self.set_new_target_samplenum()
         self.putpx(['SOP', None])
-        self.putx([1, ['SOP']])
+        self.putx([1, ['SOP', 'S']])
         self.state = 'GET BIT'
 
     def handle_bit(self, sym, b):
         if self.consecutive_ones == 6 and b == '0':
             # Stuff bit.
             self.putpb(['STUFF BIT', None])
-            self.putb([4, ['SB: %s' % b]])
+            self.putb([4, ['Stuff bit: %s' % b, 'SB: %s' % b, '%s' % b]])
             self.putb([0, ['%s' % sym]])
             self.consecutive_ones = 0
         else:
@@ -180,14 +180,14 @@ class Decoder(srd.Decoder):
         # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
         self.syms.append(sym)
         self.putpb(['SYM', sym])
-        self.putb([0, ['%s' % sym]])
+        self.putb([0, ['%s' % sym, '%s' % sym[0]]])
         self.bitnum += 1
         self.set_new_target_samplenum()
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
             # Got an EOP.
             self.putpm(['EOP', None])
-            self.putm([2, ['EOP']])
+            self.putm([2, ['EOP', 'E']])
             self.bitnum, self.syms, self.state = 0, [], 'IDLE'
             self.consecutive_ones = 0
 
