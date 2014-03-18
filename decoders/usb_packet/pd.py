@@ -187,8 +187,8 @@ class Decoder(srd.Decoder):
         ('packet-invalid', 'Packet: Invalid'),
     )
     annotation_rows = (
-        ('fields', 'Packet fields', tuple(range(11 + 1))),
-        ('packet', 'Packets', tuple(range(12, 28 + 1))),
+        ('fields', 'Packet fields', tuple(range(10 + 1))),
+        ('packet', 'Packets', tuple(range(11, 28 + 1))),
     )
 
     def __init__(self):
