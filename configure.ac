@@ -77,7 +77,7 @@ AC_SUBST(SRD_LIB_VERSION_AGE)
 AC_SUBST(SRD_LIB_VERSION)
 AC_SUBST(SRD_LIB_LDFLAGS)
 
-# assume we can build tests/runtc unless proven otherwise
+# Assume we can build tests/runtc unless proven otherwise.
 build_runtc="yes"
 
 # Checks for libraries.
@@ -94,14 +94,18 @@ AM_PATH_GLIB_2_0([2.24.0],
 # See also: http://sigrok.org/wiki/Libsigrokdecode/Python
 CPPFLAGS_PYTHON=""
 LDFLAGS_PYTHON=""
+pyver="none"
 PKG_CHECK_MODULES([python3], [python3 >= 3.2],
-	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python3_CFLAGS";
+	[pyver=`$PKG_CONFIG --modversion python3`;
+	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python3_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python3_LIBS"],
 [PKG_CHECK_MODULES([python33], [python-3.3 >= 3.2],
-	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python33_CFLAGS";
+	[pyver=`$PKG_CONFIG --modversion python-3.3`;
+	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python33_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python33_LIBS"],
 [PKG_CHECK_MODULES([python32], [python-3.2 >= 3.2],
-	[CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python32_CFLAGS";
+	[pyver=`$PKG_CONFIG --modversion python-3.2`;
+	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python32_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python32_LIBS"],
 )])])
 AC_SUBST(CPPFLAGS_PYTHON)
@@ -161,26 +165,33 @@ echo "  - Library version (current:revision:age): $SRD_LIB_VERSION"
 echo "  - Prefix: $prefix"
 echo "  - Building on: $build"
 echo "  - Building for: $host"
-echo "  - Building protocol decoder test framework: $build_runtc"
 echo
 echo "Detected libraries:"
 echo
 
+if test "x$pyver" = "xnone"; then
+	echo "  - (REQUIRED) python >= 3.2: no"
+else
+	echo "  - (REQUIRED) python >= 3.2: yes ($pyver)"
+fi
+
 # Note: This only works for libs with pkg-config integration.
 for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4" "libsigrok >= 0.2.0"; do
-        if `$PKG_CONFIG --exists $lib`; then
-                ver=`$PKG_CONFIG --modversion $lib`
-                answer="yes ($ver)"
-        else
-                answer="no"
-        fi
-        echo "  - $lib: $answer"
+	optional="OPTIONAL"
+	if test "x$lib" = "xglib-2.0 >= 2.24.0"; then optional="REQUIRED"; fi
+	if `$PKG_CONFIG --exists $lib`; then
+		ver=`$PKG_CONFIG --modversion $lib`
+		answer="yes ($ver)"
+	else
+		answer="no"
+	fi
+	echo "  - ($optional) $lib: $answer"
 done
 
 echo
-echo "Detected Python:"
+echo "Enabled features:"
 echo
-echo "  - Python CPPFLAGS: $CPPFLAGS_PYTHON"
-echo "  - Python LDFLAGS: $LDFLAGS_PYTHON"
+echo "  - (OPTIONAL) Library unit test framework support: $have_check"
+echo "  - (OPTIONAL) Protocol decoder test framework support: $build_runtc"
 echo
 
