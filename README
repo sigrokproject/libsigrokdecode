@@ -35,8 +35,9 @@ Requirements
  - libtool
  - pkg-config >= 0.22
  - libglib >= 2.24.0
- - Python >= 3.0
+ - Python >= 3.2
  - check >= 0.9.4 (optional, only needed to run unit tests)
+ - libsigrok >= 0.2.0 (optional, only needed for the developer PD tests)
 
 
 Building and installing
