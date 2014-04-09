@@ -20,8 +20,6 @@
 
 ACLOCAL_AMFLAGS = -I autostuff
 
-SUBDIRS = . contrib tests
-
 lib_LTLIBRARIES = libsigrokdecode.la
 
 libsigrokdecode_la_SOURCES = \
@@ -49,7 +47,32 @@ noinst_HEADERS = libsigrokdecode-internal.h
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsigrokdecode.pc
 
-EXTRA_DIST = Doxyfile
+EXTRA_DIST = Doxyfile contrib/sigrok-logo-notext.png
+
+if HAVE_CHECK
+TESTS = tests/check_main
+check_PROGRAMS = ${TESTS}
+tests_check_main_SOURCES = \
+	libsigrokdecode.h \
+	tests/lib.h \
+	tests/check_main.c \
+	tests/check_core.c \
+	tests/check_decoder.c \
+	tests/check_inst.c \
+	tests/check_session.c
+tests_check_main_CFLAGS = @check_CFLAGS@
+tests_check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
+tests_check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
+	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
+endif
+
+if BUILD_RUNTC
+noinst_PROGRAMS = tests/runtc
+tests_runtc_SOURCES = tests/runtc.c
+tests_runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS) \
+	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
+tests_runtc_LDFLAGS = -L$(top_builddir) $(LIBSIGROK_LIBS) $(LDFLAGS_PYTHON) -lsigrokdecode
+endif
 
 MAINTAINERCLEANFILES = ChangeLog
 

@@ -29,6 +29,7 @@ version.h
 .deps
 Makefile
 Makefile.in
+.dirstamp
 
 # build leftovers
 *~

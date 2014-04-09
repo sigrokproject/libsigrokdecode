@@ -34,7 +34,7 @@ AC_CONFIG_MACRO_DIR([autostuff])
 AC_CONFIG_AUX_DIR([autostuff])
 
 # We require at least automake 1.11 (needed for 'silent rules').
-AM_INIT_AUTOMAKE([1.11 -Wall -Werror check-news color-tests])
+AM_INIT_AUTOMAKE([1.11 -Wall -Werror subdir-objects check-news color-tests])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
@@ -148,12 +148,7 @@ AC_SUBST(SRD_PACKAGE_VERSION)
 
 AM_CONDITIONAL(BUILD_RUNTC, test x"$build_runtc" = "xyes")
 
-AC_CONFIG_FILES([Makefile
-		 version.h
-		 libsigrokdecode.pc
-		 contrib/Makefile
-		 tests/Makefile
-		])
+AC_CONFIG_FILES([Makefile version.h libsigrokdecode.pc])
 
 AC_OUTPUT
 
