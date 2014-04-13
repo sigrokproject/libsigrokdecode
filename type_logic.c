@@ -45,16 +45,16 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	 * and 0x00 values, so the PD doesn't need to do any bitshifting.
 	 */
 	sample_pos = logic->inbuf + logic->itercnt * logic->di->data_unitsize;
-	for (i = 0; i < logic->di->dec_num_probes; i++) {
-		/* A probemap value of -1 means "unused optional probe". */
-		if (logic->di->dec_probemap[i] == -1) {
-			/* Value of unused probe is 0xff, instead of 0 or 1. */
-			logic->di->probe_samples[i] = 0xff;
+	for (i = 0; i < logic->di->dec_num_channels; i++) {
+		/* A channelmap value of -1 means "unused optional channel". */
+		if (logic->di->dec_channelmap[i] == -1) {
+			/* Value of unused channel is 0xff, instead of 0 or 1. */
+			logic->di->channel_samples[i] = 0xff;
 		} else {
-			byte_offset = logic->di->dec_probemap[i] / 8;
-			bit_offset = logic->di->dec_probemap[i] % 8;
+			byte_offset = logic->di->dec_channelmap[i] / 8;
+			bit_offset = logic->di->dec_channelmap[i] % 8;
 			sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
-			logic->di->probe_samples[i] = sample;
+			logic->di->channel_samples[i] = sample;
 		}
 	}
 
@@ -63,8 +63,8 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	    PyLong_FromUnsignedLongLong(logic->start_samplenum +
 					logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
-	py_samples = PyBytes_FromStringAndSize((const char *)logic->di->probe_samples,
-					       logic->di->dec_num_probes);
+	py_samples = PyBytes_FromStringAndSize((const char *)logic->di->channel_samples,
+					       logic->di->dec_num_channels);
 	PyList_SetItem(logic->sample, 1, py_samples);
 	Py_INCREF(logic->sample);
 	logic->itercnt++;

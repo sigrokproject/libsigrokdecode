@@ -37,7 +37,7 @@ overdrive communication speed. The following minimal values should be used:
  - overdrive available: 2MHz minimum, 5MHz suggested
  - overdrive not available: 400kHz minimum, 1MHz suggested
 
-Probes:
+Channels:
 1-Wire requires a single signal, but some master implementations might have a
 separate signal used to deliver power to the bus during temperature conversion
 as an example. This power signal is currently not used.

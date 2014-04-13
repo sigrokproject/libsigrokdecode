@@ -209,13 +209,13 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 /**
  * Send a chunk of logic sample data to a running decoder session.
  *
- * If no probe map has been set up, the logic samples must be arranged
- * in probe order, in the least amount of space possible. The default
- * probe set consists of all required probes + all optional probes.
+ * If no channel map has been set up, the logic samples must be arranged
+ * in channel order, in the least amount of space possible. The default
+ * channel set consists of all required channels + all optional channels.
  *
  * The size of a sample in inbuf is the unit size passed to
- * srd_inst_probe_set_all(). If no probe map has been configured, it is
- * the minimum number of bytes needed to store the default probes.
+ * srd_inst_channel_set_all(). If no channel map has been configured, it is
+ * the minimum number of bytes needed to store the default channels.
  *
  * @param sess The session to use.
  * @param start_samplenum The sample number of the first sample in this chunk.

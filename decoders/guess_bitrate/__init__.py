@@ -20,7 +20,7 @@
 
 '''
 This protocol decoder tries to guess the bitrate / baudrate of the
-communication on the specified probe. Typically this will be used to
+communication on the specified channel. Typically this will be used to
 guess / detect the baudrate used in a UART communication snippet, but it
 could also be used to guess bitrates of certain other protocols or buses.
 
@@ -29,9 +29,9 @@ and that there are various cases in practice where the detection of the
 bitrate or baudrate will not necessarily have the expected result.
 
 The precision of the estimated bitrate / baudrate will also depend on the
-samplerate used to sample the respective probe. For good results it is
+samplerate used to sample the respective channel. For good results it is
 recommended to use a logic analyzer samplerate that is much higher than
-the expected bitrate/baudrate that might be used on the probe.
+the expected bitrate/baudrate that might be used on the channel.
 '''
 
 from .pd import *

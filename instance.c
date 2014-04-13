@@ -169,122 +169,123 @@ err_out:
 	return ret;
 }
 
-/* Helper GComparefunc for g_slist_find_custom() in srd_inst_probe_set_all() */
-static gint compare_probe_id(const struct srd_probe *a, const char *probe_id)
+/* Helper GComparefunc for g_slist_find_custom() in srd_inst_channel_set_all() */
+static gint compare_channel_id(const struct srd_channel *pdch,
+			const char *channel_id)
 {
-	return strcmp(a->id, probe_id);
+	return strcmp(pdch->id, channel_id);
 }
 
 /**
- * Set all probes in a decoder instance.
+ * Set all channels in a decoder instance.
  *
- * This function sets _all_ probes for the specified decoder instance, i.e.,
- * it overwrites any probes that were already defined (if any).
+ * This function sets _all_ channels for the specified decoder instance, i.e.,
+ * it overwrites any channels that were already defined (if any).
  *
  * @param di Decoder instance.
- * @param new_probes A GHashTable of probes to set. Key is probe name, value is
- *                   the probe number. Samples passed to this instance will be
- *                   arranged in this order.
+ * @param new_channels A GHashTable of channels to set. Key is channel name,
+ *                     value is the channel number. Samples passed to this
+ *                     instance will be arranged in this order.
  * @param unit_size Number of bytes per sample in the data stream to be passed
- *                  to the decoder. The highest probe index specified in the
- *                  probe map must lie within a sample unit.
+ *                  to the decoder. The highest channel index specified in the
+ *                  channel map must lie within a sample unit.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @since 0.1.0
  */
-SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-		GHashTable *new_probes, int unit_size)
+SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
+		GHashTable *new_channels, int unit_size)
 {
-	GVariant *probe_val;
+	GVariant *channel_val;
 	GList *l;
 	GSList *sl;
-	struct srd_probe *p;
-	int *new_probemap, new_probenum, num_required_probes, i;
-	char *probe_id;
+	struct srd_channel *pdch;
+	int *new_channelmap, new_channelnum, num_required_channels, i;
+	char *channel_id;
 
-	srd_dbg("set probes called for instance %s with list of %d probes",
-		di->inst_id, g_hash_table_size(new_probes));
+	srd_dbg("set channels called for instance %s with list of %d channels",
+		di->inst_id, g_hash_table_size(new_channels));
 
-	if (g_hash_table_size(new_probes) == 0)
-		/* No probes provided. */
+	if (g_hash_table_size(new_channels) == 0)
+		/* No channels provided. */
 		return SRD_OK;
 
-	if (di->dec_num_probes == 0) {
-		/* Decoder has no probes. */
-		srd_err("Protocol decoder %s has no probes to define.",
+	if (di->dec_num_channels == 0) {
+		/* Decoder has no channels. */
+		srd_err("Protocol decoder %s has no channels to define.",
 			di->decoder->name);
 		return SRD_ERR_ARG;
 	}
 
-	new_probemap = NULL;
+	new_channelmap = NULL;
 
-	if (!(new_probemap = g_try_malloc(sizeof(int) * di->dec_num_probes))) {
-		srd_err("Failed to g_malloc() new probe map.");
+	if (!(new_channelmap = g_try_malloc(sizeof(int) * di->dec_num_channels))) {
+		srd_err("Failed to g_malloc() new channel map.");
 		return SRD_ERR_MALLOC;
 	}
 
 	/*
-	 * For now, map all indexes to probe -1 (can be overridden later).
-	 * This -1 is interpreted as an unspecified probe later.
+	 * For now, map all indexes to channel -1 (can be overridden later).
+	 * This -1 is interpreted as an unspecified channel later.
 	 */
-	for (i = 0; i < di->dec_num_probes; i++)
-		new_probemap[i] = -1;
+	for (i = 0; i < di->dec_num_channels; i++)
+		new_channelmap[i] = -1;
 
-	for (l = g_hash_table_get_keys(new_probes); l; l = l->next) {
-		probe_id = l->data;
-		probe_val = g_hash_table_lookup(new_probes, probe_id);
-		if (!g_variant_is_of_type(probe_val, G_VARIANT_TYPE_INT32)) {
-			/* Probe name was specified without a value. */
-			srd_err("No probe number was specified for %s.",
-					probe_id);
-			g_free(new_probemap);
+	for (l = g_hash_table_get_keys(new_channels); l; l = l->next) {
+		channel_id = l->data;
+		channel_val = g_hash_table_lookup(new_channels, channel_id);
+		if (!g_variant_is_of_type(channel_val, G_VARIANT_TYPE_INT32)) {
+			/* Channel name was specified without a value. */
+			srd_err("No channel number was specified for %s.",
+					channel_id);
+			g_free(new_channelmap);
 			return SRD_ERR_ARG;
 		}
-		new_probenum = g_variant_get_int32(probe_val);
-		if (new_probenum >= 8 * unit_size) {
-			srd_err("Probe index %d not within data unit (%d bit).",
-				new_probenum, 8 * unit_size);
-			g_free(new_probemap);
+		new_channelnum = g_variant_get_int32(channel_val);
+		if (new_channelnum >= 8 * unit_size) {
+			srd_err("Channel index %d not within data unit (%d bit).",
+				new_channelnum, 8 * unit_size);
+			g_free(new_channelmap);
 			return SRD_ERR_ARG;
 		}
-		if (!(sl = g_slist_find_custom(di->decoder->probes, probe_id,
-				(GCompareFunc)compare_probe_id))) {
-			/* Fall back on optional probes. */
-			if (!(sl = g_slist_find_custom(di->decoder->opt_probes,
-			     probe_id, (GCompareFunc) compare_probe_id))) {
-				srd_err("Protocol decoder %s has no probe "
-						"'%s'.", di->decoder->name, probe_id);
-				g_free(new_probemap);
+		if (!(sl = g_slist_find_custom(di->decoder->channels, channel_id,
+				(GCompareFunc)compare_channel_id))) {
+			/* Fall back on optional channels. */
+			if (!(sl = g_slist_find_custom(di->decoder->opt_channels,
+			     channel_id, (GCompareFunc) compare_channel_id))) {
+				srd_err("Protocol decoder %s has no channel "
+						"'%s'.", di->decoder->name, channel_id);
+				g_free(new_channelmap);
 				return SRD_ERR_ARG;
 			}
 		}
-		p = sl->data;
-		new_probemap[p->order] = new_probenum;
-		srd_dbg("Setting probe mapping: %s (index %d) = probe %d.",
-			p->id, p->order, new_probenum);
+		pdch = sl->data;
+		new_channelmap[pdch->order] = new_channelnum;
+		srd_dbg("Setting channel mapping: %s (index %d) = channel %d.",
+			pdch->id, pdch->order, new_channelnum);
 	}
 	di->data_unitsize = unit_size;
 
-	srd_dbg("Final probe map:");
-	num_required_probes = g_slist_length(di->decoder->probes);
-	for (i = 0; i < di->dec_num_probes; i++) {
-		srd_dbg(" - index %d = probe %d (%s)", i, new_probemap[i],
-		        (i < num_required_probes) ? "required" : "optional");
+	srd_dbg("Final channel map:");
+	num_required_channels = g_slist_length(di->decoder->channels);
+	for (i = 0; i < di->dec_num_channels; i++) {
+		srd_dbg(" - index %d = channel %d (%s)", i, new_channelmap[i],
+		        (i < num_required_channels) ? "required" : "optional");
 	}
 
-	/* Report an error if not all required probes were specified. */
-	for (i = 0; i < num_required_probes; i++) {
-		if (new_probemap[i] != -1)
+	/* Report an error if not all required channels were specified. */
+	for (i = 0; i < num_required_channels; i++) {
+		if (new_channelmap[i] != -1)
 			continue;
-		p = g_slist_nth(di->decoder->probes, i)->data;
-		srd_err("Required probe '%s' (index %d) was not specified.",
-			p->id, i);
+		pdch = g_slist_nth(di->decoder->channels, i)->data;
+		srd_err("Required channel '%s' (index %d) was not specified.",
+			pdch->id, i);
 		return SRD_ERR;
 	}
 
-	g_free(di->dec_probemap);
-	di->dec_probemap = new_probemap;
+	g_free(di->dec_channelmap);
+	di->dec_channelmap = new_channelmap;
 
 	return SRD_OK;
 }
@@ -337,28 +338,28 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		di->inst_id = g_strdup(decoder_id);
 
 	/*
-	 * Prepare a default probe map, where samples come in the
+	 * Prepare a default channel map, where samples come in the
 	 * order in which the decoder class defined them.
 	 */
-	di->dec_num_probes = g_slist_length(di->decoder->probes) +
-			g_slist_length(di->decoder->opt_probes);
-	if (di->dec_num_probes) {
-		if (!(di->dec_probemap =
-				g_try_malloc(sizeof(int) * di->dec_num_probes))) {
-			srd_err("Failed to g_malloc() probe map.");
+	di->dec_num_channels = g_slist_length(di->decoder->channels) +
+			g_slist_length(di->decoder->opt_channels);
+	if (di->dec_num_channels) {
+		if (!(di->dec_channelmap =
+				g_try_malloc(sizeof(int) * di->dec_num_channels))) {
+			srd_err("Failed to g_malloc() channel map.");
 			g_free(di);
 			return NULL;
 		}
-		for (i = 0; i < di->dec_num_probes; i++)
-			di->dec_probemap[i] = i;
-		di->data_unitsize = (di->dec_num_probes + 7) / 8;
+		for (i = 0; i < di->dec_num_channels; i++)
+			di->dec_channelmap[i] = i;
+		di->data_unitsize = (di->dec_num_channels + 7) / 8;
 		/*
 		 * Will be used to prepare a sample at every iteration
 		 * of the instance's decode() method.
 		 */
-		if (!(di->probe_samples = g_try_malloc(di->dec_num_probes))) {
+		if (!(di->channel_samples = g_try_malloc(di->dec_num_channels))) {
 			srd_err("Failed to g_malloc() sample buffer.");
-			g_free(di->dec_probemap);
+			g_free(di->dec_channelmap);
 			g_free(di);
 			return NULL;
 		}
@@ -369,13 +370,13 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		if (PyErr_Occurred())
 			srd_exception_catch("failed to create %s instance: ",
 					decoder_id);
-		g_free(di->dec_probemap);
+		g_free(di->dec_channelmap);
 		g_free(di);
 		return NULL;
 	}
 
 	if (options && srd_inst_option_set(di, options) != SRD_OK) {
-		g_free(di->dec_probemap);
+		g_free(di->dec_channelmap);
 		g_free(di);
 		return NULL;
 	}
@@ -624,7 +625,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 
 	Py_DecRef(di->py_inst);
 	g_free(di->inst_id);
-	g_free(di->dec_probemap);
+	g_free(di->dec_channelmap);
 	g_slist_free(di->next_di);
 	for (l = di->pd_output; l; l = l->next) {
 		pdo = l->data;

@@ -36,11 +36,11 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['tlc5620']
-    probes = (
+    channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Serial interface clock'},
         {'id': 'data', 'name': 'DATA', 'desc': 'Serial interface data'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'load', 'name': 'LOAD', 'desc': 'Serial interface load control'},
         {'id': 'ldac', 'name': 'LDAC', 'desc': 'Load DAC'},
     )

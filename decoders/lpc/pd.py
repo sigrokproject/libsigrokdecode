@@ -104,7 +104,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['lpc']
-    probes = (
+    channels = (
         {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'Frame'},
         {'id': 'lclk',   'name': 'LCLK',    'desc': 'Clock'},
         {'id': 'lad0',   'name': 'LAD[0]',  'desc': 'Addr/control/data 0'},
@@ -112,7 +112,7 @@ class Decoder(srd.Decoder):
         {'id': 'lad2',   'name': 'LAD[2]',  'desc': 'Addr/control/data 2'},
         {'id': 'lad3',   'name': 'LAD[3]',  'desc': 'Addr/control/data 3'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'lreset', 'name': 'LRESET#', 'desc': 'Reset'},
         {'id': 'ldrq',   'name': 'LDRQ#',   'desc': 'Encoded DMA / bus master request'},
         {'id': 'serirq', 'name': 'SERIRQ',  'desc': 'Serialized IRQ'},

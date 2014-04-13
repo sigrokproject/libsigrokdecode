@@ -90,31 +90,31 @@ SRD_API struct srd_decoder *srd_decoder_get_by_id(const char *id)
 	return NULL;
 }
 
-static int get_probes(const struct srd_decoder *d, const char *attr,
-		GSList **pl)
+static int get_channels(const struct srd_decoder *d, const char *attr,
+		GSList **pdchl)
 {
-	PyObject *py_probelist, *py_entry;
-	struct srd_probe *p;
-	int ret, num_probes, i;
+	PyObject *py_channellist, *py_entry;
+	struct srd_channel *pdch;
+	int ret, num_channels, i;
 
 	if (!PyObject_HasAttrString(d->py_dec, attr))
-		/* No probes of this type specified. */
+		/* No channels of this type specified. */
 		return SRD_OK;
 
-	py_probelist = PyObject_GetAttrString(d->py_dec, attr);
-	if (!PyTuple_Check(py_probelist)) {
+	py_channellist = PyObject_GetAttrString(d->py_dec, attr);
+	if (!PyTuple_Check(py_channellist)) {
 		srd_err("Protocol decoder %s %s attribute is not a tuple.",
 				d->name, attr);
 		return SRD_ERR_PYTHON;
 	}
 
-	if ((num_probes = PyTuple_Size(py_probelist)) == 0)
-		/* Empty probelist. */
+	if ((num_channels = PyTuple_Size(py_channellist)) == 0)
+		/* Empty channellist. */
 		return SRD_OK;
 
 	ret = SRD_OK;
-	for (i = 0; i < num_probes; i++) {
-		py_entry = PyTuple_GetItem(py_probelist, i);
+	for (i = 0; i < num_channels; i++) {
+		py_entry = PyTuple_GetItem(py_channellist, i);
 		if (!PyDict_Check(py_entry)) {
 			srd_err("Protocol decoder %s %s attribute is not "
 				"a list with dict elements.", d->name, attr);
@@ -122,30 +122,30 @@ static int get_probes(const struct srd_decoder *d, const char *attr,
 			break;
 		}
 
-		if (!(p = g_try_malloc(sizeof(struct srd_probe)))) {
-			srd_err("Failed to g_malloc() struct srd_probe.");
+		if (!(pdch = g_try_malloc(sizeof(struct srd_channel)))) {
+			srd_err("Failed to g_malloc() struct srd_channel.");
 			ret = SRD_ERR_MALLOC;
 			break;
 		}
 
-		if ((py_dictitem_as_str(py_entry, "id", &p->id)) != SRD_OK) {
+		if ((py_dictitem_as_str(py_entry, "id", &pdch->id)) != SRD_OK) {
 			ret = SRD_ERR_PYTHON;
 			break;
 		}
-		if ((py_dictitem_as_str(py_entry, "name", &p->name)) != SRD_OK) {
+		if ((py_dictitem_as_str(py_entry, "name", &pdch->name)) != SRD_OK) {
 			ret = SRD_ERR_PYTHON;
 			break;
 		}
-		if ((py_dictitem_as_str(py_entry, "desc", &p->desc)) != SRD_OK) {
+		if ((py_dictitem_as_str(py_entry, "desc", &pdch->desc)) != SRD_OK) {
 			ret = SRD_ERR_PYTHON;
 			break;
 		}
-		p->order = i;
+		pdch->order = i;
 
-		*pl = g_slist_append(*pl, p);
+		*pdchl = g_slist_append(*pdchl, pdch);
 	}
 
-	Py_DecRef(py_probelist);
+	Py_DecRef(py_channellist);
 
 	return ret;
 }
@@ -302,7 +302,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_decoder *d;
 	int ret, i, j;
 	char **ann, **bin, *ann_row_id, *ann_row_desc;
-	struct srd_probe *p;
+	struct srd_channel *pdch;
 	GSList *l, *ann_classes;
 	struct srd_decoder_annotation_row *ann_row;
 
@@ -404,25 +404,25 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (get_options(d) != SRD_OK)
 		goto err_out;
 
-	/* Check and import required probes. */
-	if (get_probes(d, "probes", &d->probes) != SRD_OK)
+	/* Check and import required channels. */
+	if (get_channels(d, "channels", &d->channels) != SRD_OK)
 		goto err_out;
 
-	/* Check and import optional probes. */
-	if (get_probes(d, "optional_probes", &d->opt_probes) != SRD_OK)
+	/* Check and import optional channels. */
+	if (get_channels(d, "optional_channels", &d->opt_channels) != SRD_OK)
 		goto err_out;
 
 	/*
-	 * Fix order numbers for the optional probes.
+	 * Fix order numbers for the optional channels.
 	 *
 	 * Example:
-	 * Required probes: r1, r2, r3. Optional: o1, o2, o3, o4.
-	 * 'order' fields in the d->probes list = 0, 1, 2.
-	 * 'order' fields in the d->opt_probes list = 3, 4, 5, 6.
+	 * Required channels: r1, r2, r3. Optional: o1, o2, o3, o4.
+	 * 'order' fields in the d->channels list = 0, 1, 2.
+	 * 'order' fields in the d->opt_channels list = 3, 4, 5, 6.
 	 */
-	for (l = d->opt_probes; l; l = l->next) {
-		p = l->data;
-		p->order += g_slist_length(d->probes);
+	for (l = d->opt_channels; l; l = l->next) {
+		pdch = l->data;
+		pdch->order += g_slist_length(d->channels);
 	}
 
 	/* Convert annotation class attribute to GSList of char **. */
@@ -587,22 +587,22 @@ SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 	return doc;
 }
 
-static void free_probes(GSList *probelist)
+static void free_channels(GSList *channellist)
 {
 	GSList *l;
-	struct srd_probe *p;
+	struct srd_channel *pdch;
 
-	if (probelist == NULL)
+	if (channellist == NULL)
 		return;
 
-	for (l = probelist; l; l = l->next) {
-		p = l->data;
-		g_free(p->id);
-		g_free(p->name);
-		g_free(p->desc);
-		g_free(p);
+	for (l = channellist; l; l = l->next) {
+		pdch = l->data;
+		g_free(pdch->id);
+		g_free(pdch->name);
+		g_free(pdch->desc);
+		g_free(pdch);
 	}
-	g_slist_free(probelist);
+	g_slist_free(channellist);
 }
 
 /**
@@ -648,8 +648,8 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	}
 	g_slist_free(dec->options);
 
-	free_probes(dec->probes);
-	free_probes(dec->opt_probes);
+	free_channels(dec->channels);
+	free_channels(dec->opt_channels);
 	g_free(dec->id);
 	g_free(dec->name);
 	g_free(dec->longname);

@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['can']
-    probes = (
+    channels = (
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},
     )
     options = (

@@ -62,13 +62,13 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['jtag']
-    probes = (
+    channels = (
         {'id': 'tdi',  'name': 'TDI',  'desc': 'Test data input'},
         {'id': 'tdo',  'name': 'TDO',  'desc': 'Test data output'},
         {'id': 'tck',  'name': 'TCK',  'desc': 'Test clock'},
         {'id': 'tms',  'name': 'TMS',  'desc': 'Test mode select'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
         {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
@@ -200,7 +200,7 @@ class Decoder(srd.Decoder):
             self.oldpins = pins
 
             # Get individual pin values into local variables.
-            # Unused probes will have a value of > 1.
+            # Unused channels will have a value of > 1.
             (tdi, tdo, tck, tms, trst, srst, rtck) = pins
 
             # We only care about TCK edges (either rising or falling).

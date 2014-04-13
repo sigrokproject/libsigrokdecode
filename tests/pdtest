@@ -110,7 +110,7 @@ def parse_testfile(path, pd, tc, op_type, op_class):
                     raise E_syntax
                 pd_spec = {
                     'name': f.pop(0),
-                    'probes': [],
+                    'channels': [],
                     'options': [],
                 }
                 while len(f):
@@ -122,12 +122,12 @@ def parse_testfile(path, pd, tc, op_type, op_class):
                     if '=' not in b:
                         raise E_syntax
                     opt, val = b.split('=')
-                    if a == 'probe':
+                    if a == 'channel':
                         try:
                             val = int(val)
                         except:
                             raise E_syntax
-                        pd_spec['probes'].append([opt, val])
+                        pd_spec['channels'].append([opt, val])
                     elif a == 'option':
                         pd_spec['options'].append([opt, val])
                     else:
@@ -314,8 +314,8 @@ def run_tests(tests, fix=False):
                 # Set up PD stack for this test.
                 for spd in tc['pdlist']:
                     args.extend(['-P', spd['name']])
-                    for label, probe in spd['probes']:
-                        args.extend(['-p', "%s=%d" % (label, probe)])
+                    for label, channel in spd['channels']:
+                        args.extend(['-p', "%s=%d" % (label, channel)])
                     for option, value in spd['options']:
                         args.extend(['-o', "%s=%s" % (option, value)])
                 args.extend(['-i', os.path.join(dumps_dir, tc['input'])])
@@ -448,8 +448,8 @@ def show_tests(tests):
                 print("Testcase: %s/%s" % (tc['pd'], tc['name']))
                 for pd in tc['pdlist']:
                     print("  Protocol decoder: %s" % pd['name'])
-                    for label, probe in pd['probes']:
-                        print("    Probe %s=%d" % (label, probe))
+                    for label, channel in pd['channels']:
+                        print("    Channel %s=%d" % (label, channel))
                     for option, value in pd['options']:
                         print("    Option %s=%d" % (option, value))
                 if 'stack' in tc:

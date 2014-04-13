@@ -54,9 +54,9 @@ Packet:
    word <worditemcount> is 7, and so on.
 '''
 
-def probe_list(num_probes):
+def channel_list(num_channels):
     l = [{'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'}]
-    for i in range(num_probes):
+    for i in range(num_channels):
         d = {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data line %d' % i}
         l.append(d)
     return tuple(l)
@@ -70,7 +70,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['parallel']
-    optional_probes = probe_list(8)
+    optional_channels = channel_list(8)
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},

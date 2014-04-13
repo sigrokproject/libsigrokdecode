@@ -156,11 +156,11 @@ struct srd_decoder {
 	 */
 	char *license;
 
-	/** List of probes required by this decoder. */
-	GSList *probes;
+	/** List of channels required by this decoder. */
+	GSList *channels;
 
-	/** List of optional probes for this decoder. */
-	GSList *opt_probes;
+	/** List of optional channels for this decoder. */
+	GSList *opt_channels;
 
 	/**
 	 * List of NULL-terminated char[], containing descriptions of the
@@ -191,17 +191,17 @@ struct srd_decoder {
 };
 
 /**
- * Structure which contains information about one protocol decoder probe.
- * For example, I2C has two probes, SDA and SCL.
+ * Structure which contains information about one protocol decoder channel.
+ * For example, I2C has two channels, SDA and SCL.
  */
-struct srd_probe {
-	/** The ID of the probe. Must be non-NULL. */
+struct srd_channel {
+	/** The ID of the channel. Must be non-NULL. */
 	char *id;
-	/** The name of the probe. Must not be NULL. */
+	/** The name of the channel. Must not be NULL. */
 	char *name;
-	/** The description of the probe. Must not be NULL. */
+	/** The description of the channel. Must not be NULL. */
 	char *desc;
-	/** The index of the probe, i.e. its order in the list of probes. */
+	/** The index of the channel, i.e. its order in the list of channels. */
 	int order;
 };
 
@@ -224,10 +224,10 @@ struct srd_decoder_inst {
 	PyObject *py_inst;
 	char *inst_id;
 	GSList *pd_output;
-	int dec_num_probes;
-	int *dec_probemap;
+	int dec_num_channels;
+	int *dec_channelmap;
 	int data_unitsize;
-	uint8_t *probe_samples;
+	uint8_t *channel_samples;
 	GSList *next_di;
 };
 
@@ -312,8 +312,8 @@ SRD_API int srd_decoder_unload_all(void);
 /* instance.c */
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options);
-SRD_API int srd_inst_probe_set_all(struct srd_decoder_inst *di,
-		GHashTable *probes, int unit_size);
+SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
+		GHashTable *channels, int unit_size);
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *id, GHashTable *options);
 SRD_API int srd_inst_stack(struct srd_session *sess,

@@ -29,10 +29,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['onewire_link']
-    probes = (
+    channels = (
         {'id': 'owr', 'name': 'OWR', 'desc': '1-Wire signal line'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power supply pin'},
     )
     options = (

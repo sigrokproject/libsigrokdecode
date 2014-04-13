@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['guess_bitrate']
-    probes = (
+    channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
     annotations = (

@@ -41,9 +41,9 @@ int debug = FALSE;
 int statistics = FALSE;
 char *coverage_report;
 
-struct probe {
+struct channel {
 	char *name;
-	int probe;
+	int channel;
 };
 
 struct option {
@@ -53,7 +53,7 @@ struct option {
 
 struct pd {
 	char *name;
-	GSList *probes;
+	GSList *channels;
 	GSList *options;
 };
 
@@ -140,8 +140,8 @@ static void usage(char *msg)
 	printf("Usage: runtc [-dPpoiOf]\n");
 	printf("  -d  Debug\n");
 	printf("  -P  <protocol decoder>\n");
-	printf("  -p  <probename=probenum> (optional)\n");
-	printf("  -o  <probeoption=value> (optional)\n");
+	printf("  -p  <channelname=channelnum> (optional)\n");
+	printf("  -o  <channeloption=value> (optional)\n");
 	printf("  -i <input file>\n");
 	printf("  -O <output-pd:output-type[:output-class]>\n");
 	printf("  -f <output file> (optional)\n");
@@ -329,13 +329,13 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	struct srd_decoder_inst *di, *prev_di;
 	srd_pd_output_callback_t cb;
 	struct pd *pd;
-	struct probe *probe;
+	struct channel *channel;
 	struct option *option;
 	GVariant *gvar;
-	GHashTable *probes, *opts;
+	GHashTable *channels, *opts;
 	GSList *pdl, *l;
 	int idx;
-	int max_probe;
+	int max_channel;
 	char **decoder_class;
 
 	if (op->outfile) {
@@ -385,23 +385,23 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 			return FALSE;
 		g_hash_table_destroy(opts);
 
-		/* Map probes. */
-		if (pd->probes) {
-			probes = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
+		/* Map channels. */
+		if (pd->channels) {
+			channels = g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 					(GDestroyNotify)g_variant_unref);
-			max_probe = 0;
-			for (l = pd->probes; l; l = l->next) {
-				probe = l->data;
-				if (probe->probe > max_probe)
-					max_probe = probe->probe;
-				gvar = g_variant_new_int32(probe->probe);
+			max_channel = 0;
+			for (l = pd->channels; l; l = l->next) {
+				channel = l->data;
+				if (channel->channel > max_channel)
+					max_channel = channel->channel;
+				gvar = g_variant_new_int32(channel->channel);
 				g_variant_ref_sink(gvar);
-				g_hash_table_insert(probes, probe->name, gvar);
+				g_hash_table_insert(channels, channel->name, gvar);
 			}
-			if (srd_inst_probe_set_all(di, probes,
-					(max_probe + 8) / 8) != SRD_OK)
+			if (srd_inst_channel_set_all(di, channels,
+					(max_channel + 8) / 8) != SRD_OK)
 				return FALSE;
-			g_hash_table_destroy(probes);
+			g_hash_table_destroy(channels);
 		}
 
 		/* If this is not the first decoder in the list, stack it
@@ -685,7 +685,7 @@ int main(int argc, char **argv)
 	PyObject *coverage;
 	GSList *pdlist;
 	struct pd *pd;
-	struct probe *probe;
+	struct channel *channel;
 	struct option *option;
 	struct output *op;
 	int ret;
@@ -710,7 +710,7 @@ int main(int argc, char **argv)
 		case 'P':
 			pd = g_malloc(sizeof(struct pd));
 			pd->name = g_strdup(optarg);
-			pd->probes = pd->options = NULL;
+			pd->channels = pd->options = NULL;
 			pdlist = g_slist_append(pdlist, pd);
 			break;
 		case 'p':
@@ -728,11 +728,11 @@ int main(int argc, char **argv)
 				usage(NULL);
 			}
 			if (c == 'p') {
-				probe = malloc(sizeof(struct probe));
-				probe->name = g_strdup(kv[0]);
-				probe->probe = strtoul(kv[1], 0, 10);
+				channel = malloc(sizeof(struct channel));
+				channel->name = g_strdup(kv[0]);
+				channel->channel = strtoul(kv[1], 0, 10);
 				/* Apply to last PD. */
-				pd->probes = g_slist_append(pd->probes, probe);
+				pd->channels = g_slist_append(pd->channels, channel);
 			} else {
 				option = malloc(sizeof(struct option));
 				option->key = g_strdup(kv[0]);

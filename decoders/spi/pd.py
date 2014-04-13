@@ -31,7 +31,7 @@ Commands:
  - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
    The data is _usually_ 8 bits (but can also be fewer or more bits).
    Both data items are Python numbers (not strings), or None if the respective
-   probe was not supplied.
+   channel was not supplied.
  - 'BITS': <data1>/<data2> contain a list of bit values in this MISO/MOSI data
    item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
@@ -69,10 +69,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']
-    probes = (
+    channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'miso', 'name': 'MISO', 'desc': 'Master in, slave out'},
         {'id': 'mosi', 'name': 'MOSI', 'desc': 'Master out, slave in'},
         {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},

@@ -56,7 +56,7 @@ ann_data_cycle_map = {
 
 def reduce_bus(bus):
     if 0xFF in bus:
-        return None # unassigned bus probes
+        return None # unassigned bus channels
     else:
         return reduce(lambda a, b: (a << 1) | b, reversed(bus))
 
@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
     license  = 'gplv3+'
     inputs   = ['logic']
     outputs  = ['z80']
-    probes = tuple({
+    channels = tuple({
             'id': 'd%d' % i,
             'name': 'D%d' % i,
             'desc': 'Data bus line %d' % i
@@ -82,7 +82,7 @@ class Decoder(srd.Decoder):
         {'id': 'rd', 'name': '/RD', 'desc': 'Memory or I/O read'},
         {'id': 'wr', 'name': '/WR', 'desc': 'Memory or I/O write'},
     )
-    optional_probes = (
+    optional_channels = (
         {'id': 'mreq', 'name': '/MREQ', 'desc': 'Memory request'},
         {'id': 'iorq', 'name': '/IORQ', 'desc': 'I/O request'},
     ) + tuple({
