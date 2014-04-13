@@ -69,7 +69,7 @@ class Decoder(srd.Decoder):
     name     = 'Z80'
     longname = 'Zilog Z80 CPU'
     desc     = 'Zilog Z80 microprocessor disassembly.'
-    license  = 'gplv2+'
+    license  = 'gplv3+'
     inputs   = ['logic']
     outputs  = ['z80']
     probes = tuple({
