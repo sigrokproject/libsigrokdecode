@@ -103,7 +103,6 @@ class Decoder(srd.Decoder):
         self.addr = self.cmd = None
 
     def start(self):
-        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.active = 0 if self.options['polarity'] == 'active-low' else 1
         self.old_ir = 1 if self.active == 0 else 0

@@ -136,7 +136,6 @@ class Decoder(srd.Decoder):
         # self.state = 'BYPASS'
 
     def start(self):
-        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_reg_bypass(self, cmd, bits):

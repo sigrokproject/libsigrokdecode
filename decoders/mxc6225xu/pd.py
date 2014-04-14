@@ -76,7 +76,6 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def start(self):
-        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):

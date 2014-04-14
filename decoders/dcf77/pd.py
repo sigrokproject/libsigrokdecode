@@ -77,7 +77,6 @@ class Decoder(srd.Decoder):
         self.dcf77_bitnumber_is_known = 0
 
     def start(self):
-        # self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
