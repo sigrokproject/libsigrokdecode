@@ -28,7 +28,7 @@ dacs = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'tlc5620'
     name = 'TI TLC5620'
     longname = 'Texas Instruments TLC5620'

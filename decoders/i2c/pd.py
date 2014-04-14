@@ -64,7 +64,7 @@ proto = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'i2c'
     name = 'I²C'
     longname = 'Inter-Integrated Circuit'

@@ -96,7 +96,7 @@ fields = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'lpc'
     name = 'LPC'
     longname = 'Low-Pin-Count'

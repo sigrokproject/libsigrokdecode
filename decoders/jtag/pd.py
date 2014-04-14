@@ -54,7 +54,7 @@ jtag_states = [
 ]
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'jtag'
     name = 'JTAG'
     longname = 'Joint Test Action Group (IEEE 1149.1)'

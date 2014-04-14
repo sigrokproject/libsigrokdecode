@@ -64,7 +64,7 @@ def signed_byte(byte):
     return byte if byte < 128 else byte - 256
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id       = 'z80'
     name     = 'Z80'
     longname = 'Zilog Z80 CPU'

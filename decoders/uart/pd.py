@@ -70,7 +70,7 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
         raise Exception('Invalid parity type: %d' % parity_type)
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'uart'
     name = 'UART'
     longname = 'Universal Asynchronous Receiver/Transmitter'

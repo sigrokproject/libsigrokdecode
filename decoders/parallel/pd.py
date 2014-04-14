@@ -62,7 +62,7 @@ def channel_list(num_channels):
     return tuple(l)
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'parallel'
     name = 'Parallel'
     longname = 'Parallel sync bus'

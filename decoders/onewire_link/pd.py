@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'onewire_link'
     name = '1-Wire link layer'
     longname = '1-Wire serial communication bus (link layer)'

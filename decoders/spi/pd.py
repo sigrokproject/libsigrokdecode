@@ -61,7 +61,7 @@ spi_mode = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'spi'
     name = 'SPI'
     longname = 'Serial Peripheral Interface'

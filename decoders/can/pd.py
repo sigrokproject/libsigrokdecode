@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'can'
     name = 'CAN'
     longname = 'Controller Area Network'

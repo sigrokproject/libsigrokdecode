@@ -77,7 +77,7 @@ def cmd_list():
     return tuple(l)
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'sdcard_spi'
     name = 'SD card (SPI mode)'
     longname = 'Secure Digital card (SPI mode)'

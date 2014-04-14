@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'i2cdemux'
     name = 'I²C demux'
     longname = 'I²C demultiplexer'

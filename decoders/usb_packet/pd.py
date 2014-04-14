@@ -143,7 +143,7 @@ def bitstr_to_num(bitstr):
     return int(''.join(l), 2)
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'usb_packet'
     name = 'USB packet'
     longname = 'Universal Serial Bus (LS/FS) packet'

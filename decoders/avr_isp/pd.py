@@ -24,7 +24,7 @@ from .parts import *
 VENDOR_CODE_ATMEL = 0x1e
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'avr_isp'
     name = 'AVR ISP'
     longname = 'AVR In-System Programming'

@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'mlx90614'
     name = 'MLX90614'
     longname = 'Melexis MLX90614'

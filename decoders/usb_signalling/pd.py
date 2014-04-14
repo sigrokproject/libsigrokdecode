@@ -74,7 +74,7 @@ sym_idx = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'usb_signalling'
     name = 'USB signalling'
     longname = 'Universal Serial Bus (LS/FS) signalling'

@@ -83,7 +83,7 @@ def decode_status_reg(data):
     return ret
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'mx25lxx05d'
     name = 'MX25Lxx05D'
     longname = 'Macronix MX25Lxx05D'

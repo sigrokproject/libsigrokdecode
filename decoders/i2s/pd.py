@@ -34,7 +34,7 @@ Packet:
 '''
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'i2s'
     name = 'I²S'
     longname = 'Integrated Interchip Sound'

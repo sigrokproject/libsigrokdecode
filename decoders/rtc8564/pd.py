@@ -32,7 +32,7 @@ def reg_list():
     return tuple(l)
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'rtc8564'
     name = 'RTC-8564'
     longname = 'Epson RTC-8564 JE/NB'

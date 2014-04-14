@@ -191,7 +191,7 @@ AUX_TYPES = [
 ]
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'xfp'
     name = 'XFP'
     longname = '10 Gigabit Small Form Factor Pluggable Module (XFP)'

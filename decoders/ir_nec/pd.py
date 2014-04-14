@@ -22,7 +22,7 @@ import sigrokdecode as srd
 from .lists import *
 
 class Decoder(srd.Decoder):
-    api_version = 1
+    api_version = 2
     id = 'ir_nec'
     name = 'IR NEC'
     longname = 'IR NEC'
