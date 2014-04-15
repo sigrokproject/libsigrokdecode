@@ -47,7 +47,7 @@ noinst_HEADERS = libsigrokdecode-internal.h
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsigrokdecode.pc
 
-EXTRA_DIST = Doxyfile contrib/sigrok-logo-notext.png
+EXTRA_DIST = Doxyfile HACKING contrib/sigrok-logo-notext.png
 
 if HAVE_CHECK
 TESTS = tests/check_main
