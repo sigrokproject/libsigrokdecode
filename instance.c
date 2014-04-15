@@ -204,8 +204,8 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 	int *new_channelmap, new_channelnum, num_required_channels, i;
 	char *channel_id;
 
-	srd_dbg("set channels called for instance %s with list of %d probes, "
-		"unitsize %d", di->inst_id, g_hash_table_size(new_channels), unit_size);
+	srd_dbg("Setting channels for instance %s with list of %d channels, "
+		"unitsize %d.", di->inst_id, g_hash_table_size(new_channels), unit_size);
 
 	if (g_hash_table_size(new_channels) == 0)
 		/* No channels provided. */
