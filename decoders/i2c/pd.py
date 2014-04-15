@@ -28,10 +28,10 @@ import sigrokdecode as srd
 '''
 OUTPUT_PYTHON format:
 
-I²C packet:
-[<cmd>, <data>]
+Packet:
+[<ptype>, <pdata>]
 
-<cmd> is one of:
+<ptype>:
  - 'START' (START condition)
  - 'START REPEAT' (Repeated START condition)
  - 'ADDRESS READ' (Slave address, read)
@@ -41,12 +41,12 @@ I²C packet:
  - 'STOP' (STOP condition)
  - 'ACK' (ACK bit)
  - 'NACK' (NACK bit)
- - 'BITS' (<data>: list of data/address bits and their ss/es numbers)
+ - 'BITS' (<pdata>: list of data/address bits and their ss/es numbers)
 
-<data> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
+<pdata> is the data or address byte associated with the 'ADDRESS*' and 'DATA*'
 command. Slave addresses do not include bit 0 (the READ/WRITE indication bit).
 For example, a slave address field could be 0x51 (instead of 0xa2).
-For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <data> is None.
+For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <pdata> is None.
 '''
 
 # CMD: [annotation-type-index, long annotation, short annotation]

@@ -23,10 +23,10 @@ import sigrokdecode as srd
 '''
 OUTPUT_PYTHON format:
 
-UART packet:
-[<packet-type>, <rxtx>, <packet-data>]
+Packet:
+[<ptype>, <rxtx>, <pdata>]
 
-This is the list of <packet-type>s and their respective <packet-data>:
+This is the list of <ptype>s and their respective <pdata> values:
  - 'STARTBIT': The data is the (integer) value of the start bit (0/1).
  - 'DATA': The data is the (integer) value of the UART data. Valid values
    range from 0 to 512 (as the data can be up to 9 bits in size).

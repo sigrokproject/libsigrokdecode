@@ -24,10 +24,10 @@ import sigrokdecode as srd
 '''
 OUTPUT_PYTHON format:
 
-SPI packet:
-[<cmd>, <data1>, <data2>]
+Packet:
+[<ptype>, <data1>, <data2>]
 
-Commands:
+<ptype>:
  - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
    The data is _usually_ 8 bits (but can also be fewer or more bits).
    Both data items are Python numbers (not strings), or None if the respective

@@ -23,11 +23,11 @@ import sigrokdecode as srd
 '''
 OUTPUT_PYTHON format:
 
-JTAG packet:
-[<packet-type>, <data>]
+Packet:
+[<ptype>, <pdata>]
 
-<packet-type> is one of:
- - 'NEW STATE': <data> is the new state of the JTAG state machine.
+<ptype>:
+ - 'NEW STATE': <pdata> is the new state of the JTAG state machine.
    Valid values: 'TEST-LOGIC-RESET', 'RUN-TEST/IDLE', 'SELECT-DR-SCAN',
    'CAPTURE-DR', 'SHIFT-DR', 'EXIT1-DR', 'PAUSE-DR', 'EXIT2-DR', 'UPDATE-DR',
    'SELECT-IR-SCAN', 'CAPTURE-IR', 'SHIFT-IR', 'EXIT1-IR', 'PAUSE-IR',
