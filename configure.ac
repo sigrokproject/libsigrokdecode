@@ -99,7 +99,11 @@ PKG_CHECK_MODULES([python3], [python3 >= 3.2],
 	[pyver=`$PKG_CONFIG --modversion python3`;
 	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python3_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python3_LIBS"],
-[PKG_CHECK_MODULES([python33], [python-3.3 >= 3.2],
+[PKG_CHECK_MODULES([python34], [python-3.4 >= 3.4],
+	[pyver=`$PKG_CONFIG --modversion python-3.4`;
+	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python34_CFLAGS";
+	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python34_LIBS"],
+[PKG_CHECK_MODULES([python33], [python-3.3 >= 3.3],
 	[pyver=`$PKG_CONFIG --modversion python-3.3`;
 	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python33_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python33_LIBS"],
@@ -107,7 +111,7 @@ PKG_CHECK_MODULES([python3], [python3 >= 3.2],
 	[pyver=`$PKG_CONFIG --modversion python-3.2`;
 	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python32_CFLAGS";
 	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python32_LIBS"],
-)])])
+)])])])
 AC_SUBST(CPPFLAGS_PYTHON)
 AC_SUBST(LDFLAGS_PYTHON)
 
