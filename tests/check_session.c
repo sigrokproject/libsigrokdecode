@@ -20,6 +20,7 @@
 
 #include "../libsigrokdecode.h" /* First, to avoid compiler warning. */
 #include "../libsigrokdecode-internal.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <check.h>
 #include "lib.h"
@@ -193,11 +194,10 @@ START_TEST(test_session_metadata_set)
 	srd_init(NULL);
 	srd_session_new(&sess);
 	/* Try a bunch of values. */
-	for (i = 0; i < 1000; i++) {
+	for (i = 0; i < 1000; i++)
 		conf_check_ok(sess, SRD_CONF_SAMPLERATE, i);
-	}
 	/* Try the max. possible value. */
-	conf_check_ok(sess, SRD_CONF_SAMPLERATE, 18446744073709551615ULL);
+	conf_check_ok(sess, SRD_CONF_SAMPLERATE, UINT64_MAX);
 	srd_session_destroy(sess);
 	srd_exit();
 }
