@@ -22,6 +22,10 @@
 #include "config.h"
 #include <inttypes.h>
 
+typedef struct {
+        PyObject_HEAD
+} srd_Decoder;
+
 /* This is only used for nicer srd_dbg() output. */
 static const char *OUTPUT_TYPES[] = {
 	"OUTPUT_ANN",

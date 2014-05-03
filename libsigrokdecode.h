@@ -271,10 +271,6 @@ struct srd_pd_callback {
 
 typedef struct {
 	PyObject_HEAD
-} srd_Decoder;
-
-typedef struct {
-	PyObject_HEAD
 	struct srd_decoder_inst *di;
 	uint64_t start_samplenum;
 	unsigned int itercnt;
