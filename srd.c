@@ -32,9 +32,6 @@ SRD_PRIV GSList *searchpaths = NULL;
 extern GSList *sessions;
 extern int max_session_id;
 
-/* decoder.c */
-extern SRD_PRIV GSList *pd_list;
-
 /** @endcond */
 
 /**

@@ -40,7 +40,7 @@
 /** @cond PRIVATE */
 
 /* The list of protocol decoders. */
-SRD_PRIV GSList *pd_list = NULL;
+static GSList *pd_list = NULL;
 
 /* srd.c */
 extern GSList *searchpaths;
