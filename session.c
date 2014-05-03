@@ -301,7 +301,7 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
  * @since 0.3.0
  */
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
-		int output_type, srd_pd_output_callback_t cb, void *cb_data)
+		int output_type, srd_pd_output_callback cb, void *cb_data)
 {
 	struct srd_pd_callback *pd_cb;
 

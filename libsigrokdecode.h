@@ -258,12 +258,12 @@ struct srd_proto_data_binary {
 	const unsigned char *data;
 };
 
-typedef void (*srd_pd_output_callback_t)(struct srd_proto_data *pdata,
-					 void *cb_data);
+typedef void (*srd_pd_output_callback)(struct srd_proto_data *pdata,
+					void *cb_data);
 
 struct srd_pd_callback {
 	int output_type;
-	srd_pd_output_callback_t cb;
+	srd_pd_output_callback cb;
 	void *cb_data;
 };
 
@@ -298,7 +298,7 @@ SRD_API int srd_session_send(struct srd_session *sess,
 		const uint8_t *inbuf, uint64_t inbuflen);
 SRD_API int srd_session_destroy(struct srd_session *sess);
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
-		int output_type, srd_pd_output_callback_t cb, void *cb_data);
+		int output_type, srd_pd_output_callback cb, void *cb_data);
 
 /* decoder.c */
 SRD_API const GSList *srd_decoder_list(void);
@@ -322,11 +322,11 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 		const char *inst_id);
 
 /* log.c */
-typedef int (*srd_log_callback_t)(void *cb_data, int loglevel,
+typedef int (*srd_log_callback)(void *cb_data, int loglevel,
 				  const char *format, va_list args);
 SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
-SRD_API int srd_log_callback_set(srd_log_callback_t cb, void *cb_data);
+SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data);
 SRD_API int srd_log_callback_set_default(void);
 SRD_API int srd_log_logdomain_set(const char *logdomain);
 SRD_API char *srd_log_logdomain_get(void);

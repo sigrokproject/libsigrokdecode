@@ -327,7 +327,7 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	struct srd_session *sess;
 	struct srd_decoder *dec;
 	struct srd_decoder_inst *di, *prev_di;
-	srd_pd_output_callback_t cb;
+	srd_pd_output_callback cb;
 	struct pd *pd;
 	struct channel *channel;
 	struct option *option;
