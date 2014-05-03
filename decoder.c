@@ -47,11 +47,21 @@ extern GSList *searchpaths;
 
 /* session.c */
 extern GSList *sessions;
+extern int max_session_id;
 
 /* module_sigrokdecode.c */
 extern SRD_PRIV PyObject *mod_sigrokdecode;
 
 /** @endcond */
+
+static gboolean srd_check_init(void)
+{
+	if (max_session_id < 0) {
+		srd_err("Library is not initialized.");
+		return FALSE;
+	} else
+		return TRUE;
+}
 
 /**
  * Returns the list of supported/loaded protocol decoders.
