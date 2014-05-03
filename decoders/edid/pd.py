@@ -68,7 +68,7 @@ xy_ratio = [
     (16, 9),
 ]
 
-# Annotation types
+# Annotation classes
 ANN_FIELDS = 0
 ANN_SECTIONS = 1
 
