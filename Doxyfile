@@ -805,8 +805,10 @@ EXCLUDE_SYMLINKS       = NO
 #  - type_decoder.c: No public API stuff in there currently.
 #  - tyoe_logic.c: No public API stuff in there currently.
 #  - util.c: No public API stuff in there currently.
+#  - tests/*: Unit tests, no public API stuff in there.
+#  - doxy/*: Potentially already generated docs, should not be scanned.
 #
-EXCLUDE_PATTERNS       = */decoders/*
+EXCLUDE_PATTERNS       = */decoders/* */tests/* */doxy/*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
