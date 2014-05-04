@@ -89,8 +89,8 @@ dist-hook: ChangeLog
 
 install-decoders:
 	$(MKDIR_P) $(DESTDIR)$(DECODERS_DIR)
-	${top_srcdir}/tools/install-decoders -i ${top_srcdir}/decoders \
-		-o $(DESTDIR)$(DECODERS_DIR)
+	$(PYTHON3) ${top_srcdir}/tools/install-decoders \
+		-i ${top_srcdir}/decoders -o $(DESTDIR)$(DECODERS_DIR)
 
 install-data-hook: install-decoders
 
