@@ -38,7 +38,7 @@
  */
 
 /* Currently selected libsigrokdecode loglevel. Default: SRD_LOG_WARN. */
-static int srd_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
+static int cur_loglevel = SRD_LOG_WARN; /* Show errors+warnings per default. */
 
 /* Function prototype. */
 static int srd_logv(void *cb_data, int loglevel, const char *format,
@@ -85,7 +85,7 @@ SRD_API int srd_log_loglevel_set(int loglevel)
 		return SRD_ERR_ARG;
 	}
 
-	srd_loglevel = loglevel;
+	cur_loglevel = loglevel;
 
 	srd_dbg("libsigrokdecode loglevel set to %d.", loglevel);
 
@@ -101,7 +101,7 @@ SRD_API int srd_log_loglevel_set(int loglevel)
  */
 SRD_API int srd_log_loglevel_get(void)
 {
-	return srd_loglevel;
+	return cur_loglevel;
 }
 
 /**
@@ -209,7 +209,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 	(void)cb_data;
 
 	/* Only output messages of at least the selected loglevel(s). */
-	if (loglevel > srd_loglevel)
+	if (loglevel > cur_loglevel)
 		return SRD_OK;
 
 	if (srd_log_domain[0] != '\0')
