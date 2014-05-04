@@ -192,7 +192,7 @@ static gint compare_channel_id(const struct srd_channel *pdch,
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.1.0
+ * @since 0.3.0
  */
 SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		GHashTable *new_channels, int unit_size)

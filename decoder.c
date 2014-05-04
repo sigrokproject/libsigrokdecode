@@ -70,7 +70,7 @@ static gboolean srd_check_init(void)
  *
  * @return List of decoders, NULL if none are supported or loaded.
  *
- * @since 0.1.0 (but the API changed in 0.2.0)
+ * @since 0.2.0
  */
 SRD_API const GSList *srd_decoder_list(void)
 {

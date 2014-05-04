@@ -162,7 +162,7 @@ SRD_API char *srd_log_logdomain_get(void)
  *
  * @return SRD_OK upon success, SRD_ERR_ARG upon invalid arguments.
  *
- * @since 0.1.0
+ * @since 0.3.0
  */
 SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data)
 {
