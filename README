@@ -38,6 +38,7 @@ Requirements
  - Python >= 3.2
  - check >= 0.9.4 (optional, only needed to run unit tests)
  - libsigrok >= 0.2.0 (optional, only needed for the developer PD tests)
+ - python3-coverage (optional, only needed for the developer PD tests)
 
 
 Building and installing
