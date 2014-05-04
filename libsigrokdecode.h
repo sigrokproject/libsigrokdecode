@@ -65,7 +65,7 @@ struct srd_session;
  */
 
 /** Status/error codes returned by libsigrokdecode functions. */
-enum {
+enum srd_error_code {
 	SRD_OK               =  0, /**< No error */
 	SRD_ERR              = -1, /**< Generic/unspecified error */
 	SRD_ERR_MALLOC       = -2, /**< Malloc/calloc/realloc error */
@@ -81,7 +81,7 @@ enum {
 };
 
 /* libsigrokdecode loglevels. */
-enum {
+enum srd_loglevel {
 	SRD_LOG_NONE = 0, /**< Output no messages at all. */
 	SRD_LOG_ERR  = 1, /**< Output error messages. */
 	SRD_LOG_WARN = 2, /**< Output warnings. */
@@ -126,14 +126,14 @@ enum {
  *   - add a check in module_sigrokdecode.c:Decoder_put()
  *   - add a debug string in type_decoder.c:OUTPUT_TYPES
  */
-enum {
+enum srd_output_type {
 	SRD_OUTPUT_ANN,
 	SRD_OUTPUT_PYTHON,
 	SRD_OUTPUT_BINARY,
 	SRD_OUTPUT_META,
 };
 
-enum {
+enum srd_configkey {
 	SRD_CONF_SAMPLERATE = 10000,
 };
 
