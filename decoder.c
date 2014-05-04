@@ -366,6 +366,17 @@ SRD_API int srd_decoder_load(const char *module_name)
 	}
 	Py_CLEAR(py_basedec);
 
+	/*
+	 * Check that thіs decoder has the correct PD API version.
+	 * PDs of different API versions are incompatible and cannot work.
+	 */
+	py_long = PyObject_GetAttrString(d->py_dec, "api_version");
+	if (PyLong_AsLong(py_long) != 2) {
+		srd_err("Only PDs of API version 2 are supported.");
+		goto err_out;
+	}
+	Py_CLEAR(py_long);
+
 	/* Check for a proper start() method. */
 	if (!PyObject_HasAttrString(d->py_dec, "start")) {
 		srd_err("Protocol decoder %s has no start() method Decoder "
