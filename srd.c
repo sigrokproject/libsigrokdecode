@@ -29,8 +29,8 @@
 SRD_PRIV GSList *searchpaths = NULL;
 
 /* session.c */
-extern GSList *sessions;
-extern int max_session_id;
+extern SRD_PRIV GSList *sessions;
+extern SRD_PRIV int max_session_id;
 
 /** @endcond */
 

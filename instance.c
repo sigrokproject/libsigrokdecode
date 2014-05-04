@@ -28,7 +28,7 @@
 
 /** @cond PRIVATE */
 
-extern GSList *sessions;
+extern SRD_PRIV GSList *sessions;
 
 /* type_logic.c */
 extern SRD_PRIV PyTypeObject srd_logic_type;

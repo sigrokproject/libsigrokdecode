@@ -43,11 +43,11 @@
 static GSList *pd_list = NULL;
 
 /* srd.c */
-extern GSList *searchpaths;
+extern SRD_PRIV GSList *searchpaths;
 
 /* session.c */
-extern GSList *sessions;
-extern int max_session_id;
+extern SRD_PRIV GSList *sessions;
+extern SRD_PRIV int max_session_id;
 
 /* module_sigrokdecode.c */
 extern SRD_PRIV PyObject *mod_sigrokdecode;

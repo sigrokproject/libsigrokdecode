@@ -41,7 +41,7 @@
 /** @cond PRIVATE */
 
 SRD_PRIV GSList *sessions = NULL;
-int max_session_id = -1;
+SRD_PRIV int max_session_id = -1;
 
 /** @endcond */
 
