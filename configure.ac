@@ -66,7 +66,7 @@ PKG_PROG_PKG_CONFIG([0.22])
 # Carefully read the libtool docs before updating these numbers!
 # The algorithm for determining which number to change (and how) is nontrivial!
 # http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
-SRD_LIB_VERSION_CURRENT=1
+SRD_LIB_VERSION_CURRENT=2
 SRD_LIB_VERSION_REVISION=0
 SRD_LIB_VERSION_AGE=0
 SRD_LIB_VERSION="$SRD_LIB_VERSION_CURRENT:$SRD_LIB_VERSION_REVISION:$SRD_LIB_VERSION_AGE"
