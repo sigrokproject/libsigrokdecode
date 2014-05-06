@@ -133,7 +133,7 @@ AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
 # libsigrok is optional (only used for the protocol decoder test framework).
 # Disable if not found.
-PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.2.0],
+PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.3.0],
 	[LIBSIGROK_CFLAGS="$libsigrok_CFLAGS"; LIBSIGROK_LIBS="$libsigrok_LIBS"],
 	[build_runtc="no"])
 AC_SUBST([LIBSIGROK_CFLAGS])
@@ -182,7 +182,7 @@ else
 fi
 
 # Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4" "libsigrok >= 0.2.0"; do
+for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4" "libsigrok >= 0.3.0"; do
 	optional="OPTIONAL"
 	if test "x$lib" = "xglib-2.0 >= 2.24.0"; then optional="REQUIRED"; fi
 	if `$PKG_CONFIG --exists $lib`; then
