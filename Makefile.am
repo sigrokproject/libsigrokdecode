@@ -68,10 +68,11 @@ endif
 
 if BUILD_RUNTC
 noinst_PROGRAMS = tests/runtc
+tests_runtc_LDADD = $(top_builddir)/libsigrokdecode.la
 tests_runtc_SOURCES = tests/runtc.c
 tests_runtc_CPPFLAGS = $(CPPFLAGS_PYTHON) $(LIBSIGROK_CFLAGS) \
 	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
-tests_runtc_LDFLAGS = -L$(top_builddir) $(LIBSIGROK_LIBS) $(LDFLAGS_PYTHON) -lsigrokdecode
+tests_runtc_LDFLAGS = -L$(top_builddir) $(LIBSIGROK_LIBS) $(LDFLAGS_PYTHON)
 endif
 
 MAINTAINERCLEANFILES = ChangeLog
