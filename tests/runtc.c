@@ -688,8 +688,8 @@ int main(int argc, char **argv)
 	struct channel *channel;
 	struct option *option;
 	struct output *op;
-	int ret;
-	char c, *opt_infile, **kv, **opstr;
+	int ret, c;
+	char *opt_infile, **kv, **opstr;
 
 	op = malloc(sizeof(struct output));
 	op->pd = NULL;
