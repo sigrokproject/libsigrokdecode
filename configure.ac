@@ -125,7 +125,7 @@ AC_SUBST(MODNAME_PYTHON)
 # We also need to find the name of the python3 executable (for 'make install').
 # Some OSes call this python3, some call it python3.2, etc. etc.
 AC_CHECK_PROGS([PYTHON3], [python3.4 python3.3 python3.2 python3])
-if test "x$PYTHON3" == "x"; then
+if test "x$PYTHON3" = "x"; then
 	AC_MSG_ERROR([cannot find python3 executable.])
 fi
 
