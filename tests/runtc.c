@@ -759,6 +759,9 @@ int main(int argc, char **argv)
 				op->type = SRD_OUTPUT_BINARY;
 			else if (!strcmp(opstr[1], "python"))
 				op->type = SRD_OUTPUT_PYTHON;
+			else if (!strcmp(opstr[1], "exception"))
+                /* Doesn't matter, we just need it to bomb out. */
+				op->type = SRD_OUTPUT_PYTHON;
 			else {
 				ERR("Unknown output type '%s'", opstr[1]);
 				g_strfreev(opstr);

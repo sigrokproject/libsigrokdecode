@@ -20,6 +20,7 @@
 
 import os
 import sys
+import re
 from getopt import getopt
 from tempfile import mkstemp
 from subprocess import Popen, PIPE
@@ -376,6 +377,12 @@ def run_tests(tests, fix=False):
                         if coverage:
                             results[-1]['coverage_report'] = coverage
                         os.unlink(outfile)
+                    if op['type'] == 'exception' and 'error' in results[-1]:
+                        # filter out the exception we were looking for
+                        reg = "^Error: srd: Protocol decoder instance %s: %s:" % (op['pd'], op['match'])
+                        if re.match(reg, results[-1]['error']):
+                            # found it, not an error
+                            results[-1].pop('error')
                     if VERBOSE:
                         if 'diff' in results[-1]:
                             INFO("Output mismatch")
