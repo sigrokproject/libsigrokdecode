@@ -63,6 +63,9 @@ proto = {
     'DATA WRITE':      [9, 'Data write',    'DW'],
 }
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'i2c'
@@ -265,8 +268,8 @@ class Decoder(srd.Decoder):
         self.bits = []
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError("Cannot decode without samplerate.")
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).
@@ -293,8 +296,6 @@ class Decoder(srd.Decoder):
             elif self.state == 'FIND ACK':
                 if self.is_data_bit(scl, sda):
                     self.get_ack(scl, sda)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 
             # Save current SDA/SCL values for the next round.
             self.oldscl, self.oldsda = scl, sda
