@@ -417,6 +417,21 @@ def run_tests(tests, fix=False):
             if VERBOSE:
                 dots = '.' * (54 - len(pd) - 2)
             INFO("%s total %s %d%%" % (pd, dots, pd_coverage))
+            if report_dir:
+                # generate a missing lines list across all the files in
+                # the PD
+                files = {}
+                for entry in missed_lines:
+                    filename, line = entry.split(':')
+                    if filename not in files:
+                        files[filename] = []
+                    files[filename].append(line)
+                text = ''
+                for filename in sorted(files.keys()):
+                    line_list = ','.join(sorted(files[filename], key=int))
+                    text += "%s: %s\n" % (filename, line_list)
+                open(os.path.join(report_dir, pd + "_total"), 'w').write(text)
+
 
     return results, errors
 
