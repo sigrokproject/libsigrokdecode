@@ -409,14 +409,14 @@ def run_tests(tests, fix=False):
                         for cvg in results[-1]['coverage']:
                             if cvg['scope'] == pd:
                                 pd_cvg.append(cvg)
-        if VERBOSE and opt_coverage and len(pd_cvg) > 1:
+        if opt_coverage and len(pd_cvg) > 1:
             # report total coverage of this PD, across all the tests
             # that were done on it.
             total_lines, missed_lines = coverage_sum(pd_cvg)
             pd_coverage = 100 - (float(len(missed_lines)) / total_lines * 100)
             if VERBOSE:
                 dots = '.' * (54 - len(pd) - 2)
-            INFO("%s total %s %d%%" % (pd, dots, pd_coverage))
+                INFO("%s total %s %d%%" % (pd, dots, pd_coverage))
             if report_dir:
                 # generate a missing lines list across all the files in
                 # the PD
