@@ -48,7 +48,7 @@ struct channel {
 
 struct option {
 	char *key;
-	char *value;
+	GVariant *value;
 };
 
 struct pd {
@@ -736,7 +736,8 @@ int main(int argc, char **argv)
 			} else {
 				option = malloc(sizeof(struct option));
 				option->key = g_strdup(kv[0]);
-				option->value = g_strdup(kv[1]);
+				option->value = g_variant_new_string(kv[1]);
+                g_variant_ref_sink(option->value);
 				/* Apply to last PD. */
 				pd->options = g_slist_append(pd->options, option);
 			}
