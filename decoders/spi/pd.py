@@ -116,7 +116,6 @@ class Decoder(srd.Decoder):
         self.oldcs = -1
         self.oldpins = None
         self.have_cs = self.have_miso = self.have_mosi = None
-        self.state = 'IDLE'
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -174,9 +173,7 @@ class Decoder(srd.Decoder):
             self.cs_was_deasserted = False
             if self.have_cs:
                 active_low = (self.options['cs_polarity'] == 'active-low')
-                deasserted = (cs == 1) if active_low else (cs == 0)
-                if deasserted:
-                    self.cs_was_deasserted = True
+                self.cs_was_deasserted = (cs == 1) if active_low else (cs == 0)
 
         ws = self.options['wordsize']
 
@@ -278,9 +275,5 @@ class Decoder(srd.Decoder):
             if not (self.have_miso or self.have_mosi):
                 raise Exception('Either MISO or MOSI (or both) pins required.')
 
-            # State machine.
-            if self.state == 'IDLE':
-                self.find_clk_edge(miso, mosi, clk, cs)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
+            self.find_clk_edge(miso, mosi, clk, cs)
 
