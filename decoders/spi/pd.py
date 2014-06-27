@@ -60,6 +60,12 @@ spi_mode = {
     (1, 1): 3, # Mode 3
 }
 
+class SamplerateError(Exception):
+    pass
+
+class MissingDataError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'spi'
@@ -258,8 +264,8 @@ class Decoder(srd.Decoder):
         self.handle_bit(miso, mosi, clk, cs)
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError("Cannot decode without samplerate.")
         # Either MISO or MOSI can be omitted (but not both). CS# is optional.
         for (self.samplenum, pins) in data:
 
@@ -273,7 +279,7 @@ class Decoder(srd.Decoder):
 
             # Either MISO or MOSI (but not both) can be omitted.
             if not (self.have_miso or self.have_mosi):
-                raise Exception('Either MISO or MOSI (or both) pins required.')
+                raise MissingDataError('Either MISO or MOSI (or both) pins required.')
 
             self.find_clk_edge(miso, mosi, clk, cs)
 
