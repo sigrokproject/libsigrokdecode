@@ -35,7 +35,7 @@
 #ifdef __LINUX__
 #include <sched.h>
 #endif
-#include "../config.h"
+#include "config.h"
 
 int debug = FALSE;
 int statistics = FALSE;
