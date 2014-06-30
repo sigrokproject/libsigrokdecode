@@ -22,7 +22,20 @@
 #ifndef LIBSIGROKDECODE_LIBSIGROKDECODE_INTERNAL_H
 #define LIBSIGROKDECODE_LIBSIGROKDECODE_INTERNAL_H
 
+#include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "libsigrokdecode.h"
+
+/* Custom Python types: */
+
+typedef struct {
+	PyObject_HEAD
+	struct srd_decoder_inst *di;
+	uint64_t start_samplenum;
+	unsigned int itercnt;
+	uint8_t *inbuf;
+	uint64_t inbuflen;
+	PyObject *sample;
+} srd_logic;
 
 struct srd_session {
 	int session_id;

@@ -22,7 +22,6 @@
 #ifndef LIBSIGROKDECODE_SIGROKDECODE_H
 #define LIBSIGROKDECODE_SIGROKDECODE_H
 
-#include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include <stdint.h>
 #include <glib.h>
 
@@ -184,10 +183,10 @@ struct srd_decoder {
 	GSList *options;
 
 	/** Python module. */
-	PyObject *py_mod;
+	void *py_mod;
 
 	/** sigrokdecode.Decoder class. */
-	PyObject *py_dec;
+	void *py_dec;
 };
 
 /**
@@ -221,7 +220,7 @@ struct srd_decoder_annotation_row {
 struct srd_decoder_inst {
 	struct srd_decoder *decoder;
 	struct srd_session *sess;
-	PyObject *py_inst;
+	void *py_inst;
 	char *inst_id;
 	GSList *pd_output;
 	int dec_num_channels;
@@ -266,19 +265,6 @@ struct srd_pd_callback {
 	srd_pd_output_callback cb;
 	void *cb_data;
 };
-
-/* Custom Python types: */
-
-typedef struct {
-	PyObject_HEAD
-	struct srd_decoder_inst *di;
-	uint64_t start_samplenum;
-	unsigned int itercnt;
-	uint8_t *inbuf;
-	uint64_t inbuflen;
-	PyObject *sample;
-} srd_logic;
-
 
 /* srd.c */
 SRD_API int srd_init(const char *path);

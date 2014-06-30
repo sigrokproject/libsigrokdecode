@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libsigrokdecode.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
-#include "libsigrokdecode-internal.h"
+#include "libsigrokdecode-internal.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
+#include "libsigrokdecode.h"
 #include "config.h"
 #include <glib.h>
 #include <inttypes.h>
