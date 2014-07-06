@@ -687,14 +687,98 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
+static void srd_decoder_load_all_zip_path(char *path)
+{
+	PyObject *zipimport_mod, *zipimporter_class, *zipimporter;
+	PyObject *prefix_obj, *files, *key, *value, *set, *modname;
+	Py_ssize_t pos = 0;
+	char *prefix;
+	size_t prefix_len;
+
+	set = files = prefix_obj = zipimporter = zipimporter_class = NULL;
+
+	zipimport_mod = PyImport_ImportModule("zipimport");
+	if (zipimport_mod == NULL)
+		goto err_out;
+
+	zipimporter_class = PyObject_GetAttrString(zipimport_mod, "zipimporter");
+	if (zipimporter_class == NULL)
+		goto err_out;
+
+	zipimporter = PyObject_CallFunction(zipimporter_class, "s", path);
+	if (zipimporter == NULL)
+		goto err_out;
+
+	prefix_obj = PyObject_GetAttrString(zipimporter, "prefix");
+	if (prefix_obj == NULL)
+		goto err_out;
+
+	files = PyObject_GetAttrString(zipimporter, "_files");
+	if (files == NULL)
+		goto err_out;
+
+	set = PySet_New(NULL);
+	if (set == NULL)
+		goto err_out;
+
+	if (py_str_as_str(prefix_obj, &prefix) != SRD_OK)
+		goto err_out;
+
+	prefix_len = strlen(prefix);
+
+	while (PyDict_Next(files, &pos, &key, &value)) {
+		char *path, *slash;
+		if (py_str_as_str(key, &path) == SRD_OK) {
+			if (strlen(path) > prefix_len &&
+			    !memcmp(path, prefix, prefix_len) &&
+			    (slash = strchr(path+prefix_len, '/'))) {
+				modname =
+				  PyUnicode_FromStringAndSize(path+prefix_len,
+							      slash-(path+prefix_len));
+				if (modname == NULL) {
+					PyErr_Clear();
+				} else {
+					PySet_Add(set, modname);
+					Py_XDECREF(modname);
+				}
+			}
+			free(path);
+		}
+	}
+
+	free(prefix);
+
+	while ((modname = PySet_Pop(set))) {
+		char *modname_str;
+		if (py_str_as_str(modname, &modname_str) == SRD_OK) {
+			/* The directory name is the module name (e.g. "i2c"). */
+			srd_decoder_load(modname_str);
+			free(modname_str);
+		}
+		Py_XDECREF(modname);
+	}
+
+err_out:
+	Py_XDECREF(set);
+	Py_XDECREF(files);
+	Py_XDECREF(prefix_obj);
+	Py_XDECREF(zipimporter);
+	Py_XDECREF(zipimporter_class);
+	Py_XDECREF(zipimport_mod);
+	PyErr_Clear();
+}
+
 static void srd_decoder_load_all_path(char *path)
 {
 	GDir *dir;
 	const gchar *direntry;
 
-	if (!(dir = g_dir_open(path, 0, NULL)))
+	if (!(dir = g_dir_open(path, 0, NULL))) {
 		/* Not really fatal */
+		/* Try zipimport method too */
+		srd_decoder_load_all_zip_path(path);
 		return;
+	}
 
 	/* This ignores errors returned by srd_decoder_load(). That
 	 * function will have logged the cause, but in any case we
