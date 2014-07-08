@@ -28,11 +28,11 @@ Packet:
 [<ptype>, <data1>, <data2>]
 
 <ptype>:
- - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
+ - 'DATA': <data1> contains the MOSI data, <data2> contains the MISO data.
    The data is _usually_ 8 bits (but can also be fewer or more bits).
    Both data items are Python numbers (not strings), or None if the respective
    channel was not supplied.
- - 'BITS': <data1>/<data2> contain a list of bit values in this MISO/MOSI data
+ - 'BITS': <data1>/<data2> contain a list of bit values in this MOSI/MISO data
    item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings.
