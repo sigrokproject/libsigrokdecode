@@ -1,0 +1,7 @@
+3-19 nrf24l01: register: "Reg. STATUS = "\x00""
+24-40 nrf24l01: register: "Reg. STATUS = "\x00""
+41-57 nrf24l01: register: "Payload width = 9"
+62-78 nrf24l01: register: "Reg. STATUS = "\x00""
+83-99 nrf24l01: register: "Reg. STATUS = "\x00""
+100-116 nrf24l01: register: "Payload width = 9"
+138-154 nrf24l01: register: "Reg. STATUS = "\x00""
