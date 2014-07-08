@@ -254,10 +254,10 @@ class Decoder(srd.Decoder):
                     # Save the sample number for the rising edge.
                     self.rise = self.samplenum
                     self.putfr([2, ['Reset', 'Rst', 'R']])
-                    self.state = "WAIT FOR PRESENCE DETECT"
+                    self.state = 'WAIT FOR PRESENCE DETECT'
                 # Otherwise this is assumed to be a data bit.
                 else:
-                    self.state = "WAIT FOR FALLING EDGE"
+                    self.state = 'WAIT FOR FALLING EDGE'
             elif self.state == 'WAIT FOR PRESENCE DETECT':
                 # Sample presence status.
                 t = self.samplenum - self.rise

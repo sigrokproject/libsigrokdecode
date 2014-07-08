@@ -65,5 +65,5 @@ class Decoder(srd.Decoder):
         rgb_value |= int(blue)
 
         self.cmd_es = es
-        self.putx([0, ["#%.6x" % rgb_value]])
+        self.putx([0, ['#%.6x' % rgb_value]])
         self.mosi_bytes = []
