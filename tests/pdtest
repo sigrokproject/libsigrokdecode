@@ -379,7 +379,7 @@ def run_tests(tests, fix=False):
                         os.unlink(outfile)
                     if op['type'] == 'exception' and 'error' in results[-1]:
                         # filter out the exception we were looking for
-                        reg = "^Error: srd: Protocol decoder instance %s: %s:" % (op['pd'], op['match'])
+                        reg = "^Error: srd: %s:" % op['match']
                         if re.match(reg, results[-1]['error']):
                             # found it, not an error
                             results[-1].pop('error')
