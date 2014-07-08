@@ -20,6 +20,9 @@
 
 import sigrokdecode as srd
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'guess_bitrate'
@@ -53,8 +56,8 @@ class Decoder(srd.Decoder):
             self.samplerate = value;
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             data = pins[0]

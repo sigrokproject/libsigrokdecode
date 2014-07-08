@@ -21,6 +21,9 @@
 import sigrokdecode as srd
 from .lists import *
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'ir_nec'
@@ -148,8 +151,8 @@ class Decoder(srd.Decoder):
         return ret == 0
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
             self.ir = pins[0]
 

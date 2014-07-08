@@ -33,6 +33,9 @@ Packet:
 <value>: integer
 '''
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'i2s'
@@ -128,8 +131,8 @@ class Decoder(srd.Decoder):
         return bytes([lo, hi])
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for self.samplenum, (sck, ws, sd) in data:
 
             # Ignore sample if the bit clock hasn't changed.

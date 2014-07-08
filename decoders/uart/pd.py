@@ -69,6 +69,9 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
     else:
         raise Exception('Invalid parity type: %d' % parity_type)
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'uart'
@@ -327,8 +330,8 @@ class Decoder(srd.Decoder):
         self.putg([rxtx + 4, ['Stop bit', 'Stop', 'T']])
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             # Note: Ignoring identical samples here for performance reasons

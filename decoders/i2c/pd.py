@@ -269,7 +269,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         if not self.samplerate:
-            raise SamplerateError("Cannot decode without samplerate.")
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).

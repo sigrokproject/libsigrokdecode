@@ -265,7 +265,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         if not self.samplerate:
-            raise SamplerateError("Cannot decode without samplerate.")
+            raise SamplerateError('Cannot decode without samplerate.')
         # Either MISO or MOSI can be omitted (but not both). CS# is optional.
         for (self.samplenum, pins) in data:
 

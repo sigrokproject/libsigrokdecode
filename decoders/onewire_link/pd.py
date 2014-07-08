@@ -20,6 +20,9 @@
 
 import sigrokdecode as srd
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'onewire_link'
@@ -185,8 +188,8 @@ class Decoder(srd.Decoder):
                  % (time_min*1000000, time_max*1000000)]])
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, (owr, pwr)) in data:
             # State machine.
             if self.state == 'WAIT FOR FALLING EDGE':
