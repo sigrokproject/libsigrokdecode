@@ -46,21 +46,20 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 		return;
 	}
 
-	msg = g_string_sized_new(128);
-	va_start(args, format);
-	g_string_vprintf(msg, format, args);
-	va_end(args);
-
-	/* Can be NULL. */
+	/* Send the exception error message(s) to srd_err(). */
 	if (evalue)
 		ename = (char *)Py_TYPE(evalue)->tp_name;
 	else
+		/* Can be NULL. */
 		ename = "(unknown exception)";
 
-	/* Send the exception error message(s) to srd_err(). */
-	py_str_as_str(py_str, &str);
+	msg = g_string_sized_new(128);
 	g_string_append(msg, ename);
 	g_string_append(msg, ": ");
+	va_start(args, format);
+	g_string_append_vprintf(msg, format, args);
+	va_end(args);
+	py_str_as_str(py_str, &str);
 	g_string_append(msg, str);
 	Py_DecRef(py_str);
 	srd_err(msg->str);
