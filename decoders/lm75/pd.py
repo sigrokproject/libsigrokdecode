@@ -181,6 +181,4 @@ class Decoder(srd.Decoder):
             else:
                 # self.putx([0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
                 pass
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

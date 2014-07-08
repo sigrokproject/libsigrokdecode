@@ -439,6 +439,4 @@ class Decoder(srd.Decoder):
             handle_response(miso)
 
             self.state = 'IDLE'
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

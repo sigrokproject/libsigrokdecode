@@ -154,8 +154,6 @@ class Decoder(srd.Decoder):
             self.handle_device_reply(rxtx, self.cmd[rxtx][:-2])
         elif rxtx == TX:
             self.handle_host_command(rxtx, self.cmd[rxtx][:-2])
-        else:
-            raise Exception('Invalid rxtx value: %d' % rxtx)
 
         self.cmd[rxtx] = ''
 

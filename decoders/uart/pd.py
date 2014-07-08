@@ -360,8 +360,6 @@ class Decoder(srd.Decoder):
                     self.get_parity_bit(rxtx, signal)
                 elif self.state[rxtx] == 'GET STOP BITS':
                     self.get_stop_bits(rxtx, signal)
-                else:
-                    raise Exception('Invalid state: %s' % self.state[rxtx])
 
                 # Save current RX/TX values for the next round.
                 self.oldbit[rxtx] = signal

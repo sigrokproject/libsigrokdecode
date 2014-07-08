@@ -73,6 +73,4 @@ class Decoder(srd.Decoder):
                 self.putx([1, ['Temperature: %3.2f K' % kelvin]])
                 self.state = 'IGNORE START REPEAT'
                 self.data = []
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

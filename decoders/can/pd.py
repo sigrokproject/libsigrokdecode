@@ -376,6 +376,4 @@ class Decoder(srd.Decoder):
                 if not self.reached_bit(self.curbit):
                     continue
                 self.handle_bit(can_rx)
-            else:
-                raise Exception("Invalid state: %s" % self.state)
 

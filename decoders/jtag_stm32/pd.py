@@ -218,6 +218,4 @@ class Decoder(srd.Decoder):
             handle_reg(cmd, val)
             if cmd == 'DR TDO': # TODO: Assumes 'DR TDI' comes before 'DR TDO'
                 self.state = 'IDLE'
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

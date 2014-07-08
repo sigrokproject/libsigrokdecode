@@ -168,8 +168,6 @@ class Decoder(srd.Decoder):
                 if edge == 's':
                     self.state = 'MID0'
                 bit = 0 if edge == 's' else None
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 
             self.edges.append(self.samplenum)
             if bit != None:

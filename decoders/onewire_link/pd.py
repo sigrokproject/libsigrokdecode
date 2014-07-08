@@ -278,5 +278,3 @@ class Decoder(srd.Decoder):
 
                 # Wait for next slot.
                 self.state = 'WAIT FOR FALLING EDGE'
-            else:
-                raise Exception('Invalid state: %s' % self.state)

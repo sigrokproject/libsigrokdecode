@@ -126,8 +126,6 @@ class Decoder(srd.Decoder):
             if self.onewire_collect(8, val, ss, es) == 0:
                 return
             self.putx([0, ['ROM error data: 0x%02x' % self.data]])
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 
     # Data collector.
     def onewire_collect(self, length, val, ss, es):

@@ -92,7 +92,6 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.ss_item = self.es_item = None
         self.first = True
-        self.state = 'IDLE'
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -181,12 +180,8 @@ class Decoder(srd.Decoder):
                 continue
             self.oldpins = pins
 
-            # State machine.
-            if self.state == 'IDLE':
-                if pins[0] not in (0, 1):
-                    self.handle_bits(pins[1:])
-                else:
-                    self.find_clk_edge(pins[0], pins[1:])
+            if pins[0] not in (0, 1):
+                self.handle_bits(pins[1:])
             else:
-                raise Exception('Invalid state: %s' % self.state)
+                self.find_clk_edge(pins[0], pins[1:])
 

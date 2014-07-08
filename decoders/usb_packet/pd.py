@@ -338,6 +338,4 @@ class Decoder(srd.Decoder):
                 self.bits, self.state = [], 'WAIT FOR SOP'
             else:
                 pass # TODO: Error
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

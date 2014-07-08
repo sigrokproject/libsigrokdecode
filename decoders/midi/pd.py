@@ -206,6 +206,4 @@ class Decoder(srd.Decoder):
             self.handle_syscommon_msg(pdata)
         elif self.state == 'HANDLE SYSREALTIME MSG':
             self.handle_sysrealtime_msg(pdata)
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

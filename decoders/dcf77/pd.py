@@ -310,8 +310,5 @@ class Decoder(srd.Decoder):
 
                 self.state = 'WAIT FOR RISING EDGE'
 
-            else:
-                raise Exception('Invalid state: %s' % self.state)
-
             self.oldval = val
 

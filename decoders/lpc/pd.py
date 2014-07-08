@@ -365,6 +365,4 @@ class Decoder(srd.Decoder):
                 self.handle_get_data(lad, lad_bits)
             elif self.state == 'GET TAR2':
                 self.handle_get_tar2(lad, lad_bits)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 

@@ -252,6 +252,4 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
             else:
                 pass # TODO?
-        else:
-            raise Exception('Invalid state: %s' % self.state)
 

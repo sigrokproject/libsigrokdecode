@@ -199,8 +199,6 @@ class Decoder(srd.Decoder):
                 self.putremote()
                 self.ss_bit = self.ss_start = self.samplenum
                 self.state = 'IDLE'
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 
             self.old_ir = self.ir
 
