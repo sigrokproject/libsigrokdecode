@@ -66,8 +66,6 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
         return (ones % 2) == 1
     elif parity_type == 'even':
         return (ones % 2) == 0
-    else:
-        raise Exception('Invalid parity type: %d' % parity_type)
 
 class SamplerateError(Exception):
     pass
@@ -242,12 +240,9 @@ class Decoder(srd.Decoder):
             self.databyte[rxtx] >>= 1
             self.databyte[rxtx] |= \
                 (signal << (self.options['num_data_bits'] - 1))
-        elif self.options['bit_order'] == 'msb-first':
+        else:
             self.databyte[rxtx] <<= 1
             self.databyte[rxtx] |= (signal << 0)
-        else:
-            raise Exception('Invalid bit order value: %s',
-                            self.options['bit_order'])
 
         self.putg([rxtx + 12, ['%d' % signal]])
 
@@ -277,8 +272,6 @@ class Decoder(srd.Decoder):
             self.putx(rxtx, [rxtx, [oct(b)[2:].zfill(3)]])
         elif f == 'bin':
             self.putx(rxtx, [rxtx, [bin(b)[2:].zfill(8)]])
-        else:
-            raise Exception('Invalid data format option: %s' % f)
 
         self.putbin(rxtx, (rxtx, bytes([b])))
         self.putbin(rxtx, (2, bytes([b])))
