@@ -24,4 +24,3 @@ Maxim DS28EA00 1-Wire digital thermometer protocol.
 '''
 
 from .pd import *
-

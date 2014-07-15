@@ -122,7 +122,7 @@ class Decoder(srd.Decoder):
         self.items.append(item)
         self.itemcount += 1
 
-        if self.first == True:
+        if self.first:
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
             self.first = False
@@ -184,4 +184,3 @@ class Decoder(srd.Decoder):
                 self.handle_bits(pins[1:])
             else:
                 self.find_clk_edge(pins[0], pins[1:])
-

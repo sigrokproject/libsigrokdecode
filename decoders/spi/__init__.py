@@ -30,4 +30,3 @@ data is decoded on every clock transition (depending on SPI mode).
 '''
 
 from .pd import *
-

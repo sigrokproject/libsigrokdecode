@@ -26,4 +26,3 @@ stream containing only I²C packets for one specific I²C slave.
 '''
 
 from .pd import *
-

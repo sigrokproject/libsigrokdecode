@@ -87,4 +87,3 @@ class Decoder(srd.Decoder):
             self.packets = []
         else:
             pass # Do nothing, only add the I²C packet to our cache.
-

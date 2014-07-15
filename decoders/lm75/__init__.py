@@ -24,4 +24,3 @@ This decoder stacks on top of the 'i2c' PD and decodes the National LM75
 '''
 
 from .pd import *
-

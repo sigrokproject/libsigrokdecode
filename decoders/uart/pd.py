@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
-            self.samplerate = value;
+            self.samplerate = value
             # The width of one UART bit in number of samples.
             self.bit_width = float(self.samplerate) / float(self.options['baudrate'])
 
@@ -359,4 +359,3 @@ class Decoder(srd.Decoder):
 
                 # Save current RX/TX values for the next round.
                 self.oldbit[rxtx] = signal
-

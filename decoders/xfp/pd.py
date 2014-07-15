@@ -644,4 +644,3 @@ class Decoder(srd.Decoder):
         self.annotate("AUX1 monitoring", aux)
         aux = AUX_TYPES[data[0] & 0x0f]
         self.annotate("AUX2 monitoring", aux)
-

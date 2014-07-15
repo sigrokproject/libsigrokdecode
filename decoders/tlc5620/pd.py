@@ -128,4 +128,3 @@ class Decoder(srd.Decoder):
             self.oldclk = clk
             self.oldload = load
             self.oldldac = ldac
-

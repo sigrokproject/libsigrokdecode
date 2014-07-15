@@ -242,7 +242,7 @@ class Decoder(srd.Decoder):
             # Even parity over date bits (36-58): DCF77 bit 58.
             parity = self.datebits.count(1)
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
-            self.putx([16, ['Date parity: %s' % s, 'DP: %s' %s]])
+            self.putx([16, ['Date parity: %s' % s, 'DP: %s' % s]])
             self.datebits = []
         else:
             raise Exception('Invalid DCF77 bit: %d' % c)
@@ -314,4 +314,3 @@ class Decoder(srd.Decoder):
                 self.state = 'WAIT FOR RISING EDGE'
 
             self.oldval = val
-

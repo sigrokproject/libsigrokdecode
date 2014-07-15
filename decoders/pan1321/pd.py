@@ -156,4 +156,3 @@ class Decoder(srd.Decoder):
             self.handle_host_command(rxtx, self.cmd[rxtx][:-2])
 
         self.cmd[rxtx] = ''
-

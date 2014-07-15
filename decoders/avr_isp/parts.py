@@ -40,4 +40,3 @@ part = {
     (0x01, 0x02): 'Device locked',
     # TODO: Lots more entries.
 }
-

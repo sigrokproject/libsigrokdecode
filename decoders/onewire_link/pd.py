@@ -185,7 +185,7 @@ class Decoder(srd.Decoder):
         if (time_min < 0.0000073) or (time_max > 0.000010):
             self.putm([1, ['The overdrive mode presence sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (7.3us, 10.0us).'
-                 % (time_min*1000000, time_max*1000000)]])
+                 % (time_min * 1000000, time_max * 1000000)]])
 
     def decode(self, ss, es, data):
         if not self.samplerate:

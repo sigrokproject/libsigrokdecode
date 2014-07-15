@@ -24,4 +24,3 @@ values that are clocked over SPI in RGB values.
 '''
 
 from .pd import *
-

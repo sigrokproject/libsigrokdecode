@@ -53,7 +53,7 @@ class Decoder(srd.Decoder):
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
-            self.samplerate = value;
+            self.samplerate = value
 
     def decode(self, ss, es, data):
         if not self.samplerate:
@@ -67,22 +67,21 @@ class Decoder(srd.Decoder):
                 continue
 
             # Initialize first self.olddata with the first sample value.
-            if self.olddata == None:
+            if self.olddata is None:
                 self.olddata = data
                 continue
 
             # Get the smallest distance between two transitions
             # and use that to calculate the bitrate/baudrate.
-            if self.first_transition == True:
+            if self.first_transition:
                 self.ss_edge = self.samplenum
                 self.first_transition = False
             else:
                 b = self.samplenum - self.ss_edge
-                if self.bitwidth == None or b < self.bitwidth:
+                if self.bitwidth is None or b < self.bitwidth:
                     self.bitwidth = b
                     bitrate = int(float(self.samplerate) / float(b))
                     self.putx([0, ['%d' % bitrate]])
                 self.ss_edge = self.samplenum
 
             self.olddata = data
-

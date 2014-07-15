@@ -240,4 +240,3 @@ class Decoder(srd.Decoder):
                     self.get_bit(sym)
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
-

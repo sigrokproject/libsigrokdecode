@@ -23,4 +23,3 @@ RC-5 is a biphase/manchester based infrared remote control protocol.
 '''
 
 from .pd import *
-

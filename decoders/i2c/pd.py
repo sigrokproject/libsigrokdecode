@@ -299,4 +299,3 @@ class Decoder(srd.Decoder):
 
             # Save current SDA/SCL values for the next round.
             self.oldscl, self.oldsda = scl, sda
-

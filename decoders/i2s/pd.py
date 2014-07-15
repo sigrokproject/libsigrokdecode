@@ -93,8 +93,8 @@ class Decoder(srd.Decoder):
 
         # Calculate the sample rate.
         samplerate = '?'
-        if self.start_sample != None and \
-            self.first_sample != None and \
+        if self.start_sample is not None and \
+            self.first_sample is not None and \
             self.start_sample > self.first_sample:
             samplerate = '%d' % (self.samplesreceived *
                 self.samplerate / (self.start_sample -
@@ -151,7 +151,7 @@ class Decoder(srd.Decoder):
                 continue
 
             # Only submit the sample, if we received the beginning of it.
-            if self.start_sample != None:
+            if self.start_sample is not None:
 
                 if not self.wrote_wav_header:
                     self.put(0, 0, self.out_bin, (0, self.wav_header()))
@@ -182,8 +182,7 @@ class Decoder(srd.Decoder):
             self.start_sample = self.samplenum
 
             # Save the first sample position.
-            if self.first_sample == None:
+            if self.first_sample is None:
                 self.first_sample = self.samplenum
 
             self.oldws = ws
-

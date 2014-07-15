@@ -346,7 +346,7 @@ class Decoder(srd.Decoder):
             if self.state == 'IDLE':
                 # A valid LPC cycle starts with LFRAME# being asserted (low).
                 if lframe != 0:
-                   continue
+                    continue
                 self.ss_block = self.samplenum
                 self.state = 'GET START'
                 self.lad = -1
@@ -365,4 +365,3 @@ class Decoder(srd.Decoder):
                 self.handle_get_data(lad, lad_bits)
             elif self.state == 'GET TAR2':
                 self.handle_get_tar2(lad, lad_bits)
-

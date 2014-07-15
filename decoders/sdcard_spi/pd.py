@@ -228,7 +228,7 @@ class Decoder(srd.Decoder):
         if len(self.read_buf) < 16 + 4:
             return
         self.cmd_es = self.es
-        self.read_buf = self.read_buf[4:] ### TODO: Document or redo.
+        self.read_buf = self.read_buf[4:] # TODO: Document or redo.
         self.putx([9, ['CSD: %s' % self.read_buf]])
         # TODO: Decode all bits.
         self.read_buf = []
@@ -439,4 +439,3 @@ class Decoder(srd.Decoder):
             handle_response(miso)
 
             self.state = 'IDLE'
-

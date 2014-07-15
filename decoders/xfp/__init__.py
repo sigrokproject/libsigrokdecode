@@ -38,4 +38,3 @@ The XFP specification is available here:
 '''
 
 from .pd import *
-

@@ -35,4 +35,3 @@ the expected bitrate/baudrate that might be used on the channel.
 '''
 
 from .pd import *
-

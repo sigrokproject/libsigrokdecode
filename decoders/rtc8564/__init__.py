@@ -24,4 +24,3 @@ RTC-8564 JE/NB real-time clock (RTC) protocol.
 '''
 
 from .pd import *
-

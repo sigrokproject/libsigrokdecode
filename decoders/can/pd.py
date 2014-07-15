@@ -379,4 +379,3 @@ class Decoder(srd.Decoder):
                 if not self.reached_bit(self.curbit):
                     continue
                 self.handle_bit(can_rx)
-

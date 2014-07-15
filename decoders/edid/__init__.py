@@ -37,4 +37,3 @@ More information on EDID is available here:
 '''
 
 from .pd import *
-

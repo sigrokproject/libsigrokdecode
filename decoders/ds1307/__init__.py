@@ -24,4 +24,3 @@ real-time clock (RTC) specific registers and commands.
 '''
 
 from .pd import *
-

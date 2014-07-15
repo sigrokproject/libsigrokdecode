@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
                 bit = 0 if edge == 's' else None
 
             self.edges.append(self.samplenum)
-            if bit != None:
+            if bit is not None:
                 self.bits.append([self.samplenum, bit])
 
             if len(self.bits) == 14:
@@ -181,4 +181,3 @@ class Decoder(srd.Decoder):
                 self.reset_decoder_state()
 
             self.old_ir = self.ir
-

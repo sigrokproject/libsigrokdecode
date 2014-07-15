@@ -208,4 +208,3 @@ class Decoder(srd.Decoder):
 
         self.mosi_bytes = []
         self.miso_bytes = []
-

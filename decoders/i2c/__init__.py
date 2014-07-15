@@ -24,4 +24,3 @@ bus using two signals (SCL = serial clock line, SDA = serial data line).
 '''
 
 from .pd import *
-

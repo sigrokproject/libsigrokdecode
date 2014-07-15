@@ -24,4 +24,3 @@ infrared thermometer protocol.
 '''
 
 from .pd import *
-

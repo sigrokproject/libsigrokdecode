@@ -67,4 +67,3 @@ SPI mode properties (differences to SD mode):
 '''
 
 from .pd import *
-

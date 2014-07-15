@@ -42,4 +42,3 @@ http://www.usb.org/developers/docs/
 '''
 
 from .pd import *
-

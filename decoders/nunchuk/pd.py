@@ -202,4 +202,3 @@ class Decoder(srd.Decoder):
             else:
                 # self.putx([14, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
                 pass
-

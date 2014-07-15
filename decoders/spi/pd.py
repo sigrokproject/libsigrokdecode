@@ -282,4 +282,3 @@ class Decoder(srd.Decoder):
                 raise MissingDataError('Either MISO or MOSI (or both) pins required.')
 
             self.find_clk_edge(miso, mosi, clk, cs)
-

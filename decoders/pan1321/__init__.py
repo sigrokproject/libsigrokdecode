@@ -24,4 +24,3 @@ Bluetooth module Serial Port Profile (SPP) protocol.
 '''
 
 from .pd import *
-

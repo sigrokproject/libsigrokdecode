@@ -360,7 +360,7 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         # If we encountered a known chip command, enter the resp. state.
-        if self.state == None:
+        if self.state is None:
             self.state = mosi
             self.cmdstate = 1
 
@@ -372,4 +372,3 @@ class Decoder(srd.Decoder):
         else:
             self.putx([24, ['Unknown command: 0x%02x' % mosi]])
             self.state = None
-

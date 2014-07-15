@@ -1,6 +1,6 @@
 ##
 ## This file is part of the libsigrokdecode project.
-## 
+##
 ## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ## Copyright (C) 2013 Matt Ranostay <mranostay@gmail.com>
 ##
@@ -81,7 +81,7 @@ class Decoder(srd.Decoder):
         self.putx([0, ['Day of Week: %s' % days_of_week[self.days - 1]]])
 
     def handle_reg_0x04(self, b): # Date
-        self.date =  bcd2int(b & 0x3f)
+        self.date = bcd2int(b & 0x3f)
         self.putx([0, ['Days: %d' % self.date]])
 
     def handle_reg_0x05(self, b): # Month
@@ -89,7 +89,7 @@ class Decoder(srd.Decoder):
         self.putx([0, ['Months: %d' % self.months]])
 
     def handle_reg_0x06(self, b): # Year
-        self.years = bcd2int(b & 0xff) + 2000;
+        self.years = bcd2int(b & 0xff) + 2000
         self.putx([0, ['Years: %d' % self.years]])
 
     def handle_reg_0x07(self, b): # Control Register
@@ -164,4 +164,3 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
             else:
                 pass # TODO?
-

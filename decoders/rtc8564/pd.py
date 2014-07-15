@@ -252,4 +252,3 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
             else:
                 pass # TODO?
-

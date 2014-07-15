@@ -50,26 +50,26 @@ regs = {
     0x16: ('RX_PW_P5',    1),
     0x17: ('FIFO_STATUS', 1),
     0x1c: ('DYNPD',       1),
-    0x1d: ('FEATURE',     1)
+    0x1d: ('FEATURE',     1),
 }
 
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'nrf24l01'
-    name = 'NRF24L01(+)'
+    name = 'nRF24L01(+)'
     longname = 'Nordic Semiconductor nRF24L01/nRF24L01+'
-    desc = '2.4 GHz transceiver chip.'
+    desc = '2.4GHz transceiver chip.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['nrf24l01']
     annotations = (
-        # sent from the host to the chip
-        ('cmd', 'Commands send to the device.'),
-        ('tx-data', 'Payload send to the device.'),
+        # Sent from the host to the chip.
+        ('cmd', 'Commands sent to the device'),
+        ('tx-data', 'Payload sent to the device'),
 
-        # returned by the chip
-        ('register', 'Registers read from the device.'),
-        ('rx-data', 'Payload read from the device.'),
+        # Returned by the chip.
+        ('register', 'Registers read from the device'),
+        ('rx-data', 'Payload read from the device'),
 
         ('warning', 'Warnings'),
     )
@@ -100,17 +100,17 @@ class Decoder(srd.Decoder):
 
     def next(self):
         '''Resets the decoder after a complete command was decoded.'''
-        # 'True' for the first byte after CS went low
+        # 'True' for the first byte after CS went low.
         self.first = True
 
-        # the current command, and the minimum and maximum number
-        # of data bytes to follow
+        # The current command, and the minimum and maximum number
+        # of data bytes to follow.
         self.cmd = None
         self.min = 0
         self.max = 0
 
-        # used to collect the bytes after the command byte
-        # (and the start/end sample number)
+        # Used to collect the bytes after the command byte
+        # (and the start/end sample number).
         self.mb = []
         self.mb_s = -1
         self.mb_e = -1
@@ -127,15 +127,15 @@ class Decoder(srd.Decoder):
         '''Decodes the command byte 'b' at position 'pos' and prepares
         the decoding of the following data bytes.'''
         c = self.parse_command(b)
-        if c == None:
+        if c is None:
             self.warn(pos, 'unknown command')
             return
 
         self.cmd, self.dat, self.min, self.max = c
 
         if self.cmd in ('W_REGISTER', 'ACTIVATE'):
-            # don't output anything now, the command is merged with
-            # the data bytes following it
+            # Don't output anything now, the command is merged with
+            # the data bytes following it.
             self.mb_s = pos[0]
         else:
             self.putp(pos, self.ann_cmd, self.format_command())
@@ -196,20 +196,19 @@ class Decoder(srd.Decoder):
         '''
 
         if type(regid) == int:
-            # get the name of the register
+            # Get the name of the register.
             if regid not in regs:
                 self.warn(pos, 'unknown register')
                 return
-
             name = regs[regid][0]
         else:
             name = regid
 
-        # multi byte register come LSByte first
+        # Multi byte register come LSByte first.
         data = reversed(data)
 
         if self.cmd == 'W_REGISTER' and ann == self.ann_cmd:
-            # the 'W_REGISTER' command is merged with the following byte(s)
+            # The 'W_REGISTER' command is merged with the following byte(s).
             label = '{}: {}'.format(self.format_command(), name)
         else:
             label = 'Reg. {}'.format(name)
@@ -236,10 +235,10 @@ class Decoder(srd.Decoder):
 
         if self.cmd == 'R_REGISTER':
             self.decode_register(pos, self.ann_reg,
-                                 self.dat, self.miso_bytes());
+                                 self.dat, self.miso_bytes())
         elif self.cmd == 'W_REGISTER':
             self.decode_register(pos, self.ann_cmd,
-                                 self.dat, self.mosi_bytes());
+                                 self.dat, self.mosi_bytes())
         elif self.cmd == 'R_RX_PAYLOAD':
             self.decode_mb_data(pos, self.ann_rx,
                                 self.miso_bytes(), 'RX payload', False)
@@ -264,11 +263,11 @@ class Decoder(srd.Decoder):
 
         if ptype == 'CS-CHANGE':
             if data1 == 0 and data2 == 1:
-                # rising edge, the complete command is transmitted, process
-                # the bytes that were send after the command byte
+                # Rising edge, the complete command is transmitted, process
+                # the bytes that were send after the command byte.
                 if self.cmd:
-                    # check if we got the minimum number of data bytes
-                    # after the command byte
+                    # Check if we got the minimum number of data bytes
+                    # after the command byte.
                     if len(self.mb) < self.min:
                         self.warn((ss, ss), 'missing data bytes')
                     elif self.mb:
@@ -276,24 +275,23 @@ class Decoder(srd.Decoder):
 
                 self.next()
         elif ptype == 'DATA':
-            mosi = data1
-            miso = data2
+            mosi, miso = data1, data2
             pos = (ss, es)
 
-            if miso == None or mosi == None:
+            if miso is None or mosi is None:
                 raise MissingDataError('Both MISO and MOSI pins required.')
 
             if self.first:
                 self.first = False
-                # first MOSI byte is always the command
+                # First MOSI byte is always the command.
                 self.decode_command(pos, mosi)
-                # first MISO byte is always the status register
+                # First MISO byte is always the status register.
                 self.decode_register(pos, self.ann_reg, 'STATUS', [miso])
             else:
                 if not self.cmd or len(self.mb) >= self.max:
                     self.warn(pos, 'excess byte')
                 else:
-                    # collect the bytes after the command byte
+                    # Collect the bytes after the command byte.
                     if self.mb_s == -1:
                         self.mb_s = ss
                     self.mb_e = es

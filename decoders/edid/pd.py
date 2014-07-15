@@ -465,4 +465,3 @@ class Decoder(srd.Decoder):
             else:
                 if self.cache[i+2] == 0 or self.cache[i+4] == 0:
                     self.decode_descriptor(i)
-

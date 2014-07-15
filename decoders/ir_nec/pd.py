@@ -204,4 +204,3 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
 
             self.old_ir = self.ir
-

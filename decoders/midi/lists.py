@@ -267,7 +267,7 @@ sysex_manufacturer_ids = {
     (0x00, 0x00, 0x5c): 'AT&T Bell Labs',
     (0x00, 0x00, 0x5e): 'Symetrix',
     (0x00, 0x00, 0x5f): 'MIDI the World',
-    
+
     (0x00, 0x00, 0x60): 'Desper Products',
     (0x00, 0x00, 0x61): 'Micros\'N MIDI',
     (0x00, 0x00, 0x62): 'Accordians Intl',
@@ -467,4 +467,3 @@ control_functions = {
     0x7e: 'poly mode off', # mono mode on, all notes off
     0x7f: 'poly mode on', # mono mode off, all notes off
 }
-
