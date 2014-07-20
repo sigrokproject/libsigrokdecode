@@ -66,7 +66,7 @@ static gboolean srd_check_init(void)
 /**
  * Returns the list of supported/loaded protocol decoders.
  *
- * This is a GSList containing the names of the decoders as strings.
+ * This is a GSList of pointers to struct srd_decoder items.
  *
  * @return List of decoders, NULL if none are supported or loaded.
  *
