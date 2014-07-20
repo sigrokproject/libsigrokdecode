@@ -338,6 +338,7 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 	int idx;
 	int max_channel;
 	char **decoder_class;
+	struct sr_session *sr_sess;
 
 	if (op->outfile) {
 		if ((op->outfd = open(op->outfile, O_CREAT|O_WRONLY, 0600)) == -1) {
@@ -347,12 +348,12 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 		}
 	}
 
-	if (sr_session_load(infile) != SR_OK)
+	if (sr_session_load(infile, &sr_sess) != SR_OK)
 		return FALSE;
 
 	if (srd_session_new(&sess) != SRD_OK)
 		return FALSE;
-	sr_session_datafeed_callback_add(sr_cb, sess);
+	sr_session_datafeed_callback_add(sr_sess, sr_cb, sess);
 	switch (op->type) {
 	case SRD_OUTPUT_ANN:
 		cb = srd_cb_ann;
@@ -444,9 +445,9 @@ static int run_testcase(char *infile, GSList *pdlist, struct output *op)
 			DBG("Class %s index is %d", op->class, op->class_idx);
 	}
 
-	sr_session_start();
-	sr_session_run();
-	sr_session_stop();
+	sr_session_start(sr_sess);
+	sr_session_run(sr_sess);
+	sr_session_stop(sr_sess);
 
 	srd_session_destroy(sess);
 
