@@ -144,9 +144,9 @@ class Decoder(srd.Decoder):
         '''Returns the label for the current command.'''
         if self.cmd == 'R_REGISTER':
             reg = regs[self.dat][0] if self.dat in regs else 'unknown register'
-            return 'Cmd. R_REGISTER "{}"'.format(reg)
+            return 'Cmd R_REGISTER "{}"'.format(reg)
         else:
-            return 'Cmd. {}'.format(self.cmd)
+            return 'Cmd {}'.format(self.cmd)
 
     def parse_command(self, b):
         '''Parses the command byte.
@@ -211,20 +211,25 @@ class Decoder(srd.Decoder):
             # The 'W_REGISTER' command is merged with the following byte(s).
             label = '{}: {}'.format(self.format_command(), name)
         else:
-            label = 'Reg. {}'.format(name)
+            label = 'Reg {}'.format(name)
 
-        self.decode_mb_data(pos, ann, data, label)
+        self.decode_mb_data(pos, ann, data, label, True)
 
-    def decode_mb_data(self, pos, ann, data, label, escape_all=True):
+    def decode_mb_data(self, pos, ann, data, label, always_hex):
         '''Decodes the data bytes 'data' of a multibyte command at position
-        'pos'. The decoded data is prefixed with 'label'. If 'excape_all' is
-        True, all data bytes are escaped as hex codes.'''
+        'pos'. The decoded data is prefixed with 'label'. If 'always_hex' is
+        True, all bytes are decoded as hex codes, otherwise only non
+        printable characters are escaped.'''
 
-        def escape(b):
-            c = chr(b)
-            if escape_all or not str.isprintable(c):
-                return '\\x{:02X}'.format(b)
-            return c
+        if always_hex:
+            def escape(b):
+                return '{:02X}'.format(b)
+        else:
+            def escape(b):
+                c = chr(b)
+                if not str.isprintable(c):
+                    return '\\x{:02X}'.format(b)
+                return c
 
         data = ''.join([escape(b) for b in data])
         text = '{} = "{}"'.format(label, data)
