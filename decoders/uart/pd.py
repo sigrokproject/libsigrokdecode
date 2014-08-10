@@ -70,6 +70,9 @@ def parity_ok(parity_type, parity_bit, data, num_data_bits):
 class SamplerateError(Exception):
     pass
 
+class ChannelError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'uart'
@@ -336,7 +339,7 @@ class Decoder(srd.Decoder):
             # Either RX or TX (but not both) can be omitted.
             has_pin = [rx in (0, 1), tx in (0, 1)]
             if has_pin == [False, False]:
-                raise Exception('Either TX or RX (or both) pins required.')
+                raise ChannelError('Either TX or RX (or both) pins required.')
 
             # State machine.
             for rxtx in (RX, TX):

@@ -63,7 +63,7 @@ spi_mode = {
 class SamplerateError(Exception):
     pass
 
-class MissingDataError(Exception):
+class ChannelError(Exception):
     pass
 
 class Decoder(srd.Decoder):
@@ -279,6 +279,6 @@ class Decoder(srd.Decoder):
 
             # Either MISO or MOSI (but not both) can be omitted.
             if not (self.have_miso or self.have_mosi):
-                raise MissingDataError('Either MISO or MOSI (or both) pins required.')
+                raise ChannelError('Either MISO or MOSI (or both) pins required.')
 
             self.find_clk_edge(miso, mosi, clk, cs)

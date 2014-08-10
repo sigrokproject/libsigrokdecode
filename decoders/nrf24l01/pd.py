@@ -20,7 +20,7 @@
 
 import sigrokdecode as srd
 
-class MissingDataError(Exception):
+class ChannelError(Exception):
     pass
 
 regs = {
@@ -284,7 +284,7 @@ class Decoder(srd.Decoder):
             pos = (ss, es)
 
             if miso is None or mosi is None:
-                raise MissingDataError('Both MISO and MOSI pins required.')
+                raise ChannelError('Both MISO and MOSI pins required.')
 
             if self.first:
                 self.first = False
