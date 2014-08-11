@@ -61,6 +61,9 @@ def channel_list(num_channels):
         l.append(d)
     return tuple(l)
 
+class ChannelError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'parallel'
@@ -179,6 +182,9 @@ class Decoder(srd.Decoder):
             if self.oldpins == pins:
                 continue
             self.oldpins = pins
+
+            if sum(1 for p in pins if p in (0, 1)) == 0:
+                raise ChannelError('At least one channel has to be supplied.')
 
             if pins[0] not in (0, 1):
                 self.handle_bits(pins[1:])
