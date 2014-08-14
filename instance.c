@@ -64,11 +64,11 @@ extern SRD_PRIV PyTypeObject srd_logic_type;
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options)
 {
-    struct srd_decoder_option *sdo;
+	struct srd_decoder_option *sdo;
 	PyObject *py_di_options, *py_optval;
 	GVariant *value;
-    GSList *l;
-    double val_double;
+	GSList *l;
+	double val_double;
 	gint64 val_int;
 	int ret;
 	const char *val_str;
@@ -96,7 +96,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	}
 
 	ret = SRD_ERR_PYTHON;
-    py_optval = NULL;
+	py_optval = NULL;
 
 	/*
 	 * The 'options' tuple is a class variable, but we need to
@@ -110,52 +110,53 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	py_di_options = PyDict_New();
 	PyObject_SetAttrString(di->py_inst, "options", py_di_options);
 
-    for (l = di->decoder->options; l; l = l->next) {
-        sdo = l->data;
-        if ((value = g_hash_table_lookup(options, sdo->id))) {
-            /* A value was supplied for this option. */
-            if (!g_variant_type_equal(g_variant_get_type(value),
-                    g_variant_get_type(sdo->def))) {
-                srd_err("Option '%s' should have the same type "
-                        "as the default value.", sdo->id);
-                goto err_out;
-            }
-        } else {
-            /* Use default for this option. */
-            value = sdo->def;
-        }
-        if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
-            val_str = g_variant_get_string(value, NULL);
-            if (!(py_optval = PyUnicode_FromString(val_str))) {
-                /* Some UTF-8 encoding error. */
-                PyErr_Clear();
-                srd_err("Option '%s' requires a UTF-8 string value.", sdo->id);
-                goto err_out;
-            }
-        } else if (g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
-            val_int = g_variant_get_int64(value);
-            if (!(py_optval = PyLong_FromLong(val_int))) {
-                /* ValueError Exception */
-                PyErr_Clear();
-                srd_err("Option '%s' has invalid integer value.", sdo->id);
-                goto err_out;
-            }
-        } else if (g_variant_is_of_type(value, G_VARIANT_TYPE_DOUBLE)) {
-            val_double = g_variant_get_double(value);
-            if (!(py_optval = PyFloat_FromDouble(val_double))) {
-                /* ValueError Exception */
-                PyErr_Clear();
-                srd_err("Option '%s' has invalid float value.", sdo->id);
-                goto err_out;
-            }
-        }
+	for (l = di->decoder->options; l; l = l->next) {
+		sdo = l->data;
+		if ((value = g_hash_table_lookup(options, sdo->id))) {
+			/* A value was supplied for this option. */
+			if (!g_variant_type_equal(g_variant_get_type(value),
+				  g_variant_get_type(sdo-> def))) {
+				srd_err("Option '%s' should have the same type "
+					"as the default value.", sdo->id);
+				goto err_out;
+			}
+		} else {
+			/* Use default for this option. */
+			value = sdo->def;
+		}
+		if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
+			val_str = g_variant_get_string(value, NULL);
+			if (!(py_optval = PyUnicode_FromString(val_str))) {
+				/* Some UTF-8 encoding error. */
+				PyErr_Clear();
+				srd_err("Option '%s' requires a UTF-8 string value.", sdo->id);
+				goto err_out;
+			}
+		} else if (g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
+			val_int = g_variant_get_int64(value);
+			if (!(py_optval = PyLong_FromLong(val_int))) {
+				/* ValueError Exception */
+				PyErr_Clear();
+				srd_err("Option '%s' has invalid integer value.", sdo->id);
+				goto err_out;
+			}
+		} else if (g_variant_is_of_type(value, G_VARIANT_TYPE_DOUBLE)) {
+			val_double = g_variant_get_double(value);
+			if (!(py_optval = PyFloat_FromDouble(val_double))) {
+				/* ValueError Exception */
+				PyErr_Clear();
+				srd_err("Option '%s' has invalid float value.",
+					sdo->id);
+				goto err_out;
+			}
+		}
 		if (PyDict_SetItemString(py_di_options, sdo->id, py_optval) == -1)
 			goto err_out;
-        /* Not harmful even if we used the default. */
-        g_hash_table_remove(options, sdo->id);
-    }
-    if (g_hash_table_size(options) != 0)
-        srd_warn("Unknown options specified for '%s'", di->inst_id);
+		/* Not harmful even if we used the default. */
+		g_hash_table_remove(options, sdo->id);
+	}
+	if (g_hash_table_size(options) != 0)
+		srd_warn("Unknown options specified for '%s'", di->inst_id);
 
 	ret = SRD_OK;
 
@@ -205,7 +206,8 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 	char *channel_id;
 
 	srd_dbg("Setting channels for instance %s with list of %d channels, "
-		"unitsize %d.", di->inst_id, g_hash_table_size(new_channels), unit_size);
+		"unitsize %d.", di->inst_id, g_hash_table_size(new_channels),
+		unit_size);
 
 	if (g_hash_table_size(new_channels) == 0)
 		/* No channels provided. */
@@ -253,9 +255,9 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 				(GCompareFunc)compare_channel_id))) {
 			/* Fall back on optional channels. */
 			if (!(sl = g_slist_find_custom(di->decoder->opt_channels,
-			     channel_id, (GCompareFunc) compare_channel_id))) {
+			     channel_id, (GCompareFunc)compare_channel_id))) {
 				srd_err("Protocol decoder %s has no channel "
-						"'%s'.", di->decoder->name, channel_id);
+					"'%s'.", di->decoder->name, channel_id);
 				g_free(new_channelmap);
 				return SRD_ERR_ARG;
 			}
@@ -271,7 +273,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 	num_required_channels = g_slist_length(di->decoder->channels);
 	for (i = 0; i < di->dec_num_channels; i++) {
 		srd_dbg(" - index %d = channel %d (%s)", i, new_channelmap[i],
-		        (i < num_required_channels) ? "required" : "optional");
+			(i < num_required_channels) ? "required" : "optional");
 	}
 
 	/* Report an error if not all required channels were specified. */
@@ -421,7 +423,7 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 	/* Stack on top of source di. */
 	di_bottom->next_di = g_slist_append(di_bottom->next_di, di_top);
 
-	srd_dbg("Stacked %s on top of %s.", di_top->inst_id, di_bottom->inst_id);
+	srd_dbg("Stacked %s onto %s.", di_top->inst_id, di_bottom->inst_id);
 
 	return SRD_OK;
 }
@@ -607,7 +609,8 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 	Py_IncRef(di->py_inst);
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
 			"KKO", start_samplenum, end_samplenum, logic))) {
-		srd_exception_catch("Protocol decoder instance %s: ", di->inst_id);
+		srd_exception_catch("Protocol decoder instance %s: ",
+				di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
@@ -661,4 +664,3 @@ SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack)
 }
 
 /** @} */
-

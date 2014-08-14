@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef LIBSIGROKDECODE_SIGROKDECODE_H
-#define LIBSIGROKDECODE_SIGROKDECODE_H
+#ifndef LIBSIGROKDECODE_LIBSIGROKDECODE_H
+#define LIBSIGROKDECODE_LIBSIGROKDECODE_H
 
 #include <stdint.h>
 #include <glib.h>
@@ -179,7 +179,7 @@ struct srd_decoder {
 	 */
 	GSList *binary;
 
-	/** List of decoder options.  */
+	/** List of decoder options. */
 	GSList *options;
 
 	/** Python module. */
@@ -208,7 +208,7 @@ struct srd_decoder_option {
 	char *id;
 	char *desc;
 	GVariant *def;
-    GSList *values;
+	GSList *values;
 };
 
 struct srd_decoder_annotation_row {

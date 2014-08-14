@@ -47,7 +47,6 @@ struct srd_session {
 	GSList *callbacks;
 };
 
-
 /* srd.c */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
 

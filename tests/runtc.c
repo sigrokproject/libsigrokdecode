@@ -74,12 +74,10 @@ struct cvg {
 	GSList *missed_lines;
 };
 
-
 struct cvg *get_mod_cov(PyObject *py_cov, char *module_name);
 void cvg_add(struct cvg *dst, struct cvg *src);
 struct cvg *cvg_new(void);
 gboolean find_missed_line(struct cvg *cvg, char *linespec);
-
 
 static void logmsg(char *prefix, FILE *out, const char *format, va_list args)
 {
@@ -190,9 +188,9 @@ static void srd_cb_py(struct srd_proto_data *pdata, void *cb_data)
 	s = py_str_as_str(pyrepr);
 	Py_DecRef(pyrepr);
 
-	/* Output format for testing is '<ss>-<es> <inst-id>: <repr>\n' */
+	/* Output format for testing is '<ss>-<es> <inst-id>: <repr>\n'. */
 	out = g_string_sized_new(128);
-	g_string_printf(out, "%"PRIu64"-%"PRIu64" %s: %s\n",
+	g_string_printf(out, "%" PRIu64 "-%" PRIu64 " %s: %s\n",
 			pdata->start_sample, pdata->end_sample,
 			pdata->pdo->di->inst_id, s);
 	g_free(s);
@@ -226,7 +224,7 @@ static void srd_cb_bin(struct srd_proto_data *pdata, void *cb_data)
 		return;
 
 	out = g_string_sized_new(128);
-	g_string_printf(out, "%"PRIu64"-%"PRIu64" %s:",
+	g_string_printf(out, "%" PRIu64 "-%" PRIu64 " %s:",
 			pdata->start_sample, pdata->end_sample,
 			pdata->pdo->di->inst_id);
 	for (i = 0; i < pdb->size; i++) {
@@ -264,7 +262,7 @@ static void srd_cb_ann(struct srd_proto_data *pdata, void *cb_data)
 
 	dec_ann = g_slist_nth_data(dec->annotations, pda->ann_format);
 	line = g_string_sized_new(256);
-	g_string_printf(line, "%"PRIu64"-%"PRIu64" %s: %s:",
+	g_string_printf(line, "%" PRIu64 "-%" PRIu64 " %s: %s:",
 			pdata->start_sample, pdata->end_sample,
 			pdata->pdo->di->inst_id, dec_ann[0]);
 	for (i = 0; pda->ann_text[i]; i++)
@@ -558,7 +556,7 @@ struct cvg *get_mod_cov(PyObject *py_cov, char *module_name)
 		cvg_mod->coverage = 100 - ((float)cvg_mod->num_missed / (float)cvg_mod->num_lines * 100);
 
 	Py_DecRef(py_mod);
-    Py_DecRef(py_path);
+	Py_DecRef(py_path);
 
 	return cvg_mod;
 }
@@ -587,7 +585,6 @@ void cvg_add(struct cvg *dst, struct cvg *src)
 {
 	GSList *l;
 	char *linespec;
-
 
 	dst->num_lines += src->num_lines;
 	dst->num_missed += src->num_missed;
@@ -639,7 +636,6 @@ static int report_coverage(PyObject *py_cov, GSList *pdlist)
 	/* Machine-readable stats on stdout. */
 	printf("coverage: scope=all coverage=%.0f%% lines=%d missed=%d\n",
 			total_coverage, cvg_all->num_lines, cvg_all->num_missed);
-
 
 	/* Write text report to file. */
 	/* io.open(coverage_report, "w") */
@@ -705,7 +701,7 @@ int main(int argc, char **argv)
 	pd = NULL;
 	coverage = NULL;
 	while ((c = getopt(argc, argv, "dP:p:o:i:O:f:c:S")) != -1) {
-		switch(c) {
+		switch (c) {
 		case 'd':
 			debug = TRUE;
 			break;
@@ -763,7 +759,7 @@ int main(int argc, char **argv)
 			else if (!strcmp(opstr[1], "python"))
 				op->type = SRD_OUTPUT_PYTHON;
 			else if (!strcmp(opstr[1], "exception"))
-                /* Doesn't matter, we just need it to bomb out. */
+				/* Doesn't matter, we just need it to bomb out. */
 				op->type = SRD_OUTPUT_PYTHON;
 			else {
 				ERR("Unknown output type '%s'", opstr[1]);
