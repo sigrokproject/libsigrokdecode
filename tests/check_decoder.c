@@ -23,16 +23,6 @@
 #include <check.h>
 #include "lib.h"
 
-static void setup(void)
-{
-	/* Silence libsigrokdecode while the unit tests run. */
-	srd_log_loglevel_set(SRD_LOG_NONE);
-}
-
-static void teardown(void)
-{
-}
-
 /*
  * Check whether srd_decoder_load_all() works.
  * If it returns != SRD_OK (or segfaults) this test will fail.
@@ -320,7 +310,7 @@ Suite *suite_decoder(void)
 	s = suite_create("decoder");
 
 	tc = tcase_create("load");
-	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
 	tcase_add_test(tc, test_load_all);
 	tcase_add_test(tc, test_load_all_no_init);
 	tcase_add_test(tc, test_load);
@@ -331,7 +321,7 @@ Suite *suite_decoder(void)
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("list");
-	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
 	tcase_add_test(tc, test_decoder_list);
 	tcase_add_test(tc, test_decoder_list_no_load);
 	tcase_add_test(tc, test_decoder_list_no_init);

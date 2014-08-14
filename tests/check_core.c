@@ -23,16 +23,6 @@
 #include <check.h>
 #include "lib.h"
 
-static void setup(void)
-{
-	/* Silence libsigrokdecode while the unit tests run. */
-	srd_log_loglevel_set(SRD_LOG_NONE);
-}
-
-static void teardown(void)
-{
-}
-
 /*
  * Check various basic init related things.
  *
@@ -104,7 +94,7 @@ Suite *suite_core(void)
 	s = suite_create("core");
 
 	tc = tcase_create("init_exit");
-	tcase_add_checked_fixture(tc, setup, teardown);
+	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
 	tcase_add_test(tc, test_init_exit);
 	tcase_add_test(tc, test_init_exit_2);
 	tcase_add_test(tc, test_init_exit_3);

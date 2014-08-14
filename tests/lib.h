@@ -21,6 +21,9 @@
 #ifndef LIBSIGROKDECODE_TESTS_LIB_H
 #define LIBSIGROKDECODE_TESTS_LIB_H
 
+void srdtest_setup(void);
+void srdtest_teardown(void);
+
 Suite *suite_core(void);
 Suite *suite_decoder(void);
 Suite *suite_inst(void);
