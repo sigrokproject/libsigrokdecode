@@ -171,6 +171,10 @@ class Decoder(srd.Decoder):
             'Square wave rate: %s' % r, 'SQW rate: %s' % r, 'Rate: %s' % r,
             'RS: %s' % s, 'RS', 'R']])
 
+    def handle_reg_0x3f(self, b): # RAM (bytes 0x08-0x3f)
+        self.putd(7, 0, [8, ['RAM', 'R']])
+        self.putd(7, 0, [23, ['SRAM: 0x%02X' % b, '0x%02X' % b]])
+
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -209,7 +213,8 @@ class Decoder(srd.Decoder):
                 return
             # Otherwise: Get data bytes until a STOP condition occurs.
             if cmd == 'DATA WRITE':
-                handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
+                r = self.reg if self.reg < 8 else 0x3f
+                handle_reg = getattr(self, 'handle_reg_0x%02x' % r)
                 handle_reg(databyte)
                 self.reg += 1
                 # TODO: Check for NACK!
@@ -233,7 +238,8 @@ class Decoder(srd.Decoder):
                 pass # TODO
         elif self.state == 'READ RTC REGS2':
             if cmd == 'DATA READ':
-                handle_reg = getattr(self, 'handle_reg_0x%02x' % self.reg)
+                r = self.reg if self.reg < 8 else 0x3f
+                handle_reg = getattr(self, 'handle_reg_0x%02x' % r)
                 handle_reg(databyte)
                 self.reg += 1
                 # TODO: Check for NACK!
