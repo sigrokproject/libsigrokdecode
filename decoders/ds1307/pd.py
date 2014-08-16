@@ -44,6 +44,8 @@ rates = {
     0b11: '32768kHz',
 }
 
+DS1307_I2C_ADDRESS = 0x68
+
 def regs_and_bits():
     l = [('reg-' + r.lower(), r + ' register') for r in regs]
     l += [('bit-' + re.sub('\/| ', '-', b).lower(), b + ' bit') for b in bits]
@@ -67,11 +69,13 @@ class Decoder(srd.Decoder):
         ('write-datetime', 'Write date/time'),
         ('reg-read', 'Register read'),
         ('reg-write', 'Register write'),
+        ('warnings', 'Warnings'),
     )
     annotation_rows = (
         ('bits', 'Bits', tuple(range(9, 24))),
         ('regs', 'Registers', tuple(range(9))),
         ('date-time', 'Date/time', (24, 25, 26, 27)),
+        ('warnings', 'Warnings', (28,)),
     )
 
     def __init__(self, **kwargs):
@@ -193,6 +197,13 @@ class Decoder(srd.Decoder):
         if self.reg > 0x3f:
             self.reg = 0
 
+    def is_correct_chip(self, addr):
+        if addr == DS1307_I2C_ADDRESS:
+            return True
+        self.put(self.block_start_sample, self.es, self.out_ann,
+                 [28, ['Ignoring non-DS1307 data (slave 0x%02X)' % addr]])
+        return False
+
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -214,8 +225,10 @@ class Decoder(srd.Decoder):
             self.block_start_sample = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
-            # TODO: We should only handle packets to the RTC slave (0x68).
             if cmd != 'ADDRESS WRITE':
+                return
+            if not self.is_correct_chip(databyte):
+                self.state = 'IDLE'
                 return
             self.state = 'GET REG ADDR'
         elif self.state == 'GET REG ADDR':
@@ -237,10 +250,12 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
         elif self.state == 'READ RTC REGS':
             # Wait for an address read operation.
-            # TODO: We should only handle packets to the RTC slave (0x68).
-            if cmd == 'ADDRESS READ':
-                self.state = 'READ RTC REGS2'
+            if cmd != 'ADDRESS READ':
                 return
+            if not self.is_correct_chip(databyte):
+                self.state = 'IDLE'
+                return
+            self.state = 'READ RTC REGS2'
         elif self.state == 'READ RTC REGS2':
             if cmd == 'DATA READ':
                 self.handle_reg(databyte)
