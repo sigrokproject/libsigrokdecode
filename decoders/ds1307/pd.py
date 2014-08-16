@@ -37,6 +37,13 @@ bits = (
     'Hours', 'Day', 'Date', 'Month', 'Year', 'OUT', 'SQWE', 'RS', 'RAM',
 )
 
+rates = {
+    0b00: '1Hz',
+    0b01: '4096kHz',
+    0b10: '8192kHz',
+    0b11: '32768kHz',
+}
+
 def regs_and_bits():
     l = [('reg-' + r.lower(), r + ' register') for r in regs]
     l += [('bit-' + re.sub('\/| ', '-', b).lower(), b + ' bit') for b in bits]
@@ -149,7 +156,20 @@ class Decoder(srd.Decoder):
         self.putd(7, 0, [19, ['Year: %d' % y, 'Y: %d' % y, 'Y']])
 
     def handle_reg_0x07(self, b): # Control Register
-        pass
+        self.putd(7, 0, [7, ['Control', 'Ctrl', 'C']])
+        for i in (6, 5, 3, 2):
+            self.putr(i)
+        o = 1 if (b & (1 << 7)) else 0
+        s = 1 if (b & (1 << 4)) else 0
+        s2 = 'en' if (b & (1 << 4)) else 'dis'
+        r = rates[b & 0x03]
+        self.putd(7, 7, [20, ['Output control: %d' % o,
+            'OUT: %d' % o, 'O: %d' % o, 'O']])
+        self.putd(4, 4, [21, ['Square wave output: %sabled' % s2,
+            'SQWE: %sabled' % s2, 'SQWE: %d' % s, 'S: %d' % s, 'S']])
+        self.putd(1, 0, [22, ['Square wave output rate: %s' % r,
+            'Square wave rate: %s' % r, 'SQW rate: %s' % r, 'Rate: %s' % r,
+            'RS: %s' % s, 'RS', 'R']])
 
     def decode(self, ss, es, data):
         cmd, databyte = data
