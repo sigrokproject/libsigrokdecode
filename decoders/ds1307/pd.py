@@ -175,6 +175,20 @@ class Decoder(srd.Decoder):
         self.putd(7, 0, [8, ['RAM', 'R']])
         self.putd(7, 0, [23, ['SRAM: 0x%02X' % b, '0x%02X' % b]])
 
+    def output_datetime(self, cls, rw):
+        # TODO: Handle read/write of only parts of these items.
+        d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
+            days_of_week[self.days - 1], self.date, self.months,
+            self.years, self.hours, self.minutes, self.seconds)
+        self.put(self.block_start_sample, self.es, self.out_ann,
+                 [cls, ['%s date/time: %s' % (rw, d)]])
+
+    def handle_reg(self, b):
+        r = self.reg if self.reg < 8 else 0x3f
+        fn = getattr(self, 'handle_reg_0x%02x' % r)
+        fn(b)
+        self.reg += 1
+
     def decode(self, ss, es, data):
         cmd, databyte = data
 
@@ -207,48 +221,25 @@ class Decoder(srd.Decoder):
             self.reg = databyte
             self.state = 'WRITE RTC REGS'
         elif self.state == 'WRITE RTC REGS':
-            # If we see a Repeated Start here, it's probably an RTC read.
+            # If we see a Repeated Start here, it's an RTC read.
             if cmd == 'START REPEAT':
                 self.state = 'READ RTC REGS'
                 return
             # Otherwise: Get data bytes until a STOP condition occurs.
             if cmd == 'DATA WRITE':
-                r = self.reg if self.reg < 8 else 0x3f
-                handle_reg = getattr(self, 'handle_reg_0x%02x' % r)
-                handle_reg(databyte)
-                self.reg += 1
-                # TODO: Check for NACK!
+                self.handle_reg(databyte)
             elif cmd == 'STOP':
-                # TODO: Handle read/write of only parts of these items.
-                d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
-                    days_of_week[self.days - 1], self.date, self.months,
-                    self.years, self.hours, self.minutes, self.seconds)
-                self.put(self.block_start_sample, es, self.out_ann,
-                         [25, ['Written date/time: %s' % d]])
+                self.output_datetime(25, 'Written')
                 self.state = 'IDLE'
-            else:
-                pass # TODO
         elif self.state == 'READ RTC REGS':
             # Wait for an address read operation.
             # TODO: We should only handle packets to the RTC slave (0x68).
             if cmd == 'ADDRESS READ':
                 self.state = 'READ RTC REGS2'
                 return
-            else:
-                pass # TODO
         elif self.state == 'READ RTC REGS2':
             if cmd == 'DATA READ':
-                r = self.reg if self.reg < 8 else 0x3f
-                handle_reg = getattr(self, 'handle_reg_0x%02x' % r)
-                handle_reg(databyte)
-                self.reg += 1
-                # TODO: Check for NACK!
+                self.handle_reg(databyte)
             elif cmd == 'STOP':
-                d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
-                    days_of_week[self.days - 1], self.date, self.months,
-                    self.years, self.hours, self.minutes, self.seconds)
-                self.put(self.block_start_sample, es, self.out_ann,
-                         [24, ['Read date/time: %s' % d]])
+                self.output_datetime(24, 'Read')
                 self.state = 'IDLE'
-            else:
-                pass # TODO?
