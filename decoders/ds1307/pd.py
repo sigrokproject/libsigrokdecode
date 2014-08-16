@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ## Copyright (C) 2013 Matt Ranostay <mranostay@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -19,17 +19,28 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+import re
 import sigrokdecode as srd
 
-days_of_week = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-]
+days_of_week = (
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday',
+    'Thursday', 'Friday', 'Saturday',
+)
+
+regs = (
+    'Seconds', 'Minutes', 'Hours', 'Day', 'Date', 'Month', 'Year',
+    'Control', 'RAM',
+)
+
+bits = (
+    'Clock halt', 'Seconds', 'Reserved', 'Minutes', '12/24 hours', 'AM/PM',
+    'Hours', 'Day', 'Date', 'Month', 'Year', 'OUT', 'SQWE', 'RS', 'RAM',
+)
+
+def regs_and_bits():
+    l = [('reg-' + r.lower(), r + ' register') for r in regs]
+    l += [('bit-' + re.sub('\/| ', '-', b).lower(), b + ' bit') for b in bits]
+    return tuple(l)
 
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
@@ -44,8 +55,16 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['ds1307']
-    annotations = (
-        ('text', 'Human-readable text'),
+    annotations =  regs_and_bits() + (
+        ('read-datetime', 'Read date/time'),
+        ('write-datetime', 'Write date/time'),
+        ('reg-read', 'Register read'),
+        ('reg-write', 'Register write'),
+    )
+    annotation_rows = (
+        ('bits', 'Bits', tuple(range(9, 24))),
+        ('regs', 'Registers', tuple(range(9))),
+        ('date-time', 'Date/time', (24, 25, 26, 27)),
     )
 
     def __init__(self, **kwargs):
@@ -57,6 +76,7 @@ class Decoder(srd.Decoder):
         self.date = -1
         self.months = -1
         self.years = -1
+        self.bits = []
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -64,39 +84,81 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
-    def handle_reg_0x00(self, b): # Seconds
-        self.seconds = bcd2int(b & 0x7f)
-        self.putx([0, ['Seconds: %d' % self.seconds]])
+    def putd(self, bit1, bit2, data):
+        self.put(self.bits[bit1][1], self.bits[bit2][2], self.out_ann, data)
 
-    def handle_reg_0x01(self, b): # Minutes
-        self.minutes = bcd2int(b & 0x7f)
-        self.putx([0, ['Minutes: %d' % self.minutes]])
+    def putr(self, bit):
+        self.put(self.bits[bit][1], self.bits[bit][2], self.out_ann,
+                 [11, ['Reserved bit', 'Reserved', 'Rsvd', 'R']])
 
-    def handle_reg_0x02(self, b): # Hours
-        self.hours = bcd2int(b & 0x3f)
-        self.putx([0, ['Hours: %d' % self.hours]])
+    def handle_reg_0x00(self, b): # Seconds (0-59) / Clock halt bit
+        self.putd(7, 0, [0, ['Seconds', 'Sec', 'S']])
+        ch = 1 if (b & (1 << 7)) else 0
+        self.putd(7, 7, [9, ['Clock halt: %d' % ch, 'Clk hlt: %d' % ch,
+                        'CH: %d' % ch, 'CH']])
+        s = self.seconds = bcd2int(b & 0x7f)
+        self.putd(6, 0, [10, ['Second: %d' % s, 'Sec: %d' % s, 'S: %d' % s, 'S']])
 
-    def handle_reg_0x03(self, b): # Day of week
-        self.days = bcd2int(b & 0x7)
-        self.putx([0, ['Day of Week: %s' % days_of_week[self.days - 1]]])
+    def handle_reg_0x01(self, b): # Minutes (0-59)
+        self.putd(7, 0, [1, ['Minutes', 'Min', 'M']])
+        self.putr(7)
+        m = self.minutes = bcd2int(b & 0x7f)
+        self.putd(6, 0, [12, ['Minute: %d' % m, 'Min: %d' % m, 'M: %d' % m, 'M']])
 
-    def handle_reg_0x04(self, b): # Date
-        self.date = bcd2int(b & 0x3f)
-        self.putx([0, ['Days: %d' % self.date]])
+    def handle_reg_0x02(self, b): # Hours (1-12+AM/PM or 0-23)
+        self.putd(7, 0, [2, ['Hours', 'H']])
+        self.putr(7)
+        ampm_mode = True if (b & (1 << 6)) else False
+        if ampm_mode:
+            self.putd(6, 6, [13, ['12-hour mode', '12h mode', '12h']])
+            a = 'AM' if (b & (1 << 6)) else 'PM'
+            self.putd(5, 5, [14, [a, a[0]]])
+            h = self.hours = bcd2int(b & 0x1f)
+            self.putd(4, 0, [15, ['Hour: %d' % h, 'H: %d' % h, 'H']])
+        else:
+            self.putd(6, 6, [13, ['24-hour mode', '24h mode', '24h']])
+            h = self.hours = bcd2int(b & 0x3f)
+            self.putd(5, 0, [15, ['Hour: %d' % h, 'H: %d' % h, 'H']])
 
-    def handle_reg_0x05(self, b): # Month
-        self.months = bcd2int(b & 0x1f)
-        self.putx([0, ['Months: %d' % self.months]])
+    def handle_reg_0x03(self, b): # Day / day of week (1-7)
+        self.putd(7, 0, [3, ['Day of week', 'Day', 'D']])
+        for i in (7, 6, 5, 4, 3):
+            self.putr(i)
+        w = self.days = bcd2int(b & 0x07)
+        ws = days_of_week[self.days - 1]
+        self.putd(2, 0, [16, ['Weekday: %s' % ws, 'WD: %s' % ws, 'WD', 'W']])
 
-    def handle_reg_0x06(self, b): # Year
-        self.years = bcd2int(b & 0xff) + 2000
-        self.putx([0, ['Years: %d' % self.years]])
+    def handle_reg_0x04(self, b): # Date (1-31)
+        self.putd(7, 0, [4, ['Date', 'D']])
+        for i in (7, 6):
+            self.putr(i)
+        d = self.date = bcd2int(b & 0x3f)
+        self.putd(5, 0, [17, ['Date: %d' % d, 'D: %d' % d, 'D']])
+
+    def handle_reg_0x05(self, b): # Month (1-12)
+        self.putd(7, 0, [5, ['Month', 'Mon', 'M']])
+        for i in (7, 6, 5):
+            self.putr(i)
+        m = self.months = bcd2int(b & 0x1f)
+        self.putd(4, 0, [18, ['Month: %d' % m, 'Mon: %d' % m, 'M: %d' % m, 'M']])
+
+    def handle_reg_0x06(self, b): # Year (0-99)
+        self.putd(7, 0, [6, ['Year', 'Y']])
+        y = self.years = bcd2int(b & 0xff)
+        self.years += 2000
+        self.putd(7, 0, [19, ['Year: %d' % y, 'Y: %d' % y, 'Y']])
 
     def handle_reg_0x07(self, b): # Control Register
         pass
 
     def decode(self, ss, es, data):
         cmd, databyte = data
+
+        # Collect the 'BITS' packet, then return. The next packet is
+        # guaranteed to belong to these bits we just stored.
+        if cmd == 'BITS':
+            self.bits = databyte
+            return
 
         # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
@@ -133,11 +195,11 @@ class Decoder(srd.Decoder):
                 # TODO: Check for NACK!
             elif cmd == 'STOP':
                 # TODO: Handle read/write of only parts of these items.
-                d = '%s, %02d.%02d.%02d %02d:%02d:%02d' % (
+                d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
                     days_of_week[self.days - 1], self.date, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [0, ['Written date/time: %s' % d]])
+                         [25, ['Written date/time: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO
@@ -156,11 +218,11 @@ class Decoder(srd.Decoder):
                 self.reg += 1
                 # TODO: Check for NACK!
             elif cmd == 'STOP':
-                d = '%s, %02d.%02d.%02d %02d:%02d:%02d' % (
+                d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
                     days_of_week[self.days - 1], self.date, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
                 self.put(self.block_start_sample, es, self.out_ann,
-                         [0, ['Read date/time: %s' % d]])
+                         [24, ['Read date/time: %s' % d]])
                 self.state = 'IDLE'
             else:
                 pass # TODO?
