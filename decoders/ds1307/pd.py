@@ -187,7 +187,11 @@ class Decoder(srd.Decoder):
         r = self.reg if self.reg < 8 else 0x3f
         fn = getattr(self, 'handle_reg_0x%02x' % r)
         fn(b)
+        # Honor address auto-increment feature of the DS1307. When the
+        # address reaches 0x3f, it will wrap around to address 0.
         self.reg += 1
+        if self.reg > 0x3f:
+            self.reg = 0
 
     def decode(self, ss, es, data):
         cmd, databyte = data
