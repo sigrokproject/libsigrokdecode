@@ -44,7 +44,7 @@ AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
 # Enable more compiler warnings via -Wall and -Wextra. Add -fvisibility=hidden
 # and enforce use of SRD_API to explicitly mark all public API functions.
-CFLAGS="$CFLAGS -Wall -Wextra -Wmissing-prototypes -fvisibility=hidden"
+AM_CFLAGS="$AM_CFLAGS -Wall -Wextra -Wmissing-prototypes -fvisibility=hidden"
 
 # Checks for programs.
 AC_PROG_CC
@@ -86,7 +86,7 @@ build_runtc="yes"
 # Note: glib-2.0 is part of the libsigrokdecode API
 # (hard pkg-config requirement).
 AM_PATH_GLIB_2_0([2.24.0],
-        [CFLAGS="$CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
+        [AM_CFLAGS="$AM_CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
 
 # Python 3 is always needed.
 # Note: We need to try a few different variants, since some systems have a
@@ -162,6 +162,8 @@ AC_SUBST(SRD_PACKAGE_VERSION_MAJOR)
 AC_SUBST(SRD_PACKAGE_VERSION_MINOR)
 AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
 AC_SUBST(SRD_PACKAGE_VERSION)
+
+AC_SUBST(AM_CFLAGS)
 
 AM_CONDITIONAL(BUILD_RUNTC, test x"$build_runtc" = "xyes")
 

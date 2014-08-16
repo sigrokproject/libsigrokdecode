@@ -60,7 +60,7 @@ tests_check_main_SOURCES = \
 	tests/check_decoder.c \
 	tests/check_inst.c \
 	tests/check_session.c
-tests_check_main_CFLAGS = @check_CFLAGS@
+tests_check_main_CFLAGS = $(AM_CFLAGS) @check_CFLAGS@
 tests_check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
 tests_check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
