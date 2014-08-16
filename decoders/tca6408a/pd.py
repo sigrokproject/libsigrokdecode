@@ -25,8 +25,8 @@ import sigrokdecode as srd
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'tca6408a'
-    name = 'TCA6408A'
-    longname = 'TI TCA6408A'
+    name = 'TI TCA6408A'
+    longname = 'Texas Instruments TCA6408A'
     desc = 'Texas Instruments TCA6408A 8-bit I²C I/O expander.'
     license = 'gplv2+'
     inputs = ['i2c']
