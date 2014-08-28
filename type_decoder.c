@@ -40,10 +40,10 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	PyObject *py_tmp;
 	struct srd_pd_output *pdo;
 	struct srd_proto_data_annotation *pda;
-	int ann_format;
+	int ann_class;
 	char **ann_text;
 
-	/* Should be a list of [annotation format, [string, ...]]. */
+	/* Should be a list of [annotation class, [string, ...]]. */
 	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
 		srd_err("Protocol decoder %s submitted %s instead of list.",
 			di->decoder->name, obj->ob_type->tp_name);
@@ -60,7 +60,7 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 
 	/*
 	 * The first element should be an integer matching a previously
-	 * registered annotation format.
+	 * registered annotation class.
 	 */
 	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
@@ -68,10 +68,10 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 			"first element was not an integer.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
-	ann_format = PyLong_AsLong(py_tmp);
-	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_format))) {
+	ann_class = PyLong_AsLong(py_tmp);
+	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_class))) {
 		srd_err("Protocol decoder %s submitted data to unregistered "
-			"annotation format %d.", di->decoder->name, ann_format);
+			"annotation class %d.", di->decoder->name, ann_class);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -90,7 +90,7 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 
 	if (!(pda = g_try_malloc(sizeof(struct srd_proto_data_annotation))))
 		return SRD_ERR_MALLOC;
-	pda->ann_format = ann_format;
+	pda->ann_class = ann_class;
 	pda->ann_text = ann_text;
 	pdata->data = pda;
 

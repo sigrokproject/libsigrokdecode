@@ -248,7 +248,7 @@ struct srd_proto_data {
 	void *data;
 };
 struct srd_proto_data_annotation {
-	int ann_format;
+	int ann_class;
 	char **ann_text;
 };
 struct srd_proto_data_binary {
