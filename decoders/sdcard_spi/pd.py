@@ -98,7 +98,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
-        self.samplenum = 0
         self.ss, self.es = 0, 0
         self.bit_ss, self.bit_es = 0, 0
         self.cmd_ss, self.cmd_es = 0, 0
