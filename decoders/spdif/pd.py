@@ -55,6 +55,9 @@ class Decoder(srd.Decoder):
     def putx(self, ss, es, data):
         self.put(ss, es, self.out_ann, data)
 
+    def puty(self, data):
+        self.put(self.ss_edge, self.samplenum, self.out_ann, data)
+
     def __init__(self, **kwargs):
         self.state  = 0
         self.olddata = None
@@ -116,9 +119,8 @@ class Decoder(srd.Decoder):
         spdif_bitrate = int(self.samplerate / (self.clocks[2] / 1.5))
         self.ss_edge = 0
 
-        self.putx(self.ss_edge, self.samplenum, [0, \
-                ['Signal Bitrate: %d Mbit/s (=> %d kHz)' % \
-                (spdif_bitrate, (spdif_bitrate/ (2 * 32)))]])
+        self.puty([0, ['Signal Bitrate: %d Mbit/s (=> %d kHz)' % \
+                  (spdif_bitrate, (spdif_bitrate/ (2 * 32)))]])
 
         clock_period_nsec = 1000000000 / spdif_bitrate
 
@@ -202,13 +204,13 @@ class Decoder(srd.Decoder):
             self.preamble_state = 0
             self.state = 3
             if self.preamble == [2, 0, 1, 0]:
-                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble W', 'W']])
+                self.puty([1, ['Preamble W', 'W']])
             elif self.preamble == [2, 2, 1, 1]:
-                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble M', 'M']])
+                self.puty([1, ['Preamble M', 'M']])
             elif self.preamble == [2, 1, 1, 2]:
-                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble B', 'B']])
+                self.puty([1, ['Preamble B', 'B']])
             else:
-                self.putx(self.ss_edge, self.samplenum, [1, ['Unknown Preamble', 'Unkown Prea.', 'U']])
+                self.puty([1, ['Unknown Preamble', 'Unkown Prea.', 'U']])
             self.preamble = []
             self.seen_preamble = True
             self.bitcount = 0
