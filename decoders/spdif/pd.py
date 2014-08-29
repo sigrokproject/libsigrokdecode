@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def __init__(self, **kwargs):
-        self.state  = 0
+        self.state = 'GET FIRST PULSE WIDTH'
         self.olddata = None
         self.ss_edge = None
         self.first_edge = True
@@ -97,13 +97,13 @@ class Decoder(srd.Decoder):
     def find_first_pulse_width(self):
         if self.pulse_width != 0:
             self.clocks.append(self.pulse_width)
-            self.state = 1
+            self.state = 'GET SECOND PULSE WIDTH'
 
     def find_second_pulse_width(self):
         if self.pulse_width > (self.clocks[0] * 1.3) or \
                 self.pulse_width < (self.clocks[0] * 0.7):
             self.clocks.append(self.pulse_width)
-            self.state = 2
+            self.state = 'GET THIRD PULSE WIDTH'
 
     def find_third_pulse_width(self):
         if not ((self.pulse_width > (self.clocks[0] * 1.3) or \
@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
         self.last_preamble = self.samplenum
 
         # We are done recovering the clock, now let's decode the data stream.
-        self.state = 3
+        self.state = 'DECODE STREAM'
 
     def decode_stream(self):
         pulse = self.get_pulse_type(self.pulse_width)
@@ -136,7 +136,7 @@ class Decoder(srd.Decoder):
             # This is probably the start of a preamble, decode it.
             if pulse == 2:
                 self.preamble.append(self.get_pulse_type(self.pulse_width))
-                self.state = 4 # Decode a preamble.
+                self.state = 'DECODE PREAMBLE'
                 self.ss_edge = self.samplenum - self.pulse_width - 1
             return
 
@@ -192,7 +192,7 @@ class Decoder(srd.Decoder):
             self.seen_preamble = False
             self.bitcount = 0
 
-    def handle_preamble(self):
+    def decode_preamble(self):
         if self.preamble_state == 0:
             self.preamble.append(self.get_pulse_type(self.pulse_width))
             self.preamble_state = 1
@@ -202,7 +202,7 @@ class Decoder(srd.Decoder):
         elif self.preamble_state == 2:
             self.preamble.append(self.get_pulse_type(self.pulse_width))
             self.preamble_state = 0
-            self.state = 3
+            self.state = 'DECODE STREAM'
             if self.preamble == [2, 0, 1, 0]:
                 self.puty([1, ['Preamble W', 'W']])
             elif self.preamble == [2, 2, 1, 1]:
@@ -241,16 +241,16 @@ class Decoder(srd.Decoder):
                 self.first_edge = False
                 self.pulse_width = 0
             else:
-                if self.state == 0:
+                if self.state == 'GET FIRST PULSE WIDTH':
                     self.find_first_pulse_width()
-                elif self.state == 1:
+                elif self.state == 'GET SECOND PULSE WIDTH':
                     self.find_second_pulse_width()
-                elif self.state == 2:
+                elif self.state == 'GET THIRD PULSE WIDTH':
                     self.find_third_pulse_width()
-                elif self.state == 3:
+                elif self.state == 'DECODE STREAM':
                     self.decode_stream()
-                elif self.state == 4:
-                    self.handle_preamble()
+                elif self.state == 'DECODE PREAMBLE':
+                    self.decode_preamble()
 
             self.pulse_width = 0
 
