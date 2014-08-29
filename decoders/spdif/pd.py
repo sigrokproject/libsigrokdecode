@@ -84,12 +84,12 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def get_pulse_type(self, pulse):
+    def get_pulse_type(self):
         if self.range1 == 0 or self.range2 == 0:
             return -1
-        if pulse >= self.range2:
+        if self.pulse_width >= self.range2:
             return 2
-        elif pulse >= self.range1:
+        elif self.pulse_width >= self.range1:
             return 0
         else:
             return 1
@@ -130,12 +130,12 @@ class Decoder(srd.Decoder):
         self.state = 'DECODE STREAM'
 
     def decode_stream(self):
-        pulse = self.get_pulse_type(self.pulse_width)
+        pulse = self.get_pulse_type()
 
         if not self.seen_preamble:
             # This is probably the start of a preamble, decode it.
             if pulse == 2:
-                self.preamble.append(self.get_pulse_type(self.pulse_width))
+                self.preamble.append(self.get_pulse_type())
                 self.state = 'DECODE PREAMBLE'
                 self.ss_edge = self.samplenum - self.pulse_width - 1
             return
@@ -194,13 +194,13 @@ class Decoder(srd.Decoder):
 
     def decode_preamble(self):
         if self.preamble_state == 0:
-            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble.append(self.get_pulse_type())
             self.preamble_state = 1
         elif self.preamble_state == 1:
-            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble.append(self.get_pulse_type())
             self.preamble_state = 2
         elif self.preamble_state == 2:
-            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble.append(self.get_pulse_type())
             self.preamble_state = 0
             self.state = 'DECODE STREAM'
             if self.preamble == [2, 0, 1, 0]:
