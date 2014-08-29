@@ -91,6 +91,131 @@ class Decoder(srd.Decoder):
         else:
             return 1
 
+    def find_first_pulse_width(self):
+        if self.pulse_width != 0:
+            self.clocks.append(self.pulse_width)
+            self.state = 1
+
+    def find_second_pulse_width(self):
+        if self.pulse_width > (self.clocks[0] * 1.3) or \
+                self.pulse_width < (self.clocks[0] * 0.7):
+            self.clocks.append(self.pulse_width)
+            self.state = 2
+
+    def find_third_pulse_width(self):
+        if not ((self.pulse_width > (self.clocks[0] * 1.3) or \
+                self.pulse_width < (self.clocks[0] * 0.7)) \
+                and (self.pulse_width > (self.clocks[1] * 1.3) or \
+                self.pulse_width < (self.clocks[1] * 0.7))):
+            return
+
+        self.clocks.append(self.pulse_width)
+        self.clocks.sort()
+        self.range1 = (self.clocks[0] + self.clocks[1]) / 2
+        self.range2 = (self.clocks[1] + self.clocks[2]) / 2
+        spdif_bitrate = int(self.samplerate / (self.clocks[2] / 1.5))
+        self.ss_edge = 0
+
+        self.putx(self.ss_edge, self.samplenum, [0, \
+                ['Signal Bitrate: %d Mbit/s (=> %d kHz)' % \
+                (spdif_bitrate, (spdif_bitrate/ (2 * 32)))]])
+
+        clock_period_nsec = 1000000000 / spdif_bitrate
+
+        self.last_preamble = self.samplenum
+
+        # We are done recovering the clock, now let's decode the data stream.
+        self.state = 3
+
+    def decode_stream(self):
+        pulse = self.get_pulse_type(self.pulse_width)
+
+        if not self.seen_preamble:
+            # This is probably the start of a preamble, decode it.
+            if pulse == 2:
+                self.preamble.append(self.get_pulse_type(self.pulse_width))
+                self.state = 4 # Decode a preamble.
+                self.ss_edge = self.samplenum - self.pulse_width - 1
+            return
+
+        # We've seen a preamble.
+        if pulse == 1 and self.first_one:
+            self.first_one = False
+            self.subframe.append([pulse, self.samplenum - \
+                self.pulse_width - 1, self.samplenum])
+        elif pulse == 1 and not self.first_one:
+            self.subframe[-1][2] = self.samplenum
+            self.putx(self.subframe[-1][1], self.samplenum, [2, ['1']])
+            self.bitcount += 1
+            self.first_one = True
+        else:
+            self.subframe.append([pulse, self.samplenum - \
+                self.pulse_width - 1, self.samplenum])
+            self.putx(self.samplenum - self.pulse_width - 1,
+                      self.samplenum, [2, ['0']])
+            self.bitcount += 1
+
+        if self.bitcount == 28:
+            aux_audio_data = self.subframe[0:4]
+            sam, sam_rot = '', ''
+            for a in aux_audio_data:
+                sam = sam + str(a[0])
+                sam_rot = str(a[0]) + sam_rot
+            sample = self.subframe[4:24]
+            for s in sample:
+                sam = sam + str(s[0])
+                sam_rot = str(s[0]) + sam_rot
+            validity = self.subframe[24:25]
+            subcode_data = self.subframe[25:26]
+            channel_status = self.subframe[26:27]
+            parity = self.subframe[27:28]
+
+            self.putx(aux_audio_data[0][1], aux_audio_data[3][2], \
+                      [3, ['Aux 0x%x' % int(sam, 2), '0x%x' % int(sam, 2)]])
+            self.putx(sample[0][1], sample[19][2], \
+                      [3, ['Sample 0x%x' % int(sam, 2), '0x%x' % int(sam, 2)]])
+            self.putx(aux_audio_data[0][1], sample[19][2], \
+                      [4, ['Audio 0x%x' % int(sam_rot, 2), '0x%x' % int(sam_rot, 2)]])
+            if validity[0][0] == 0:
+                self.putx(validity[0][1], validity[0][2], [5, ['V']])
+            else:
+                self.putx(validity[0][1], validity[0][2], [5, ['E']])
+            self.putx(subcode_data[0][1], subcode_data[0][2],
+                [6, ['S: %d' % subcode_data[0][0]]])
+            self.putx(channel_status[0][1], channel_status[0][2],
+                [7, ['C: %d' % channel_status[0][0]]])
+            self.putx(parity[0][1], parity[0][2], [8, ['P: %d' % parity[0][0]]])
+
+            self.subframe = []
+            self.seen_preamble = False
+            self.bitcount = 0
+
+    def handle_preamble(self):
+        if self.preamble_state == 0:
+            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble_state = 1
+        elif self.preamble_state == 1:
+            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble_state = 2
+        elif self.preamble_state == 2:
+            self.preamble.append(self.get_pulse_type(self.pulse_width))
+            self.preamble_state = 0
+            self.state = 3
+            if self.preamble == [2, 0, 1, 0]:
+                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble W', 'W']])
+            elif self.preamble == [2, 2, 1, 1]:
+                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble M', 'M']])
+            elif self.preamble == [2, 1, 1, 2]:
+                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble B', 'B']])
+            else:
+                self.putx(self.ss_edge, self.samplenum, [1, ['Unknown Preamble', 'Unkown Prea.', 'U']])
+            self.preamble = []
+            self.seen_preamble = True
+            self.bitcount = 0
+            self.first_one = True
+
+        self.last_preamble = self.samplenum
+
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -98,7 +223,7 @@ class Decoder(srd.Decoder):
         for (self.samplenum, pins) in data:
             data = pins[0]
 
-            # Initialize first self.olddata with the first sample value.
+            # Initialize self.olddata with the first sample value.
             if self.olddata == None:
                 self.olddata = data
                 continue
@@ -106,131 +231,25 @@ class Decoder(srd.Decoder):
             # First we need to recover the clock.
             if self.olddata == data:
                 self.pulse_width += 1
-            else:
-                # Found rising or falling edge.
-                if self.first_edge:
-                    # Throw away first detected edge as it might be mangled data.
-                    self.first_edge = False
-                    self.pulse_width = 0
-                else:
-                    if self.state == 0:
-                        # Find first pulse width.
-                        if self.pulse_width != 0:
-                            self.clocks.append(self.pulse_width)
-                            self.state = 1
+                continue
 
-                    elif self.state == 1:
-                        # Find second pulse width.
-                        if self.pulse_width > (self.clocks[0] * 1.3) or self.pulse_width < (self.clocks[0] * 0.7):
-                            self.clocks.append(self.pulse_width)
-                            self.state = 2
-
-                    elif self.state == 2:
-                        # Find third pulse width.
-                        if (self.pulse_width > (self.clocks[0] * 1.3) or self.pulse_width < (self.clocks[0] * 0.7)) \
-                                and (self.pulse_width > (self.clocks[1] * 1.3) or self.pulse_width < (self.clocks[1] * 0.7)):
-                            self.clocks.append(self.pulse_width)
-                            self.clocks.sort()
-                            self.range1 = (self.clocks[0] + self.clocks[1]) / 2
-                            self.range2 = (self.clocks[1] + self.clocks[2]) / 2
-                            spdif_bitrate = int(self.samplerate / (self.clocks[2] / 1.5))
-                            self.ss_edge = 0
-
-                            self.putx(self.ss_edge, self.samplenum, [0, \
-                                    ['Signal Bitrate: %d Mbit/s (=> %d kHz)' % \
-                                    (spdif_bitrate, (spdif_bitrate/ (2 * 32)))]])
-
-                            clock_period_nsec = 1000000000 / spdif_bitrate
-
-                            self.last_preamble = self.samplenum
-                            # We are done recovering the clock, now let's decode the data stream.
-                            self.state = 3
-
-                    elif self.state == 3:
-                        # Decode the stream.
-                        pulse = self.get_pulse_type(self.pulse_width)
-
-                        if self.seen_preamble:
-                            if pulse == 1 and self.first_one:
-                                self.first_one = False
-                                self.subframe.append([pulse, self.samplenum - self.pulse_width - 1, self.samplenum])
-                            elif pulse == 1 and not self.first_one:
-                                self.subframe[-1][2] = self.samplenum
-                                self.putx(self.subframe[-1][1], self.samplenum, [2, ['1']])
-                                self.bitcount += 1
-                                self.first_one = True
-                            else:
-                                self.subframe.append([pulse, self.samplenum - self.pulse_width - 1, self.samplenum])
-                                self.putx(self.samplenum - self.pulse_width - 1, self.samplenum, [2, ['0']])
-                                self.bitcount += 1
-
-                            if self.bitcount == 28:
-                                aux_audio_data = self.subframe[0:4]
-                                sam, sam_rot = '', ''
-                                for a in aux_audio_data:
-                                    sam = sam + str(a[0])
-                                    sam_rot = str(a[0]) + sam_rot
-                                sample = self.subframe[4:24]
-                                for s in sample:
-                                    sam = sam + str(s[0])
-                                    sam_rot = str(s[0]) + sam_rot
-                                validity = self.subframe[24:25]
-                                subcode_data = self.subframe[25:26]
-                                channel_status = self.subframe[26:27]
-                                parity = self.subframe[27:28]
-
-                                self.putx(aux_audio_data[0][1], aux_audio_data[3][2], \
-                                          [3, ['Aux 0x%x' % int(sam, 2), '0x%x' % int(sam, 2)]])
-                                self.putx(sample[0][1], sample[19][2], \
-                                          [3, ['Sample 0x%x' % int(sam, 2), '0x%x' % int(sam, 2)]])
-                                self.putx(aux_audio_data[0][1], sample[19][2], \
-                                          [4, ['Audio 0x%x' % int(sam_rot, 2), '0x%x' % int(sam_rot, 2)]])
-                                if validity[0][0] == 0:
-                                    self.putx(validity[0][1], validity[0][2], [5, ['V']])
-                                else:
-                                    self.putx(validity[0][1], validity[0][2], [5, ['E']])
-                                self.putx(subcode_data[0][1], subcode_data[0][2], [6, ['S: %d' % subcode_data[0][0]]])
-                                self.putx(channel_status[0][1], channel_status[0][2], [7, ['C: %d' % channel_status[0][0]]])
-                                self.putx(parity[0][1], parity[0][2], [8, ['P: %d' % parity[0][0]]])
-
-                                self.subframe = []
-                                self.seen_preamble = False
-                                self.bitcount = 0
-                        else:
-                            # This is probably the start of a preamble, so go
-                            # ahead and decode it.
-                            if pulse == 2:
-                                self.preamble.append(self.get_pulse_type(self.pulse_width))
-                                self.state = 4 # Decode a preamble.
-                                self.ss_edge = self.samplenum - self.pulse_width - 1
-
-                    elif self.state == 4:
-                        if self.preamble_state == 0:
-                            self.preamble.append(self.get_pulse_type(self.pulse_width))
-                            self.preamble_state = 1
-                        elif self.preamble_state == 1:
-                            self.preamble.append(self.get_pulse_type(self.pulse_width))
-                            self.preamble_state = 2
-                        elif self.preamble_state == 2:
-                            self.preamble.append(self.get_pulse_type(self.pulse_width))
-                            self.preamble_state = 0
-                            self.state = 3
-                            if self.preamble == [2, 0, 1, 0]:
-                                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble W', 'W']])
-                            elif self.preamble == [2, 2, 1, 1]:
-                                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble M', 'M']])
-                            elif self.preamble == [2, 1, 1, 2]:
-                                self.putx(self.ss_edge, self.samplenum, [1, ['Preamble B', 'B']])
-                            else:
-                                self.putx(self.ss_edge, self.samplenum, [1, ['Unknown Preamble', 'Unkown Prea.', 'U']])
-                            self.preamble = []
-                            self.seen_preamble = True
-                            self.bitcount = 0
-                            self.first_one = True
-
-                        self.last_preamble = self.samplenum
-
+            # Found rising or falling edge.
+            if self.first_edge:
+                # Throw away first detected edge as it might be mangled data.
+                self.first_edge = False
                 self.pulse_width = 0
+            else:
+                if self.state == 0:
+                    self.find_first_pulse_width()
+                elif self.state == 1:
+                    self.find_second_pulse_width()
+                elif self.state == 2:
+                    self.find_third_pulse_width()
+                elif self.state == 3:
+                    self.decode_stream()
+                elif self.state == 4:
+                    self.handle_preamble()
+
+            self.pulse_width = 0
 
             self.olddata = data
-
