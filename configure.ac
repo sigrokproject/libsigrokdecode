@@ -77,9 +77,6 @@ AC_SUBST(SRD_LIB_VERSION_AGE)
 AC_SUBST(SRD_LIB_VERSION)
 AC_SUBST(SRD_LIB_LDFLAGS)
 
-# Assume we can build tests/runtc unless proven otherwise.
-build_runtc="yes"
-
 # Checks for libraries.
 
 # libglib-2.0 is always needed.
@@ -137,17 +134,8 @@ PKG_CHECK_MODULES([check], [check >= 0.9.4],
 	[have_check="yes"], [have_check="no"])
 AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
 
-# libsigrok is optional (only used for the protocol decoder test framework).
-# Disable if not found.
-PKG_CHECK_MODULES([libsigrok], [libsigrok >= 0.3.0],
-	[LIBSIGROK_CFLAGS="$libsigrok_CFLAGS"; LIBSIGROK_LIBS="$libsigrok_LIBS"],
-	[build_runtc="no"])
-AC_SUBST([LIBSIGROK_CFLAGS])
-AC_SUBST([LIBSIGROK_LIBS])
-
 # Checks for header files.
 # These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
-AC_CHECK_HEADER([sys/resource.h], [], [build_runtc="no"])
 
 AC_SUBST(DECODERS_DIR, "$datadir/libsigrokdecode/decoders")
 AC_SUBST(MAKEFLAGS, '--no-print-directory')
@@ -164,8 +152,6 @@ AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
 AC_SUBST(SRD_PACKAGE_VERSION)
 
 AC_SUBST(AM_CFLAGS)
-
-AM_CONDITIONAL(BUILD_RUNTC, test x"$build_runtc" = "xyes")
 
 AC_CONFIG_FILES([Makefile version.h libsigrokdecode.pc])
 
@@ -190,7 +176,7 @@ else
 fi
 
 # Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4" "libsigrok >= 0.3.0"; do
+for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4"; do
 	optional="OPTIONAL"
 	if test "x$lib" = "xglib-2.0 >= 2.24.0"; then optional="REQUIRED"; fi
 	if `$PKG_CONFIG --exists $lib`; then
@@ -206,6 +192,5 @@ echo
 echo "Enabled features:"
 echo
 echo "  - (OPTIONAL) Library unit test framework support: $have_check"
-echo "  - (OPTIONAL) Protocol decoder test framework support: $build_runtc"
 echo
 

@@ -23,7 +23,6 @@ tests/check_main
 tests/check_main.*
 tests/test-suite.log
 test-suite.log
-tests/runtc
 version.h
 
 # recursive autoconf leftovers
