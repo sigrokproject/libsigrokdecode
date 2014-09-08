@@ -18,7 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import traceback
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
@@ -489,10 +488,7 @@ class Decoder(srd.Decoder):
 
         self.row_pos = [0, 8, 8]
 
-        try:
-            self.handle_cmd(self.mosi_bytes, self.miso_bytes)
-        except:
-            traceback.print_exc()
+        self.handle_cmd(self.mosi_bytes, self.miso_bytes)
 
         self.mosi_bytes, self.miso_bytes = [], []
         self.mosi_bits, self.miso_bits = [], []
