@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2014 Sławek Piotrowski <slawomir.piotrowski@payu.pl>
+## Copyright (C) 2014 Sławek Piotrowski <sentinel@atteo.org>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 ##
 
 '''
-This decoder stacks on top of the 'spi' PD and decodes the RFM12
-control protocol.
+This decoder stacks on top of the 'spi' PD and decodes the HopeRF RFM12
+wireless transceiver control protocol.
 '''
 
 from .pd import *

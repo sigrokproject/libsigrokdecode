@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2014 Sławek Piotrowski <slawomir.piotrowski@payu.pl>
+## Copyright (C) 2014 Sławek Piotrowski <sentinel@atteo.org>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ class Decoder(srd.Decoder):
     id = 'rfm12'
     name = 'RFM12'
     longname = 'RFM12 control protocol'
-    desc = 'Protocol for controlling RFM12 wireless transceivers from HoperRF'
+    desc = 'HopeRF RFM12 wireless transceiver control protocol.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['rfm12']
