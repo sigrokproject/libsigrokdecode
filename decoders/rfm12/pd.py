@@ -120,7 +120,7 @@ class Decoder(srd.Decoder):
         self.describe_bits(bits, NAMES)
         self.describe_changed_bits(bits, old_bits, NAMES)
 
-        FREQUENCIES = ['Reserved', '433', '868', '912']
+        FREQUENCIES = ['315', '433', '868', '915']
         f = FREQUENCIES[(cmd[1] & 0x30) >> 4] + 'MHz'
         self.putx(1, 2, ['Frequency: ' + f, f])
         if cmd[1] & 0x30 != self.last_config & 0x30:
