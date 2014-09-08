@@ -264,17 +264,17 @@ class Decoder(srd.Decoder):
         else:
             self.advance_ann(5, 2)
 
-        range = (cmd[1] & 0x30) >> 4
+        range_limit = (cmd[1] & 0x30) >> 4
         FREQ_TABLE = [0.0, 2.5, 5.0, 7.5]
         freq_delta = FREQ_TABLE[(self.last_config & 0x30) >> 4]
 
-        if range == 0:
+        if range_limit == 0:
             self.putx(0, 2, ['Range: No limit'])
-        elif range == 1:
+        elif range_limit == 1:
             self.putx(0, 2, ['Range: +/-%dkHz' % (15 * freq_delta)])
-        elif range == 2: 
+        elif range_limit == 2:
             self.putx(0, 2, ['Range: +/-%dkHz' % (7 * freq_delta)])
-        elif range == 3:
+        elif range_limit == 3:
             self.putx(0, 2, ['Range: +/-%dkHz' % (3 * freq_delta)])
 
         if (cmd[1] & 0x30) != (self.last_afc & 0x30):
