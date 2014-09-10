@@ -128,4 +128,3 @@ class Decoder(srd.Decoder):
                 handle_reg(databyte)
             elif cmd == 'STOP':
                 self.state = 'IDLE'
-

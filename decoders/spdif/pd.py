@@ -226,7 +226,7 @@ class Decoder(srd.Decoder):
             data = pins[0]
 
             # Initialize self.olddata with the first sample value.
-            if self.olddata == None:
+            if self.olddata is None:
                 self.olddata = data
                 continue
 
