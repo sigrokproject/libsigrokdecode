@@ -63,7 +63,7 @@ tests_check_main_SOURCES = \
 tests_check_main_CFLAGS = @check_CFLAGS@
 tests_check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
 tests_check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
-	-DDECODERS_DIR='"$(abs_top_builddir)/decoders"'
+	-DDECODERS_DIR='"$(abs_top_srcdir)/decoders"'
 endif
 
 MAINTAINERCLEANFILES = ChangeLog
