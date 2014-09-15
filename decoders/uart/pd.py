@@ -102,7 +102,10 @@ class Decoder(srd.Decoder):
             'values': ('lsb-first', 'msb-first')},
         {'id': 'format', 'desc': 'Data format', 'default': 'ascii',
             'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
-        # TODO: Options to invert the signal(s).
+        {'id': 'invert_rx', 'desc': 'Invert RX?', 'default': 'no',
+            'values': ('yes', 'no')},
+        {'id': 'invert_tx', 'desc': 'Invert TX?', 'default': 'no',
+            'values': ('yes', 'no')},
     )
     annotations = (
         ('rx-data', 'RX data'),
@@ -335,6 +338,11 @@ class Decoder(srd.Decoder):
             # if self.oldpins == pins:
             #     continue
             self.oldpins, (rx, tx) = pins, pins
+
+            if self.options['invert_rx'] == 'yes':
+                rx = not rx
+            if self.options['invert_tx'] == 'yes':
+                tx = not tx
 
             # Either RX or TX (but not both) can be omitted.
             has_pin = [rx in (0, 1), tx in (0, 1)]
