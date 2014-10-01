@@ -23,4 +23,4 @@ This decoder stacks on top of the 'spi' PD and decodes the HopeRF RFM12
 wireless transceiver control protocol.
 '''
 
-from .pd import *
+from .pd import Decoder

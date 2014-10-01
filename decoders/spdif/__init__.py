@@ -23,4 +23,4 @@ S/PDIF (Sony/Philips Digital Interface Format) is a serial bus for
 transmitting audio data.
 '''
 
-from .pd import *
+from .pd import Decoder

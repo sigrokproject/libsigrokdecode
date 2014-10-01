@@ -27,4 +27,4 @@ https://en.wikipedia.org/wiki/STM32
 http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/REFERENCE_MANUAL/CD00171190.pdf (e.g. chapter 31.7: "JTAG debug port")
 '''
 
-from .pd import *
+from .pd import Decoder

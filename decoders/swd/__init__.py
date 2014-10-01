@@ -32,4 +32,4 @@ Not supported:
  * SWD protocol version 2 (multi-drop support, etc.)
 '''
 
-from .pd import *
+from .pd import Decoder

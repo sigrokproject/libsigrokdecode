@@ -28,4 +28,4 @@ https://en.wikipedia.org/wiki/Joint_Test_Action_Group
 http://focus.ti.com/lit/an/ssya002c/ssya002c.pdf
 '''
 
-from .pd import *
+from .pd import Decoder

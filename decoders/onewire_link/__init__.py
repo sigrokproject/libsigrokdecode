@@ -65,4 +65,4 @@ These options should be configured only on very rare cases and the user should
 read the decoder source code to understand them correctly.
 '''
 
-from .pd import *
+from .pd import Decoder

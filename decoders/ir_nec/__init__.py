@@ -22,4 +22,4 @@
 NEC is a pulse-distance based infrared remote control protocol.
 '''
 
-from .pd import *
+from .pd import Decoder

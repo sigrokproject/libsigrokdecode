@@ -48,4 +48,4 @@ https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
 '''
 
-from .pd import *
+from .pd import Decoder

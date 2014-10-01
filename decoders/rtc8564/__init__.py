@@ -23,4 +23,4 @@ This decoder stacks on top of the 'i2c' PD and decodes the Epson
 RTC-8564 JE/NB real-time clock (RTC) protocol.
 '''
 
-from .pd import *
+from .pd import Decoder

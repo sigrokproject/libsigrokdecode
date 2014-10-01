@@ -28,4 +28,4 @@ http://todbot.com/blog/2008/02/18/wiichuck-wii-nunchuck-adapter-available/
 https://www.sparkfun.com/products/9281
 '''
 
-from .pd import *
+from .pd import Decoder

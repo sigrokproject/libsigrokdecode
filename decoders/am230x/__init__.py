@@ -33,4 +33,4 @@ Therefore the option 'device' must be used to properly decode the
 communication of the respective sensor.
 '''
 
-from .pd import *
+from .pd import Decoder

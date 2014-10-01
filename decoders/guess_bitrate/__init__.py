@@ -34,4 +34,4 @@ recommended to use a logic analyzer samplerate that is much higher than
 the expected bitrate/baudrate that might be used on the channel.
 '''
 
-from .pd import *
+from .pd import Decoder

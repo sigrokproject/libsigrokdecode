@@ -26,4 +26,4 @@ The chip's I²C interface supports standard mode and fast mode (max. 400kHz).
 Its I²C slave address is 0x2a.
 '''
 
-from .pd import *
+from .pd import Decoder

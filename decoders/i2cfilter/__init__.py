@@ -34,4 +34,4 @@ Both of these are optional; if no options are specified the entire payload
 of the I²C session will be output.
 '''
 
-from .pd import *
+from .pd import Decoder

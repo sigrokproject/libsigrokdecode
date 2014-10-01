@@ -23,4 +23,4 @@ This decoder stacks on top of the 'i2c' PD and decodes the Texas Instruments
 TCA6408A 8-bit I²C I/O expander protocol.
 '''
 
-from .pd import *
+from .pd import Decoder
