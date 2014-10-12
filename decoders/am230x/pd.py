@@ -185,7 +185,7 @@ class Decoder(srd.Decoder):
                     self.bytepos.append(self.samplenum)
                     self.state = 'WAIT FOR BIT HIGH'
                 else:
-                    self.reset_variables()
+                    self.reset()
             elif self.state == 'WAIT FOR BIT HIGH':
                 if sda != 1:
                     continue
