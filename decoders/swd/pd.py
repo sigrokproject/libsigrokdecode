@@ -19,7 +19,7 @@
 ##
 
 import sigrokdecode as srd
-import re, traceback
+import re
 
 '''
 OUTPUT_PYTHON format:
@@ -143,13 +143,6 @@ class Decoder(srd.Decoder):
         self.putp(ptype, (self.addr, self.data, self.ack))
 
     def decode(self, ss, es, data):
-        try:
-            return self._decode(ss, es, data)
-        except:
-            traceback.print_exc()
-            raise
-
-    def _decode(self, ss, es, data):
         for (self.samplenum, (clk, dio)) in data:
             if clk == self.oldclk:
                 continue # Not a clock edge.
