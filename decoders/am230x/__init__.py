@@ -27,9 +27,10 @@ A sample rate of at least 200kHz is recommended to properly detect all the
 elements of the protocol.
 
 Options:
-The DHT11 digital humidity and temperature sensor uses the same single wire
-protocol with a different encoding of the measured values. Therefore the option
-'dht11' must be used to properly decode the communication of a DHT11 device.
+The AM230x and DHTxx digital humidity and temperature sensors use the same
+single-wire protocol with different encoding of the measured values.
+Therefore the option 'device' must be used to properly decode the
+communication of the respective sensor.
 '''
 
 from .pd import *
