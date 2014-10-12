@@ -37,9 +37,9 @@ class SamplerateError(Exception):
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'am230x'
-    name = 'AM230x'
-    longname = 'AM230x humidity and temperature sensors'
-    desc = 'Proprietary single wire communication bus.'
+    name = 'AM230x/DHTxx'
+    longname = 'Aosong AM230x/DHTxx'
+    desc = 'Aosong AM230x/DHTxx humidity/temperature sensor protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['am230x']
@@ -95,8 +95,8 @@ class Decoder(srd.Decoder):
 
     def bits2num(self, bitlist):
         number = 0
-        for i in range(0, len(bitlist)):
-            number += bitlist[-1-i] * 2**i
+        for i in range(len(bitlist)):
+            number += bitlist[-1 - i] * 2**i
         return number
 
     def calculate_humidity(self, bitlist):
@@ -119,7 +119,7 @@ class Decoder(srd.Decoder):
 
     def calculate_checksum(self, bitlist):
         checksum = 0
-        for i in range(8, len(bitlist)+1, 8):
+        for i in range(8, len(bitlist) + 1, 8):
             checksum += self.bits2num(bitlist[i-8:i])
         return checksum % 256
 
