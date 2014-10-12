@@ -24,8 +24,8 @@ import sigrokdecode as srd
 timing = {
     'START LOW'     : {'min': 750, 'max': 25000},
     'START HIGH'    : {'min': 10, 'max': 10000},
-    'RESPONSE LOW'  : {'min': 70, 'max': 90},
-    'RESPONSE HIGH' : {'min': 70, 'max': 90},
+    'RESPONSE LOW'  : {'min': 50, 'max': 90},
+    'RESPONSE HIGH' : {'min': 50, 'max': 90},
     'BIT LOW'       : {'min': 45, 'max': 90},
     'BIT 0 HIGH'    : {'min': 20, 'max': 35},
     'BIT 1 HIGH'    : {'min': 65, 'max': 80},
