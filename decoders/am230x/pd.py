@@ -141,6 +141,29 @@ class Decoder(srd.Decoder):
             for t in timing[e]:
                 self.cnt[e][t] = timing[e][t] * self.samplerate / 1000000
 
+    def handle_byte(self, bit):
+        self.bits.append(bit)
+        self.putfs([2, ['Bit: %d' % bit, '%d' % bit]])
+        self.fall = self.samplenum
+        self.state = 'WAIT FOR BIT HIGH'
+        if len(self.bits) % 8 == 0:
+            byte = self.bits2num(self.bits[-8:])
+            self.putb([4, ['Byte: %#04x' % byte, '%#04x' % byte]])
+            if len(self.bits) == 16:
+                h = self.calculate_humidity(self.bits[-16:])
+                self.putv([5, ['Humidity: %.1f %%' % h, 'RH = %.1f %%' % h]])
+            elif len(self.bits) == 32:
+                t = self.calculate_temperature(self.bits[-16:])
+                self.putv([6, ['Temperature: %.1f °C' % t, 'T = %.1f °C' % t]])
+            elif len(self.bits) == 40:
+                parity = self.bits2num(self.bits[-8:])
+                if parity == self.calculate_checksum(self.bits[0:32]):
+                    self.putb([7, ['Checksum: OK', 'OK']])
+                else:
+                    self.putb([7, ['Checksum: not OK', 'NOK']])
+                self.state = 'WAIT FOR END'
+            self.bytepos.append(self.samplenum)
+
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -204,27 +227,7 @@ class Decoder(srd.Decoder):
                 else:
                     self.reset()
                     continue
-                self.bits.append(bit)
-                self.putfs([2, ['Bit: %d' % bit, '%d' % bit]])
-                self.fall = self.samplenum
-                self.state = 'WAIT FOR BIT HIGH'
-                if len(self.bits) % 8 == 0:
-                    byte = self.bits2num(self.bits[-8:])
-                    self.putb([4, ['Byte: %#04x' % byte, '%#04x' % byte]])
-                    if len(self.bits) == 16:
-                        h = self.calculate_humidity(self.bits[-16:])
-                        self.putv([5, ['Humidity: %.1f %%' % h, 'RH = %.1f %%' % h]])
-                    elif len(self.bits) == 32:
-                        t = self.calculate_temperature(self.bits[-16:])
-                        self.putv([6, ['Temperature: %.1f °C' % t, 'T = %.1f °C' % t]])
-                    elif len(self.bits) == 40:
-                        parity = self.bits2num(self.bits[-8:])
-                        if parity == self.calculate_checksum(self.bits[0:32]):
-                            self.putb([7, ['Checksum: OK', 'OK']])
-                        else:
-                            self.putb([7, ['Checksum: not OK', 'NOK']])
-                        self.state = 'WAIT FOR END'
-                    self.bytepos.append(self.samplenum)
+                self.handle_byte(bit)
             elif self.state == 'WAIT FOR END':
                 if sda != 1:
                     continue
