@@ -47,8 +47,8 @@ class Decoder(srd.Decoder):
         {'id': 'sda', 'name': 'SDA', 'desc': 'Single wire serial data line'},
     )
     options = (
-        {'id': 'dht11', 'desc': 'DHT11 compatibility mode',
-            'default': 'no', 'values': ('no', 'yes')},
+        {'id': 'device', 'desc': 'Device type',
+            'default': 'am230x', 'values': ('am230x', 'dht11')},
     )
     annotations = (
         ('start', 'Start'),
@@ -101,7 +101,7 @@ class Decoder(srd.Decoder):
 
     def calculate_humidity(self, bitlist):
         h = 0
-        if self.options['dht11'] == 'yes':
+        if self.options['device'] == 'dht11':
             h = self.bits2num(bitlist[0:8])
         else:
             h = self.bits2num(bitlist) / 10
@@ -109,7 +109,7 @@ class Decoder(srd.Decoder):
 
     def calculate_temperature(self, bitlist):
         t = 0
-        if self.options['dht11'] == 'yes':
+        if self.options['device'] == 'dht11':
             t = self.bits2num(bitlist[0:8])
         else:
             t = self.bits2num(bitlist[1:]) / 10
