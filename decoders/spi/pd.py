@@ -116,7 +116,7 @@ class Decoder(srd.Decoder):
         self.misodata = self.mosidata = 0
         self.misobits = []
         self.mosibits = []
-        self.startsample = -1
+        self.ss_block = -1
         self.samplenum = -1
         self.cs_was_deasserted = False
         self.oldcs = -1
@@ -134,7 +134,7 @@ class Decoder(srd.Decoder):
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
     def putw(self, data):
-        self.put(self.startsample, self.samplenum, self.out_ann, data)
+        self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def putdata(self):
         # Pass MISO and MOSI bits and then data to the next PD up the stack.
@@ -175,7 +175,7 @@ class Decoder(srd.Decoder):
     def handle_bit(self, miso, mosi, clk, cs):
         # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
-            self.startsample = self.samplenum
+            self.ss_block = self.samplenum
             self.cs_was_deasserted = False
             if self.have_cs:
                 active_low = (self.options['cs_polarity'] == 'active-low')
@@ -225,9 +225,9 @@ class Decoder(srd.Decoder):
 
         # Meta bitrate.
         elapsed = 1 / float(self.samplerate)
-        elapsed *= (self.samplenum - self.startsample + 1)
+        elapsed *= (self.samplenum - self.ss_block + 1)
         bitrate = int(1 / elapsed * self.options['wordsize'])
-        self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
+        self.put(self.ss_block, self.samplenum, self.out_bitrate, bitrate)
 
         if self.have_cs and self.cs_was_deasserted:
             self.putw([4, ['CS# was deasserted during this data word!']])

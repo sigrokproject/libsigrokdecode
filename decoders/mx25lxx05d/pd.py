@@ -126,7 +126,7 @@ class Decoder(srd.Decoder):
     def handle_rdid(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([2, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
@@ -143,7 +143,7 @@ class Decoder(srd.Decoder):
             # TODO: Check self.device_id is valid & exists in device_names.
             # TODO: Same device ID? Check!
             d = 'Device: Macronix %s' % device_name[self.device_id]
-            self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
+            self.put(self.ss_block, self.es, self.out_ann, [0, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -215,7 +215,7 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.addr = 0
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([8, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
@@ -225,12 +225,12 @@ class Decoder(srd.Decoder):
 
         if self.cmdstate == 4:
             d = 'Erase sector %d (0x%06x)' % (self.addr, self.addr)
-            self.put(self.start_sample, self.es, self.out_ann, [24, [d]])
+            self.put(self.ss_block, self.es, self.out_ann, [24, [d]])
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
                 # Sector addresses must be 4K-aligned (same for all 3 chips).
                 d = 'Warning: Invalid sector address!'
-                self.put(self.start_sample, self.es, self.out_ann, [101, [d]])
+                self.put(self.ss_block, self.es, self.out_ann, [101, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -288,7 +288,7 @@ class Decoder(srd.Decoder):
     def handle_rems(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([16, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
@@ -313,7 +313,6 @@ class Decoder(srd.Decoder):
             self.putx([24, ['%s ID' % d]])
 
         if self.cmdstate == 6:
-            self.end_sample = self.es
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
             self.putx([24, ['Device: Macronix %s' % device_name[id]]])
             self.state = None

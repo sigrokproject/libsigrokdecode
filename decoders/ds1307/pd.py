@@ -184,7 +184,7 @@ class Decoder(srd.Decoder):
         d = '%s, %02d.%02d.%4d %02d:%02d:%02d' % (
             days_of_week[self.days - 1], self.date, self.months,
             self.years, self.hours, self.minutes, self.seconds)
-        self.put(self.block_start_sample, self.es, self.out_ann,
+        self.put(self.ss_block, self.es, self.out_ann,
                  [cls, ['%s date/time: %s' % (rw, d)]])
 
     def handle_reg(self, b):
@@ -200,7 +200,7 @@ class Decoder(srd.Decoder):
     def is_correct_chip(self, addr):
         if addr == DS1307_I2C_ADDRESS:
             return True
-        self.put(self.block_start_sample, self.es, self.out_ann,
+        self.put(self.ss_block, self.es, self.out_ann,
                  [28, ['Ignoring non-DS1307 data (slave 0x%02X)' % addr]])
         return False
 
@@ -222,7 +222,7 @@ class Decoder(srd.Decoder):
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
-            self.block_start_sample = ss
+            self.ss_block = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
             if cmd != 'ADDRESS WRITE':

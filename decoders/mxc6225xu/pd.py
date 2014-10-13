@@ -165,7 +165,6 @@ class Decoder(srd.Decoder):
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
-            self.block_start_sample = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
             # TODO: We should only handle packets to the slave(?)

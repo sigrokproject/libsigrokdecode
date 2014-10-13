@@ -110,7 +110,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.samplerate = None
-        self.ss = self.es = self.byte_ss = -1
+        self.ss = self.es = self.ss_byte = -1
         self.samplenum = None
         self.bitcount = 0
         self.databyte = 0
@@ -182,7 +182,7 @@ class Decoder(srd.Decoder):
 
         # Remember the start of the first data/address bit.
         if self.bitcount == 0:
-            self.byte_ss = self.samplenum
+            self.ss_byte = self.samplenum
 
         # Store individual bits and their start/end samplenumbers.
         # In the list, index 0 represents the LSB (I²C transmits MSB-first).
@@ -219,7 +219,7 @@ class Decoder(srd.Decoder):
             cmd = 'DATA READ'
             bin_class = 2
 
-        self.ss, self.es = self.byte_ss, self.samplenum + self.bitwidth
+        self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
 
         self.putp(['BITS', self.bits])
         self.putp([cmd, d])
@@ -233,7 +233,7 @@ class Decoder(srd.Decoder):
             self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
             w = ['Write', 'Wr', 'W'] if self.wr else ['Read', 'Rd', 'R']
             self.putx([proto[cmd][0], w])
-            self.ss, self.es = self.byte_ss, self.samplenum
+            self.ss, self.es = self.ss_byte, self.samplenum
 
         self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
                    '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
@@ -256,7 +256,7 @@ class Decoder(srd.Decoder):
         # Meta bitrate
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
         bitrate = int(1 / elapsed * self.pdu_bits)
-        self.put(self.byte_ss, self.samplenum, self.out_bitrate, bitrate)
+        self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
 
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum

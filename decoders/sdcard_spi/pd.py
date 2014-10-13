@@ -99,8 +99,8 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.state = 'IDLE'
         self.ss, self.es = 0, 0
-        self.bit_ss, self.bit_es = 0, 0
-        self.cmd_ss, self.cmd_es = 0, 0
+        self.ss_bit, self.es_bit = 0, 0
+        self.ss_cmd, self.es_cmd = 0, 0
         self.cmd_token = []
         self.cmd_token_bits = []
         self.is_acmd = False # Indicates CMD vs. ACMD
@@ -112,13 +112,13 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
+        self.put(self.ss_cmd, self.es_cmd, self.out_ann, data)
 
     def putc(self, cmd, desc):
         self.putx([cmd, ['%s: %s' % (self.cmd_str, desc)]])
 
     def putb(self, data):
-        self.put(self.bit_ss, self.bit_es, self.out_ann, data)
+        self.put(self.ss_bit, self.es_bit, self.out_ann, data)
 
     def cmd_name(self, cmd):
         c = acmd_names if self.is_acmd else cmd_names
@@ -136,7 +136,7 @@ class Decoder(srd.Decoder):
         #  - CMD[00:00]: End bit (always 1)
 
         if len(self.cmd_token) == 0:
-            self.cmd_ss = self.ss
+            self.ss_cmd = self.ss
 
         self.cmd_token.append(mosi)
         self.cmd_token_bits.append(self.mosi_bits)
@@ -145,7 +145,7 @@ class Decoder(srd.Decoder):
         if len(self.cmd_token) < 6:
             return
 
-        self.cmd_es = self.es
+        self.es_cmd = self.es
 
         t = self.cmd_token
 
@@ -156,14 +156,14 @@ class Decoder(srd.Decoder):
             return self.cmd_token_bits[5 - byte][bit]
 
         # Bits[47:47]: Start bit (always 0)
-        bit, self.bit_ss, self.bit_es = tb(5, 7)[0], tb(5, 7)[1], tb(5, 7)[2]
+        bit, self.ss_bit, self.es_bit = tb(5, 7)[0], tb(5, 7)[1], tb(5, 7)[2]
         if bit == 0:
             self.putb([134, ['Start bit: %d' % bit]])
         else:
             self.putb([135, ['Start bit: %s (Warning: Must be 0!)' % bit]])
 
         # Bits[46:46]: Transmitter bit (1 == host)
-        bit, self.bit_ss, self.bit_es = tb(5, 6)[0], tb(5, 6)[1], tb(5, 6)[2]
+        bit, self.ss_bit, self.es_bit = tb(5, 6)[0], tb(5, 6)[1], tb(5, 6)[2]
         if bit == 1:
             self.putb([134, ['Transmitter bit: %d' % bit]])
         else:
@@ -171,22 +171,22 @@ class Decoder(srd.Decoder):
 
         # Bits[45:40]: Command index (BCD; valid: 0-63)
         cmd = self.cmd_index = t[0] & 0x3f
-        self.bit_ss, self.bit_es = tb(5, 5)[1], tb(5, 0)[2]
+        self.ss_bit, self.es_bit = tb(5, 5)[1], tb(5, 0)[2]
         self.putb([134, ['Command: %s%d (%s)' % (s, cmd, self.cmd_name(cmd))]])
 
         # Bits[39:8]: Argument
         self.arg = (t[1] << 24) | (t[2] << 16) | (t[3] << 8) | t[4]
-        self.bit_ss, self.bit_es = tb(4, 7)[1], tb(1, 0)[2]
+        self.ss_bit, self.es_bit = tb(4, 7)[1], tb(1, 0)[2]
         self.putb([134, ['Argument: 0x%04x' % self.arg]])
 
         # Bits[7:1]: CRC7
         # TODO: Check CRC7.
         crc = t[5] >> 1
-        self.bit_ss, self.bit_es = tb(0, 7)[1], tb(0, 1)[2]
+        self.ss_bit, self.es_bit = tb(0, 7)[1], tb(0, 1)[2]
         self.putb([134, ['CRC7: 0x%01x' % crc]])
 
         # Bits[0:0]: End bit (always 1)
-        bit, self.bit_ss, self.bit_es = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
+        bit, self.ss_bit, self.es_bit = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
         self.putb([134, ['End bit: %d' % bit]])
         if bit == 1:
             self.putb([134, ['End bit: %d' % bit]])
@@ -211,8 +211,8 @@ class Decoder(srd.Decoder):
         # CMD1: SEND_OP_COND
         self.putc(1, 'Send HCS info and activate the card init process')
         hcs = (self.arg & (1 << 30)) >> 30
-        self.bit_ss = self.cmd_token_bits[5 - 4][6][1]
-        self.bit_es = self.cmd_token_bits[5 - 4][6][2]
+        self.ss_bit = self.cmd_token_bits[5 - 4][6][1]
+        self.es_bit = self.cmd_token_bits[5 - 4][6][2]
         self.putb([134, ['HCS: %d' % hcs]])
         self.state = 'GET RESPONSE R1'
 
@@ -220,13 +220,13 @@ class Decoder(srd.Decoder):
         # CMD9: SEND_CSD (128 bits / 16 bytes)
         self.putc(9, 'Ask card to send its card specific data (CSD)')
         if len(self.read_buf) == 0:
-            self.cmd_ss = self.ss
+            self.ss_cmd = self.ss
         self.read_buf.append(self.miso)
         # FIXME
         ### if len(self.read_buf) < 16:
         if len(self.read_buf) < 16 + 4:
             return
-        self.cmd_es = self.es
+        self.es_cmd = self.es
         self.read_buf = self.read_buf[4:] # TODO: Document or redo.
         self.putx([9, ['CSD: %s' % self.read_buf]])
         # TODO: Decode all bits.
@@ -256,11 +256,11 @@ class Decoder(srd.Decoder):
         # CMD17: READ_SINGLE_BLOCK
         self.putc(17, 'Read a block from address 0x%04x' % self.arg)
         if len(self.read_buf) == 0:
-            self.cmd_ss = self.ss
+            self.ss_cmd = self.ss
         self.read_buf.append(self.miso)
         if len(self.read_buf) < self.blocklen + 2: # FIXME
             return
-        self.cmd_es = self.es
+        self.es_cmd = self.es
         self.read_buf = self.read_buf[2:] # FIXME
         self.putx([17, ['Block data: %s' % self.read_buf]])
         self.read_buf = []
@@ -331,12 +331,12 @@ class Decoder(srd.Decoder):
         # The R1 response token format (1 byte).
         # Sent by the card after every command except for SEND_STATUS.
 
-        self.cmd_ss, self.cmd_es = self.miso_bits[7][1], self.miso_bits[0][2]
+        self.ss_cmd, self.es_cmd = self.miso_bits[7][1], self.miso_bits[0][2]
         self.putx([65, ['R1: 0x%02x' % res]])
 
         def putbit(bit, data):
             b = self.miso_bits[bit]
-            self.bit_ss, self.bit_es = b[1], b[2]
+            self.ss_bit, self.es_bit = b[1], b[2]
             self.putb([134, data])
 
         # Bit 0: 'In idle state' bit

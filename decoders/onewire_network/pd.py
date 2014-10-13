@@ -46,8 +46,8 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self, **kwargs):
-        self.beg = 0
-        self.end = 0
+        self.ss_block = 0
+        self.es_block = 0
         self.state = 'COMMAND'
         self.bit_cnt = 0
         self.search = 'P'
@@ -62,11 +62,11 @@ class Decoder(srd.Decoder):
 
     def putx(self, data):
         # Helper function for most annotations.
-        self.put(self.beg, self.end, self.out_ann, data)
+        self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def puty(self, data):
         # Helper function for most protocol packets.
-        self.put(self.beg, self.end, self.out_python, data)
+        self.put(self.ss_block, self.es_block, self.out_python, data)
 
     def decode(self, ss, es, data):
         code, val = data
@@ -131,13 +131,13 @@ class Decoder(srd.Decoder):
     def onewire_collect(self, length, val, ss, es):
         # Storing the sample this sequence begins with.
         if self.bit_cnt == 1:
-            self.beg = ss
+            self.ss_block = ss
         self.data = self.data & ~(1 << self.bit_cnt) | (val << self.bit_cnt)
         self.bit_cnt += 1
         # Storing the sample this sequence ends with.
         # In case the full length of the sequence is received, return 1.
         if self.bit_cnt == length:
-            self.end = es
+            self.es_block = es
             self.data = self.data & ((1 << length) - 1)
             self.bit_cnt = 0
             return 1
@@ -148,7 +148,7 @@ class Decoder(srd.Decoder):
     def onewire_search(self, length, val, ss, es):
         # Storing the sample this sequence begins with.
         if (self.bit_cnt == 0) and (self.search == 'P'):
-            self.beg = ss
+            self.ss_block = ss
 
         if self.search == 'P':
             # Master receives an original address bit.
@@ -169,7 +169,7 @@ class Decoder(srd.Decoder):
         # Storing the sample this sequence ends with.
         # In case the full length of the sequence is received, return 1.
         if self.bit_cnt == length:
-            self.end = es
+            self.es_block = es
             self.data_p = self.data_p & ((1 << length) - 1)
             self.data_n = self.data_n & ((1 << length) - 1)
             self.data = self.data & ((1 << length) - 1)

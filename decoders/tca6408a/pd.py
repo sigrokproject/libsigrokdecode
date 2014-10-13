@@ -91,7 +91,6 @@ class Decoder(srd.Decoder):
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
-            self.block_start_sample = ss
         elif self.state == 'GET SLAVE ADDR':
             self.chip = databyte  
             self.state = 'GET REG ADDR'

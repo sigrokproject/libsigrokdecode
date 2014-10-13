@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.samplerate = None
         self.samplenum = None
-        self.edges, self.bits, self.bits_ss_es = [], [], []
+        self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
     def start(self):
@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
             self.halfbit = int((self.samplerate * 0.00178) / 2.0)
 
     def putb(self, bit1, bit2, data):
-        ss, es = self.bits_ss_es[bit1][0], self.bits_ss_es[bit2][1]
+        ss, es = self.ss_es_bits[bit1][0], self.ss_es_bits[bit2][1]
         self.put(ss, es, self.out_ann, data)
 
     def handle_bits(self):
@@ -83,9 +83,9 @@ class Decoder(srd.Decoder):
             if i == 0:
                 ss = max(0, self.bits[0][0] - self.halfbit)
             else:
-                ss = self.bits_ss_es[i - 1][1]
+                ss = self.ss_es_bits[i - 1][1]
             es = self.bits[i][0] + self.halfbit
-            self.bits_ss_es.append([ss, es])
+            self.ss_es_bits.append([ss, es])
             self.putb(i, i, [0, ['%d' % self.bits[i][1]]])
         # Bits[0:0]: Startbit 1
         s = ['Startbit1: %d' % b[0][1], 'SB1: %d' % b[0][1], 'SB1', 'S1', 'S']
@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
             return 'e' # Error, invalid edge distance.
 
     def reset_decoder_state(self):
-        self.edges, self.bits, self.bits_ss_es = [], [], []
+        self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
     def decode(self, ss, es, data):

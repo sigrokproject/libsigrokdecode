@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
         self.sx = self.sy = self.ax = self.ay = self.az = self.bz = self.bc = -1
         self.databytecount = 0
         self.reg = 0x00
-        self.ss = self.es = self.block_ss = self.block_es = 0
+        self.ss = self.es = self.ss_block = self.es_block = 0
         self.init_seq = []
 
     def start(self):
@@ -62,13 +62,13 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def putb(self, data):
-        self.put(self.block_ss, self.block_es, self.out_ann, data)
+        self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def putd(self, bit1, bit2, data):
         self.put(self.bits[bit1][1], self.bits[bit2][2], self.out_ann, data)
 
     def handle_reg_0x00(self, databyte):
-        self.block_ss = self.ss
+        self.ss_block = self.ss
         self.sx = databyte
         self.putx([0, ['Analog stick X position: 0x%02X' % self.sx,
                        'SX: 0x%02X' % self.sx]])
@@ -94,7 +94,7 @@ class Decoder(srd.Decoder):
                        'AZ[9:2]: 0x%03X' % self.az]])
 
     def handle_reg_0x05(self, databyte):
-        self.block_es = self.es
+        self.es_block = self.es
         self.bz = (databyte & (1 << 0)) >> 0 # Bits[0:0]
         self.bc = (databyte & (1 << 1)) >> 1 # Bits[1:1]
         ax_rest = (databyte & (3 << 2)) >> 2 # Bits[3:2]
@@ -170,7 +170,7 @@ class Decoder(srd.Decoder):
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
-            self.block_start_sample = ss
+            self.ss_block = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address read/write operation.
             if cmd == 'ADDRESS READ':
@@ -183,7 +183,7 @@ class Decoder(srd.Decoder):
                 handle_reg(databyte)
                 self.reg += 1
             elif cmd == 'STOP':
-                self.block_end_sample = es
+                self.es_block = es
                 self.output_full_block_if_possible()
                 self.sx = self.sy = self.ax = self.ay = self.az = -1
                 self.bz = self.bc = -1
@@ -195,7 +195,7 @@ class Decoder(srd.Decoder):
             if cmd == 'DATA WRITE':
                 self.handle_reg_write(databyte)
             elif cmd == 'STOP':
-                self.block_end_sample = es
+                self.es_block = es
                 self.output_init_seq()
                 self.init_seq = []
                 self.state = 'IDLE'

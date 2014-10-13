@@ -189,7 +189,7 @@ class Decoder(srd.Decoder):
             if cmd != 'START':
                 return
             self.state = 'GET SLAVE ADDR'
-            self.block_start_sample = ss
+            self.ss_block = ss
         elif self.state == 'GET SLAVE ADDR':
             # Wait for an address write operation.
             # TODO: We should only handle packets to the RTC slave (0xa2/0xa3).
@@ -220,7 +220,7 @@ class Decoder(srd.Decoder):
                 # TODO: Handle read/write of only parts of these items.
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
-                self.put(self.block_start_sample, es, self.out_ann,
+                self.put(self.ss_block, es, self.out_ann,
                          [9, ['Write date/time: %s' % d, 'Write: %s' % d,
                               'W: %s' % d]])
                 self.state = 'IDLE'
@@ -246,7 +246,7 @@ class Decoder(srd.Decoder):
             elif cmd == 'STOP':
                 d = '%02d.%02d.%02d %02d:%02d:%02d' % (self.days, self.months,
                     self.years, self.hours, self.minutes, self.seconds)
-                self.put(self.block_start_sample, es, self.out_ann,
+                self.put(self.ss_block, es, self.out_ann,
                          [10, ['Read date/time: %s' % d, 'Read: %s' % d,
                                'R: %s' % d]])
                 self.state = 'IDLE'

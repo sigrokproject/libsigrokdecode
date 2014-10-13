@@ -54,15 +54,15 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.state = 'IDLE'
         self.mosi_bytes, self.miso_bytes = [], []
-        self.cmd_ss, self.cmd_es = 0, 0
+        self.ss_cmd, self.es_cmd = 0, 0
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
-        self.device_ss = None
+        self.ss_device = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
+        self.put(self.ss_cmd, self.es_cmd, self.out_ann, data)
 
     def handle_cmd_programming_enable(self, cmd, ret):
         # Programming enable.
@@ -99,7 +99,7 @@ class Decoder(srd.Decoder):
 
         # Store for later.
         self.mm = cmd[3]
-        self.device_ss = self.cmd_ss
+        self.ss_device = self.ss_cmd
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != cmd[1] or ret[0] != self.yy:
@@ -112,7 +112,7 @@ class Decoder(srd.Decoder):
 
         p = part[(self.part_fam_flash_size, self.part_number)]
         data = [9, ['Device: Atmel %s' % p]]
-        self.put(self.device_ss, self.cmd_es, self.out_ann, data)
+        self.put(self.ss_device, self.es_cmd, self.out_ann, data)
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != self.xx or ret[0] != self.mm:
@@ -192,7 +192,7 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         if len(self.mosi_bytes) == 0:
-            self.cmd_ss = ss
+            self.ss_cmd = ss
 
         # Append new bytes.
         self.mosi_bytes.append(mosi)
@@ -202,7 +202,7 @@ class Decoder(srd.Decoder):
         if len(self.mosi_bytes) < 4:
             return
 
-        self.cmd_es = es
+        self.es_cmd = es
 
         self.handle_command(self.mosi_bytes, self.miso_bytes)
 
