@@ -70,7 +70,7 @@ class Decoder(srd.Decoder):
         c = self.cmd
         if len(c) < 3:
             return
-        self.es_block = self.ss
+        self.es_block = self.es
         msg, chan, note, velocity = c[0] & 0xf0, (c[0] & 0x0f) + 1, c[1], c[2]
         s = 'note off' if (velocity == 0) else status_bytes[msg]
         self.putx([0, ['Channel %d: %s (note = %d, velocity = %d)' % \
@@ -162,7 +162,7 @@ class Decoder(srd.Decoder):
 
     def handle_sysrealtime_msg(self, newbyte):
         # System realtime message: 0b11111ttt (t = message type)
-        self.es_block = self.ss
+        self.es_block = self.es
         self.putx([0, ['System realtime message: %s' % status_bytes[newbyte]]])
         self.cmd, self.state = [], 'IDLE'
 
