@@ -115,7 +115,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		if ((value = g_hash_table_lookup(options, sdo->id))) {
 			/* A value was supplied for this option. */
 			if (!g_variant_type_equal(g_variant_get_type(value),
-				  g_variant_get_type(sdo-> def))) {
+				  g_variant_get_type(sdo->def))) {
 				srd_err("Option '%s' should have the same type "
 					"as the default value.", sdo->id);
 				goto err_out;
