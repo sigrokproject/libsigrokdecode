@@ -175,6 +175,9 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = ss, es
 
+        # We're only interested in the byte value (not individual bits).
+        pdata = pdata[0]
+
         # Short MIDI overview:
         #  - Status bytes are 0x80-0xff, data bytes are 0x00-0x7f.
         #  - Most messages: 1 status byte, 1-2 data bytes.

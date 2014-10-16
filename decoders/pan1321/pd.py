@@ -136,6 +136,9 @@ class Decoder(srd.Decoder):
         if ptype != 'DATA':
             return
 
+        # We're only interested in the byte value (not individual bits).
+        pdata = pdata[0]
+
         # If this is the start of a command/reply, remember the start sample.
         if self.cmd[rxtx] == '':
             self.ss_block = ss

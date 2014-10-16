@@ -28,9 +28,9 @@ Packet:
 
 This is the list of <ptype>s and their respective <pdata> values:
  - 'STARTBIT': The data is the (integer) value of the start bit (0/1).
- - 'DATA': The data is the (integer) value of the UART data. Valid values
-   range from 0 to 512 (as the data can be up to 9 bits in size).
- - 'DATABITS': List of data bits and their ss/es numbers.
+ - ('DATA', 'DATABITS'): DATA is the (integer) value of the UART data. Valid
+   values range from 0 to 512 (as the data can be up to 9 bits in size).
+   'DATABITS' is the list of individual data bits and their ss/es numbers.
  - 'PARITYBIT': The data is the (integer) value of the parity bit (0/1).
  - 'STOPBIT': The data is the (integer) value of the stop bit (0 or 1).
  - 'INVALID STARTBIT': The data is the (integer) value of the start bit (0/1).
@@ -263,8 +263,8 @@ class Decoder(srd.Decoder):
 
         self.state[rxtx] = 'GET PARITY BIT'
 
-        self.putpx(rxtx, ['DATABITS', rxtx, self.databits[rxtx]])
-        self.putpx(rxtx, ['DATA', rxtx, self.databyte[rxtx]])
+        self.putpx(rxtx, ['DATA', rxtx,
+            (self.databyte[rxtx], self.databits[rxtx])])
 
         b, f = self.databyte[rxtx], self.options['format']
         if f == 'ascii':
