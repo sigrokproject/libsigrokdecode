@@ -35,7 +35,9 @@ Packet:
  - 'BITS': <data1>/<data2> contain a list of bit values in this MOSI/MISO data
    item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
-   Both data items are Python numbers (0/1), not strings.
+   Both data items are Python numbers (0/1), not strings. At the beginning of
+   the decoding a packet is generated with <data1> = -1 and <data2> being the
+   initial state of the CS# pin or -1 if the chip select pin is not supplied.
 
 Examples:
  ['CS-CHANGE', 1, 0]
@@ -122,6 +124,7 @@ class Decoder(srd.Decoder):
         self.oldcs = -1
         self.oldpins = None
         self.have_cs = self.have_miso = self.have_mosi = None
+        self.no_cs_notification = False
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -280,5 +283,10 @@ class Decoder(srd.Decoder):
             # Either MISO or MOSI (but not both) can be omitted.
             if not (self.have_miso or self.have_mosi):
                 raise ChannelError('Either MISO or MOSI (or both) pins required.')
+
+            # Tell stacked decoders that we don't have a CS# signal.
+            if not self.no_cs_notification and not self.have_cs:
+                self.put(0, 0, self.out_python, ['CS-CHANGE', -1, -1])
+                self.no_cs_notification = True
 
             self.find_clk_edge(miso, mosi, clk, cs)
