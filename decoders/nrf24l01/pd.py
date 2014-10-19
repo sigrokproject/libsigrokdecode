@@ -86,6 +86,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.next()
+        self.requirements_met = True
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -264,9 +265,17 @@ class Decoder(srd.Decoder):
                 self.warn(pos, 'wrong data for "ACTIVATE" command')
 
     def decode(self, ss, es, data):
+        if not self.requirements_met:
+            return
+
         ptype, data1, data2 = data
 
         if ptype == 'CS-CHANGE':
+            if data1 == -1:
+                if data2 == -1:
+                    self.requirements_met = False
+                    raise ChannelError('CS# pin required.')
+
             if data1 == 0 and data2 == 1:
                 # Rising edge, the complete command is transmitted, process
                 # the bytes that were send after the command byte.
@@ -284,6 +293,7 @@ class Decoder(srd.Decoder):
             pos = (ss, es)
 
             if miso is None or mosi is None:
+                self.requirements_met = False
                 raise ChannelError('Both MISO and MOSI pins required.')
 
             if self.first:
