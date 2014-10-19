@@ -87,6 +87,7 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.next()
         self.requirements_met = True
+        self.cs_was_released = False
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -275,6 +276,8 @@ class Decoder(srd.Decoder):
                 if data2 == -1:
                     self.requirements_met = False
                     raise ChannelError('CS# pin required.')
+                elif data2 == 1:
+                    self.cs_was_released = True
 
             if data1 == 0 and data2 == 1:
                 # Rising edge, the complete command is transmitted, process
@@ -288,7 +291,8 @@ class Decoder(srd.Decoder):
                         self.finish_command((self.mb_s, self.mb_e))
 
                 self.next()
-        elif ptype == 'DATA':
+                self.cs_was_released = True
+        elif ptype == 'DATA' and self.cs_was_released:
             mosi, miso = data1, data2
             pos = (ss, es)
 
