@@ -36,10 +36,11 @@ Packet:
    item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings. At the beginning of
-   the decoding a packet is generated with <data1> = -1 and <data2> being the
-   initial state of the CS# pin or -1 if the chip select pin is not supplied.
+   the decoding a packet is generated with <data1> = None and <data2> being the
+   initial state of the CS# pin or None if the chip select pin is not supplied.
 
 Examples:
+ ['CS-CHANGE', None, 1]
  ['CS-CHANGE', 1, 0]
  ['DATA', 0xff, 0x3a]
  ['BITS', [[1, 80, 82], [1, 83, 84], [1, 85, 86], [1, 87, 88],
@@ -121,7 +122,7 @@ class Decoder(srd.Decoder):
         self.ss_block = -1
         self.samplenum = -1
         self.cs_was_deasserted = False
-        self.oldcs = -1
+        self.oldcs = None
         self.oldpins = None
         self.have_cs = self.have_miso = self.have_mosi = None
         self.no_cs_notification = False
@@ -286,7 +287,7 @@ class Decoder(srd.Decoder):
 
             # Tell stacked decoders that we don't have a CS# signal.
             if not self.no_cs_notification and not self.have_cs:
-                self.put(0, 0, self.out_python, ['CS-CHANGE', -1, -1])
+                self.put(0, 0, self.out_python, ['CS-CHANGE', None, None])
                 self.no_cs_notification = True
 
             self.find_clk_edge(miso, mosi, clk, cs)

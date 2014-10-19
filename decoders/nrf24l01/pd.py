@@ -272,8 +272,8 @@ class Decoder(srd.Decoder):
         ptype, data1, data2 = data
 
         if ptype == 'CS-CHANGE':
-            if data1 == -1:
-                if data2 == -1:
+            if data1 is None:
+                if data2 is None:
                     self.requirements_met = False
                     raise ChannelError('CS# pin required.')
                 elif data2 == 1:
