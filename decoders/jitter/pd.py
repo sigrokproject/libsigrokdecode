@@ -105,6 +105,60 @@ class Decoder(srd.Decoder):
     def putm(self, data):
         self.put(self.samplenum, self.samplenum, self.out_ann, data)
 
+    def handle_clk(self, clk, sig):
+        if self.clk_start == self.samplenum:
+            # Clock transition already treated.
+            # We have done everything we can with this sample.
+            return True
+
+        if self.clk_edge(self.oldclk, clk):
+            # Clock edge found.
+            # We note the sample and move to the next state.
+            self.clk_start = self.samplenum
+            self.state = 'SIG'
+            return False
+        else:
+            if self.sig_start is not None \
+               and self.sig_start != self.samplenum \
+               and self.sig_edge(self.oldsig, sig):
+                # If any transition in the resulting signal
+                # occurs while we are waiting for a clock,
+                # we increase the missed signal counter.
+                self.sig_missed += 1
+                self.put(ss, self.samplenum, self.out_sig_missed, self.sig_missed)
+                self.putm([2, ['Missed signal', 'MS']])
+            # No clock edge found, we have done everything we
+            # can with this sample.
+            return True
+
+    def handle_sig(self, clk, sig):
+        if self.sig_start == self.samplenum:
+            # Signal transition already treated.
+            # We have done everything we can with this sample.
+            return True
+
+        if self.sig_edge(self.oldsig, sig):
+            # Signal edge found.
+            # We note the sample, calculate the jitter
+            # and move to the next state.
+            self.sig_start = self.samplenum
+            self.state = 'CLK'
+            # Calculate and report the timing jitter.
+            self.putx((self.sig_start - self.clk_start) / self.samplerate)
+            return False
+        else:
+            if self.clk_start != self.samplenum \
+               and self.clk_edge(self.oldclk, clk):
+                # If any transition in the clock signal
+                # occurs while we are waiting for a resulting
+                # signal, we increase the missed clock counter.
+                self.clk_missed += 1
+                self.put(ss, self.samplenum, self.out_clk_missed, self.clk_missed)
+                self.putm([1, ['Missed clock', 'MC']])
+            # No resulting signal edge found, we have done
+            # everything we can with this sample.
+            return True
+
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -122,58 +176,13 @@ class Decoder(srd.Decoder):
             # State machine:
             # For each sample we can move 2 steps forward in the state machine.
             while True:
-
                 # Clock state has the lead.
                 if self.state == 'CLK':
-                    if self.clk_start == self.samplenum:
-                        # Clock transition already treated.
-                        # We have done everything we can with this sample.
+                    if self.handle_clk(clk, sig):
                         break
-                    else:
-                        if self.clk_edge(self.oldclk, clk) is True:
-                            # Clock edge found.
-                            # We note the sample and move to the next state.
-                            self.clk_start = self.samplenum
-                            self.state = 'SIG'
-                        else:
-                            if self.sig_start is not None \
-                               and self.sig_start != self.samplenum \
-                               and self.sig_edge(self.oldsig, sig) is True:
-                                # If any transition in the resulting signal
-                                # occurs while we are waiting for a clock,
-                                # we increase the missed signal counter.
-                                self.sig_missed += 1
-                                self.put(ss, self.samplenum, self.out_sig_missed, self.sig_missed)
-                                self.putm([2, ['Missed signal', 'MS']])
-                            # No clock edge found, we have done everything we
-                            # can with this sample.
-                            break
                 if self.state == 'SIG':
-                    if self.sig_start == self.samplenum:
-                        # Signal transition already treated.
-                        # We have done everything we can with this sample.
+                    if self.handle_sig(clk, sig):
                         break
-                    else:
-                        if self.sig_edge(self.oldsig, sig) is True:
-                            # Signal edge found.
-                            # We note the sample, calculate the jitter
-                            # and move to the next state.
-                            self.sig_start = self.samplenum
-                            self.state = 'CLK'
-                            # Calculate and report the timing jitter.
-                            self.putx((self.sig_start - self.clk_start) / self.samplerate)
-                        else:
-                            if self.clk_start != self.samplenum \
-                               and self.clk_edge(self.oldclk, clk) is True:
-                                # If any transition in the clock signal
-                                # occurs while we are waiting for a resulting
-                                # signal, we increase the missed clock counter.
-                                self.clk_missed += 1
-                                self.put(ss, self.samplenum, self.out_clk_missed, self.clk_missed)
-                                self.putm([1, ['Missed clock', 'MC']])
-                            # No resulting signal edge found, we have done
-                            # everything we can with this sample.
-                            break
 
             # Save current CLK/SIG values for the next round.
             self.oldclk, self.oldsig = clk, sig
