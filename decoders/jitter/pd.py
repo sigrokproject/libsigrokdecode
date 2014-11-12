@@ -125,7 +125,7 @@ class Decoder(srd.Decoder):
                 # occurs while we are waiting for a clock,
                 # we increase the missed signal counter.
                 self.sig_missed += 1
-                self.put(ss, self.samplenum, self.out_sig_missed, self.sig_missed)
+                self.put(self.samplenum, self.samplenum, self.out_sig_missed, self.sig_missed)
                 self.putm([2, ['Missed signal', 'MS']])
             # No clock edge found, we have done everything we
             # can with this sample.
@@ -153,7 +153,7 @@ class Decoder(srd.Decoder):
                 # occurs while we are waiting for a resulting
                 # signal, we increase the missed clock counter.
                 self.clk_missed += 1
-                self.put(ss, self.samplenum, self.out_clk_missed, self.clk_missed)
+                self.put(self.samplenum, self.samplenum, self.out_clk_missed, self.clk_missed)
                 self.putm([1, ['Missed clock', 'MC']])
             # No resulting signal edge found, we have done
             # everything we can with this sample.
