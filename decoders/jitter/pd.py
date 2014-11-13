@@ -59,6 +59,9 @@ class Decoder(srd.Decoder):
         ('clk_missed', 'Clock missed', (1,)),
         ('sig_missed', 'Signal missed', (2,)),
     )
+    binary = (
+        ('jitter', 'Raw jitter values'),
+    )
 
     def __init__(self, **kwargs):
         self.state = 'CLK'
@@ -74,6 +77,7 @@ class Decoder(srd.Decoder):
         self.clk_edge = edge_detector[self.options['clk_polarity']]
         self.sig_edge = edge_detector[self.options['sig_polarity']]
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_clk_missed = self.register(srd.OUTPUT_META,
             meta=(int, 'Clock missed', 'Clock transition missed'))
         self.out_sig_missed = self.register(srd.OUTPUT_META,
@@ -100,6 +104,15 @@ class Decoder(srd.Decoder):
             delta_s = u"%.1fms" % (delta * 1e3)
 
         self.put(self.clk_start, self.sig_start, self.out_ann, [0, [delta_s]])
+
+    # Helper function for raw jitter value which could be useful for statistics.
+    def putb(self, delta):
+        if delta is None:
+            return
+        # format the delta to an ascii output
+        for x in str(delta):
+            self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord(x)])))
+        self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord('\n')])))
 
     # Helper function for missed clock and signal annotations.
     def putm(self, data):
@@ -144,7 +157,9 @@ class Decoder(srd.Decoder):
             self.sig_start = self.samplenum
             self.state = 'CLK'
             # Calculate and report the timing jitter.
-            self.putx((self.sig_start - self.clk_start) / self.samplerate)
+            delta = (self.sig_start - self.clk_start) / self.samplerate
+            self.putx(delta)
+            self.putb(delta)
             return False
         else:
             if self.clk_start != self.samplenum \
