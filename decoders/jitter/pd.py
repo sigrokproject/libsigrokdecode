@@ -109,10 +109,10 @@ class Decoder(srd.Decoder):
     def putb(self, delta):
         if delta is None:
             return
-        # Format the delta to an ASCII float output.
-        for x in str(delta):
-            self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord(x)])))
-        self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord('\n')])))
+        # Format the delta to an ASCII float value terminated by a newline.
+        x = str(delta) + '\n'
+        self.put(self.clk_start, self.sig_start, self.out_bin,
+                 (0, x.encode('UTF-8')))
 
     # Helper function for missed clock and signal annotations.
     def putm(self, data):
