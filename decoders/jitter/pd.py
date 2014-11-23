@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
         ('sig_missed', 'Signal missed', (2,)),
     )
     binary = (
-        ('jitter', 'Raw jitter values'),
+        ('ascii-float', 'Jitter values as newline-separated ASCII floats'),
     )
 
     def __init__(self, **kwargs):
@@ -105,11 +105,11 @@ class Decoder(srd.Decoder):
 
         self.put(self.clk_start, self.sig_start, self.out_ann, [0, [delta_s]])
 
-    # Helper function for raw jitter value which could be useful for statistics.
+    # Helper function for ASCII float jitter values (one value per line).
     def putb(self, delta):
         if delta is None:
             return
-        # format the delta to an ascii output
+        # Format the delta to an ASCII float output.
         for x in str(delta):
             self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord(x)])))
         self.put(self.clk_start, self.sig_start, self.out_bin, (0, bytes([ord('\n')])))
