@@ -27,16 +27,18 @@ Distro packagers should only use released tarballs (no git snapshots).
 Requirements
 ------------
 
- - git
- - gcc (>= 4.0)
+ - git (only needed when building from git)
+ - gcc (>= 4.0) or clang
  - make
- - autoconf >= 2.63
- - automake >= 1.11
- - libtool
+ - autoconf >= 2.63 (only needed when building from git)
+ - automake >= 1.11 (only needed when building from git)
+ - libtool (only needed when building from git)
  - pkg-config >= 0.22
  - libglib >= 2.24.0
  - Python >= 3.2
  - check >= 0.9.4 (optional, only needed to run unit tests)
+ - doxygen (optional, only needed for the C API docs)
+ - graphviz (optional, only needed for the C API docs)
 
 
 Building and installing
