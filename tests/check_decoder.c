@@ -310,6 +310,7 @@ Suite *suite_decoder(void)
 	s = suite_create("decoder");
 
 	tc = tcase_create("load");
+	tcase_set_timeout(tc, 0);
 	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
 	tcase_add_test(tc, test_load_all);
 	tcase_add_test(tc, test_load_all_no_init);
