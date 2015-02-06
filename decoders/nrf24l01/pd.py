@@ -52,6 +52,11 @@ regs = {
     0x1c: ('DYNPD',       1),
     0x1d: ('FEATURE',     1),
 }
+xn297_regs = {
+    0x19: ('DEMOD_CAL',   5),
+    0x1e: ('RF_CAL',      7),
+    0x1f: ('BB_CAL',      5),
+}
 
 class Decoder(srd.Decoder):
     api_version = 2
@@ -62,6 +67,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['nrf24l01']
+    options = (
+        {'id': 'xn297_extensions', 'desc': 'XN297 extensions',
+            'default': 'disable', 'values': ('enable', 'disable')},
+    )
     annotations = (
         # Sent from the host to the chip.
         ('cmd', 'Commands sent to the device'),
@@ -91,6 +100,8 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        if self.options['xn297_extensions'] == 'enable':
+            regs.update(xn297_regs)
 
     def warn(self, pos, msg):
         '''Put a warning message 'msg' at 'pos'.'''
