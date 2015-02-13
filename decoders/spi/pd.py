@@ -183,14 +183,16 @@ class Decoder(srd.Decoder):
         self.mosibits = [] if self.have_mosi else None
         self.bitcount = 0
 
+    def cs_asserted(self, cs):
+        active_low = (self.options['cs_polarity'] == 'active-low')
+        return (cs == 0) if active_low else (cs == 1)
+
     def handle_bit(self, miso, mosi, clk, cs):
         # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
             self.ss_block = self.samplenum
-            self.cs_was_deasserted = False
-            if self.have_cs:
-                active_low = (self.options['cs_polarity'] == 'active-low')
-                self.cs_was_deasserted = (cs == 1) if active_low else (cs == 0)
+            self.cs_was_deasserted = \
+                not self.cs_asserted(cs) if self.have_cs else False
 
         ws = self.options['wordsize']
 
@@ -253,6 +255,10 @@ class Decoder(srd.Decoder):
             self.oldcs = cs
             # Reset decoder state when CS# changes (and the CS# pin is used).
             self.reset_decoder_state()
+
+        # We only care about samples if CS# is asserted.
+        if self.have_cs and not self.cs_asserted(cs):
+            return
 
         # Ignore sample if the clock pin hasn't changed.
         if clk == self.oldclk:
