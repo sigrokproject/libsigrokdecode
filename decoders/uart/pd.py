@@ -19,6 +19,7 @@
 ##
 
 import sigrokdecode as srd
+from math import floor, ceil
 
 '''
 OUTPUT_PYTHON format:
@@ -139,24 +140,24 @@ class Decoder(srd.Decoder):
     )
 
     def putx(self, rxtx, data):
-        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
-        self.put(s - halfbit, self.samplenum + halfbit, self.out_ann, data)
+        s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
+        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
 
     def putpx(self, rxtx, data):
-        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
-        self.put(s - halfbit, self.samplenum + halfbit, self.out_python, data)
+        s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
+        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_python, data)
 
     def putg(self, data):
-        s, halfbit = self.samplenum, int(self.bit_width / 2)
-        self.put(s - halfbit, s + halfbit, self.out_ann, data)
+        s, halfbit = self.samplenum, self.bit_width / 2.0
+        self.put(s - floor(halfbit), s + ceil(halfbit), self.out_ann, data)
 
     def putp(self, data):
-        s, halfbit = self.samplenum, int(self.bit_width / 2)
-        self.put(s - halfbit, s + halfbit, self.out_python, data)
+        s, halfbit = self.samplenum, self.bit_width / 2.0
+        self.put(s - floor(halfbit), s + ceil(halfbit), self.out_python, data)
 
     def putbin(self, rxtx, data):
-        s, halfbit = self.startsample[rxtx], int(self.bit_width / 2)
-        self.put(s - halfbit, self.samplenum + halfbit, self.out_bin, data)
+        s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
+        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_bin, data)
 
     def __init__(self, **kwargs):
         self.samplerate = None
@@ -189,7 +190,9 @@ class Decoder(srd.Decoder):
         # bitpos is the samplenumber which is in the middle of the
         # specified UART bit (0 = start bit, 1..x = data, x+1 = parity bit
         # (if used) or the first stop bit, and so on).
-        bitpos = self.frame_start[rxtx] + (self.bit_width / 2.0)
+        # The samples within bit are 0, 1, ..., (bit_width - 1), therefore
+        # index of the middle sample within bit window is (bit_width - 1) / 2.
+        bitpos = self.frame_start[rxtx] + (self.bit_width - 1) / 2.0
         bitpos += bitnum * self.bit_width
         if self.samplenum >= bitpos:
             return True
