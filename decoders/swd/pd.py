@@ -340,7 +340,7 @@ class Decoder(srd.Decoder):
                 }[self.addr]
         elif self.apdp == 'AP':
             if self.rw == 'R':
-                return 'W AP%x' % self.addr
+                return 'R AP%x' % self.addr
             elif self.rw == 'W':
                 return 'W AP%x' % self.addr
 
