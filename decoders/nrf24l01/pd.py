@@ -52,6 +52,7 @@ regs = {
     0x1c: ('DYNPD',       1),
     0x1d: ('FEATURE',     1),
 }
+
 xn297_regs = {
     0x19: ('DEMOD_CAL',   5),
     0x1e: ('RF_CAL',      7),
@@ -68,8 +69,8 @@ class Decoder(srd.Decoder):
     inputs = ['spi']
     outputs = ['nrf24l01']
     options = (
-        {'id': 'xn297_extensions', 'desc': 'XN297 extensions',
-            'default': 'disable', 'values': ('enable', 'disable')},
+        {'id': 'chip', 'desc': 'Chip type',
+            'default': 'nrf24l01', 'values': ('nrf24l01', 'xn297')},
     )
     annotations = (
         # Sent from the host to the chip.
@@ -100,7 +101,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        if self.options['xn297_extensions'] == 'enable':
+        if self.options['chip'] == 'xn297':
             regs.update(xn297_regs)
 
     def warn(self, pos, msg):
