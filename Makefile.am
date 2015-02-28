@@ -50,19 +50,19 @@ pkgconfig_DATA = libsigrokdecode.pc
 EXTRA_DIST = Doxyfile HACKING contrib/sigrok-logo-notext.png
 
 if HAVE_CHECK
-TESTS = tests/check_main
+TESTS = tests/main
 check_PROGRAMS = ${TESTS}
-tests_check_main_SOURCES = \
+tests_main_SOURCES = \
 	libsigrokdecode.h \
 	tests/lib.h \
-	tests/check_main.c \
-	tests/check_core.c \
-	tests/check_decoder.c \
-	tests/check_inst.c \
-	tests/check_session.c
-tests_check_main_CFLAGS = $(AM_CFLAGS) @check_CFLAGS@
-tests_check_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
-tests_check_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
+	tests/main.c \
+	tests/core.c \
+	tests/decoder.c \
+	tests/inst.c \
+	tests/session.c
+tests_main_CFLAGS = $(AM_CFLAGS) @check_CFLAGS@
+tests_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
+tests_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 	-DDECODERS_DIR='"$(abs_top_srcdir)/decoders"'
 endif
 
