@@ -88,8 +88,7 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 		return SRD_ERR_PYTHON;
 	}
 
-	if (!(pda = g_try_malloc(sizeof(struct srd_proto_data_annotation))))
-		return SRD_ERR_MALLOC;
+	pda = g_malloc(sizeof(struct srd_proto_data_annotation));
 	pda->ann_class = ann_class;
 	pda->ann_text = ann_text;
 	pdata->data = pda;
@@ -151,8 +150,7 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 		return SRD_ERR_PYTHON;
 	}
 
-	if (!(pdb = g_try_malloc(sizeof(struct srd_proto_data_binary))))
-		return SRD_ERR_MALLOC;
+	pdb = g_malloc(sizeof(struct srd_proto_data_binary));
 	if (PyBytes_AsStringAndSize(py_tmp, &buf, &size) == -1)
 		return SRD_ERR_PYTHON;
 	pdb->bin_class = bin_class;
@@ -233,10 +231,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		 di->inst_id, start_sample, end_sample,
 		 OUTPUT_TYPES[pdo->output_type], output_id);
 
-	if (!(pdata = g_try_malloc0(sizeof(struct srd_proto_data)))) {
-		srd_err("Failed to g_malloc() struct srd_proto_data.");
-		return NULL;
-	}
+	pdata = g_malloc0(sizeof(struct srd_proto_data));
 	pdata->start_sample = start_sample;
 	pdata->end_sample = end_sample;
 	pdata->pdo = pdo;
@@ -350,10 +345,7 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	srd_dbg("Instance %s creating new output type %d for %s.",
 		di->inst_id, output_type, proto_id);
 
-	if (!(pdo = g_try_malloc(sizeof(struct srd_pd_output)))) {
-		PyErr_SetString(PyExc_MemoryError, "struct srd_pd_output");
-		return NULL;
-	}
+	pdo = g_malloc(sizeof(struct srd_pd_output));
 
 	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
 	pdo->pdo_id = g_slist_length(di->pd_output);

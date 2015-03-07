@@ -132,11 +132,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 			break;
 		}
 
-		if (!(pdch = g_try_malloc(sizeof(struct srd_channel)))) {
-			srd_err("Failed to g_malloc() struct srd_channel.");
-			ret = SRD_ERR_MALLOC;
-			break;
-		}
+		pdch = g_malloc(sizeof(struct srd_channel));
 
 		if ((py_dictitem_as_str(py_entry, "id", &pdch->id)) != SRD_OK) {
 			ret = SRD_ERR_PYTHON;
@@ -331,11 +327,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	py_basedec = py_method = py_attr = NULL;
 
-	if (!(d = g_try_malloc0(sizeof(struct srd_decoder)))) {
-		srd_dbg("Failed to g_malloc() struct srd_decoder.");
-		ret = SRD_ERR_MALLOC;
-		goto err_out;
-	}
+	d = g_malloc0(sizeof(struct srd_decoder));
 
 	ret = SRD_ERR_PYTHON;
 
@@ -367,7 +359,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	Py_CLEAR(py_basedec);
 
 	/*
-	 * Check that thіs decoder has the correct PD API version.
+	 * Check that this decoder has the correct PD API version.
 	 * PDs of different API versions are incompatible and cannot work.
 	 */
 	py_long = PyObject_GetAttrString(d->py_dec, "api_version");

@@ -145,11 +145,7 @@ SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr)
 		goto err_out;
 	}
 
-	if (!(*outstr = g_strdup(str))) {
-		srd_dbg("Failed to g_malloc() outstr.");
-		ret = SRD_ERR_MALLOC;
-		goto err_out;
-	}
+	*outstr = g_strdup(str);
 
 err_out:
 	if (py_encstr)

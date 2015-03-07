@@ -76,8 +76,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
 		return SRD_ERR_ARG;
 	}
 
-	if (!(*sess = g_try_malloc(sizeof(struct srd_session))))
-		return SRD_ERR_MALLOC;
+	*sess = g_malloc(sizeof(struct srd_session));
 	(*sess)->session_id = ++max_session_id;
 	(*sess)->di_list = (*sess)->callbacks = NULL;
 
@@ -312,11 +311,7 @@ SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 
 	srd_dbg("Registering new callback for output type %d.", output_type);
 
-	if (!(pd_cb = g_try_malloc(sizeof(struct srd_pd_callback)))) {
-		srd_err("Failed to g_malloc() struct srd_pd_callback.");
-		return SRD_ERR_MALLOC;
-	}
-
+	pd_cb = g_malloc(sizeof(struct srd_pd_callback));
 	pd_cb->output_type = output_type;
 	pd_cb->cb = cb;
 	pd_cb->cb_data = cb_data;

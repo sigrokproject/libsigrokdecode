@@ -220,12 +220,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		return SRD_ERR_ARG;
 	}
 
-	new_channelmap = NULL;
-
-	if (!(new_channelmap = g_try_malloc(sizeof(int) * di->dec_num_channels))) {
-		srd_err("Failed to g_malloc() new channel map.");
-		return SRD_ERR_MALLOC;
-	}
+	new_channelmap = g_malloc(sizeof(int) * di->dec_num_channels);
 
 	/*
 	 * For now, map all indexes to channel -1 (can be overridden later).
@@ -325,10 +320,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		return NULL;
 	}
 
-	if (!(di = g_try_malloc0(sizeof(struct srd_decoder_inst)))) {
-		srd_err("Failed to g_malloc() instance.");
-		return NULL;
-	}
+	di = g_malloc0(sizeof(struct srd_decoder_inst));
 
 	di->decoder = dec;
 	di->sess = sess;
@@ -346,12 +338,8 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	di->dec_num_channels = g_slist_length(di->decoder->channels) +
 			g_slist_length(di->decoder->opt_channels);
 	if (di->dec_num_channels) {
-		if (!(di->dec_channelmap =
-				g_try_malloc(sizeof(int) * di->dec_num_channels))) {
-			srd_err("Failed to g_malloc() channel map.");
-			g_free(di);
-			return NULL;
-		}
+		di->dec_channelmap =
+				g_malloc(sizeof(int) * di->dec_num_channels);
 		for (i = 0; i < di->dec_num_channels; i++)
 			di->dec_channelmap[i] = i;
 		di->data_unitsize = (di->dec_num_channels + 7) / 8;
@@ -359,12 +347,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		 * Will be used to prepare a sample at every iteration
 		 * of the instance's decode() method.
 		 */
-		if (!(di->channel_samples = g_try_malloc(di->dec_num_channels))) {
-			srd_err("Failed to g_malloc() sample buffer.");
-			g_free(di->dec_channelmap);
-			g_free(di);
-			return NULL;
-		}
+		di->channel_samples = g_malloc(di->dec_num_channels);
 	}
 
 	/* Create a new instance of this decoder class. */

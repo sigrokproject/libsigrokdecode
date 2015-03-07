@@ -248,10 +248,7 @@ SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 
 	/* Convert to wide chars. */
 	wc_len = sizeof(wchar_t) * (new_path->len + 1);
-	if (!(wc_new_path = g_try_malloc(wc_len))) {
-		srd_dbg("malloc failed");
-		return SRD_ERR_MALLOC;
-	}
+	wc_new_path = g_malloc(wc_len);
 	mbstowcs(wc_new_path, new_path->str, wc_len);
 	PySys_SetPath(wc_new_path);
 	g_string_free(new_path, TRUE);
