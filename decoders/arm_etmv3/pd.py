@@ -22,6 +22,16 @@ import sigrokdecode as srd
 import subprocess
 import re
 
+# See ETMv3 Signal Protocol table 7-11: 'Encoding of Exception[8:0]'.
+exc_names = [
+    'No exception', 'IRQ1', 'IRQ2', 'IRQ3', 'IRQ4', 'IRQ5', 'IRQ6', 'IRQ7',
+    'IRQ0', 'UsageFault', 'NMI', 'SVC', 'DebugMon', 'MemManage', 'PendSV',
+    'SysTick', 'Reserved', 'Reset', 'BusFault', 'Reserved', 'Reserved'
+]
+
+for i in range(8, 496):
+    exc_names.append('IRQ%d' % i)
+
 def parse_varint(bytes):
     '''Parse an integer where the top bit is the continuation bit.
     Returns value and number of parsed bytes.'''
@@ -70,14 +80,17 @@ def parse_branch_addr(bytes, ref_addr, cpu_state, branch_enc):
     if bytes[addrlen-1] & 0x80 != 0x00:
         return None # Branch address not complete.
 
+    addr_bits = 7 * addrlen
+
     have_exc_info = False
     if branch_enc == 'original':
         if addrlen == 5 and bytes[4] & 0x40:
             have_exc_info = True
     elif branch_enc == 'alternative':
-        if addrlen >= 2 and bytes[addrlen - 1] & 0x40:
+        addr_bits -= 1 # Top bit of address indicates exc_info.
+        if addrlen >= 2 and addr & (1 << addr_bits):
             have_exc_info = True
-            addr &= ~(1 << (addrlen * 7 - 1))
+            addr &= ~(1 << addr_bits)
 
     exc_info = None
     if have_exc_info:
@@ -99,17 +112,18 @@ def parse_branch_addr(bytes, ref_addr, cpu_state, branch_enc):
     # Shift the address according to current CPU state.
     if cpu_state == 'arm':
         addr = (addr & 0xFFFFFFFE) << 1
+        addr_bits += 1
     elif cpu_state == 'thumb':
         addr = addr & 0xFFFFFFFE
     elif cpu_state == 'jazelle':
         addr = (addr & 0xFFFFFFFFE) >> 1
+        addr_bits -= 1
     else:
         raise NotImplementedError('Unhandled state: ' + cpu_state)
 
     # If the address wasn't full, fill in with the previous address.
     if addrlen < 5:
-        bits = 7 * addrlen
-        addr |= ref_addr & (0xFFFFFFFF << bits)
+        addr |= ref_addr & (0xFFFFFFFF << addr_bits)
 
     return addr, addrlen, cpu_state, exc_info
 
@@ -149,7 +163,7 @@ class Decoder(srd.Decoder):
         {'id': 'objdump', 'desc': 'objdump path',
             'default': 'arm-none-eabi-objdump'},
         {'id': 'objdump_opts', 'desc': 'objdump options',
-            'default': '-lS'},
+            'default': '-lSC'},
         {'id': 'elffile', 'desc': '.elf path',
             'default': ''},
         {'id': 'branch_enc', 'desc': 'Branch encoding',
@@ -198,7 +212,7 @@ class Decoder(srd.Decoder):
         instpat = re.compile('\s*([0-9a-fA-F]+):\t+([0-9a-fA-F ]+)\t+([a-zA-Z][^;]+)\s*;?.*')
         branchpat = re.compile('(b|bl|b..|bl..|cbnz|cbz)(?:\.[wn])?\s+(?:r[0-9]+,\s*)?([0-9a-fA-F]+)')
         filepat = re.compile('[^\s]+[/\\\\]([a-zA-Z0-9._-]+:[0-9]+)(?:\s.*)?')
-        funcpat = re.compile('[0-9a-fA-F]+\s*<([a-zA-Z0-9_-]+)>:.*')
+        funcpat = re.compile('[0-9a-fA-F]+\s*<([^>]+)>:.*')
 
         prev_src = ''
         prev_file = ''
@@ -231,10 +245,12 @@ class Decoder(srd.Decoder):
                 m = funcpat.match(line)
                 if m:
                     prev_func = m.group(1)
+                    prev_src = None
                 else:
                     m = filepat.match(line)
                     if m:
                         prev_file = m.group(1)
+                        prev_src = None
                     else:
                         prev_src = line.strip()
 
@@ -259,6 +275,9 @@ class Decoder(srd.Decoder):
         Argument is a list of False for not executed and True for executed
         instructions.
         '''
+
+        if len(exec_status) == 0:
+            return
 
         tdelta = max(1, (self.prevsample - self.startsample) / len(exec_status))
 
@@ -364,10 +383,10 @@ class Decoder(srd.Decoder):
             return [0, ['Synchronization']]
 
     def handle_exception_exit(self, buf):
-        return [2, 'Exception exit']
+        return [2, ['Exception exit']]
 
     def handle_exception_entry(self, buf):
-        return [1, 'Exception entry']
+        return [2, ['Exception entry']]
 
     def handle_i_sync(self, buf):
         contextid_bytes = 0 # This is the default ETM config.
@@ -478,13 +497,18 @@ class Decoder(srd.Decoder):
             txt += ', to %s state' % cpu_state
             self.cpu_state = cpu_state
 
+        annidx = 1
+
         if exc_info:
+            annidx = 2
             ns, exc, cancel, altisa, hyp, resume = exc_info
             if ns:
                 txt += ', to non-secure state'
             if exc:
-                # TODO: Parse the exception value to text.
-                txt += ', exception 0x%02x' % exc
+                if exc < len(exc_names):
+                    txt += ', exception %s' % exc_names[exc]
+                else:
+                    txt += ', exception 0x%02x' % exc
             if cancel:
                 txt += ', instr cancelled'
             if altisa:
@@ -494,8 +518,8 @@ class Decoder(srd.Decoder):
             if resume:
                 txt += ', instr resume 0x%02x' % resume
 
-        return [1, ['Branch to 0x%08x%s' % (addr, txt),
-                    'B 0x%08x%s' % (addr, txt)]]
+        return [annidx, ['Branch to 0x%08x%s' % (addr, txt),
+                         'B 0x%08x%s' % (addr, txt)]]
 
     def decode(self, ss, es, data):
         ptype, rxtx, pdata = data
