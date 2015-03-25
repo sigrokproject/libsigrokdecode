@@ -115,6 +115,9 @@ class Decoder(srd.Decoder):
         # Simplification, most annotations span exactly one SPI byte/packet.
         self.put(self.ss, self.es, self.out_ann, data)
 
+    def putb(self, data):
+        self.put(self.block_ss, self.block_es, self.out_ann, data)
+
     def handle_wren(self, mosi, miso):
         self.putx([0, ['Command: %s' % cmds[self.state][1]]])
         self.state = None
@@ -204,7 +207,38 @@ class Decoder(srd.Decoder):
         self.cmdstate += 1
 
     def handle_fast_read(self, mosi, miso):
-        pass # TODO
+        # Fast read: Master asserts CS#, sends FAST READ command, sends
+        # 3-byte address + 1 dummy byte, reads >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([5, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+            self.putx([24, ['AD%d: 0x%02x' % (self.cmdstate - 1, mosi)]])
+            if self.cmdstate == 2:
+                self.block_ss = self.ss
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+        elif self.cmdstate == 5:
+            self.putx([24, ['Dummy byte: 0x%02x' % mosi]])
+            self.block_es = self.es
+            self.putb([5, ['Read address: 0x%06x' % self.addr]])
+            self.addr = 0
+        elif self.cmdstate >= 6:
+            # Bytes 6-x: Master reads data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 32 bytes per FAST READ command.
+            if self.cmdstate == 6:
+                self.block_ss = self.ss
+            if self.cmdstate <= 32 + 5: # TODO: While CS# asserted.
+                self.data.append(miso)
+            if self.cmdstate == 32 + 5: # TODO: If CS# got de-asserted.
+                self.block_es = self.es
+                s = ' '.join([hex(b)[2:] for b in self.data])
+                self.putb([25, ['Read data: %s' % s]])
+                self.data = []
+                self.state = None
+                return
+
+        self.cmdstate += 1
 
     def handle_2read(self, mosi, miso):
         pass # TODO
