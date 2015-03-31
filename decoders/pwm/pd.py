@@ -39,6 +39,11 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('duty-cycle', 'Duty cycle'),
+        ('period', 'Period'),
+    )
+    annotation_rows = (
+         ('duty-cycle', 'Duty cycle', (0,)),
+         ('period', 'Period', (1,)),
     )
     binary = (
         ('raw', 'RAW file'),
@@ -54,6 +59,10 @@ class Decoder(srd.Decoder):
         self.num_cycles = 0
         self.average = 0
 
+    def metadata(self, key, value):
+        if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
+
     def start(self):
         self.startedge = 0 if self.options['polarity'] == 'active-low' else 1
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -64,6 +73,23 @@ class Decoder(srd.Decoder):
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
+
+    def putp(self, period_t):
+        # Adjust granularity.
+        if period_t == 0 or period_t >= 1:
+            period_s = u'%u s' % (period_t)
+        elif period_t <= 1e-12:
+            period_s = u'%.1f fs' % (period_t * 1e15)
+        elif period_t <= 1e-9:
+            period_s = u'%.1f ps' % (period_t * 1e12)
+        elif period_t <= 1e-6:
+            period_s = u'%.1f ns' % (period_t * 1e9)
+        elif period_t <= 1e-3:
+            period_s = u'%.1f μs' % (period_t * 1e6)
+        else:
+            period_s = u'%.1f ms' % (period_t * 1e3)
+
+        self.put(self.ss, self.es, self.out_ann, [1, [period_s]])
 
     def putb(self, data):
         self.put(self.num_cycles, self.num_cycles, self.out_bin, data)
@@ -103,10 +129,14 @@ class Decoder(srd.Decoder):
 
                     # Report the duty cycle in percent.
                     percent = float(ratio * 100)
-                    self.putx([0, ["%f%%" % percent]])
+                    self.putx([0, ['%f%%' % percent]])
 
                     # Report the duty cycle in the binary output.
                     self.putb((0, bytes([int(ratio * 256)])))
+
+                    # Report the period in units of time.
+                    period_t = float(period / self.samplerate)
+                    self.putp(period_t)
 
                     # Update and report the new duty cycle average.
                     self.num_cycles += 1
