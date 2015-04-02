@@ -28,7 +28,7 @@ class Decoder(srd.Decoder):
     id = 'stepper_motor'
     name = 'Stepper motor'
     longname = 'Stepper motor position / speed'
-    desc = 'Calculate absolute position and movement speed from step/dir signals.'
+    desc = 'Absolute position and movement speed from step/dir.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['stepper_motor']

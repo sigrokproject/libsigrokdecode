@@ -25,7 +25,7 @@ class Decoder(srd.Decoder):
     id = 'arm_tpiu'
     name = 'ARM TPIU'
     longname = 'ARM Trace Port Interface Unit'
-    desc = 'Filter TPIU formatted trace data into separate data streams.'
+    desc = 'Filter TPIU formatted trace data into separate streams.'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['uart'] # Emulate uart output so that arm_itm/arm_etm can stack.
