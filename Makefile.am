@@ -40,6 +40,8 @@ libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
 	-DDECODERS_DIR='"$(DECODERS_DIR)"'
 libsigrokdecode_la_LDFLAGS = $(SRD_LIB_LDFLAGS) $(LDFLAGS_PYTHON)
 
+libsigrokdecode_la_LDFLAGS += -no-undefined
+
 library_includedir = $(includedir)/libsigrokdecode
 library_include_HEADERS = libsigrokdecode.h version.h
 noinst_HEADERS = libsigrokdecode-internal.h
