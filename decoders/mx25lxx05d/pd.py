@@ -252,7 +252,7 @@ class Decoder(srd.Decoder):
             self.ss_block = self.ss
             self.putx([8, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
+            # Bytes 2/3/4: Master sends sector address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
             # self.putx([0, ['Sector address, byte %d: 0x%02x' % \
             #                (4 - self.cmdstate, mosi)]])

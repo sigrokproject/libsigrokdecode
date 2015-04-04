@@ -97,7 +97,7 @@ class Decoder(srd.Decoder):
         # Bits[7:7]: INT
         int_val = (b >> 7) & 1
         s = 'unchanged and no' if (int_val == 0) else 'changed or'
-        ann = 'INT = %d: Orientation %s shake event occured\n' % (int_val, s)
+        ann = 'INT = %d: Orientation %s shake event occurred\n' % (int_val, s)
 
         # Bits[6:5]: SH[1:0]
         sh = (((b >> 6) & 1) << 1) | ((b >> 5) & 1)

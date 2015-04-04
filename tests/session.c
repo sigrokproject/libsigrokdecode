@@ -204,7 +204,7 @@ START_TEST(test_session_metadata_set_bogus)
 	srd_init(NULL);
 	srd_session_new(&sess);
 
-	/* Incorrect gvariant type (currently only uint64 is used). */
+	/* Incorrect GVariant type (currently only uint64 is used). */
 	conf_check_fail_str(sess, SRD_CONF_SAMPLERATE, "");
 	conf_check_fail_str(sess, SRD_CONF_SAMPLERATE, "Foo");
 

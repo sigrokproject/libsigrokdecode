@@ -210,7 +210,7 @@ class Decoder(srd.Decoder):
             elif self.preamble == [2, 1, 1, 2]:
                 self.puty([1, ['Preamble B', 'B']])
             else:
-                self.puty([1, ['Unknown Preamble', 'Unkown Prea.', 'U']])
+                self.puty([1, ['Unknown Preamble', 'Unknown Prea.', 'U']])
             self.preamble = []
             self.seen_preamble = True
             self.bitcount = 0

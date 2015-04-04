@@ -333,7 +333,7 @@ class Decoder(srd.Decoder):
                     modestr += est_modes[i] + ', '
         if modestr:
             self.ann_field(offset, offset+2,
-                           'Supported establised modes: %s' % modestr[:-2])
+                           'Supported established modes: %s' % modestr[:-2])
 
     def decode_std_timing(self, offset):
         modestr = ''

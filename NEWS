@@ -64,10 +64,10 @@ means it is NOT backwards-compatible and frontends will need updates.
    - Either MISO or MOSI can be optional now, but not both (bug #175).
    - The CS# pin is optional now. If the pin is supplied, it is honored
      (decoding only happens when the pin is asserted). Otherwise decoding will
-     use every CLK edge, regardless of CS# state or CS# existance (bug #152).
+     use every CLK edge, regardless of CS# state or CS# existence (bug #152).
    - Rename the 'SCK' pin to the more common 'CLK'.
    - Output bit-exact annotations and data for use by stacked PDs.
-   - Fix a bug occuring when only MOSI (but not MISO) was supplied.
+   - Fix a bug occurring when only MOSI (but not MISO) was supplied.
  * transitioncounter:
    - Drop the obsolete 'transitioncounter' dummy protocol decoder.
  * uart:
