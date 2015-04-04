@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2014 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2015 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -84,13 +84,13 @@ def decode_status_reg(data):
 
 class Decoder(srd.Decoder):
     api_version = 2
-    id = 'mx25lxx05d'
-    name = 'MX25Lxx05D'
-    longname = 'Macronix MX25Lxx05D'
-    desc = 'SPI (NOR) flash chip protocol.'
+    id = 'spiflash'
+    name = 'SPI flash'
+    longname = 'SPI flash chips'
+    desc = 'xx25 series SPI (NOR) flash chip protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['mx25lxx05d']
+    outputs = ['spiflash']
     annotations = cmd_annotation_classes() + (
         ('bits', 'Bits'),
         ('bits2', 'Bits2'),
