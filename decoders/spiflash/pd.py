@@ -19,40 +19,7 @@
 ##
 
 import sigrokdecode as srd
-
-# Dict which maps command IDs to their names and descriptions.
-cmds = {
-    0x06: ('WREN', 'Write enable'),
-    0x04: ('WRDI', 'Write disable'),
-    0x9f: ('RDID', 'Read identification'),
-    0x05: ('RDSR', 'Read status register'),
-    0x01: ('WRSR', 'Write status register'),
-    0x03: ('READ', 'Read data'),
-    0x0b: ('FAST/READ', 'Fast read data'),
-    0xbb: ('2READ', '2x I/O read'),
-    0x20: ('SE', 'Sector erase'),
-    0xd8: ('BE', 'Block erase'),
-    0x60: ('CE', 'Chip erase'),
-    0xc7: ('CE2', 'Chip erase'), # Alternative command ID
-    0x02: ('PP', 'Page program'),
-    0xad: ('CP', 'Continuously program mode'),
-    0xb9: ('DP', 'Deep power down'),
-    0xab: ('RDP/RES', 'Release from deep powerdown / Read electronic ID'),
-    0x90: ('REMS', 'Read electronic manufacturer & device ID'),
-    0xef: ('REMS2', 'Read ID for 2x I/O mode'),
-    0xb1: ('ENSO', 'Enter secured OTP'),
-    0xc1: ('EXSO', 'Exit secured OTP'),
-    0x2b: ('RDSCUR', 'Read security register'),
-    0x2f: ('WRSCUR', 'Write security register'),
-    0x70: ('ESRY', 'Enable SO to output RY/BY#'),
-    0x80: ('DSRY', 'Disable SO to output RY/BY#'),
-}
-
-device_name = {
-    0x14: 'MX25L1605D',
-    0x15: 'MX25L3205D',
-    0x16: 'MX25L6405D',
-}
+from .lists import *
 
 def cmd_annotation_classes():
     return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
@@ -101,6 +68,10 @@ class Decoder(srd.Decoder):
         ('commands', 'Commands', tuple(range(23 + 1))),
         ('warnings', 'Warnings', (26,)),
     )
+    options = (
+        {'id': 'chip', 'desc': 'Chip', 'default': tuple(chips.keys())[0],
+            'values': tuple(chips.keys())},
+    )
 
     def __init__(self, **kwargs):
         self.state = None
@@ -110,6 +81,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.chip = chips[self.options['chip']]
 
     def putx(self, data):
         # Simplification, most annotations span exactly one SPI byte/packet.
