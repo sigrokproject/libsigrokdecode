@@ -26,13 +26,13 @@ class SamplerateError(Exception):
 
 def normalize_time(t):
     if t >= 1.0:
-        return '%.3f sec' % t
+        return '%.3f s' % t
     elif t >= 0.001:
-        return '%.3f msec' % (t * 1000.0)
+        return '%.3f ms' % (t * 1000.0)
     elif t >= 0.000001:
-        return '%.3f usec' % (t * 1000.0 * 1000.0)
+        return '%.3f μs' % (t * 1000.0 * 1000.0)
     elif t >= 0.000000001:
-        return '%.3f nsec' % (t * 1000.0 * 1000.0 * 1000.0)
+        return '%.3f ns' % (t * 1000.0 * 1000.0 * 1000.0)
     else:
         return '%f' % t
 
