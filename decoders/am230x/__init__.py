@@ -20,15 +20,16 @@
 
 '''
 This decoder handles the proprietary single wire communication protocol used
-by the Aosong AM230x/DHTxx series of digital humidity and temperature sensors.
+by the Aosong AM230x/DHTxx/RHTxx series of digital humidity and temperature
+sensors.
 
 Sample rate:
 A sample rate of at least 200kHz is recommended to properly detect all the
 elements of the protocol.
 
 Options:
-The AM230x and DHTxx digital humidity and temperature sensors use the same
-single-wire protocol with different encoding of the measured values.
+The AM230x and DHTxx/RHTxx digital humidity and temperature sensors use the
+same single-wire protocol with different encoding of the measured values.
 Therefore the option 'device' must be used to properly decode the
 communication of the respective sensor.
 '''

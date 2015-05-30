@@ -37,9 +37,9 @@ class SamplerateError(Exception):
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'am230x'
-    name = 'AM230x/DHTxx'
-    longname = 'Aosong AM230x/DHTxx'
-    desc = 'Aosong AM230x/DHTxx humidity/temperature sensor protocol.'
+    name = 'AM230x/DHTxx/RHTxx'
+    longname = 'Aosong AM230x/DHTxx/RHTxx'
+    desc = 'Aosong AM230x/DHTxx/RHTxx humidity/temperature sensor protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['am230x']
@@ -48,7 +48,7 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'device', 'desc': 'Device type',
-            'default': 'am230x', 'values': ('am230x', 'dht11')},
+            'default': 'am230x', 'values': ('am230x/rht', 'dht11')},
     )
     annotations = (
         ('start', 'Start'),
