@@ -106,8 +106,8 @@ class Decoder(srd.Decoder):
         if reg > 0x63:
             reg_desc = 'Unknown'
         if write:
-            self.putx([1, ['%s=>%#x' % (reg_desc, arg)]])
+            self.putx([1, ['%s: %#x' % (reg_desc, arg)]])
         else:
-            self.putx([0, ['%s<=%d' % (reg_desc, arg)]])
+            self.putx([0, ['%s: %d' % (reg_desc, arg)]])
 
         self.mosi_bytes = []
