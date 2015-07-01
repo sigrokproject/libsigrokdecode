@@ -23,7 +23,7 @@ AC_PREREQ([2.63])
 # libsigrokdecode package version number (NOT the same as shared lib version!).
 m4_define([srd_package_version_major], [0])
 m4_define([srd_package_version_minor], [3])
-m4_define([srd_package_version_micro], [0])
+m4_define([srd_package_version_micro], [1])
 m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro])
 
 AC_INIT([libsigrokdecode], [srd_package_version],
