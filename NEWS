@@ -1,3 +1,81 @@
+0.3.1 (2015-07-12)
+------------------
+
+Note: This release does NOT change the libsigrokdecode public C API. This
+means existing libsigrokdecode frontends should not require any changes.
+However, individual PDs and their output changed, which may require
+some adaptations on the user's side in some cases.
+
+ * New supported protocol decoders (backported from git):
+
+   - adns5020       Bidirectional command and data over an SPI-like protocol
+   - am230x         Aosong AM230x/DHTxx/RHTxx humidity/temperature sensor
+   - arm_etmv3      Decode ETM instruction trace packets
+   - arm_itm        Trace data from Cortex-M / ARMv7m ITM module
+   - arm_tpiu       Filter TPIU formatted trace data into separate streams
+   - eeprom24xx     24xx series I²C EEPROM protocol
+   - jitter         Retrieves the timing jitter between two digital signals
+   - mdio           Half-duplex sync serial bus for MII management between MAC and PHY
+   - mrf24j40       IEEE 802.15.4 2.4 GHz RF tranceiver chip
+   - nrf24l01       2.4GHz transceiver chip
+   - pwm            Analog level encoded in duty cycle percentage
+   - rfm12          HopeRF RFM12 wireless transceiver control protocol
+   - spdif          Serial bus for connecting digital audio devices
+   - stepper_motor  Absolute position and movement speed from step/dir
+   - swd            Two-wire protocol for debug access to ARM CPUs
+   - tca6408a       Texas Instruments TCA6408A 8-bit I²C I/O expander
+   - timing         Calculate time between edges
+ * The 'mx25lxx05d' decoder was renamed to 'spiflash' and made more generic.
+ * ds1307:
+   - Emit per-bit annotations for registers.
+   - Add more annotation classes (and annotation rows).
+   - Handle register 0x07 (control register).
+   - Handle SRAM register accesses.
+   - Correctly handle address wrap-around.
+   - Warn about (and ignore) non-DS1307 traffic.
+ * edid:
+   - Handle more EDID structure sections.
+   - Add annotation rows.
+ * midi:
+   - Fix two incorrect sample numbers.
+   - Update for a change (emit databyte/bits at the same time) in the uart PD.
+ * pan1321:
+   - Update for a change (emit databyte/bits at the same time) in the uart PD.
+ * onewire_link:
+   - Fix a bug when the samplerate is too low for the PD (bug #357).
+ * parallel:
+   - Enforce that at least one pin must be provided.
+ * spi:
+   - OUT_PYTHON docs: Fix order of MISO/MOSI data items.
+   - Tell stacked decoders about missing CS# signal.
+   - Add binary output facilities for MISO/MOSI (bug #424).
+   - Don't decode data lines if CS# isn't asserted (bug #559).
+ * spiflash:
+   - Implement FAST READ command.
+   - Add a 'chip' option in preparation for supporting more devices.
+ * uart:
+   - Add signal inversion options 'invert_tx' and 'invert_rx'.
+   - Emit databyte and bits list at the same time to simplify stacked PDs.
+   - Improve sample positions at high data rates.
+ * Drop the PD testing framework. It's in the 'sigrok-test' repository now
+   (and is not meant for "end users" or distro packages anyway; it's a pure
+   developer tool/system). This also fixes some PD test related build issues.
+ * Makefile.am: Use libtool's -no-undefined option (fixes MinGW shared build).
+ * Support loading decoders stored in ZIP files.
+ * README:
+   - Drop obsolete (optional) dependencies: python3-coverage, libsigrok.
+   - Use clearer descriptions for the dependencies.
+ * Remove all references to the obsolete sigrok-commits mailing list.
+ * Fix incorrect doxygen comment for srd_decoder_list() function (bug #378).
+ * configure.ac:
+   - Fix a shell portability issue ("==" vs. "=").
+   - Use AM_CFLAGS instead of CFLAGS.
+   - Only link the 'check' library into the unit tests (not the lib).
+ * Unit tests:
+   - Fix out-of-tree build.
+ * libsigrokdecode.pc (pkg-config) file:
+   - Fix an issue related to the Python lib dependencies.
+
 0.3.0 (2014-05-06)
 ------------------
 
