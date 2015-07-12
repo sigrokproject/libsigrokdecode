@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_11bits(self):
-        s = "".join(str(i) for i in self.bits[:2])
+        s = ''.join(str(i) for i in self.bits[:2])
         self.dac_select = s = dacs[int(s, 2)]
         self.put(self.ss_dac, self.es_dac, self.out_ann,
                  [0, ['DAC select: %s' % s, 'DAC sel: %s' % s,
@@ -75,7 +75,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_gain, self.es_gain, self.out_ann,
                  [1, ['Gain: x%d' % g, 'G: x%d' % g, 'x%d' % g]])
 
-        s = "".join(str(i) for i in self.bits[3:])
+        s = ''.join(str(i) for i in self.bits[3:])
         self.dac_value = v = int(s, 2)
         self.put(self.ss_value, self.es_value, self.out_ann,
                  [2, ['DAC value: %d' % v, 'Value: %d' % v, 'Val: %d' % v,
@@ -128,4 +128,3 @@ class Decoder(srd.Decoder):
             self.oldclk = clk
             self.oldload = load
             self.oldldac = ldac
-

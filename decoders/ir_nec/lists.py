@@ -49,4 +49,3 @@ command = {
         68: ['AV', 'AV'],
     }.items())),
 }
-

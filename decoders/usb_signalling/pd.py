@@ -73,6 +73,9 @@ sym_idx = {
     'SE1': 3,
 }
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'usb_signalling'
@@ -217,8 +220,8 @@ class Decoder(srd.Decoder):
         self.oldsym = sym
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
             # State machine.
             if self.state == 'IDLE':
@@ -237,6 +240,3 @@ class Decoder(srd.Decoder):
                     self.get_bit(sym)
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
-

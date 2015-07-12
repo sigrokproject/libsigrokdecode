@@ -27,5 +27,4 @@ the digital output side of a CAN transceiver IC such as the Microchip
 MCP-2515DM-BM).
 '''
 
-from .pd import *
-
+from .pd import Decoder

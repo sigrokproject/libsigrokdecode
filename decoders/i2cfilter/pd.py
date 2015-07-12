@@ -39,7 +39,6 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self, **kwargs):
-        self.state = None
         self.curslave = -1
         self.curdirection = None
         self.packets = [] # Local cache of I²C packets
@@ -48,8 +47,6 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON, proto_id='i2c')
         if self.options['address'] not in range(0, 127 + 1):
             raise Exception('Invalid slave (must be 0..127).')
-        if self.options['direction'] not in ('both', 'read', 'write'):
-            raise Exception('Invalid direction (valid: read/write/both).')
 
     # Grab I²C packets into a local cache, until an I²C STOP condition
     # packet comes along. At some point before that STOP condition, there
@@ -90,4 +87,3 @@ class Decoder(srd.Decoder):
             self.packets = []
         else:
             pass # Do nothing, only add the I²C packet to our cache.
-

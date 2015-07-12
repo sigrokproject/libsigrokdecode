@@ -92,4 +92,3 @@ command = {
         55: ['Recording', 'Rec'],
     }.items())),
 }
-

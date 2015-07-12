@@ -54,5 +54,4 @@ TODO:
  - Add reporting original/complement address values from the search algorithm.
 '''
 
-from .pd import *
-
+from .pd import Decoder

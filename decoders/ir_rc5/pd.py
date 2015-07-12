@@ -21,6 +21,9 @@
 import sigrokdecode as srd
 from .lists import *
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'ir_rc5'
@@ -56,7 +59,7 @@ class Decoder(srd.Decoder):
     def __init__(self, **kwargs):
         self.samplerate = None
         self.samplenum = None
-        self.edges, self.bits, self.bits_ss_es = [], [], []
+        self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
     def start(self):
@@ -70,7 +73,7 @@ class Decoder(srd.Decoder):
             self.halfbit = int((self.samplerate * 0.00178) / 2.0)
 
     def putb(self, bit1, bit2, data):
-        ss, es = self.bits_ss_es[bit1][0], self.bits_ss_es[bit2][1]
+        ss, es = self.ss_es_bits[bit1][0], self.ss_es_bits[bit2][1]
         self.put(ss, es, self.out_ann, data)
 
     def handle_bits(self):
@@ -80,9 +83,9 @@ class Decoder(srd.Decoder):
             if i == 0:
                 ss = max(0, self.bits[0][0] - self.halfbit)
             else:
-                ss = self.bits_ss_es[i - 1][1]
+                ss = self.ss_es_bits[i - 1][1]
             es = self.bits[i][0] + self.halfbit
-            self.bits_ss_es.append([ss, es])
+            self.ss_es_bits.append([ss, es])
             self.putb(i, i, [0, ['%d' % self.bits[i][1]]])
         # Bits[0:0]: Startbit 1
         s = ['Startbit1: %d' % b[0][1], 'SB1: %d' % b[0][1], 'SB1', 'S1', 'S']
@@ -129,12 +132,12 @@ class Decoder(srd.Decoder):
             return 'e' # Error, invalid edge distance.
 
     def reset_decoder_state(self):
-        self.edges, self.bits, self.bits_ss_es = [], [], []
+        self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             self.ir = pins[0]
@@ -168,11 +171,9 @@ class Decoder(srd.Decoder):
                 if edge == 's':
                     self.state = 'MID0'
                 bit = 0 if edge == 's' else None
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 
             self.edges.append(self.samplenum)
-            if bit != None:
+            if bit is not None:
                 self.bits.append([self.samplenum, bit])
 
             if len(self.bits) == 14:
@@ -180,4 +181,3 @@ class Decoder(srd.Decoder):
                 self.reset_decoder_state()
 
             self.old_ir = self.ir
-

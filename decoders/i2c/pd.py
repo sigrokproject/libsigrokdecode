@@ -63,6 +63,9 @@ proto = {
     'DATA WRITE':      [9, 'Data write',    'DW'],
 }
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'i2c'
@@ -107,7 +110,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.samplerate = None
-        self.ss = self.es = self.byte_ss = -1
+        self.ss = self.es = self.ss_byte = -1
         self.samplenum = None
         self.bitcount = 0
         self.databyte = 0
@@ -179,7 +182,7 @@ class Decoder(srd.Decoder):
 
         # Remember the start of the first data/address bit.
         if self.bitcount == 0:
-            self.byte_ss = self.samplenum
+            self.ss_byte = self.samplenum
 
         # Store individual bits and their start/end samplenumbers.
         # In the list, index 0 represents the LSB (I²C transmits MSB-first).
@@ -216,7 +219,7 @@ class Decoder(srd.Decoder):
             cmd = 'DATA READ'
             bin_class = 2
 
-        self.ss, self.es = self.byte_ss, self.samplenum + self.bitwidth
+        self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
 
         self.putp(['BITS', self.bits])
         self.putp([cmd, d])
@@ -230,7 +233,7 @@ class Decoder(srd.Decoder):
             self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
             w = ['Write', 'Wr', 'W'] if self.wr else ['Read', 'Rd', 'R']
             self.putx([proto[cmd][0], w])
-            self.ss, self.es = self.byte_ss, self.samplenum
+            self.ss, self.es = self.ss_byte, self.samplenum
 
         self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
                    '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
@@ -253,7 +256,7 @@ class Decoder(srd.Decoder):
         # Meta bitrate
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
         bitrate = int(1 / elapsed * self.pdu_bits)
-        self.put(self.byte_ss, self.samplenum, self.out_bitrate, bitrate)
+        self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
 
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum
@@ -265,8 +268,8 @@ class Decoder(srd.Decoder):
         self.bits = []
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).
@@ -293,9 +296,6 @@ class Decoder(srd.Decoder):
             elif self.state == 'FIND ACK':
                 if self.is_data_bit(scl, sda):
                     self.get_ack(scl, sda)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
 
             # Save current SDA/SCL values for the next round.
             self.oldscl, self.oldsda = scl, sda
-

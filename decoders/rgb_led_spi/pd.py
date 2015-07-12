@@ -25,7 +25,7 @@ class Decoder(srd.Decoder):
     id = 'rgb_led_spi'
     name = 'RGB LED (SPI)'
     longname = 'RGB LED string decoder (SPI)'
-    desc = 'Generic RGB LED string protocol (RGB values clocked over SPI).'
+    desc = 'RGB LED string protocol (RGB values clocked over SPI).'
     license = 'gplv2'
     inputs = ['spi']
     outputs = ['rgb_led_spi']
@@ -34,14 +34,14 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self, **kwargs):
-        self.cmd_ss, self.cmd_es = 0, 0
+        self.ss_cmd, self.es_cmd = 0, 0
         self.mosi_bytes = []
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putx(self, data):
-        self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
+        self.put(self.ss_cmd, self.es_cmd, self.out_ann, data)
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         if len(self.mosi_bytes) == 0:
-            self.cmd_ss = ss
+            self.ss_cmd = ss
         self.mosi_bytes.append(mosi)
 
         # RGB value == 3 bytes
@@ -60,10 +60,8 @@ class Decoder(srd.Decoder):
             return
 
         red, green, blue = self.mosi_bytes
-        rgb_value  = int(red) << 16
-        rgb_value |= int(green) << 8
-        rgb_value |= int(blue)
+        rgb_value = int(red) << 16 | int(green) << 8 | int(blue)
 
-        self.cmd_es = es
-        self.putx([0, ["#%.6x" % rgb_value]])
+        self.es_cmd = es
+        self.putx([0, ['#%.6x' % rgb_value]])
         self.mosi_bytes = []

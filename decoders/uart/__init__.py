@@ -38,5 +38,4 @@ it though, no matter whether the source was on TTL UART levels, or RS232,
 or others.
 '''
 
-from .pd import *
-
+from .pd import Decoder

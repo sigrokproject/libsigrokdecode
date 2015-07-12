@@ -32,5 +32,4 @@ should be used. Using combinations like D7/D12/D3/D15 is not supported.
 For an 8-bit bus you should use D0-D7, for a 16-bit bus use D0-D15 and so on.
 '''
 
-from .pd import *
-
+from .pd import Decoder

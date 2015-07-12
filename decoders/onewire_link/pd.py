@@ -20,6 +20,9 @@
 
 import sigrokdecode as srd
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'onewire_link'
@@ -106,11 +109,7 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def metadata(self, key, value):
-        if key != srd.SRD_CONF_SAMPLERATE:
-            return
-        self.samplerate = value
-
+    def checks(self):
         # Check if samplerate is appropriate.
         if self.options['overdrive'] == 'yes':
             if self.samplerate < 2000000:
@@ -123,36 +122,9 @@ class Decoder(srd.Decoder):
             if self.samplerate < 400000:
                 self.putm([1, ['Sampling rate is too low. Must be above ' +
                                '400kHz for proper normal mode decoding.']])
-            elif (self.samplerate < 1000000):
+            elif self.samplerate < 1000000:
                 self.putm([1, ['Sampling rate is suggested to be above ' +
                                '1MHz for proper normal mode decoding.']])
-
-        # The default 1-Wire time base is 30us. This is used to calculate
-        # sampling times.
-        samplerate = float(self.samplerate)
-
-        x = float(self.options['cnt_normal_bit']) / 1000000.0
-        self.cnt_normal_bit = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_slot']) / 1000000.0
-        self.cnt_normal_slot = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_presence']) / 1000000.0
-        self.cnt_normal_presence = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_reset']) / 1000000.0
-        self.cnt_normal_reset = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_bit']) / 1000000.0
-        self.cnt_overdrive_bit = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_slot']) / 1000000.0
-        self.cnt_overdrive_slot = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_presence']) / 1000000.0
-        self.cnt_overdrive_presence = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_reset']) / 1000000.0
-        self.cnt_overdrive_reset = int(samplerate * x) - 1
-
-        # Organize values into lists.
-        self.cnt_bit = [self.cnt_normal_bit, self.cnt_overdrive_bit]
-        self.cnt_presence = [self.cnt_normal_presence, self.cnt_overdrive_presence]
-        self.cnt_reset = [self.cnt_normal_reset, self.cnt_overdrive_reset]
-        self.cnt_slot = [self.cnt_normal_slot, self.cnt_overdrive_slot]
 
         # Check if sample times are in the allowed range.
 
@@ -182,12 +154,47 @@ class Decoder(srd.Decoder):
         if (time_min < 0.0000073) or (time_max > 0.000010):
             self.putm([1, ['The overdrive mode presence sample time interval ' +
                  '(%2.1fus-%2.1fus) should be inside (7.3us, 10.0us).'
-                 % (time_min*1000000, time_max*1000000)]])
+                 % (time_min * 1000000, time_max * 1000000)]])
+
+
+    def metadata(self, key, value):
+        if key != srd.SRD_CONF_SAMPLERATE:
+            return
+        self.samplerate = value
+
+        # The default 1-Wire time base is 30us. This is used to calculate
+        # sampling times.
+        samplerate = float(self.samplerate)
+
+        x = float(self.options['cnt_normal_bit']) / 1000000.0
+        self.cnt_normal_bit = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_slot']) / 1000000.0
+        self.cnt_normal_slot = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_presence']) / 1000000.0
+        self.cnt_normal_presence = int(samplerate * x) - 1
+        x = float(self.options['cnt_normal_reset']) / 1000000.0
+        self.cnt_normal_reset = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_bit']) / 1000000.0
+        self.cnt_overdrive_bit = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_slot']) / 1000000.0
+        self.cnt_overdrive_slot = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_presence']) / 1000000.0
+        self.cnt_overdrive_presence = int(samplerate * x) - 1
+        x = float(self.options['cnt_overdrive_reset']) / 1000000.0
+        self.cnt_overdrive_reset = int(samplerate * x) - 1
+
+        # Organize values into lists.
+        self.cnt_bit = [self.cnt_normal_bit, self.cnt_overdrive_bit]
+        self.cnt_presence = [self.cnt_normal_presence, self.cnt_overdrive_presence]
+        self.cnt_reset = [self.cnt_normal_reset, self.cnt_overdrive_reset]
+        self.cnt_slot = [self.cnt_normal_slot, self.cnt_overdrive_slot]
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, (owr, pwr)) in data:
+            if self.samplenum == 0:
+                self.checks()
             # State machine.
             if self.state == 'WAIT FOR FALLING EDGE':
                 # The start of a cycle is a falling edge.
@@ -251,10 +258,10 @@ class Decoder(srd.Decoder):
                     # Save the sample number for the rising edge.
                     self.rise = self.samplenum
                     self.putfr([2, ['Reset', 'Rst', 'R']])
-                    self.state = "WAIT FOR PRESENCE DETECT"
+                    self.state = 'WAIT FOR PRESENCE DETECT'
                 # Otherwise this is assumed to be a data bit.
                 else:
-                    self.state = "WAIT FOR FALLING EDGE"
+                    self.state = 'WAIT FOR FALLING EDGE'
             elif self.state == 'WAIT FOR PRESENCE DETECT':
                 # Sample presence status.
                 t = self.samplenum - self.rise
@@ -278,5 +285,3 @@ class Decoder(srd.Decoder):
 
                 # Wait for next slot.
                 self.state = 'WAIT FOR FALLING EDGE'
-            else:
-                raise Exception('Invalid state: %s' % self.state)

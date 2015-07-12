@@ -88,6 +88,3 @@ class Decoder(srd.Decoder):
                 self.putx([0, ['Temperature conversion status: 0x%02x' % val]])
             elif self.state in [s.upper() for s in command.values()]:
                 self.putx([0, ['TODO \'%s\': 0x%02x' % (self.state, val)]])
-            else:
-                raise Exception('Invalid state: %s' % self.state)
-

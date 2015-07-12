@@ -61,6 +61,9 @@ def channel_list(num_channels):
         l.append(d)
     return tuple(l)
 
+class ChannelError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'parallel'
@@ -92,7 +95,6 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.ss_item = self.es_item = None
         self.first = True
-        self.state = 'IDLE'
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -123,7 +125,7 @@ class Decoder(srd.Decoder):
         self.items.append(item)
         self.itemcount += 1
 
-        if self.first == True:
+        if self.first:
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
             self.first = False
@@ -181,12 +183,10 @@ class Decoder(srd.Decoder):
                 continue
             self.oldpins = pins
 
-            # State machine.
-            if self.state == 'IDLE':
-                if pins[0] not in (0, 1):
-                    self.handle_bits(pins[1:])
-                else:
-                    self.find_clk_edge(pins[0], pins[1:])
-            else:
-                raise Exception('Invalid state: %s' % self.state)
+            if sum(1 for p in pins if p in (0, 1)) == 0:
+                raise ChannelError('At least one channel has to be supplied.')
 
+            if pins[0] not in (0, 1):
+                self.handle_bits(pins[1:])
+            else:
+                self.find_clk_edge(pins[0], pins[1:])

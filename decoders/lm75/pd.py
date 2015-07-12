@@ -76,7 +76,7 @@ class Decoder(srd.Decoder):
 
     def putb(self, data):
         # Helper for annotations which span a block of I²C packets.
-        self.put(self.block_start, self.block_end, self.out_ann, data)
+        self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def warn_upon_invalid_slave(self, addr):
         # LM75 and compatible devices have a 7-bit I²C slave address where
@@ -102,11 +102,11 @@ class Decoder(srd.Decoder):
     def handle_temperature_reg(self, b, s, rw):
         # Common helper for the temperature/T_HYST/T_OS registers.
         if len(self.databytes) == 0:
-            self.block_start = self.ss
+            self.ss_block = self.ss
             self.databytes.append(b)
             return
         self.databytes.append(b)
-        self.block_end = self.es
+        self.es_block = self.es
         self.output_temperature(s, rw)
         self.databytes = []
 
@@ -181,6 +181,3 @@ class Decoder(srd.Decoder):
             else:
                 # self.putx([0, ['Ignoring: %s (data=%s)' % (cmd, databyte)]])
                 pass
-        else:
-            raise Exception('Invalid state: %s' % self.state)
-

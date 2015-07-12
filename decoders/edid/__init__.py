@@ -36,5 +36,4 @@ More information on EDID is available here:
  https://en.wikipedia.org/wiki/Extended_display_identification_data
 '''
 
-from .pd import *
-
+from .pd import Decoder

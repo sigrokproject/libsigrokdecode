@@ -37,5 +37,4 @@ The XFP specification is available here:
   ftp://ftp.seagate.com/sff/INF-8077.PDF
 '''
 
-from .pd import *
-
+from .pd import Decoder

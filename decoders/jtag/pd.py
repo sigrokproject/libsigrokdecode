@@ -139,14 +139,11 @@ class Decoder(srd.Decoder):
         elif self.state == 'UPDATE-IR':
             self.state = 'SELECT-DR-SCAN' if (tms) else 'RUN-TEST/IDLE'
 
-        else:
-            raise Exception('Invalid state: %s' % self.state)
-
     def handle_rising_tck_edge(self, tdi, tdo, tck, tms):
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
 
-        if self.first == True:
+        if self.first:
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
             self.first = False
@@ -217,4 +214,3 @@ class Decoder(srd.Decoder):
                 self.handle_rising_tck_edge(tdi, tdo, tck, tms)
 
             self.oldtck = tck
-

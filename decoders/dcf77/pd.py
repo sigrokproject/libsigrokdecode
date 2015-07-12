@@ -25,6 +25,9 @@ import calendar
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'dcf77'
@@ -239,14 +242,14 @@ class Decoder(srd.Decoder):
             # Even parity over date bits (36-58): DCF77 bit 58.
             parity = self.datebits.count(1)
             s = 'OK' if ((parity % 2) == 0) else 'INVALID!'
-            self.putx([16, ['Date parity: %s' % s, 'DP: %s' %s]])
+            self.putx([16, ['Date parity: %s' % s, 'DP: %s' % s]])
             self.datebits = []
         else:
             raise Exception('Invalid DCF77 bit: %d' % c)
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
             # Ignore identical samples early on (for performance reasons).
@@ -310,8 +313,4 @@ class Decoder(srd.Decoder):
 
                 self.state = 'WAIT FOR RISING EDGE'
 
-            else:
-                raise Exception('Invalid state: %s' % self.state)
-
             self.oldval = val
-

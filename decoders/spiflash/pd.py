@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2014 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2015 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,40 +19,7 @@
 ##
 
 import sigrokdecode as srd
-
-# Dict which maps command IDs to their names and descriptions.
-cmds = {
-    0x06: ('WREN', 'Write enable'),
-    0x04: ('WRDI', 'Write disable'),
-    0x9f: ('RDID', 'Read identification'),
-    0x05: ('RDSR', 'Read status register'),
-    0x01: ('WRSR', 'Write status register'),
-    0x03: ('READ', 'Read data'),
-    0x0b: ('FAST/READ', 'Fast read data'),
-    0xbb: ('2READ', '2x I/O read'),
-    0x20: ('SE', 'Sector erase'),
-    0xd8: ('BE', 'Block erase'),
-    0x60: ('CE', 'Chip erase'),
-    0xc7: ('CE2', 'Chip erase'), # Alternative command ID
-    0x02: ('PP', 'Page program'),
-    0xad: ('CP', 'Continuously program mode'),
-    0xb9: ('DP', 'Deep power down'),
-    0xab: ('RDP/RES', 'Release from deep powerdown / Read electronic ID'),
-    0x90: ('REMS', 'Read electronic manufacturer & device ID'),
-    0xef: ('REMS2', 'Read ID for 2x I/O mode'),
-    0xb1: ('ENSO', 'Enter secured OTP'),
-    0xc1: ('EXSO', 'Exit secured OTP'),
-    0x2b: ('RDSCUR', 'Read security register'),
-    0x2f: ('WRSCUR', 'Write security register'),
-    0x70: ('ESRY', 'Enable SO to output RY/BY#'),
-    0x80: ('DSRY', 'Disable SO to output RY/BY#'),
-}
-
-device_name = {
-    0x14: 'MX25L1605D',
-    0x15: 'MX25L3205D',
-    0x16: 'MX25L6405D',
-}
+from .lists import *
 
 def cmd_annotation_classes():
     return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
@@ -84,13 +51,13 @@ def decode_status_reg(data):
 
 class Decoder(srd.Decoder):
     api_version = 2
-    id = 'mx25lxx05d'
-    name = 'MX25Lxx05D'
-    longname = 'Macronix MX25Lxx05D'
-    desc = 'SPI (NOR) flash chip protocol.'
+    id = 'spiflash'
+    name = 'SPI flash'
+    longname = 'SPI flash chips'
+    desc = 'xx25 series SPI (NOR) flash chip protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['mx25lxx05d']
+    outputs = ['spiflash']
     annotations = cmd_annotation_classes() + (
         ('bits', 'Bits'),
         ('bits2', 'Bits2'),
@@ -101,6 +68,10 @@ class Decoder(srd.Decoder):
         ('commands', 'Commands', tuple(range(23 + 1))),
         ('warnings', 'Warnings', (26,)),
     )
+    options = (
+        {'id': 'chip', 'desc': 'Chip', 'default': tuple(chips.keys())[0],
+            'values': tuple(chips.keys())},
+    )
 
     def __init__(self, **kwargs):
         self.state = None
@@ -110,10 +81,14 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.chip = chips[self.options['chip']]
 
     def putx(self, data):
         # Simplification, most annotations span exactly one SPI byte/packet.
         self.put(self.ss, self.es, self.out_ann, data)
+
+    def putb(self, data):
+        self.put(self.block_ss, self.block_es, self.out_ann, data)
 
     def handle_wren(self, mosi, miso):
         self.putx([0, ['Command: %s' % cmds[self.state][1]]])
@@ -126,7 +101,7 @@ class Decoder(srd.Decoder):
     def handle_rdid(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([2, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
@@ -143,7 +118,7 @@ class Decoder(srd.Decoder):
             # TODO: Check self.device_id is valid & exists in device_names.
             # TODO: Same device ID? Check!
             d = 'Device: Macronix %s' % device_name[self.device_id]
-            self.put(self.start_sample, self.es, self.out_ann, [0, [d]])
+            self.put(self.ss_block, self.es, self.out_ann, [0, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -204,7 +179,38 @@ class Decoder(srd.Decoder):
         self.cmdstate += 1
 
     def handle_fast_read(self, mosi, miso):
-        pass # TODO
+        # Fast read: Master asserts CS#, sends FAST READ command, sends
+        # 3-byte address + 1 dummy byte, reads >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([5, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+            self.putx([24, ['AD%d: 0x%02x' % (self.cmdstate - 1, mosi)]])
+            if self.cmdstate == 2:
+                self.block_ss = self.ss
+            self.addr |= (mosi << ((4 - self.cmdstate) * 8))
+        elif self.cmdstate == 5:
+            self.putx([24, ['Dummy byte: 0x%02x' % mosi]])
+            self.block_es = self.es
+            self.putb([5, ['Read address: 0x%06x' % self.addr]])
+            self.addr = 0
+        elif self.cmdstate >= 6:
+            # Bytes 6-x: Master reads data bytes (until CS# de-asserted).
+            # TODO: For now we hardcode 32 bytes per FAST READ command.
+            if self.cmdstate == 6:
+                self.block_ss = self.ss
+            if self.cmdstate <= 32 + 5: # TODO: While CS# asserted.
+                self.data.append(miso)
+            if self.cmdstate == 32 + 5: # TODO: If CS# got de-asserted.
+                self.block_es = self.es
+                s = ' '.join([hex(b)[2:] for b in self.data])
+                self.putb([25, ['Read data: %s' % s]])
+                self.data = []
+                self.state = None
+                return
+
+        self.cmdstate += 1
 
     def handle_2read(self, mosi, miso):
         pass # TODO
@@ -215,22 +221,22 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.addr = 0
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([8, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends sectror address (24bits, MSB-first).
+            # Bytes 2/3/4: Master sends sector address (24bits, MSB-first).
             self.addr |= (mosi << ((4 - self.cmdstate) * 8))
             # self.putx([0, ['Sector address, byte %d: 0x%02x' % \
             #                (4 - self.cmdstate, mosi)]])
 
         if self.cmdstate == 4:
             d = 'Erase sector %d (0x%06x)' % (self.addr, self.addr)
-            self.put(self.start_sample, self.es, self.out_ann, [24, [d]])
+            self.put(self.ss_block, self.es, self.out_ann, [24, [d]])
             # TODO: Max. size depends on chip, check that too if possible.
             if self.addr % 4096 != 0:
                 # Sector addresses must be 4K-aligned (same for all 3 chips).
                 d = 'Warning: Invalid sector address!'
-                self.put(self.start_sample, self.es, self.out_ann, [101, [d]])
+                self.put(self.ss_block, self.es, self.out_ann, [101, [d]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -288,7 +294,7 @@ class Decoder(srd.Decoder):
     def handle_rems(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
-            self.start_sample = self.ss
+            self.ss_block = self.ss
             self.putx([16, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
@@ -313,7 +319,6 @@ class Decoder(srd.Decoder):
             self.putx([24, ['%s ID' % d]])
 
         if self.cmdstate == 6:
-            self.end_sample = self.es
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
             self.putx([24, ['Device: Macronix %s' % device_name[id]]])
             self.state = None
@@ -360,7 +365,7 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         # If we encountered a known chip command, enter the resp. state.
-        if self.state == None:
+        if self.state is None:
             self.state = mosi
             self.cmdstate = 1
 
@@ -372,4 +377,3 @@ class Decoder(srd.Decoder):
         else:
             self.putx([24, ['Unknown command: 0x%02x' % mosi]])
             self.state = None
-

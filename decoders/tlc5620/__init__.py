@@ -22,5 +22,4 @@
 The Texas Instruments TLC5620 is an 8-bit quad DAC.
 '''
 
-from .pd import *
-
+from .pd import Decoder

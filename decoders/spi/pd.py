@@ -28,16 +28,19 @@ Packet:
 [<ptype>, <data1>, <data2>]
 
 <ptype>:
- - 'DATA': <data1> contains the MISO data, <data2> contains the MOSI data.
+ - 'DATA': <data1> contains the MOSI data, <data2> contains the MISO data.
    The data is _usually_ 8 bits (but can also be fewer or more bits).
    Both data items are Python numbers (not strings), or None if the respective
    channel was not supplied.
- - 'BITS': <data1>/<data2> contain a list of bit values in this MISO/MOSI data
+ - 'BITS': <data1>/<data2> contain a list of bit values in this MOSI/MISO data
    item, and for each of those also their respective start-/endsample numbers.
  - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
-   Both data items are Python numbers (0/1), not strings.
+   Both data items are Python numbers (0/1), not strings. At the beginning of
+   the decoding a packet is generated with <data1> = None and <data2> being the
+   initial state of the CS# pin or None if the chip select pin is not supplied.
 
 Examples:
+ ['CS-CHANGE', None, 1]
  ['CS-CHANGE', 1, 0]
  ['DATA', 0xff, 0x3a]
  ['BITS', [[1, 80, 82], [1, 83, 84], [1, 85, 86], [1, 87, 88],
@@ -59,6 +62,12 @@ spi_mode = {
     (1, 0): 2, # Mode 2
     (1, 1): 3, # Mode 3
 }
+
+class SamplerateError(Exception):
+    pass
+
+class ChannelError(Exception):
+    pass
 
 class Decoder(srd.Decoder):
     api_version = 2
@@ -102,6 +111,10 @@ class Decoder(srd.Decoder):
         ('mosi-bits', 'MOSI bits', (3,)),
         ('other', 'Other', (4,)),
     )
+    binary = (
+        ('miso', 'MISO'),
+        ('mosi', 'MOSI'),
+    )
 
     def __init__(self):
         self.samplerate = None
@@ -110,13 +123,13 @@ class Decoder(srd.Decoder):
         self.misodata = self.mosidata = 0
         self.misobits = []
         self.mosibits = []
-        self.startsample = -1
+        self.ss_block = -1
         self.samplenum = -1
         self.cs_was_deasserted = False
-        self.oldcs = -1
+        self.oldcs = None
         self.oldpins = None
         self.have_cs = self.have_miso = self.have_mosi = None
-        self.state = 'IDLE'
+        self.no_cs_notification = False
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -125,11 +138,12 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_bin = self.register(srd.OUTPUT_BINARY)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
     def putw(self, data):
-        self.put(self.startsample, self.samplenum, self.out_ann, data)
+        self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def putdata(self):
         # Pass MISO and MOSI bits and then data to the next PD up the stack.
@@ -140,8 +154,10 @@ class Decoder(srd.Decoder):
 
         if self.have_miso:
             ss, es = self.misobits[-1][1], self.misobits[0][2]
+            self.put(ss, es, self.out_bin, (0, bytes([so])))
         if self.have_mosi:
             ss, es = self.mosibits[-1][1], self.mosibits[0][2]
+            self.put(ss, es, self.out_bin, (1, bytes([si])))
 
         self.put(ss, es, self.out_python, ['BITS', si_bits, so_bits])
         self.put(ss, es, self.out_python, ['DATA', si, so])
@@ -167,16 +183,16 @@ class Decoder(srd.Decoder):
         self.mosibits = [] if self.have_mosi else None
         self.bitcount = 0
 
+    def cs_asserted(self, cs):
+        active_low = (self.options['cs_polarity'] == 'active-low')
+        return (cs == 0) if active_low else (cs == 1)
+
     def handle_bit(self, miso, mosi, clk, cs):
         # If this is the first bit of a dataword, save its sample number.
         if self.bitcount == 0:
-            self.startsample = self.samplenum
-            self.cs_was_deasserted = False
-            if self.have_cs:
-                active_low = (self.options['cs_polarity'] == 'active-low')
-                deasserted = (cs == 1) if active_low else (cs == 0)
-                if deasserted:
-                    self.cs_was_deasserted = True
+            self.ss_block = self.samplenum
+            self.cs_was_deasserted = \
+                not self.cs_asserted(cs) if self.have_cs else False
 
         ws = self.options['wordsize']
 
@@ -222,9 +238,9 @@ class Decoder(srd.Decoder):
 
         # Meta bitrate.
         elapsed = 1 / float(self.samplerate)
-        elapsed *= (self.samplenum - self.startsample + 1)
+        elapsed *= (self.samplenum - self.ss_block + 1)
         bitrate = int(1 / elapsed * self.options['wordsize'])
-        self.put(self.startsample, self.samplenum, self.out_bitrate, bitrate)
+        self.put(self.ss_block, self.samplenum, self.out_bitrate, bitrate)
 
         if self.have_cs and self.cs_was_deasserted:
             self.putw([4, ['CS# was deasserted during this data word!']])
@@ -239,6 +255,10 @@ class Decoder(srd.Decoder):
             self.oldcs = cs
             # Reset decoder state when CS# changes (and the CS# pin is used).
             self.reset_decoder_state()
+
+        # We only care about samples if CS# is asserted.
+        if self.have_cs and not self.cs_asserted(cs):
+            return
 
         # Ignore sample if the clock pin hasn't changed.
         if clk == self.oldclk:
@@ -261,8 +281,8 @@ class Decoder(srd.Decoder):
         self.handle_bit(miso, mosi, clk, cs)
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         # Either MISO or MOSI can be omitted (but not both). CS# is optional.
         for (self.samplenum, pins) in data:
 
@@ -276,11 +296,11 @@ class Decoder(srd.Decoder):
 
             # Either MISO or MOSI (but not both) can be omitted.
             if not (self.have_miso or self.have_mosi):
-                raise Exception('Either MISO or MOSI (or both) pins required.')
+                raise ChannelError('Either MISO or MOSI (or both) pins required.')
 
-            # State machine.
-            if self.state == 'IDLE':
-                self.find_clk_edge(miso, mosi, clk, cs)
-            else:
-                raise Exception('Invalid state: %s' % self.state)
+            # Tell stacked decoders that we don't have a CS# signal.
+            if not self.no_cs_notification and not self.have_cs:
+                self.put(0, 0, self.out_python, ['CS-CHANGE', None, None])
+                self.no_cs_notification = True
 
+            self.find_clk_edge(miso, mosi, clk, cs)

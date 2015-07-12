@@ -85,6 +85,10 @@ class Decoder(srd.Decoder):
         ('fields', 'EDID structure fields'),
         ('sections', 'EDID structure sections'),
     )
+    annotation_rows = (
+        ('sections', 'Sections', (1,)),
+        ('fields', 'Fields', (0,)),
+    )
 
     def __init__(self, **kwargs):
         self.state = None
@@ -109,7 +113,6 @@ class Decoder(srd.Decoder):
         self.sn.append([ss, es])
         self.cache.append(data)
         # debug
-#        self.put(ss, es, self.out_ann, [0, ['%d: [%.2x]' % (self.cnt, data)]])
 
         if self.state is None:
             # Wait for the EDID header
@@ -120,24 +123,43 @@ class Decoder(srd.Decoder):
                     self.cache = self.cache[-8:]
                     self.cnt = 8
                     self.state = 'edid'
-                    self.put(ss, es, self.out_ann, [0, ['EDID header']])
+                    self.put(self.sn[0][0], es, self.out_ann,
+                            [ANN_SECTIONS, ['Header']])
+                    self.put(self.sn[0][0], es, self.out_ann,
+                            [ANN_FIELDS, ['Header pattern']])
         elif self.state == 'edid':
             if self.cnt == OFF_VERSION:
                 self.decode_vid(-10)
                 self.decode_pid(-8)
                 self.decode_serial(-6)
                 self.decode_mfrdate(-2)
+                self.put(self.sn[OFF_VENDOR][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['Vendor/product']])
             elif self.cnt == OFF_BASIC:
-                version = 'EDID version: %d.%d' % (self.cache[-2], self.cache[-1])
-                self.put(ss, es, self.out_ann, [0, [version]])
+                self.put(self.sn[OFF_VERSION][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['EDID Version']])
+                self.put(self.sn[OFF_VERSION][0], self.sn[OFF_VERSION][1],
+                        self.out_ann, [ANN_FIELDS,
+                            ["Version %d" % self.cache[-2]]])
+                self.put(self.sn[OFF_VERSION+1][0], self.sn[OFF_VERSION+1][1],
+                        self.out_ann, [ANN_FIELDS,
+                            [ "Revision %d" % self.cache[-1]]])
             elif self.cnt == OFF_CHROM:
+                self.put(self.sn[OFF_BASIC][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['Basic display']])
                 self.decode_basicdisplay(-5)
             elif self.cnt == OFF_EST_TIMING:
+                self.put(self.sn[OFF_CHROM][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['Color characteristics']])
                 self.decode_chromaticity(-10)
             elif self.cnt == OFF_STD_TIMING:
+                self.put(self.sn[OFF_EST_TIMING][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['Established timings']])
                 self.decode_est_timing(-3)
             elif self.cnt == OFF_DET_TIMING:
-                self.decode_std_timing(-16)
+                self.put(self.sn[OFF_STD_TIMING][0], es, self.out_ann,
+                        [ANN_SECTIONS, ['Standard timings']])
+                self.decode_std_timing(self.cnt - 16)
             elif self.cnt == OFF_NUM_EXT:
                 self.decode_descriptors(-72)
             elif self.cnt == OFF_CHECKSUM:
@@ -311,7 +333,7 @@ class Decoder(srd.Decoder):
                     modestr += est_modes[i] + ', '
         if modestr:
             self.ann_field(offset, offset+2,
-                           'Supported establised modes: %s' % modestr[:-2])
+                           'Supported established modes: %s' % modestr[:-2])
 
     def decode_std_timing(self, offset):
         modestr = ''
@@ -326,8 +348,8 @@ class Decoder(srd.Decoder):
             refresh = (self.cache[offset+i+1] & 0x3f) + 60
             modestr += '%dx%d@%dHz, ' % (x, y, refresh)
         if modestr:
-            self.ann_field(offset, offset+2,
-                           'Supported standard modes: %s' % modestr[:-2])
+            self.ann_field(offset, offset + 15,
+                    'Supported standard modes: %s' % modestr[:-2])
 
     def decode_detailed_timing(self, offset):
         if offset == -72 and self.have_preferred_timing:
@@ -336,7 +358,7 @@ class Decoder(srd.Decoder):
         else:
             section = 'Detailed'
         section += ' timing descriptor'
-        self.put(self.sn[offset][0], self.sn[offset+18][1],
+        self.put(self.sn[offset][0], self.sn[offset+17][1],
              self.out_ann, [ANN_SECTIONS, [section]])
 
         pixclock = float((self.cache[offset+1] << 8) + self.cache[offset]) / 100
@@ -346,38 +368,36 @@ class Decoder(srd.Decoder):
         self.ann_field(offset+2, offset+4, 'Horizontal active: %d' % horiz_active)
 
         horiz_blank = ((self.cache[offset+4] & 0x0f) << 8) + self.cache[offset+3]
-        self.ann_field(offset+3, offset+4, 'Horizontal blanking: %d' % horiz_blank)
+        self.ann_field(offset+2, offset+4, 'Horizontal blanking: %d' % horiz_blank)
 
         vert_active = ((self.cache[offset+7] & 0xf0) << 4) + self.cache[offset+5]
         self.ann_field(offset+5, offset+7, 'Vertical active: %d' % vert_active)
 
         vert_blank = ((self.cache[offset+7] & 0x0f) << 8) + self.cache[offset+6]
-        self.ann_field(offset+6, offset+7, 'Vertical blanking: %d' % vert_blank)
+        self.ann_field(offset+5, offset+7, 'Vertical blanking: %d' % vert_blank)
 
         horiz_sync_off = ((self.cache[offset+11] & 0xc0) << 2) + self.cache[offset+8]
         self.ann_field(offset+8, offset+11, 'Horizontal sync offset: %d' % horiz_sync_off)
 
         horiz_sync_pw = ((self.cache[offset+11] & 0x30) << 4) + self.cache[offset+9]
-        self.ann_field(offset+9, offset+11, 'Horizontal sync pulse width: %d' % horiz_sync_pw)
+        self.ann_field(offset+8, offset+11, 'Horizontal sync pulse width: %d' % horiz_sync_pw)
 
         vert_sync_off = ((self.cache[offset+11] & 0x0c) << 2) \
                     + ((self.cache[offset+10] & 0xf0) >> 4)
-        self.ann_field(offset+10, offset+11, 'Vertical sync offset: %d' % vert_sync_off)
+        self.ann_field(offset+8, offset+11, 'Vertical sync offset: %d' % vert_sync_off)
 
         vert_sync_pw = ((self.cache[offset+11] & 0x03) << 4) \
                     + (self.cache[offset+10] & 0x0f)
-        self.ann_field(offset+10, offset+11, 'Vertical sync pulse width: %d' % vert_sync_pw)
+        self.ann_field(offset+8, offset+11, 'Vertical sync pulse width: %d' % vert_sync_pw)
 
         horiz_size = ((self.cache[offset+14] & 0xf0) << 4) + self.cache[offset+12]
         vert_size = ((self.cache[offset+14] & 0x0f) << 8) + self.cache[offset+13]
         self.ann_field(offset+12, offset+14, 'Physical size: %dx%dmm' % (horiz_size, vert_size))
 
         horiz_border = self.cache[offset+15]
-        if horiz_border:
-            self.ann_field(offset+15, offset+15, 'Horizontal border: %d pixels' % horiz_border)
+        self.ann_field(offset+15, offset+15, 'Horizontal border: %d pixels' % horiz_border)
         vert_border = self.cache[offset+16]
-        if vert_border:
-            self.ann_field(offset+16, offset+16, 'Vertical border: %d lines' % vert_border)
+        self.ann_field(offset+16, offset+16, 'Vertical border: %d lines' % vert_border)
 
         features = 'Flags: '
         if self.cache[offset+17] & 0x80:
@@ -418,16 +438,22 @@ class Decoder(srd.Decoder):
         tag = self.cache[offset+3]
         if tag == 0xff:
             # Monitor serial number
+            self.put(self.sn[offset][0], self.sn[offset+17][1], self.out_ann,
+                     [ANN_SECTIONS, ['Serial number']])
             text = bytes(self.cache[offset+5:][:13]).decode(encoding='cp437', errors='replace')
-            self.ann_field(offset, offset+17, 'Serial number: %s' % text.strip())
+            self.ann_field(offset, offset+17, text.strip())
         elif tag == 0xfe:
             # Text
+            self.put(self.sn[offset][0], self.sn[offset+17][1], self.out_ann,
+                     [ANN_SECTIONS, ['Text']])
             text = bytes(self.cache[offset+5:][:13]).decode(encoding='cp437', errors='replace')
-            self.ann_field(offset, offset+17, 'Info: %s' % text.strip())
+            self.ann_field(offset, offset+17, text.strip())
         elif tag == 0xfc:
             # Monitor name
+            self.put(self.sn[offset][0], self.sn[offset+17][1], self.out_ann,
+                     [ANN_SECTIONS, ['Monitor name']])
             text = bytes(self.cache[offset+5:][:13]).decode(encoding='cp437', errors='replace')
-            self.ann_field(offset, offset+17, 'Model name: %s' % text.strip())
+            self.ann_field(offset, offset+17, text.strip())
         elif tag == 0xfd:
             # Monitor range limits
             self.put(self.sn[offset][0], self.sn[offset+17][1], self.out_ann,
@@ -465,4 +491,3 @@ class Decoder(srd.Decoder):
             else:
                 if self.cache[i+2] == 0 or self.cache[i+4] == 0:
                     self.decode_descriptor(i)
-

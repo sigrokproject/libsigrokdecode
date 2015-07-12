@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2014 Torsten Duwe <duwe@suse.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,14 +19,7 @@
 ##
 
 '''
-This decoder stacks on top of the 'spi' PD and decodes the Macronix
-MX25Lxx05D SPI (NOR) flash chip protocol.
-
-It works for the MX25L1605D/MX25L3205D/MX25L6405D.
-
-Details:
-http://www.macronix.com/QuickPlace/hq/PageLibrary4825740B00298A3B.nsf/h_Index/3F21BAC2E121E17848257639003A3146/$File/MX25L1605D-3205D-6405D-1.5.pdf
+Pulse-width modulation (a.k.a pulse-duration modulation, PDM) decoder.
 '''
 
-from .pd import *
-
+from .pd import Decoder

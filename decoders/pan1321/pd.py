@@ -136,6 +136,9 @@ class Decoder(srd.Decoder):
         if ptype != 'DATA':
             return
 
+        # We're only interested in the byte value (not individual bits).
+        pdata = pdata[0]
+
         # If this is the start of a command/reply, remember the start sample.
         if self.cmd[rxtx] == '':
             self.ss_block = ss
@@ -154,8 +157,5 @@ class Decoder(srd.Decoder):
             self.handle_device_reply(rxtx, self.cmd[rxtx][:-2])
         elif rxtx == TX:
             self.handle_host_command(rxtx, self.cmd[rxtx][:-2])
-        else:
-            raise Exception('Invalid rxtx value: %d' % rxtx)
 
         self.cmd[rxtx] = ''
-

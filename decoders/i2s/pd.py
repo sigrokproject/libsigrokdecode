@@ -33,6 +33,9 @@ Packet:
 <value>: integer
 '''
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'i2s'
@@ -64,7 +67,7 @@ class Decoder(srd.Decoder):
         self.data = 0
         self.samplesreceived = 0
         self.first_sample = None
-        self.start_sample = None
+        self.ss_block = None
         self.wordlength = -1
         self.wrote_wav_header = False
 
@@ -78,23 +81,23 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def putpb(self, data):
-        self.put(self.start_sample, self.samplenum, self.out_python, data)
+        self.put(self.ss_block, self.samplenum, self.out_python, data)
 
     def putbin(self, data):
-        self.put(self.start_sample, self.samplenum, self.out_bin, data)
+        self.put(self.ss_block, self.samplenum, self.out_bin, data)
 
     def putb(self, data):
-        self.put(self.start_sample, self.samplenum, self.out_ann, data)
+        self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def report(self):
 
         # Calculate the sample rate.
         samplerate = '?'
-        if self.start_sample != None and \
-            self.first_sample != None and \
-            self.start_sample > self.first_sample:
+        if self.ss_block is not None and \
+            self.first_sample is not None and \
+            self.ss_block > self.first_sample:
             samplerate = '%d' % (self.samplesreceived *
-                self.samplerate / (self.start_sample -
+                self.samplerate / (self.ss_block -
                 self.first_sample))
 
         return 'I²S: %d %d-bit samples received at %sHz' % \
@@ -128,8 +131,8 @@ class Decoder(srd.Decoder):
         return bytes([lo, hi])
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         for self.samplenum, (sck, ws, sd) in data:
 
             # Ignore sample if the bit clock hasn't changed.
@@ -148,7 +151,7 @@ class Decoder(srd.Decoder):
                 continue
 
             # Only submit the sample, if we received the beginning of it.
-            if self.start_sample != None:
+            if self.ss_block is not None:
 
                 if not self.wrote_wav_header:
                     self.put(0, 0, self.out_bin, (0, self.wav_header()))
@@ -176,11 +179,10 @@ class Decoder(srd.Decoder):
             # Reset decoder state.
             self.data = 0
             self.bitcount = 0
-            self.start_sample = self.samplenum
+            self.ss_block = self.samplenum
 
             # Save the first sample position.
-            if self.first_sample == None:
+            if self.first_sample is None:
                 self.first_sample = self.samplenum
 
             self.oldws = ws
-

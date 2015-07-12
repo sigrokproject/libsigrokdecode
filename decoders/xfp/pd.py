@@ -318,7 +318,7 @@ class Decoder(srd.Decoder):
                 self.annotate("Vendor ID", chr(data[i]), cnt, cnt)
 
     # Convert 16-bit two's complement values, with each increment
-    # representing 1/256C, to degrees Celcius.
+    # representing 1/256C, to degrees Celsius.
     def to_temp(self, value):
         if value & 0x8000:
             value = -((value ^ 0xffff) + 1)
@@ -644,4 +644,3 @@ class Decoder(srd.Decoder):
         self.annotate("AUX1 monitoring", aux)
         aux = AUX_TYPES[data[0] & 0x0f]
         self.annotate("AUX2 monitoring", aux)
-

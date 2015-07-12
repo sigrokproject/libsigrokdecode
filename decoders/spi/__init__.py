@@ -29,5 +29,4 @@ transitions where CS# is not asserted are ignored). If CS# is not supplied,
 data is decoded on every clock transition (depending on SPI mode).
 '''
 
-from .pd import *
-
+from .pd import Decoder

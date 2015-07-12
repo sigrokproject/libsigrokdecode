@@ -66,5 +66,4 @@ SPI mode properties (differences to SD mode):
  * The RCA register is not accessible in SPI mode.
 '''
 
-from .pd import *
-
+from .pd import Decoder
