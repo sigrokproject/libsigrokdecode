@@ -182,10 +182,9 @@ You can run the libsigrokdecode testsuite using:
 Protocol decoder test framework
 -------------------------------
 
-You can run the protocol decoder tests using (e.g.):
-
- $ ./tests/pdtest -r -a -v
-
+Please see the sigrok-test repository for a protocol decoder test suite that
+checks the decoded data of various PDs against known-good reference data.
+ 
 
 Release engineering
 -------------------
