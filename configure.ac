@@ -24,7 +24,8 @@ AC_PREREQ([2.63])
 m4_define([srd_package_version_major], [0])
 m4_define([srd_package_version_minor], [3])
 m4_define([srd_package_version_micro], [0])
-m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro])
+m4_define([srd_package_version_suffix], [-git])
+m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro[]srd_package_version_suffix])
 
 AC_INIT([libsigrokdecode], [srd_package_version],
 	[sigrok-devel@lists.sourceforge.net], [libsigrokdecode],
