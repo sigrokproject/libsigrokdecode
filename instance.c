@@ -557,9 +557,11 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 	PyObject *py_res;
 	srd_logic *logic;
 
-	srd_dbg("Calling decode() on instance %s with %" PRIu64 " bytes "
-		"starting at sample %" PRIu64 ".", di->inst_id, inbuflen,
-		start_samplenum);
+	srd_dbg("Calling decode(), start sample %" PRIu64 ", end sample %"
+		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
+		"%d), instance %s.", start_samplenum, end_samplenum,
+		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
+		di->inst_id);
 
 	/* Return an error upon unusable input. */
 	if (!di) {

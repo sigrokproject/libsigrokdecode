@@ -238,10 +238,6 @@ SRD_API int srd_session_send(struct srd_session *sess,
 		return SRD_ERR_ARG;
 	}
 
-	srd_dbg("Calling decode() on all instances with starting sample "
-			"number %" PRIu64 ", %" PRIu64 " bytes at 0x%p",
-			start_samplenum, inbuflen, inbuf);
-
 	for (d = sess->di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(d->data, start_samplenum,
 				end_samplenum, inbuf, inbuflen)) != SRD_OK)
