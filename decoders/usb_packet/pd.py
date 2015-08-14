@@ -220,6 +220,10 @@ class Decoder(srd.Decoder):
         for (bit, ss, es) in self.bits:
             packet += bit
 
+        if len(packet) < 8:
+            self.putp([28, ['Invalid packet (shorter than 8 bits)']])
+            return
+
         # Bits[0:7]: SYNC
         sync = packet[:7 + 1]
         self.ss, self.es = self.bits[0][1], self.bits[7][2]
@@ -233,9 +237,13 @@ class Decoder(srd.Decoder):
             self.putb([0, ['SYNC: %s' % sync, 'SYNC', 'S']])
         self.packet.append(sync)
 
+        if len(packet) < 16:
+            self.putp([28, ['Invalid packet (shorter than 16 bits)']])
+            return
+
         # Bits[8:15]: PID
         pid = packet[8:15 + 1]
-        pidname = pids.get(pid, (pid, ''))[0]
+        pidname = pids.get(pid, ('UNKNOWN', 'Unknown PID'))[0]
         self.ss, self.es = self.bits[8][1], self.bits[15][2]
         self.putpb(['PID', pidname])
         self.putb([2, ['PID: %s' % pidname, pidname, pidname[0]]])
@@ -243,6 +251,10 @@ class Decoder(srd.Decoder):
         self.packet_summary += pidname
 
         if pidname in ('OUT', 'IN', 'SOF', 'SETUP', 'PRE', 'PING'):
+            if len(packet) < 32:
+                self.putp([28, ['Invalid packet (shorter than 32 bits)']])
+                return
+
             if pidname == 'SOF':
                 # Bits[16:26]: Framenum
                 framenum = bitstr_to_num(packet[16:26 + 1])
@@ -333,6 +345,7 @@ class Decoder(srd.Decoder):
             elif ptype == 'EOP':
                 self.es_packet = es
                 self.handle_packet()
+                self.packet, self.packet_summary = [], ''
                 self.bits, self.state = [], 'WAIT FOR SOP'
             else:
                 pass # TODO: Error
