@@ -289,7 +289,6 @@ class Decoder(srd.Decoder):
                                'DB: %02X' % db, '%02X' % db]])
                 databytes.append(db)
                 self.packet_summary += ' %02X' % db
-                data = data[8:]
             self.packet_summary += ' ]'
 
             # Convenience Python output (no annotation) for all bytes together.
