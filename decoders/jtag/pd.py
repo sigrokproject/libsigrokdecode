@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2015 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -32,12 +32,16 @@ Packet:
    'CAPTURE-DR', 'SHIFT-DR', 'EXIT1-DR', 'PAUSE-DR', 'EXIT2-DR', 'UPDATE-DR',
    'SELECT-IR-SCAN', 'CAPTURE-IR', 'SHIFT-IR', 'EXIT1-IR', 'PAUSE-IR',
    'EXIT2-IR', 'UPDATE-IR'.
+ - 'IR TDI BIT': Bit that was clocked into the IR register.
+ - 'IR TDO BIT': Bit that was clocked out of the IR register.
+ - 'DR TDI BIT': Bit that was clocked into the DR register.
+ - 'DR TDO BIT': Bit that was clocked out of the DR register.
  - 'IR TDI': Bitstring that was clocked into the IR register.
  - 'IR TDO': Bitstring that was clocked out of the IR register.
  - 'DR TDI': Bitstring that was clocked into the DR register.
  - 'DR TDO': Bitstring that was clocked out of the DR register.
- - ...
 
+All bits are either '1' or '0' characters.
 All bitstrings are a sequence of '1' and '0' characters. The right-most
 character in the bitstring is the LSB. Example: '01110001' (1 is LSB).
 '''
@@ -162,9 +166,10 @@ class Decoder(srd.Decoder):
         if self.state.startswith('SHIFT-') and self.oldstate == self.state:
             self.bits_tdi.insert(0, tdi)
             self.bits_tdo.insert(0, tdo)
-            # TODO: ANN/PROTO output.
-            # self.putx([0, ['TDI add: ' + str(tdi)]])
-            # self.putp([0, ['TDO add: ' + str(tdo)]])
+            self.putx([0, [self.state[-2:] + ' TDI BIT: ' + str(tdi)]])
+            self.putx([0, [self.state[-2:] + ' TDO BIT: ' + str(tdo)]])
+            self.putp([self.state[-2:] + ' TDI BIT', str(tdi)])
+            self.putp([self.state[-2:] + ' TDO BIT', str(tdo)])
 
         # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
         if self.oldstate.startswith('SHIFT-') and \
@@ -174,16 +179,16 @@ class Decoder(srd.Decoder):
             b = ''.join(map(str, self.bits_tdi))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
-            # self.putx([0, [s]])
-            # self.putp([t, b])
+            self.putx([0, [s]])
+            self.putp([t, b])
             self.bits_tdi = []
 
             t = self.state[-2:] + ' TDO'
             b = ''.join(map(str, self.bits_tdo))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
-            # self.putx([0, [s]])
-            # self.putp([t, b])
+            self.putx([0, [s]])
+            self.putp([t, b])
             self.bits_tdo = []
 
     def decode(self, ss, es, data):
@@ -206,9 +211,6 @@ class Decoder(srd.Decoder):
 
             # Store start/end sample for later usage.
             self.ss, self.es = ss, es
-
-            # self.putx([0, ['tdi:%s, tdo:%s, tck:%s, tms:%s' \
-            #                % (tdi, tdo, tck, tms)]])
 
             if (self.oldtck == 0 and tck == 1):
                 self.handle_rising_tck_edge(tdi, tdo, tck, tms)
