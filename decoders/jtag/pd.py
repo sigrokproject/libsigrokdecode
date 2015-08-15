@@ -77,7 +77,19 @@ class Decoder(srd.Decoder):
         {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
         {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     )
-    annotations = tuple([tuple([s.lower(), s]) for s in jtag_states])
+    annotations = tuple([tuple([s.lower(), s]) for s in jtag_states]) + ( \
+        ('bit-tdi', 'Bit (TDI)'),
+        ('bit-tdo', 'Bit (TDO)'),
+        ('bitstring-tdi', 'Bitstring (TDI)'),
+        ('bitstring-tdo', 'Bitstring (TDO)'),
+    )
+    annotation_rows = (
+        ('bits-tdi', 'Bits (TDI)', (16,)),
+        ('bits-tdo', 'Bits (TDO)', (17,)),
+        ('bitstrings-tdi', 'Bitstring (TDI)', (18,)),
+        ('bitstrings-tdo', 'Bitstring (TDO)', (19,)),
+        ('states', 'States', tuple(range(15 + 1))),
+    )
 
     def __init__(self, **kwargs):
         # self.state = 'TEST-LOGIC-RESET'
@@ -89,8 +101,10 @@ class Decoder(srd.Decoder):
         self.bits_tdo = []
         self.samplenum = 0
         self.ss_item = self.es_item = None
+        self.ss_bitstring = self.es_bitstring = None
         self.saved_item = None
         self.first = True
+        self.first_bit = True
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -101,6 +115,12 @@ class Decoder(srd.Decoder):
 
     def putp(self, data):
         self.put(self.ss_item, self.es_item, self.out_python, data)
+
+    def putx_bs(self, data):
+        self.put(self.ss_bitstring, self.es_bitstring, self.out_ann, data)
+
+    def putp_bs(self, data):
+        self.put(self.ss_bitstring, self.es_bitstring, self.out_python, data)
 
     def advance_state_machine(self, tms):
         self.oldstate = self.state
@@ -151,45 +171,57 @@ class Decoder(srd.Decoder):
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
             self.first = False
-            self.saved_item = self.state
         else:
             # Output the saved item (from the last CLK edge to the current).
             self.es_item = self.samplenum
-            # Output the state we just switched to.
-            self.putx([jtag_states.index(self.state), [self.state]])
+            # Output the old state (from last rising TCK edge to current one).
+            self.putx([jtag_states.index(self.oldstate), [self.oldstate]])
             self.putp(['NEW STATE', self.state])
-            self.ss_item = self.samplenum
-            self.saved_item = self.state
 
-        # If we went from SHIFT-IR to SHIFT-IR, or SHIFT-DR to SHIFT-DR,
-        # collect the current TDI/TDO values (upon rising TCK edge).
-        if self.state.startswith('SHIFT-') and self.oldstate == self.state:
+        # Upon SHIFT-IR/SHIFT-DR collect the current TDI/TDO values.
+        if self.state.startswith('SHIFT-'):
+            if self.first_bit:
+                self.ss_bitstring = self.samplenum
+                self.first_bit = False
+            else:
+                self.putx([16, [str(self.bits_tdi[0])]])
+                self.putx([17, [str(self.bits_tdo[0])]])
+                self.putp([self.state[-2:] + ' TDI BIT', str(self.bits_tdi[0])])
+                self.putp([self.state[-2:] + ' TDO BIT', str(self.bits_tdo[0])])
             self.bits_tdi.insert(0, tdi)
             self.bits_tdo.insert(0, tdo)
-            self.putx([0, [self.state[-2:] + ' TDI BIT: ' + str(tdi)]])
-            self.putx([0, [self.state[-2:] + ' TDO BIT: ' + str(tdo)]])
-            self.putp([self.state[-2:] + ' TDI BIT', str(tdi)])
-            self.putp([self.state[-2:] + ' TDO BIT', str(tdo)])
 
         # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
         if self.oldstate.startswith('SHIFT-') and \
            self.state.startswith('EXIT1-'):
 
+            self.es_bitstring = self.samplenum
+
             t = self.state[-2:] + ' TDI'
             b = ''.join(map(str, self.bits_tdi))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
-            self.putx([0, [s]])
-            self.putp([t, b])
+            self.putx_bs([18, [s]])
+            self.putp_bs([t, b])
+            self.putx([16, [str(self.bits_tdi[0])]]) # Last bit.
+            self.putp([t + ' BIT', str(self.bits_tdi[0])]) # Last bit.
             self.bits_tdi = []
 
             t = self.state[-2:] + ' TDO'
             b = ''.join(map(str, self.bits_tdo))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
-            self.putx([0, [s]])
-            self.putp([t, b])
+            self.putx_bs([19, [s]])
+            self.putp_bs([t, b])
+            self.putx([17, [str(self.bits_tdo[0])]]) # Last bit.
+            self.putp([t + ' BIT', str(self.bits_tdo[0])]) # Last bit.
             self.bits_tdo = []
+
+            self.first_bit = True
+
+            self.ss_bitstring = self.samplenum
+
+        self.ss_item = self.samplenum
 
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
