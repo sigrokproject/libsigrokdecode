@@ -73,6 +73,16 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_11bits(self):
+        # Only look at the last 11 bits, the rest is ignored by the TLC5620.
+        if len(self.bits) > 11:
+            self.bits = self.bits[-11:]
+
+        self.ss_dac = self.bits[0][1]
+        self.es_dac = self.ss_gain = self.bits[2][1]
+        self.es_gain = self.ss_value = self.bits[3][1]
+        self.clock_width = self.es_gain - self.ss_gain
+        self.es_value = self.bits[10][1] + self.clock_width # Guessed.
+
         s = ''.join(str(i[0]) for i in self.bits[:2])
         self.dac_select = s = dacs[int(s, 2)]
         self.put(self.ss_dac, self.es_dac, self.out_ann,
@@ -96,7 +106,10 @@ class Decoder(srd.Decoder):
         self.put(self.bits[10][1], self.bits[10][1] + self.clock_width,
                  self.out_ann, [5, [str(self.bits[10][0])]])
 
+        self.bits = []
+
     def handle_falling_edge_load(self):
+        self.handle_11bits()
         s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [3, ['Falling edge on LOAD', 'LOAD fall', 'F']])
@@ -110,20 +123,6 @@ class Decoder(srd.Decoder):
 
     def handle_new_dac_bit(self):
         self.bits.append([self.datapin, self.samplenum])
-
-        # Wait until we have read 11 bits, then parse them.
-        l, s = len(self.bits), self.samplenum
-        if l == 1:
-            self.ss_dac = s
-        elif l == 3:
-            self.es_dac = self.ss_gain = s
-        elif l == 4:
-            self.es_gain = self.ss_value = s
-            self.clock_width = self.es_gain - self.ss_gain
-        elif l == 11:
-            self.es_value = s + self.clock_width # Guessed.
-            self.handle_11bits()
-            self.bits = []
 
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
