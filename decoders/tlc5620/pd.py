@@ -51,23 +51,27 @@ class Decoder(srd.Decoder):
         ('data-latch', 'Data latch point'),
         ('ldac-fall', 'LDAC falling edge'),
         ('bit', 'Bit'),
-        ('operation', 'Operation'),
+        ('reg-write', 'Register write'),
+        ('voltage-update', 'Voltage update'),
+        ('voltage-update-all', 'Voltage update (all DACs)'),
     )
     annotation_rows = (
         ('bits', 'Bits', (5,)),
         ('fields', 'Fields', (0, 1, 2)),
-        ('operations', 'Operations', (6,)),
+        ('registers', 'Registers', (6, 7)),
+        ('voltage-updates', 'Voltage updates', (8,)),
         ('events', 'Events', (3, 4)),
     )
 
     def __init__(self, **kwargs):
         self.oldpins = self.oldclk = self.oldload = self.oldldac = None
-        self.datapin = None
         self.bits = []
+        self.ss_dac_first = None
         self.ss_dac = self.es_dac = 0
         self.ss_gain = self.es_gain = 0
         self.ss_value = self.es_value = 0
         self.dac_select = self.gain = self.dac_value = None
+        self.dacval = {'A': '?', 'B': '?', 'C': '?', 'D': '?'}
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -82,6 +86,9 @@ class Decoder(srd.Decoder):
         self.es_gain = self.ss_value = self.bits[3][1]
         self.clock_width = self.es_gain - self.ss_gain
         self.es_value = self.bits[10][1] + self.clock_width # Guessed.
+
+        if self.ss_dac_first is None:
+            self.ss_dac_first = self.ss_dac
 
         s = ''.join(str(i[0]) for i in self.bits[:2])
         self.dac_select = s = dacs[int(s, 2)]
@@ -113,13 +120,33 @@ class Decoder(srd.Decoder):
         s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [3, ['Falling edge on LOAD', 'LOAD fall', 'F']])
-        self.put(self.ss_dac, self.es_value, self.out_ann,
-                 [6, ['Setting %s value to %d (x%d gain)' % (s, v, g),
-                      '%s=%d (x%d gain)' % (s, v, g)]])
+        if self.ldac == 0:
+            # If LDAC is low, the voltage is set immediately.
+            self.put(self.ss_dac, self.es_value, self.out_ann,
+                     [7, ['Setting %s voltage to %d (x%d gain)' % (s, v, g),
+                          '%s=%d (x%d gain)' % (s, v, g)]])
+        else:
+            # If LDAC is high, the voltage is not set immediately, but rather
+            # stored in a register. When LDAC goes low all four DAC voltages
+            # (DAC A/B/C/D) will be set at the same time.
+            self.put(self.ss_dac, self.es_value, self.out_ann,
+                     [6, ['Setting %s register value to %d (x%d gain)' % \
+                          (s, v, g), '%s=%d (x%d gain)' % (s, v, g)]])
+        # Save the last value the respective DAC was set to.
+        self.dacval[self.dac_select[-1]] = str(self.dac_value)
 
     def handle_falling_edge_ldac(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [4, ['Falling edge on LDAC', 'LDAC fall', 'LDAC', 'L']])
+
+        # Don't emit any annotations if we didn't see any register writes.
+        if self.ss_dac_first is None:
+            return
+
+        s = ''.join(['DAC%s=%s ' % (d, self.dacval[d]) for d in 'ABCD']).strip()
+        self.put(self.ss_dac_first, self.samplenum, self.out_ann,
+                 [8, ['Updating voltages: %s' % s, s, s.replace('DAC', '')]])
+        self.ss_dac_first = None
 
     def handle_new_dac_bit(self):
         self.bits.append([self.datapin, self.samplenum])
@@ -131,6 +158,7 @@ class Decoder(srd.Decoder):
             if self.oldpins == pins:
                 continue
             self.oldpins, (clk, self.datapin, load, ldac) = pins, pins
+            self.ldac = ldac
 
             # DATA is shifted in the DAC on the falling CLK edge (MSB-first).
             # A falling edge of LOAD will latch the data.
