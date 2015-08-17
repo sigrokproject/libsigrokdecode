@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2015 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -50,6 +50,14 @@ class Decoder(srd.Decoder):
         ('value', 'DAC value'),
         ('data-latch', 'Data latch point'),
         ('ldac-fall', 'LDAC falling edge'),
+        ('bit', 'Bit'),
+        ('operation', 'Operation'),
+    )
+    annotation_rows = (
+        ('bits', 'Bits', (5,)),
+        ('fields', 'Fields', (0, 1, 2)),
+        ('operations', 'Operations', (6,)),
+        ('events', 'Events', (3, 4)),
     )
 
     def __init__(self, **kwargs):
@@ -65,45 +73,55 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_11bits(self):
-        s = ''.join(str(i) for i in self.bits[:2])
+        s = ''.join(str(i[0]) for i in self.bits[:2])
         self.dac_select = s = dacs[int(s, 2)]
         self.put(self.ss_dac, self.es_dac, self.out_ann,
                  [0, ['DAC select: %s' % s, 'DAC sel: %s' % s,
                       'DAC: %s' % s, 'D: %s' % s, s, s[3]]])
 
-        self.gain = g = 1 + self.bits[2]
+        self.gain = g = 1 + self.bits[2][0]
         self.put(self.ss_gain, self.es_gain, self.out_ann,
                  [1, ['Gain: x%d' % g, 'G: x%d' % g, 'x%d' % g]])
 
-        s = ''.join(str(i) for i in self.bits[3:])
+        s = ''.join(str(i[0]) for i in self.bits[3:])
         self.dac_value = v = int(s, 2)
         self.put(self.ss_value, self.es_value, self.out_ann,
                  [2, ['DAC value: %d' % v, 'Value: %d' % v, 'Val: %d' % v,
                       'V: %d' % v, '%d' % v]])
 
+        # Emit an annotation for each bit.
+        for i in range(1, 11):
+            self.put(self.bits[i - 1][1], self.bits[i][1], self.out_ann,
+                     [5, [str(self.bits[i - 1][0])]])
+        self.put(self.bits[10][1], self.bits[10][1] + self.clock_width,
+                 self.out_ann, [5, [str(self.bits[10][0])]])
+
     def handle_falling_edge_load(self):
         s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [3, ['Setting %s value to %d (x%d gain)' % (s, v, g),
+                 [3, ['Falling edge on LOAD', 'LOAD fall', 'F']])
+        self.put(self.ss_dac, self.es_value, self.out_ann,
+                 [6, ['Setting %s value to %d (x%d gain)' % (s, v, g),
                       '%s=%d (x%d gain)' % (s, v, g)]])
 
     def handle_falling_edge_ldac(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
-                 [4, ['Falling edge on LDAC pin', 'LDAC fall', 'LDAC']])
+                 [4, ['Falling edge on LDAC', 'LDAC fall', 'LDAC', 'L']])
 
     def handle_new_dac_bit(self):
-        self.bits.append(self.datapin)
+        self.bits.append([self.datapin, self.samplenum])
 
         # Wait until we have read 11 bits, then parse them.
         l, s = len(self.bits), self.samplenum
         if l == 1:
             self.ss_dac = s
-        elif l == 2:
-            self.es_dac = self.ss_gain = s
         elif l == 3:
+            self.es_dac = self.ss_gain = s
+        elif l == 4:
             self.es_gain = self.ss_value = s
+            self.clock_width = self.es_gain - self.ss_gain
         elif l == 11:
-            self.es_value = s
+            self.es_value = s + self.clock_width # Guessed.
             self.handle_11bits()
             self.bits = []
 
