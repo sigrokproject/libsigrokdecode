@@ -44,6 +44,12 @@ class Decoder(srd.Decoder):
         {'id': 'load', 'name': 'LOAD', 'desc': 'Serial interface load control'},
         {'id': 'ldac', 'name': 'LDAC', 'desc': 'Load DAC'},
     )
+    options = (
+        {'id': 'vref_a', 'desc': 'Reference voltage DACA (V)', 'default': 3.3},
+        {'id': 'vref_b', 'desc': 'Reference voltage DACB (V)', 'default': 3.3},
+        {'id': 'vref_c', 'desc': 'Reference voltage DACC (V)', 'default': 3.3},
+        {'id': 'vref_d', 'desc': 'Reference voltage DACD (V)', 'default': 3.3},
+    )
     annotations = (
         ('dac-select', 'DAC select'),
         ('gain', 'Gain'),
@@ -74,6 +80,7 @@ class Decoder(srd.Decoder):
         self.ss_value = self.es_value = 0
         self.dac_select = self.gain = self.dac_value = None
         self.dacval = {'A': '?', 'B': '?', 'C': '?', 'D': '?'}
+        self.gains = {'A': '?', 'B': '?', 'C': '?', 'D': '?'}
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -135,20 +142,23 @@ class Decoder(srd.Decoder):
         s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [3, ['Falling edge on LOAD', 'LOAD fall', 'F']])
+        vref = self.options['vref_%s' % self.dac_select[3].lower()]
+        v = '%.2fV' % (vref * (v / 256) * self.gain)
         if self.ldac == 0:
             # If LDAC is low, the voltage is set immediately.
             self.put(self.ss_dac, self.es_value, self.out_ann,
-                     [7, ['Setting %s voltage to %d (x%d gain)' % (s, v, g),
-                          '%s=%d (x%d gain)' % (s, v, g)]])
+                     [7, ['Setting %s voltage to %s' % (s, v),
+                          '%s=%s' % (s, v)]])
         else:
             # If LDAC is high, the voltage is not set immediately, but rather
             # stored in a register. When LDAC goes low all four DAC voltages
             # (DAC A/B/C/D) will be set at the same time.
             self.put(self.ss_dac, self.es_value, self.out_ann,
-                     [6, ['Setting %s register value to %d (x%d gain)' % \
-                          (s, v, g), '%s=%d (x%d gain)' % (s, v, g)]])
+                     [6, ['Setting %s register value to %s' % \
+                          (s, v), '%s=%s' % (s, v)]])
         # Save the last value the respective DAC was set to.
         self.dacval[self.dac_select[-1]] = str(self.dac_value)
+        self.gains[self.dac_select[-1]] = self.gain
 
     def handle_falling_edge_ldac(self):
         self.put(self.samplenum, self.samplenum, self.out_ann,
@@ -158,7 +168,17 @@ class Decoder(srd.Decoder):
         if self.ss_dac_first is None:
             return
 
-        s = ''.join(['DAC%s=%s ' % (d, self.dacval[d]) for d in 'ABCD']).strip()
+        # Calculate voltages based on Vref and the per-DAC gain.
+        dacval = {}
+        for key, val in self.dacval.items():
+            if val == '?':
+                dacval[key] = '?'
+            else:
+                vref = self.options['vref_%s' % key.lower()]
+                v = vref * (int(val) / 256) * self.gains[key]
+                dacval[key] = '%.2fV' % v
+
+        s = ''.join(['DAC%s=%s ' % (d, dacval[d]) for d in 'ABCD']).strip()
         self.put(self.ss_dac_first, self.samplenum, self.out_ann,
                  [8, ['Updating voltages: %s' % s, s, s.replace('DAC', '')]])
         self.ss_dac_first = None
