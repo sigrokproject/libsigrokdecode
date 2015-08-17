@@ -54,6 +54,7 @@ class Decoder(srd.Decoder):
         ('reg-write', 'Register write'),
         ('voltage-update', 'Voltage update'),
         ('voltage-update-all', 'Voltage update (all DACs)'),
+        ('invalid-cmd', 'Invalid command'),
     )
     annotation_rows = (
         ('bits', 'Bits', (5,)),
@@ -61,6 +62,7 @@ class Decoder(srd.Decoder):
         ('registers', 'Registers', (6, 7)),
         ('voltage-updates', 'Voltage updates', (8,)),
         ('events', 'Events', (3, 4)),
+        ('errors', 'Errors', (9,)),
     )
 
     def __init__(self, **kwargs):
@@ -80,6 +82,16 @@ class Decoder(srd.Decoder):
         # Only look at the last 11 bits, the rest is ignored by the TLC5620.
         if len(self.bits) > 11:
             self.bits = self.bits[-11:]
+
+        # If there are less than 11 bits, something is probably wrong.
+        if len(self.bits) < 11:
+            ss, es = self.samplenum, self.samplenum
+            if len(self.bits) >= 2:
+                ss = self.bits[0][1]
+                es = self.bits[-1][1] + (self.bits[1][1] - self.bits[0][1])
+            self.put(ss, es, self.out_ann, [9, ['Command too short']])
+            self.bits = []
+            return False
 
         self.ss_dac = self.bits[0][1]
         self.es_dac = self.ss_gain = self.bits[2][1]
@@ -115,8 +127,11 @@ class Decoder(srd.Decoder):
 
         self.bits = []
 
+        return True
+
     def handle_falling_edge_load(self):
-        self.handle_11bits()
+        if not self.handle_11bits():
+            return
         s, v, g = self.dac_select, self.dac_value, self.gain
         self.put(self.samplenum, self.samplenum, self.out_ann,
                  [3, ['Falling edge on LOAD', 'LOAD fall', 'F']])
