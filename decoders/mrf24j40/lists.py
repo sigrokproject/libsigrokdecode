@@ -66,7 +66,7 @@ sregs = {
     0x2c: 'SECCON0',
     0x2d: 'SECCON1',
     0x2e: 'TXSTBL',
-    0x3f: 'Reserved',
+    0x2f: 'Reserved',
     0x30: 'RXSR',
     0x31: 'INTSTAT',
     0x32: 'INTCON',
