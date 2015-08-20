@@ -61,7 +61,7 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj( const GSList *stack,
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di);
 SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		uint64_t start_samplenum, uint64_t end_samplenum,
-		const uint8_t *inbuf, uint64_t inbuflen);
+		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack);
 

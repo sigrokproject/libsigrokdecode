@@ -277,7 +277,7 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		GVariant *data);
 SRD_API int srd_session_send(struct srd_session *sess,
 		uint64_t start_samplenum, uint64_t end_samplenum,
-		const uint8_t *inbuf, uint64_t inbuflen);
+		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
 SRD_API int srd_session_destroy(struct srd_session *sess);
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 		int output_type, srd_pd_output_callback cb, void *cb_data);
@@ -295,7 +295,7 @@ SRD_API int srd_decoder_unload_all(void);
 SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		GHashTable *options);
 SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
-		GHashTable *channels, int unit_size);
+		GHashTable *channels);
 SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		const char *id, GHashTable *options);
 SRD_API int srd_inst_stack(struct srd_session *sess,

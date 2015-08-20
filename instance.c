@@ -187,16 +187,13 @@ static gint compare_channel_id(const struct srd_channel *pdch,
  * @param new_channels A GHashTable of channels to set. Key is channel name,
  *                     value is the channel number. Samples passed to this
  *                     instance will be arranged in this order.
- * @param unit_size Number of bytes per sample in the data stream to be passed
- *                  to the decoder. The highest channel index specified in the
- *                  channel map must lie within a sample unit.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.3.0
+ * @since 0.4.0
  */
 SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
-		GHashTable *new_channels, int unit_size)
+		GHashTable *new_channels)
 {
 	GVariant *channel_val;
 	GList *l;
@@ -205,9 +202,8 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 	int *new_channelmap, new_channelnum, num_required_channels, i;
 	char *channel_id;
 
-	srd_dbg("Setting channels for instance %s with list of %d channels, "
-		"unitsize %d.", di->inst_id, g_hash_table_size(new_channels),
-		unit_size);
+	srd_dbg("Setting channels for instance %s with list of %d channels.",
+		di->inst_id, g_hash_table_size(new_channels));
 
 	if (g_hash_table_size(new_channels) == 0)
 		/* No channels provided. */
@@ -240,12 +236,6 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 			return SRD_ERR_ARG;
 		}
 		new_channelnum = g_variant_get_int32(channel_val);
-		if (new_channelnum >= 8 * unit_size) {
-			srd_err("Channel index %d not within data unit (%d bit).",
-				new_channelnum, 8 * unit_size);
-			g_free(new_channelmap);
-			return SRD_ERR_ARG;
-		}
 		if (!(sl = g_slist_find_custom(di->decoder->channels, channel_id,
 				(GCompareFunc)compare_channel_id))) {
 			/* Fall back on optional channels. */
@@ -262,7 +252,6 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		srd_dbg("Setting channel mapping: %s (index %d) = channel %d.",
 			pdch->id, pdch->order, new_channelnum);
 	}
-	di->data_unitsize = unit_size;
 
 	srd_dbg("Final channel map:");
 	num_required_channels = g_slist_length(di->decoder->channels);
@@ -342,7 +331,6 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 				g_malloc(sizeof(int) * di->dec_num_channels);
 		for (i = 0; i < di->dec_num_channels; i++)
 			di->dec_channelmap[i] = i;
-		di->data_unitsize = (di->dec_num_channels + 7) / 8;
 		/*
 		 * Will be used to prepare a sample at every iteration
 		 * of the instance's decode() method.
@@ -543,19 +531,22 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
  * 			  set, relative to the start of capture.
  * @param inbuf The buffer to decode. Must not be NULL.
  * @param inbuflen Length of the buffer. Must be > 0.
+ * @param unitsize The number of bytes per sample.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
  *
- * @since 0.1.0
+ * @since 0.4.0
  */
 SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		uint64_t start_samplenum, uint64_t end_samplenum,
-		const uint8_t *inbuf, uint64_t inbuflen)
+		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
 	PyObject *py_res;
 	srd_logic *logic;
+
+	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
 
 	srd_dbg("Calling decode(), start sample %" PRIu64 ", end sample %"
 		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "

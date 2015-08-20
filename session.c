@@ -212,23 +212,24 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
  * in channel order, in the least amount of space possible. The default
  * channel set consists of all required channels + all optional channels.
  *
- * The size of a sample in inbuf is the unit size passed to
- * srd_inst_channel_set_all(). If no channel map has been configured, it is
- * the minimum number of bytes needed to store the default channels.
+ * The size of a sample in inbuf is 'unitsize' bytes. If no channel map
+ * has been configured, it is the minimum number of bytes needed to store
+ * the default channels.
  *
  * @param sess The session to use.
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param end_samplenum The sample number of the last sample in this chunk.
  * @param inbuf Pointer to sample data.
  * @param inbuflen Length in bytes of the buffer.
+ * @param unitsize The number of bytes per sample.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.3.0
+ * @since 0.4.0
  */
 SRD_API int srd_session_send(struct srd_session *sess,
 		uint64_t start_samplenum, uint64_t end_samplenum,
-		const uint8_t *inbuf, uint64_t inbuflen)
+		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
 	GSList *d;
 	int ret;
@@ -240,7 +241,7 @@ SRD_API int srd_session_send(struct srd_session *sess,
 
 	for (d = sess->di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(d->data, start_samplenum,
-				end_samplenum, inbuf, inbuflen)) != SRD_OK)
+				end_samplenum, inbuf, inbuflen, unitsize)) != SRD_OK)
 			return ret;
 	}
 
