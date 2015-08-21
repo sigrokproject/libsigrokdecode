@@ -128,8 +128,8 @@ class Decoder(srd.Decoder):
         t = (self.sx, self.sy, self.ax, self.ay, self.az, self.bz, self.bc)
         if -1 in t:
             return
-        bz = 'pressed' if self.bz == 1 else 'not pressed'
-        bc = 'pressed' if self.bc == 1 else 'not pressed'
+        bz = 'pressed' if self.bz == 0 else 'not pressed'
+        bc = 'pressed' if self.bc == 0 else 'not pressed'
         s = 'Analog stick: %d/%d, accelerometer: %d/%d/%d, Z: %s, C: %s' % \
             (self.sx, self.sy, self.ax, self.ay, self.az, bz, bc)
         self.putb([13, [s]])
