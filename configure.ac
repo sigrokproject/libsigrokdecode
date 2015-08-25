@@ -21,35 +21,24 @@
 AC_PREREQ([2.63])
 
 # libsigrokdecode package version number (NOT the same as shared lib version!).
-m4_define([srd_package_version_major], [0])
-m4_define([srd_package_version_minor], [4])
-m4_define([srd_package_version_micro], [0])
-m4_define([srd_package_version_suffix], [-git])
-m4_define([srd_package_version], [srd_package_version_major.srd_package_version_minor.srd_package_version_micro[]srd_package_version_suffix])
-
-AC_INIT([libsigrokdecode], [srd_package_version],
+AC_INIT([libsigrokdecode], [0.4.0],
 	[sigrok-devel@lists.sourceforge.net], [libsigrokdecode],
 	[http://www.sigrok.org])
-AC_CONFIG_HEADER([config.h])
-AC_CONFIG_MACRO_DIR([autostuff])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([autostuff])
+AC_CONFIG_HEADERS([config.h version.h])
 
 # We require at least automake 1.11 (needed for 'silent rules').
-AM_INIT_AUTOMAKE([1.11 -Wall -Werror subdir-objects check-news color-tests])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+AM_INIT_AUTOMAKE([1.11 -Wall -Werror no-define subdir-objects check-news color-tests])
+AM_SILENT_RULES([yes])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
 AH_TOP([#ifndef SRD_CONFIG_H
 #define SRD_CONFIG_H    /* To stop multiple inclusions. */])
 AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
-# Enable more compiler warnings via -Wall and -Wextra. Add -fvisibility=hidden
-# and enforce use of SRD_API to explicitly mark all public API functions.
-AM_CFLAGS="$AM_CFLAGS -Wall -Wextra -Wmissing-prototypes -fvisibility=hidden"
-
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
@@ -59,139 +48,100 @@ AM_PROG_CC_C_O
 # Initialize libtool.
 LT_INIT
 
-# Initialize pkg-config.
-# We require at least 0.22, as "Requires.private" behaviour changed there.
-PKG_PROG_PKG_CONFIG([0.22])
+# Set up the libsigrokdecode version defines.
+SR_PKG_VERSION_SET([SRD_PACKAGE_VERSION], [AC_PACKAGE_VERSION])
 
 # Library version for libsigrokdecode (NOT the same as the package version).
 # Carefully read the libtool docs before updating these numbers!
 # The algorithm for determining which number to change (and how) is nontrivial!
 # http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
-SRD_LIB_VERSION_CURRENT=2
-SRD_LIB_VERSION_REVISION=0
-SRD_LIB_VERSION_AGE=0
-SRD_LIB_VERSION="$SRD_LIB_VERSION_CURRENT:$SRD_LIB_VERSION_REVISION:$SRD_LIB_VERSION_AGE"
-SRD_LIB_LDFLAGS="-version-info $SRD_LIB_VERSION"
-AC_SUBST(SRD_LIB_VERSION_CURRENT)
-AC_SUBST(SRD_LIB_VERSION_REVISION)
-AC_SUBST(SRD_LIB_VERSION_AGE)
-AC_SUBST(SRD_LIB_VERSION)
-AC_SUBST(SRD_LIB_LDFLAGS)
+SR_LIB_VERSION_SET([SRD_LIB_VERSION], [2:0:0])
 
-# Checks for libraries.
+############################
+##  Package dependencies  ##
+############################
 
-# libglib-2.0 is always needed.
-# Note: glib-2.0 is part of the libsigrokdecode API
-# (hard pkg-config requirement).
-AM_PATH_GLIB_2_0([2.24.0],
-        [AM_CFLAGS="$AM_CFLAGS $GLIB_CFLAGS"; LIBS="$LIBS $GLIB_LIBS"])
+# Initialize pkg-config.
+# We require at least 0.22, as "Requires.private" behaviour changed there.
+PKG_PROG_PKG_CONFIG([0.22])
+
+# Collect the pkg-config module names of all dependencies in SRD_PKGLIBS.
+# These are used to derive the compiler flags and for the "Requires.private"
+# field in the generated libsigrokdecode.pc file.
+SRD_PKGLIBS=
+SRD_PKGLIBS_CHECK=
+
+# Keep track of all checked modules so we can list them at the end.
+SR_PKG_CHECK_SUMMARY([srd_pkglibs_summary])
 
 # Python 3 is always needed.
-# Note: We need to try a few different variants, since some systems have a
-# python3.pc file, others have a python-3.3.pc file, and so on.
-# We also export the name of the package so that it can be correctly
-# added to libsigrokdecode.pc.
-# See also: http://sigrok.org/wiki/Libsigrokdecode/Python
-CPPFLAGS_PYTHON=""
-LDFLAGS_PYTHON=""
-pyver="none"
-PKG_CHECK_MODULES([python3], [python3 >= 3.2],
-	[pyver=`$PKG_CONFIG --modversion python3`;
-	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python3_CFLAGS";
-	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python3_LIBS";
-	MODNAME_PYTHON="python3"],
-[PKG_CHECK_MODULES([python34], [python-3.4 >= 3.4],
-	[pyver=`$PKG_CONFIG --modversion python-3.4`;
-	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python34_CFLAGS";
-	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python34_LIBS";
-	MODNAME_PYTHON="python-3.4"],
-[PKG_CHECK_MODULES([python33], [python-3.3 >= 3.3],
-	[pyver=`$PKG_CONFIG --modversion python-3.3`;
-	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python33_CFLAGS";
-	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python33_LIBS";
-	MODNAME_PYTHON="python-3.3"],
-[PKG_CHECK_MODULES([python32], [python-3.2 >= 3.2],
-	[pyver=`$PKG_CONFIG --modversion python-3.2`;
-	CPPFLAGS_PYTHON="$CPPFLAGS_PYTHON $python32_CFLAGS";
-	LDFLAGS_PYTHON="$LDFLAGS_PYTHON $python32_LIBS";
-	MODNAME_PYTHON="python-3.2"],
-)])])])
-AC_SUBST(CPPFLAGS_PYTHON)
-AC_SUBST(LDFLAGS_PYTHON)
-AC_SUBST(MODNAME_PYTHON)
+SR_PKG_CHECK([python3], [SRD_PKGLIBS],
+	[python3 >= 3.2], [python-3.4 >= 3.4], [python-3.3 >= 3.3], [python-3.2 >= 3.2])
+AS_IF([test "x$sr_have_python3" = xno],
+	[AC_MSG_ERROR([Cannot find Python 3 development headers.])])
 
 # We also need to find the name of the python3 executable (for 'make install').
 # Some OSes call this python3, some call it python3.2, etc. etc.
+AC_ARG_VAR([PYTHON3], [Python 3 interpreter])
 AC_CHECK_PROGS([PYTHON3], [python3.4 python3.3 python3.2 python3])
-if test "x$PYTHON3" = "x"; then
-	AC_MSG_ERROR([cannot find python3 executable.])
-fi
+AS_IF([test "x$PYTHON3" = x],
+	[AC_MSG_ERROR([Cannot find Python 3 interpreter.])])
 
-# Link against libm, this is required (among other things) by Python.
-AC_SEARCH_LIBS([pow], [m])
+######################
+##  Feature checks  ##
+######################
+
+# Keep track of all checked modules so we can list them at the end.
+SR_PKG_CHECK_SUMMARY([srd_pkglibs_opt_summary])
 
 # The Check unit testing framework is optional. Disable if not found.
-PKG_CHECK_MODULES([check], [check >= 0.9.4],
-	[have_check="yes"], [have_check="no"])
-AM_CONDITIONAL(HAVE_CHECK, test x"$have_check" = "xyes")
+SR_PKG_CHECK([check], [SRD_PKGLIBS_CHECK], [check >= 0.9.4])
+AM_CONDITIONAL([HAVE_CHECK], [test "x$sr_have_check" = xyes])
 
-# Checks for header files.
-# These are already checked: inttypes.h stdint.h stdlib.h string.h unistd.h.
+# Enable the C99 standard if possible, and enforce the use
+# of SRD_API to explicitly mark all public API functions.
+SRD_EXTRA_CFLAGS=
+SR_CHECK_COMPILE_FLAGS([SRD_EXTRA_CFLAGS], [C99], [-std=c99 -c99 -AC99 -qlanglvl=extc99])
+SR_CHECK_COMPILE_FLAGS([SRD_EXTRA_CFLAGS], [visibility], [-fvisibility=hidden])
 
-AC_SUBST(DECODERS_DIR, "$datadir/libsigrokdecode/decoders")
-AC_SUBST(MAKEFLAGS, '--no-print-directory')
-AC_SUBST(AM_LIBTOOLFLAGS, '--silent')
+# Select suitable compiler warning flags.
+SR_ARG_ENABLE_WARNINGS([SRD_WFLAGS], [-Wall], [-Wall -Wextra -Wmissing-prototypes])
 
-SRD_PACKAGE_VERSION_MAJOR=srd_package_version_major
-SRD_PACKAGE_VERSION_MINOR=srd_package_version_minor
-SRD_PACKAGE_VERSION_MICRO=srd_package_version_micro
-SRD_PACKAGE_VERSION=srd_package_version
+# Link against libm, this is required (among other things) by Python.
+SRD_EXTRA_LIBS=
+SR_SEARCH_LIBS([SRD_EXTRA_LIBS], [pow], [m])
 
-AC_SUBST(SRD_PACKAGE_VERSION_MAJOR)
-AC_SUBST(SRD_PACKAGE_VERSION_MINOR)
-AC_SUBST(SRD_PACKAGE_VERSION_MICRO)
-AC_SUBST(SRD_PACKAGE_VERSION)
+##############################
+##  Finalize configuration  ##
+##############################
 
-AC_SUBST(AM_CFLAGS)
+AC_SUBST([SRD_PKGLIBS])
 
-AC_CONFIG_FILES([Makefile version.h libsigrokdecode.pc])
+# Retrieve the compile and link flags for all modules combined.
+# Also, bail out at this point if any module dependency is not met.
+PKG_CHECK_MODULES([LIBSIGROKDECODE], [glib-2.0 >= 2.24.0 $SRD_PKGLIBS])
+PKG_CHECK_MODULES([CHECK], [$SRD_PKGLIBS_CHECK glib-2.0 $SRD_PKGLIBS])
+
+srd_glib_version=`$PKG_CONFIG --modversion glib-2.0 2>&AS_MESSAGE_LOG_FD`
+
+AC_CONFIG_FILES([Makefile libsigrokdecode.pc])
 
 AC_OUTPUT
 
-echo
-echo "libsigrokdecode configuration summary:"
-echo
-echo "  - Package version (major.minor.micro):    $SRD_PACKAGE_VERSION"
-echo "  - Library version (current:revision:age): $SRD_LIB_VERSION"
-echo "  - Prefix: $prefix"
-echo "  - Building on: $build"
-echo "  - Building for: $host"
-echo
-echo "Detected libraries:"
-echo
+cat >&AS_MESSAGE_FD <<_EOF
 
-if test "x$pyver" = "xnone"; then
-	echo "  - (REQUIRED) python >= 3.2: no"
-else
-	echo "  - (REQUIRED) python >= 3.2: yes ($pyver)"
-fi
+libsigrokdecode configuration summary:
+ - Package version................. $SRD_PACKAGE_VERSION
+ - Library ABI version............. $SRD_LIB_VERSION
+ - Prefix.......................... $prefix
+ - Building on..................... $build
+ - Building for.................... $host
+ - Additional C compiler flags..... $SRD_EXTRA_CFLAGS
+ - C compiler warnings............. $SRD_WFLAGS
 
-# Note: This only works for libs with pkg-config integration.
-for lib in "glib-2.0 >= 2.24.0" "check >= 0.9.4"; do
-	optional="OPTIONAL"
-	if test "x$lib" = "xglib-2.0 >= 2.24.0"; then optional="REQUIRED"; fi
-	if `$PKG_CONFIG --exists $lib`; then
-		ver=`$PKG_CONFIG --modversion $lib`
-		answer="yes ($ver)"
-	else
-		answer="no"
-	fi
-	echo "  - ($optional) $lib: $answer"
-done
-
-echo
-echo "Enabled features:"
-echo
-echo "  - (OPTIONAL) Library unit test framework support: $have_check"
-echo
-
+Detected libraries (required):
+ - glib-2.0 >= 2.24.0.............. $srd_glib_version
+$srd_pkglibs_summary
+Detected libraries (optional):
+$srd_pkglibs_opt_summary
+_EOF

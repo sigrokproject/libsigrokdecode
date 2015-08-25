@@ -18,7 +18,15 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-ACLOCAL_AMFLAGS = -I autostuff
+ACLOCAL_AMFLAGS = -I m4
+AM_LIBTOOLFLAGS = --silent
+MAKEFLAGS = --no-print-directory
+
+DECODERS_DIR = $(pkgdatadir)/decoders
+AM_CPPFLAGS = -D_POSIX_C_SOURCE=200112L -DDECODERS_DIR='"$(DECODERS_DIR)"'
+
+# The check CFLAGS are a superset of the libsigrokdecode CFLAGS.
+AM_CFLAGS = $(SRD_EXTRA_CFLAGS) $(SRD_WFLAGS) $(CHECK_CFLAGS)
 
 lib_LTLIBRARIES = libsigrokdecode.la
 
@@ -36,14 +44,11 @@ libsigrokdecode_la_SOURCES = \
 	error.c \
 	version.c
 
-libsigrokdecode_la_CPPFLAGS = $(CPPFLAGS_PYTHON) \
-	-DDECODERS_DIR='"$(DECODERS_DIR)"'
-libsigrokdecode_la_LDFLAGS = $(SRD_LIB_LDFLAGS) $(LDFLAGS_PYTHON)
+libsigrokdecode_la_LIBADD = $(SRD_EXTRA_LIBS) $(LIBSIGROKDECODE_LIBS)
+libsigrokdecode_la_LDFLAGS = -version-info $(SRD_LIB_VERSION) -no-undefined
 
-libsigrokdecode_la_LDFLAGS += -no-undefined
-
-library_includedir = $(includedir)/libsigrokdecode
-library_include_HEADERS = libsigrokdecode.h version.h
+pkginclude_HEADERS = libsigrokdecode.h
+nodist_pkginclude_HEADERS = version.h
 noinst_HEADERS = libsigrokdecode-internal.h
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -54,6 +59,8 @@ EXTRA_DIST = Doxyfile HACKING contrib/sigrok-logo-notext.png
 if HAVE_CHECK
 TESTS = tests/main
 check_PROGRAMS = ${TESTS}
+endif
+
 tests_main_SOURCES = \
 	libsigrokdecode.h \
 	tests/lib.h \
@@ -62,15 +69,14 @@ tests_main_SOURCES = \
 	tests/decoder.c \
 	tests/inst.c \
 	tests/session.c
-tests_main_CFLAGS = $(AM_CFLAGS) @check_CFLAGS@
-tests_main_LDADD = $(top_builddir)/libsigrokdecode.la @check_LIBS@
-tests_main_CPPFLAGS = $(CPPFLAGS_PYTHON) \
-	-DDECODERS_DIR='"$(abs_top_srcdir)/decoders"'
-endif
+
+tests_main_CPPFLAGS = -D_POSIX_C_SOURCE=200112L -DDECODERS_DIR='"$(abs_top_srcdir)/decoders"'
+tests_main_LDADD = libsigrokdecode.la $(SRD_EXTRA_LIBS) $(CHECK_LIBS)
 
 MAINTAINERCLEANFILES = ChangeLog
 
-.PHONY: ChangeLog
+.PHONY: ChangeLog install-decoders
+
 ChangeLog:
 	git --git-dir $(top_srcdir)/.git log > ChangeLog || touch ChangeLog
 
