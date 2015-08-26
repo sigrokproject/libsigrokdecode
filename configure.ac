@@ -69,7 +69,7 @@ PKG_PROG_PKG_CONFIG([0.22])
 # These are used to derive the compiler flags and for the "Requires.private"
 # field in the generated libsigrokdecode.pc file.
 SRD_PKGLIBS=
-SRD_PKGLIBS_CHECK=
+SRD_PKGLIBS_TESTS=
 
 # Keep track of all checked modules so we can list them at the end.
 SR_PKG_CHECK_SUMMARY([srd_pkglibs_summary])
@@ -95,7 +95,7 @@ AS_IF([test "x$PYTHON3" = x],
 SR_PKG_CHECK_SUMMARY([srd_pkglibs_opt_summary])
 
 # The Check unit testing framework is optional. Disable if not found.
-SR_PKG_CHECK([check], [SRD_PKGLIBS_CHECK], [check >= 0.9.4])
+SR_PKG_CHECK([check], [SRD_PKGLIBS_TESTS], [check >= 0.9.4])
 AM_CONDITIONAL([HAVE_CHECK], [test "x$sr_have_check" = xyes])
 
 # Enable the C99 standard if possible, and enforce the use
@@ -120,7 +120,7 @@ AC_SUBST([SRD_PKGLIBS])
 # Retrieve the compile and link flags for all modules combined.
 # Also, bail out at this point if any module dependency is not met.
 PKG_CHECK_MODULES([LIBSIGROKDECODE], [glib-2.0 >= 2.24.0 $SRD_PKGLIBS])
-PKG_CHECK_MODULES([CHECK], [$SRD_PKGLIBS_CHECK glib-2.0 $SRD_PKGLIBS])
+PKG_CHECK_MODULES([TESTS], [$SRD_PKGLIBS_TESTS glib-2.0 $SRD_PKGLIBS])
 
 srd_glib_version=`$PKG_CONFIG --modversion glib-2.0 2>&AS_MESSAGE_LOG_FD`
 
