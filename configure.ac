@@ -111,6 +111,8 @@ SR_ARG_ENABLE_WARNINGS([SRD_WFLAGS], [-Wall], [-Wall -Wextra -Wmissing-prototype
 SRD_EXTRA_LIBS=
 SR_SEARCH_LIBS([SRD_EXTRA_LIBS], [pow], [m])
 
+AC_SYS_LARGEFILE
+
 ##############################
 ##  Finalize configuration  ##
 ##############################
