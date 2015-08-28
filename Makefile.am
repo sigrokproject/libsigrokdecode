@@ -23,7 +23,7 @@ AM_LIBTOOLFLAGS = --silent
 MAKEFLAGS = --no-print-directory
 
 DECODERS_DIR = $(pkgdatadir)/decoders
-AM_CPPFLAGS = -D_DEFAULT_SOURCE -DDECODERS_DIR='"$(DECODERS_DIR)"'
+AM_CPPFLAGS = -D_POSIX_C_SOURCE=200112L -DDECODERS_DIR='"$(DECODERS_DIR)"'
 
 # The tests CFLAGS are a superset of the libsigrokdecode CFLAGS.
 AM_CFLAGS = $(SRD_EXTRA_CFLAGS) $(SRD_WFLAGS) $(TESTS_CFLAGS)
