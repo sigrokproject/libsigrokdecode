@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2015 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -183,7 +183,11 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = ss, es
 
-        # self.put(self.ss, self.es, self.out_ann, [0, [cmd + ' / ' + val]])
+        # The STM32F10xxx has two serially connected JTAG TAPs, the
+        # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
+        # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
+        # Due to this, we need to ignore the last bit of each data shift.
+        val = val[:-1]
 
         # State machine
         if self.state == 'IDLE':
@@ -191,9 +195,10 @@ class Decoder(srd.Decoder):
             if cmd != 'IR TDI':
                 return
             # Switch to the state named after the instruction, or 'UNKNOWN'.
-            # Ignore bits other than IR[3:0]. While the IR register is only
-            # 4 bits in size, some programs (e.g. OpenOCD) might fill in a
-            # few more (dummy) bits. OpenOCD makes IR at least 8 bits long.
+            # The STM32F10xxx has two serially connected JTAG TAPs, the
+            # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
+            # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
+            # Currently we only care about the latter and use IR[3:0].
             self.state = ir.get(val[-4:], ['UNKNOWN', 0])[0]
             self.put(self.ss, self.es, self.out_ann, [0, ['IR: ' + self.state]])
         elif self.state == 'BYPASS':
