@@ -133,7 +133,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self, **kwargs):
         self.state = 'IDLE'
-        # self.state = 'BYPASS'
+        self.samplenums = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -178,16 +178,20 @@ class Decoder(srd.Decoder):
                  [0, ['Unknown instruction: ' % bits]]) # TODO
 
     def decode(self, ss, es, data):
-        # Assumption: The right-most char in the 'val' bitstring is the LSB.
         cmd, val = data
 
         self.ss, self.es = ss, es
 
-        # The STM32F10xxx has two serially connected JTAG TAPs, the
-        # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
-        # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
-        # Due to this, we need to ignore the last bit of each data shift.
-        val = val[:-1]
+        if cmd != 'NEW STATE':
+            val, self.samplenums = val
+
+            # The right-most char in the 'val' bitstring is the LSB.
+
+            # The STM32F10xxx has two serially connected JTAG TAPs, the
+            # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
+            # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
+            # Due to this, we need to ignore the last bit of each data shift.
+            val = val[:-1]
 
         # State machine
         if self.state == 'IDLE':
