@@ -32,18 +32,15 @@ Packet:
    'CAPTURE-DR', 'SHIFT-DR', 'EXIT1-DR', 'PAUSE-DR', 'EXIT2-DR', 'UPDATE-DR',
    'SELECT-IR-SCAN', 'CAPTURE-IR', 'SHIFT-IR', 'EXIT1-IR', 'PAUSE-IR',
    'EXIT2-IR', 'UPDATE-IR'.
- - 'IR TDI BIT': Bit that was clocked into the IR register.
- - 'IR TDO BIT': Bit that was clocked out of the IR register.
- - 'DR TDI BIT': Bit that was clocked into the DR register.
- - 'DR TDO BIT': Bit that was clocked out of the DR register.
  - 'IR TDI': Bitstring that was clocked into the IR register.
  - 'IR TDO': Bitstring that was clocked out of the IR register.
  - 'DR TDI': Bitstring that was clocked into the DR register.
  - 'DR TDO': Bitstring that was clocked out of the DR register.
 
-All bits are either '1' or '0' characters.
-All bitstrings are a sequence of '1' and '0' characters. The right-most
-character in the bitstring is the LSB. Example: '01110001' (1 is LSB).
+All bitstrings are a list consisting of two items. The first is a sequence
+of '1' and '0' characters (the right-most character is the LSB. Example:
+'01110001', where 1 is the LSB). The second item is a list of ss/es values
+for each bit that is in the bitstring.
 '''
 
 jtag_states = [
@@ -99,6 +96,8 @@ class Decoder(srd.Decoder):
         self.oldtck = -1
         self.bits_tdi = []
         self.bits_tdo = []
+        self.bits_samplenums_tdi = []
+        self.bits_samplenums_tdo = []
         self.samplenum = 0
         self.ss_item = self.es_item = None
         self.ss_bitstring = self.es_bitstring = None
@@ -186,10 +185,16 @@ class Decoder(srd.Decoder):
             else:
                 self.putx([16, [str(self.bits_tdi[0])]])
                 self.putx([17, [str(self.bits_tdo[0])]])
-                self.putp([self.state[-2:] + ' TDI BIT', str(self.bits_tdi[0])])
-                self.putp([self.state[-2:] + ' TDO BIT', str(self.bits_tdo[0])])
+                # Use self.samplenum as ES of the previous bit.
+                self.bits_samplenums_tdi[0][1] = self.samplenum
+                self.bits_samplenums_tdo[0][1] = self.samplenum
+
             self.bits_tdi.insert(0, tdi)
             self.bits_tdo.insert(0, tdo)
+
+            # Use self.samplenum as SS of the current bit.
+            self.bits_samplenums_tdi.insert(0, [self.samplenum, -1])
+            self.bits_samplenums_tdo.insert(0, [self.samplenum, -1])
 
         # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
         if self.oldstate.startswith('SHIFT-') and \
@@ -202,20 +207,22 @@ class Decoder(srd.Decoder):
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
             self.putx_bs([18, [s]])
-            self.putp_bs([t, b])
+            self.bits_samplenums_tdi[0][1] = self.samplenum # ES of last bit.
+            self.putp_bs([t, [b, self.bits_samplenums_tdi]])
             self.putx([16, [str(self.bits_tdi[0])]]) # Last bit.
-            self.putp([t + ' BIT', str(self.bits_tdi[0])]) # Last bit.
             self.bits_tdi = []
+            self.bits_samplenums_tdi = []
 
             t = self.state[-2:] + ' TDO'
             b = ''.join(map(str, self.bits_tdo))
             h = ' (0x%x' % int('0b' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
             self.putx_bs([19, [s]])
-            self.putp_bs([t, b])
+            self.bits_samplenums_tdo[0][1] = self.samplenum # ES of last bit.
+            self.putp_bs([t, [b, self.bits_samplenums_tdo]])
             self.putx([17, [str(self.bits_tdo[0])]]) # Last bit.
-            self.putp([t + ' BIT', str(self.bits_tdo[0])]) # Last bit.
             self.bits_tdo = []
+            self.bits_samplenums_tdo = []
 
             self.first_bit = True
 
