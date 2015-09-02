@@ -74,7 +74,6 @@ apb_ap_reg = {
     0xfc: ['IDR', 'Identification register'],
 }
 
-# TODO: All start/end sample values in self.put() calls are bogus.
 # TODO: Split off generic ARM/Cortex-M3 parts into another protocol decoder?
 
 # Bits[31:28]: Version (here: 0x3)
@@ -138,44 +137,38 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def putx(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
     def handle_reg_bypass(self, cmd, bits):
-        # TODO
-        self.put(self.ss, self.es, self.out_ann, [0, ['BYPASS: ' + bits]])
+        self.putx([0, ['BYPASS: ' + bits]])
 
     def handle_reg_idcode(self, cmd, bits):
-        # TODO
         # IDCODE is a read-only register which is always accessible.
         # IR == IDCODE: The device ID code is shifted out via DR next.
-        self.put(self.ss, self.es, self.out_ann,
-                 [0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
-                 decode_device_id_code(bits)]])
+        self.putx([0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
+                  decode_device_id_code(bits)]])
 
     def handle_reg_dpacc(self, cmd, bits):
-        # self.put(self.ss, self.es, self.out_ann,
-        #          [0, ['DPACC/%s: %s' % (cmd, bits)]])
         s = data_in('DPACC', bits) if (cmd == 'DR TDI') else data_out(bits)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
+        self.putx([0, [s]])
 
     def handle_reg_apacc(self, cmd, bits):
-        # self.put(self.ss, self.es, self.out_ann,
-        #          [0, ['APACC/%s: %s' % (cmd, bits)]])
         s = data_in('APACC', bits) if (cmd == 'DR TDI') else data_out(bits)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
+        self.putx([0, [s]])
 
     def handle_reg_abort(self, cmd, bits):
         # Bits[31:1]: reserved. Bit[0]: DAPABORT.
         a = '' if (bits[0] == '1') else 'No '
         s = 'DAPABORT = %s: %sDAP abort generated' % (bits[0], a)
-        self.put(self.ss, self.es, self.out_ann, [0, [s]])
+        self.putx([0, [s]])
 
         # Warn if DAPABORT[31:1] contains non-zero bits.
         if (bits[:-1] != ('0' * 31)):
-            self.put(self.ss, self.es, self.out_ann,
-                     [0, ['WARNING: DAPABORT[31:1] reserved!']])
+            self.putx([0, ['WARNING: DAPABORT[31:1] reserved!']])
 
     def handle_reg_unknown(self, cmd, bits):
-        self.put(self.ss, self.es, self.out_ann,
-                 [0, ['Unknown instruction: ' % bits]]) # TODO
+        self.putx([0, ['Unknown instruction: %s' % bits]])
 
     def decode(self, ss, es, data):
         cmd, val = data
@@ -204,7 +197,7 @@ class Decoder(srd.Decoder):
             # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
             # Currently we only care about the latter and use IR[3:0].
             self.state = ir.get(val[-4:], ['UNKNOWN', 0])[0]
-            self.put(self.ss, self.es, self.out_ann, [0, ['IR: ' + self.state]])
+            self.putx([0, ['IR: ' + self.state]])
         elif self.state == 'BYPASS':
             # Here we're interested in incoming bits (TDI).
             if cmd != 'DR TDI':
@@ -225,5 +218,5 @@ class Decoder(srd.Decoder):
                 return
             handle_reg = getattr(self, 'handle_reg_%s' % self.state.lower())
             handle_reg(cmd, val)
-            if cmd == 'DR TDO': # TODO: Assumes 'DR TDI' comes before 'DR TDO'
+            if cmd == 'DR TDO': # Assumes 'DR TDI' comes before 'DR TDO'.
                 self.state = 'IDLE'
