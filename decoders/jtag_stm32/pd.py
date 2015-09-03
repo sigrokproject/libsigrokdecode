@@ -35,6 +35,23 @@ ir = {
 # ARM Cortex-M3 r1p1-01rel0 ID code
 cm3_idcode = 0x3ba00477
 
+# http://infocenter.arm.com/help/topic/com.arm.doc.ddi0413c/Chdjibcg.html
+cm3_idcode_ver = {
+    0x3: 'JTAG-DP',
+    0x2: 'SW-DP',
+}
+cm3_idcode_part = {
+    0xba00: 'JTAG-DP',
+    0xba10: 'SW-DP',
+}
+
+# http://infocenter.arm.com/help/topic/com.arm.doc.faqs/ka14408.html
+jedec_id = {
+    5: {
+        0x3b: 'ARM Ltd.',
+    },
+}
+
 # JTAG ID code in the STM32F10xxx BSC (boundary scan) TAP
 jtag_idcode = {
     0x06412041: 'Low-density device, rev. A',
@@ -81,16 +98,16 @@ apb_ap_reg = {
 # Bits[27:12]: Part number (here: 0xba00)
 #              JTAG-DP: 0xba00, SW-DP: 0xba10
 # Bits[11:1]:  JEDEC (JEP-106) manufacturer ID (here: 0x23b)
-#              Bits[11:8]: Continuation code ('ARM Limited': 0x04)
-#              Bits[7:1]: Identity code ('ARM Limited': 0x3b)
+#              Bits[11:8]: Continuation code ('ARM Ltd.': 0x04)
+#              Bits[7:1]: Identity code ('ARM Ltd.': 0x3b)
 # Bits[0:0]:   Reserved (here: 0x1)
 def decode_device_id_code(bits):
     id_hex = '0x%x' % int('0b' + bits, 2)
-    ver =    '0x%x' % int('0b' + bits[-32:-28], 2)
-    part =   '0x%x' % int('0b' + bits[-28:-12], 2)
-    manuf =  '0x%x' % int('0b' + bits[-12:-1], 2)
-    res =    '0x%x' % int('0b' + bits[-1], 2)
-    return (id_hex, ver, part, manuf, res)
+    ver = cm3_idcode_ver.get(int('0b' + bits[-32:-28], 2), 'UNKNOWN')
+    part = cm3_idcode_part.get(int('0b' + bits[-28:-12], 2), 'UNKNOWN')
+    ids = jedec_id.get(int('0b' + bits[-12:-8], 2) + 1, {})
+    manuf = ids.get(int('0b' + bits[-7:-1], 2), 'UNKNOWN')
+    return (id_hex, manuf, ver, part)
 
 # DPACC is used to access debug port registers (CTRL/STAT, SELECT, RDBUFF).
 # APACC is used to access all Access Port (AHB-AP) registers.
@@ -157,19 +174,22 @@ class Decoder(srd.Decoder):
 
     def handle_reg_idcode(self, cmd, bits):
         # IDCODE is a read-only register which is always accessible.
-        # IR == IDCODE: The device ID code is shifted out via DR next.
+        # IR == IDCODE: The 32bit device ID code is shifted out via DR next.
 
-        s = self.samplenums
-        s.reverse()
-        id_hex, ver, part, manuf, res = decode_device_id_code(bits[:-1])
+        id_hex, manuf, ver, part = decode_device_id_code(bits[:-1])
+        cc = '0x%x' % int('0b' + bits[:-1][-12:-8], 2)
+        ic = '0x%x' % int('0b' + bits[:-1][-7:-1], 2)
+
         self.putf(0, 0, [1, ['Reserved (BS TAP)', 'BS', 'B']])
         self.putf(1, 1, [1, ['Reserved', 'Res', 'R']])
+        self.putf(9, 12, [0, ['Continuation code: %s' % cc, 'CC', 'C']])
+        self.putf(2, 8, [0, ['Identity code: %s' % ic, 'IC', 'I']])
         self.putf(2, 12, [1, ['Manufacturer: %s' % manuf, 'Manuf', 'M']])
         self.putf(13, 28, [1, ['Part: %s' % part, 'Part', 'P']])
         self.putf(29, 32, [1, ['Version: %s' % ver, 'Version', 'V']])
 
-        self.ss = s[1][0]
-        self.putx([2, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
+        self.ss = self.samplenums[1][0]
+        self.putx([2, ['IDCODE: %s (%s: %s/%s)' % \
                   decode_device_id_code(bits[:-1])]])
 
     def handle_reg_dpacc(self, cmd, bits):
@@ -205,6 +225,7 @@ class Decoder(srd.Decoder):
         if cmd != 'NEW STATE':
             # The right-most char in the 'val' bitstring is the LSB.
             val, self.samplenums = val
+            self.samplenums.reverse()
 
         # State machine
         if self.state == 'IDLE':
@@ -217,9 +238,9 @@ class Decoder(srd.Decoder):
             # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
             self.state = ir.get(val[:-1][-4:], ['UNKNOWN', 0])[0]
             bstap_ir = ir.get(val[:-1][:4], ['UNKNOWN', 0])[0]
-            self.putf(3, 0, [1, ['IR (BS TAP): ' + bstap_ir]])
-            self.putf(7, 4, [1, ['IR (M3 TAP): ' + self.state]])
-            self.putf(8, 8, [1, ['Reserved (BS TAP)', 'BS', 'B']])
+            self.putf(5, 8, [1, ['IR (BS TAP): ' + bstap_ir]])
+            self.putf(1, 4, [1, ['IR (M3 TAP): ' + self.state]])
+            self.putf(0, 0, [1, ['Reserved (BS TAP)', 'BS', 'B']])
             self.putx([2, ['IR: %s' % self.state]])
         elif self.state == 'BYPASS':
             # Here we're interested in incoming bits (TDI).
