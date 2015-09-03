@@ -127,7 +127,16 @@ class Decoder(srd.Decoder):
     inputs = ['jtag']
     outputs = ['jtag_stm32']
     annotations = (
-        ('text', 'Human-readable text'),
+        ('item', 'Item'),
+        ('field', 'Field'),
+        ('command', 'Command'),
+        ('warning', 'Warning'),
+    )
+    annotation_rows = (
+        ('items', 'Items', (0,)),
+        ('fields', 'Fields', (1,)),
+        ('commands', 'Commands', (2,)),
+        ('warnings', 'Warnings', (3,)),
     )
 
     def __init__(self, **kwargs):
@@ -140,35 +149,53 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
+    def putf(self, s, e, data):
+        self.put(self.samplenums[s][0], self.samplenums[e][1], self.out_ann, data)
+
     def handle_reg_bypass(self, cmd, bits):
         self.putx([0, ['BYPASS: ' + bits]])
 
     def handle_reg_idcode(self, cmd, bits):
         # IDCODE is a read-only register which is always accessible.
         # IR == IDCODE: The device ID code is shifted out via DR next.
-        self.putx([0, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
-                  decode_device_id_code(bits)]])
+
+        s = self.samplenums
+        s.reverse()
+        id_hex, ver, part, manuf, res = decode_device_id_code(bits[:-1])
+        self.putf(0, 0, [1, ['Reserved (BS TAP)', 'BS', 'B']])
+        self.putf(1, 1, [1, ['Reserved', 'Res', 'R']])
+        self.putf(2, 12, [1, ['Manufacturer: %s' % manuf, 'Manuf', 'M']])
+        self.putf(13, 28, [1, ['Part: %s' % part, 'Part', 'P']])
+        self.putf(29, 32, [1, ['Version: %s' % ver, 'Version', 'V']])
+
+        self.ss = s[1][0]
+        self.putx([2, ['IDCODE: %s (ver=%s, part=%s, manuf=%s, res=%s)' % \
+                  decode_device_id_code(bits[:-1])]])
 
     def handle_reg_dpacc(self, cmd, bits):
+        bits = bits[:-1]
         s = data_in('DPACC', bits) if (cmd == 'DR TDI') else data_out(bits)
-        self.putx([0, [s]])
+        self.putx([2, [s]])
 
     def handle_reg_apacc(self, cmd, bits):
+        bits = bits[:-1]
         s = data_in('APACC', bits) if (cmd == 'DR TDI') else data_out(bits)
-        self.putx([0, [s]])
+        self.putx([2, [s]])
 
     def handle_reg_abort(self, cmd, bits):
+        bits = bits[:-1]
         # Bits[31:1]: reserved. Bit[0]: DAPABORT.
         a = '' if (bits[0] == '1') else 'No '
         s = 'DAPABORT = %s: %sDAP abort generated' % (bits[0], a)
-        self.putx([0, [s]])
+        self.putx([2, [s]])
 
         # Warn if DAPABORT[31:1] contains non-zero bits.
         if (bits[:-1] != ('0' * 31)):
-            self.putx([0, ['WARNING: DAPABORT[31:1] reserved!']])
+            self.putx([3, ['WARNING: DAPABORT[31:1] reserved!']])
 
     def handle_reg_unknown(self, cmd, bits):
-        self.putx([0, ['Unknown instruction: %s' % bits]])
+        bits = bits[:-1]
+        self.putx([2, ['Unknown instruction: %s' % bits]])
 
     def decode(self, ss, es, data):
         cmd, val = data
@@ -176,15 +203,8 @@ class Decoder(srd.Decoder):
         self.ss, self.es = ss, es
 
         if cmd != 'NEW STATE':
-            val, self.samplenums = val
-
             # The right-most char in the 'val' bitstring is the LSB.
-
-            # The STM32F10xxx has two serially connected JTAG TAPs, the
-            # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
-            # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
-            # Due to this, we need to ignore the last bit of each data shift.
-            val = val[:-1]
+            val, self.samplenums = val
 
         # State machine
         if self.state == 'IDLE':
@@ -195,9 +215,12 @@ class Decoder(srd.Decoder):
             # The STM32F10xxx has two serially connected JTAG TAPs, the
             # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
             # See UM 31.5 "STM32F10xxx JTAG TAP connection" for details.
-            # Currently we only care about the latter and use IR[3:0].
-            self.state = ir.get(val[-4:], ['UNKNOWN', 0])[0]
-            self.putx([0, ['IR: ' + self.state]])
+            self.state = ir.get(val[:-1][-4:], ['UNKNOWN', 0])[0]
+            bstap_ir = ir.get(val[:-1][:4], ['UNKNOWN', 0])[0]
+            self.putf(3, 0, [1, ['IR (BS TAP): ' + bstap_ir]])
+            self.putf(7, 4, [1, ['IR (M3 TAP): ' + self.state]])
+            self.putf(8, 8, [1, ['Reserved (BS TAP)', 'BS', 'B']])
+            self.putx([2, ['IR: %s' % self.state]])
         elif self.state == 'BYPASS':
             # Here we're interested in incoming bits (TDI).
             if cmd != 'DR TDI':
