@@ -138,6 +138,8 @@ libsigrokdecode configuration summary:
  - Prefix.......................... $prefix
  - Building on..................... $build
  - Building for.................... $host
+ - C compiler...................... $CC
+ - C compiler flags................ $CFLAGS
  - Additional C compiler flags..... $SRD_EXTRA_CFLAGS
  - C compiler warnings............. $SRD_WFLAGS
 
