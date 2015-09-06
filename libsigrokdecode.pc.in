@@ -2,6 +2,10 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+pkgdatadir=${datadir}/@PACKAGE_TARNAME@
+decodersdir=${pkgdatadir}/decoders
 
 Name: libsigrokdecode
 Description: Protocol decoder library of the sigrok logic analyzer software
