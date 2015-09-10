@@ -546,14 +546,6 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 	PyObject *py_res;
 	srd_logic *logic;
 
-	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
-
-	srd_dbg("Calling decode(), start sample %" PRIu64 ", end sample %"
-		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
-		"%d), instance %s.", start_samplenum, end_samplenum,
-		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
-		di->inst_id);
-
 	/* Return an error upon unusable input. */
 	if (!di) {
 		srd_dbg("empty decoder instance");
@@ -567,6 +559,14 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		srd_dbg("empty buffer");
 		return SRD_ERR_ARG;
 	}
+
+	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
+
+	srd_dbg("Calling decode(), start sample %" PRIu64 ", end sample %"
+		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
+		"%d), instance %s.", start_samplenum, end_samplenum,
+		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
+		di->inst_id);
 
 	/*
 	 * Create new srd_logic object. Each iteration around the PD's loop
