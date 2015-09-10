@@ -37,6 +37,8 @@ AH_TOP([#ifndef SRD_CONFIG_H
 #define SRD_CONFIG_H    /* To stop multiple inclusions. */])
 AH_BOTTOM([#endif /* SRD_CONFIG_H */])
 
+AC_CANONICAL_HOST
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
@@ -44,6 +46,9 @@ AC_PROG_LN_S
 
 # Required for per-target flags or subdir-objects with C sources.
 AM_PROG_CC_C_O
+
+# Get compiler versions.
+SR_PROG_VERSION([$CC], [srd_cc_version])
 
 # Initialize libtool.
 LT_INIT
@@ -138,7 +143,10 @@ libsigrokdecode configuration summary:
  - Prefix.......................... $prefix
  - Building on..................... $build
  - Building for.................... $host
+
+Compile configuration:
  - C compiler...................... $CC
+ - C compiler version.............. $srd_cc_version
  - C compiler flags................ $CFLAGS
  - Additional C compiler flags..... $SRD_EXTRA_CFLAGS
  - C compiler warnings............. $SRD_WFLAGS
