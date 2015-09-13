@@ -310,8 +310,6 @@ SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
 SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data);
 SRD_API int srd_log_callback_set_default(void);
-SRD_API int srd_log_logdomain_set(const char *logdomain);
-SRD_API char *srd_log_logdomain_get(void);
 
 /* error.c */
 SRD_API const char *srd_strerror(int error_code);

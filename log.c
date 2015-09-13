@@ -53,13 +53,6 @@ static srd_log_callback srd_log_cb = srd_logv;
  */
 static void *srd_log_cb_data = NULL;
 
-/* Log domain (a short string that is used as prefix for all messages). */
-/** @cond PRIVATE */
-#define LOGDOMAIN_MAXLEN 30
-#define LOGDOMAIN_DEFAULT "srd: "
-/** @endcond */
-static char srd_log_domain[LOGDOMAIN_MAXLEN + 1] = LOGDOMAIN_DEFAULT;
-
 /**
  * Set the libsigrokdecode loglevel.
  *
@@ -102,50 +95,6 @@ SRD_API int srd_log_loglevel_set(int loglevel)
 SRD_API int srd_log_loglevel_get(void)
 {
 	return cur_loglevel;
-}
-
-/**
- * Set the libsigrokdecode logdomain string.
- *
- * @param logdomain The string to use as logdomain for libsigrokdecode log
- *                  messages from now on. Must not be NULL. The maximum
- *                  length of the string is 30 characters (this does not
- *                  include the trailing NUL-byte). Longer strings are
- *                  silently truncated.
- *                  In order to not use a logdomain, pass an empty string.
- *                  The function makes its own copy of the input string, i.e.
- *                  the caller does not need to keep it around.
- *
- * @return SRD_OK upon success, SRD_ERR_ARG upon invalid logdomain.
- *
- * @since 0.1.0
- */
-SRD_API int srd_log_logdomain_set(const char *logdomain)
-{
-	if (!logdomain) {
-		srd_err("log: %s: logdomain was NULL", __func__);
-		return SRD_ERR_ARG;
-	}
-
-	snprintf((char *)&srd_log_domain, LOGDOMAIN_MAXLEN, "%s", logdomain);
-
-	srd_dbg("Log domain set to '%s'.", (const char *)&srd_log_domain);
-
-	return SRD_OK;
-}
-
-/**
- * Get the currently configured libsigrokdecode logdomain.
- *
- * @return A copy of the currently configured libsigrokdecode logdomain
- *         string. The caller is responsible for g_free()ing the string when
- *         it is no longer needed.
- *
- * @since 0.1.0
- */
-SRD_API char *srd_log_logdomain_get(void)
-{
-	return g_strdup((const char *)&srd_log_domain);
 }
 
 /**
@@ -212,8 +161,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 	if (loglevel > cur_loglevel)
 		return SRD_OK;
 
-	if (srd_log_domain[0] != '\0')
-		fprintf(stderr, "%s", srd_log_domain);
+	fputs("srd: ", stderr);
 	ret = vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 
