@@ -23,6 +23,7 @@
 #include "libsigrokdecode.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <glib/gprintf.h>
 
 /**
  * @file
@@ -153,8 +154,6 @@ SRD_API int srd_log_callback_set_default(void)
 static int srd_logv(void *cb_data, int loglevel, const char *format,
 		    va_list args)
 {
-	int ret;
-
 	/* This specific log callback doesn't need the void pointer data. */
 	(void)cb_data;
 
@@ -162,11 +161,12 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 	if (loglevel > cur_loglevel)
 		return SRD_OK;
 
-	fputs("srd: ", stderr);
-	ret = vfprintf(stderr, format, args);
-	fprintf(stderr, "\n");
+	if (fputs("srd: ", stderr) < 0
+			|| g_vfprintf(stderr, format, args) < 0
+			|| putc('\n', stderr) < 0)
+		return SRD_ERR;
 
-	return ret;
+	return SRD_OK;
 }
 
 /** @private */
