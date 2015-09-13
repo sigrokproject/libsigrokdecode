@@ -66,12 +66,22 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack);
 
 /* log.c */
-SRD_PRIV int srd_log(int loglevel, const char *format, ...);
-SRD_PRIV int srd_spew(const char *format, ...);
-SRD_PRIV int srd_dbg(const char *format, ...);
-SRD_PRIV int srd_info(const char *format, ...);
-SRD_PRIV int srd_warn(const char *format, ...);
-SRD_PRIV int srd_err(const char *format, ...);
+#if defined(G_OS_WIN32) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4))
+/*
+ * On MinGW, we need to specify the gnu_printf format flavor or GCC
+ * will assume non-standard Microsoft printf syntax.
+ */
+SRD_PRIV int srd_log(int loglevel, const char *format, ...)
+		__attribute__((__format__ (__gnu_printf__, 2, 3)));
+#else
+SRD_PRIV int srd_log(int loglevel, const char *format, ...) G_GNUC_PRINTF(2, 3);
+#endif
+
+#define srd_spew(...)	srd_log(SRD_LOG_SPEW, __VA_ARGS__)
+#define srd_dbg(...)	srd_log(SRD_LOG_DBG,  __VA_ARGS__)
+#define srd_info(...)	srd_log(SRD_LOG_INFO, __VA_ARGS__)
+#define srd_warn(...)	srd_log(SRD_LOG_WARN, __VA_ARGS__)
+#define srd_err(...)	srd_log(SRD_LOG_ERR,  __VA_ARGS__)
 
 /* module_sigrokdecode.c */
 PyMODINIT_FUNC PyInit_sigrokdecode(void);
