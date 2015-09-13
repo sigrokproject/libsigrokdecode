@@ -53,7 +53,7 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	/* Should have 2 elements. */
 	if (PyList_Size(obj) != 2) {
 		srd_err("Protocol decoder %s submitted annotation list with "
-			"%d elements instead of 2", di->decoder->name,
+			"%zd elements instead of 2", di->decoder->name,
 			PyList_Size(obj));
 		return SRD_ERR_PYTHON;
 	}
@@ -116,7 +116,7 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 	/* Should have 2 elements. */
 	if (PyTuple_Size(obj) != 2) {
 		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple "
-				"with %d elements instead of 2", di->decoder->name,
+				"with %zd elements instead of 2", di->decoder->name,
 				PyList_Size(obj));
 		return SRD_ERR_PYTHON;
 	}
@@ -251,7 +251,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_PYTHON:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
-			srd_spew("Sending %d-%d to instance %s",
+			srd_spew("Sending %" PRIu64 "-%" PRIu64 " to instance %s",
 				 start_sample, end_sample, next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
 				next_di->py_inst, "decode", "KKO", start_sample,

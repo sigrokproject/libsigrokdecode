@@ -62,7 +62,7 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 	py_str_as_str(py_str, &str);
 	g_string_append(msg, str);
 	Py_DecRef(py_str);
-	srd_err(msg->str);
+	srd_err("%s", msg->str);
 
 	/* Send a more precise error location to srd_dbg(), if we have it. */
 	if (etb && etb != Py_None) {
@@ -75,7 +75,7 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 		py_str_as_str(py_str, &tracestr);
 		Py_DecRef(py_str);
 		g_string_printf(msg, "%s in %s: %s", ename, tracestr, str);
-		srd_dbg(msg->str);
+		srd_dbg("%s", msg->str);
 		g_free(tracestr);
 	}
 	g_free(str);
