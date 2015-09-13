@@ -33,10 +33,6 @@ AM_INIT_AUTOMAKE([1.11 -Wall -Werror no-define subdir-objects check-news color-t
 AM_SILENT_RULES([yes])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
-AH_TOP([#ifndef SRD_CONFIG_H
-#define SRD_CONFIG_H    /* To stop multiple inclusions. */])
-AH_BOTTOM([#endif /* SRD_CONFIG_H */])
-
 AC_CANONICAL_HOST
 
 # Checks for programs.
@@ -46,6 +42,12 @@ AC_PROG_LN_S
 
 # Required for per-target flags or subdir-objects with C sources.
 AM_PROG_CC_C_O
+
+# Set the standard the C library headers should conform to.
+AH_VERBATIM([_POSIX_C_SOURCE], [/* The targeted POSIX standard. */
+#ifndef _POSIX_C_SOURCE
+# define _POSIX_C_SOURCE 200112L
+#endif])
 
 # Get compiler versions.
 SR_PROG_VERSION([$CC], [srd_cc_version])
