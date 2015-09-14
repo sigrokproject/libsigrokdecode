@@ -78,7 +78,7 @@ MAINTAINERCLEANFILES = ChangeLog
 .PHONY: ChangeLog install-decoders
 
 ChangeLog:
-	git --git-dir $(top_srcdir)/.git log > ChangeLog || touch ChangeLog
+	git --git-dir '$(top_srcdir)/.git' log >$@ || touch $@
 
 dist-hook: ChangeLog
 	$(MKDIR_P) $(distdir)/tools
