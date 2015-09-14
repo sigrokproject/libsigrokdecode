@@ -57,6 +57,11 @@ class Decoder(srd.Decoder):
         ('ack-delimiter', 'ACK delimiter'),
         ('stuff-bit', 'Stuff bit'),
         ('warnings', 'Human-readable warnings'),
+        ('bits', 'Bits'),
+    )
+    annotation_rows = (
+        ('bits', 'Bits', (17,)),
+        ('fields', 'Fields', tuple(range(17))),
     )
 
     def __init__(self, **kwargs):
@@ -305,9 +310,8 @@ class Decoder(srd.Decoder):
         # Get the index of the current CAN frame bit (without stuff bits).
         bitnum = len(self.bits) - 1
 
-        # For debugging.
-        # self.putx([0, ['Bit %d (CAN bit %d): %d' % \
-        #           (self.curbit, bitnum, can_rx)]])
+        # Emit a bit value annotation.
+        self.putx([17, [str(can_rx)]])
 
         # If this is a stuff bit, remove it from self.bits and ignore it.
         if self.is_stuff_bit():
