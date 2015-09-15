@@ -77,17 +77,17 @@ class Decoder(srd.Decoder):
     def putp(self, period_t):
         # Adjust granularity.
         if period_t == 0 or period_t >= 1:
-            period_s = u'%u s' % (period_t)
+            period_s = '%.1f s' % (period_t)
         elif period_t <= 1e-12:
-            period_s = u'%.1f fs' % (period_t * 1e15)
+            period_s = '%.1f fs' % (period_t * 1e15)
         elif period_t <= 1e-9:
-            period_s = u'%.1f ps' % (period_t * 1e12)
+            period_s = '%.1f ps' % (period_t * 1e12)
         elif period_t <= 1e-6:
-            period_s = u'%.1f ns' % (period_t * 1e9)
+            period_s = '%.1f ns' % (period_t * 1e9)
         elif period_t <= 1e-3:
-            period_s = u'%.1f μs' % (period_t * 1e6)
+            period_s = '%.1f μs' % (period_t * 1e6)
         else:
-            period_s = u'%.1f ms' % (period_t * 1e3)
+            period_s = '%.1f ms' % (period_t * 1e3)
 
         self.put(self.ss, self.es, self.out_ann, [1, [period_s]])
 
