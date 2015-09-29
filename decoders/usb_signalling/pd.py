@@ -117,9 +117,11 @@ class Decoder(srd.Decoder):
         self.syms = []
         self.bitrate = None
         self.bitwidth = None
-        self.bitnum = 0
+        self.samplepos = None
         self.samplenum_target = None
+        self.samplenum_edge = None
         self.oldpins = None
+        self.edgepins = None
         self.consecutive_ones = 0
         self.state = 'IDLE'
 
@@ -150,16 +152,16 @@ class Decoder(srd.Decoder):
 
     def putpb(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(s - h, s + h, self.out_python, data)
+        self.put(self.samplenum_edge, s + h, self.out_python, data)
 
     def putb(self, data):
         s, h = self.samplenum, self.halfbit
-        self.put(s - h, s + h, self.out_ann, data)
+        self.put(self.samplenum_edge, s + h, self.out_ann, data)
 
     def set_new_target_samplenum(self):
-        bitpos = self.ss_sop + (self.bitwidth / 2)
-        bitpos += self.bitnum * self.bitwidth
-        self.samplenum_target = int(bitpos)
+        self.samplepos += self.bitwidth;
+        self.samplenum_target = int(self.samplepos)
+        self.samplenum_edge = int(self.samplepos - (self.bitwidth / 2))
 
     def wait_for_sop(self, sym):
         # Wait for a Start of Packet (SOP), i.e. a J->K symbol change.
@@ -167,6 +169,7 @@ class Decoder(srd.Decoder):
             self.oldsym = sym
             return
         self.ss_sop = self.samplenum
+        self.samplepos = self.ss_sop - (self.bitwidth / 2) + 0.5
         self.set_new_target_samplenum()
         self.putpx(['SOP', None])
         self.putx([4, ['SOP', 'S']])
@@ -194,15 +197,15 @@ class Decoder(srd.Decoder):
         self.syms.append(sym)
         self.putpb(['SYM', sym])
         self.putb([sym_idx[sym], ['%s' % sym, '%s' % sym[0]]])
-        self.bitnum += 1
         self.set_new_target_samplenum()
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
             # Got an EOP.
             self.putpm(['EOP', None])
             self.putm([5, ['EOP', 'E']])
-            self.bitnum, self.syms, self.state = 0, [], 'IDLE'
+            self.syms, self.state = [], 'IDLE'
             self.consecutive_ones = 0
+            self.bitwidth = float(self.samplerate) / float(self.bitrate)
 
     def get_bit(self, sym):
         if sym == 'SE0':
@@ -214,8 +217,17 @@ class Decoder(srd.Decoder):
         self.syms.append(sym)
         self.putpb(['SYM', sym])
         b = '0' if self.oldsym != sym else '1'
+        if (self.oldsym != sym):
+            # edge
+            edgesym = symbols[self.options['signalling']][tuple(self.edgepins)]
+            if (edgesym not in ('SE0', 'SE1')):
+                if (edgesym == sym):
+                    self.bitwidth = self.bitwidth - (0.001 * self.bitwidth)
+                    self.samplepos = self.samplepos - (0.01 * self.bitwidth)
+                else:
+                    self.bitwidth = self.bitwidth + (0.001 * self.bitwidth)
+                    self.samplepos = self.samplepos + (0.01 * self.bitwidth)
         self.handle_bit(sym, b)
-        self.bitnum += 1
         self.set_new_target_samplenum()
         self.oldsym = sym
 
@@ -231,8 +243,11 @@ class Decoder(srd.Decoder):
                 self.oldpins = pins
                 sym = symbols[self.options['signalling']][tuple(pins)]
                 self.wait_for_sop(sym)
+                self.edgepins = pins
             elif self.state in ('GET BIT', 'GET EOP'):
                 # Wait until we're in the middle of the desired bit.
+                if self.samplenum == self.samplenum_edge:
+                    self.edgepins = pins
                 if self.samplenum < self.samplenum_target:
                     continue
                 sym = symbols[self.options['signalling']][tuple(pins)]
