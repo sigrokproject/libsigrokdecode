@@ -224,36 +224,26 @@ SRD_API int srd_exit(void)
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
 	PyObject *py_cur_path, *py_item;
-	GString *new_path;
-	int wc_len, i;
-	wchar_t *wc_new_path;
-	char *item;
 
 	srd_dbg("Adding '%s' to module path.", path);
 
-	new_path = g_string_sized_new(256);
-	g_string_assign(new_path, path);
 	py_cur_path = PySys_GetObject("path");
-	for (i = 0; i < PyList_Size(py_cur_path); i++) {
-		g_string_append(new_path, G_SEARCHPATH_SEPARATOR_S);
-		py_item = PyList_GetItem(py_cur_path, i);
-		if (!PyUnicode_Check(py_item))
-			/* Shouldn't happen. */
-			continue;
-		if (py_str_as_str(py_item, &item) != SRD_OK)
-			continue;
-		g_string_append(new_path, item);
-		g_free(item);
-	}
+	if (!py_cur_path)
+		return SRD_ERR_PYTHON;
 
-	/* Convert to wide chars. */
-	wc_len = sizeof(wchar_t) * (new_path->len + 1);
-	wc_new_path = g_malloc(wc_len);
-	mbstowcs(wc_new_path, new_path->str, wc_len);
-	PySys_SetPath(wc_new_path);
-	g_string_free(new_path, TRUE);
-	g_free(wc_new_path);
-	searchpaths = g_slist_append(searchpaths, g_strdup(path));
+	py_item = PyUnicode_FromString(path);
+	if (!py_item) {
+		srd_exception_catch("Failed to create Unicode object");
+		return SRD_ERR_PYTHON;
+	}
+	if (PyList_Insert(py_cur_path, 0, py_item) < 0) {
+		srd_exception_catch("Failed to insert path element");
+		Py_DECREF(py_item);
+		return SRD_ERR_PYTHON;
+	}
+	Py_DECREF(py_item);
+
+	searchpaths = g_slist_prepend(searchpaths, g_strdup(path));
 
 	return SRD_OK;
 }
