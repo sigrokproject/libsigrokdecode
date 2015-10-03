@@ -95,6 +95,23 @@ extern SRD_PRIV int max_session_id;
  * @{
  */
 
+static int searchpath_add_xdg_dir(const char *datadir)
+{
+	char *decdir;
+	int ret;
+
+	decdir = g_build_filename(datadir, PACKAGE_TARNAME, "decoders", NULL);
+
+	if (g_file_test(decdir, G_FILE_TEST_IS_DIR))
+		ret = srd_decoder_searchpath_add(decdir);
+	else
+		ret = SRD_OK; /* just ignore non-existing directory */
+
+	g_free(decdir);
+
+	return ret;
+}
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -124,8 +141,10 @@ extern SRD_PRIV int max_session_id;
  */
 SRD_API int srd_init(const char *path)
 {
+	const char *const *sys_datadirs;
+	const char *env_path;
+	size_t i;
 	int ret;
-	char *env_path;
 
 	if (max_session_id != -1) {
 		srd_err("libsigrokdecode is already initialized.");
@@ -140,8 +159,25 @@ SRD_API int srd_init(const char *path)
 	/* Initialize the Python interpreter. */
 	Py_Initialize();
 
-	/* Installed decoders. */
+	/* Locations relative to the XDG system data directories. */
+	sys_datadirs = g_get_system_data_dirs();
+	for (i = g_strv_length((char **)sys_datadirs); i > 0; i--) {
+		ret = searchpath_add_xdg_dir(sys_datadirs[i-1]);
+		if (ret != SRD_OK) {
+			Py_Finalize();
+			return ret;
+		}
+	}
+#ifdef DECODERS_DIR
+	/* Hardcoded decoders install location, if defined. */
 	if ((ret = srd_decoder_searchpath_add(DECODERS_DIR)) != SRD_OK) {
+		Py_Finalize();
+		return ret;
+	}
+#endif
+	/* Location relative to the XDG user data directory. */
+	ret = searchpath_add_xdg_dir(g_get_user_data_dir());
+	if (ret != SRD_OK) {
 		Py_Finalize();
 		return ret;
 	}
@@ -155,7 +191,7 @@ SRD_API int srd_init(const char *path)
 	}
 
 	/* Environment variable overrides everything, for debugging. */
-	if ((env_path = getenv("SIGROKDECODE_DIR"))) {
+	if ((env_path = g_getenv("SIGROKDECODE_DIR"))) {
 		if ((ret = srd_decoder_searchpath_add(env_path)) != SRD_OK) {
 			Py_Finalize();
 			return ret;
