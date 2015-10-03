@@ -128,19 +128,27 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 		GVariant *data)
 {
 	PyObject *py_ret;
+	GSList *l;
+	struct srd_decoder_inst *next_di;
+	int ret;
 
 	if (key != SRD_CONF_SAMPLERATE)
 		/* This is the only key we pass on to the decoder for now. */
 		return SRD_OK;
 
-	if (!PyObject_HasAttrString(di->py_inst, "metadata"))
-		/* This decoder doesn't want metadata, that's fine. */
-		return SRD_OK;
+	if (PyObject_HasAttrString(di->py_inst, "metadata")) {
+		py_ret = PyObject_CallMethod(di->py_inst, "metadata", "lK",
+				(long)SRD_CONF_SAMPLERATE,
+				(unsigned long long)g_variant_get_uint64(data));
+		Py_XDECREF(py_ret);
+	}
 
-	py_ret = PyObject_CallMethod(di->py_inst, "metadata", "lK",
-			(long)SRD_CONF_SAMPLERATE,
-			(unsigned long long)g_variant_get_uint64(data));
-	Py_XDECREF(py_ret);
+	/* Push metadata to all the PDs stacked on top of this one. */
+	for (l = di->next_di; l; l = l->next) {
+		next_di = l->data;
+		if ((ret = srd_inst_send_meta(next_di, key, data)) != SRD_OK)
+			return ret;
+	}
 
 	return SRD_OK;
 }
