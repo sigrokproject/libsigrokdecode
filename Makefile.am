@@ -75,7 +75,7 @@ tests_main_SOURCES = \
 	tests/inst.c \
 	tests/session.c
 
-tests_main_CPPFLAGS = -DDECODERS_DIR='"$(abs_top_srcdir)/decoders"'
+tests_main_CPPFLAGS = -DDECODERS_TESTDIR='"$(abs_top_srcdir)/decoders"'
 tests_main_LDADD = libsigrokdecode.la $(SRD_EXTRA_LIBS) $(TESTS_LIBS)
 
 MAINTAINERCLEANFILES = ChangeLog
