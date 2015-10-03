@@ -23,7 +23,12 @@ AM_LIBTOOLFLAGS = --silent
 GNUMAKEFLAGS = --no-print-directory
 
 DECODERS_DIR = $(pkgdatadir)/decoders
+# Do not hard-code the decoders location on Windows.
+if WIN32
+AM_CPPFLAGS =
+else
 AM_CPPFLAGS = -DDECODERS_DIR='"$(DECODERS_DIR)"'
+endif
 
 # The tests CFLAGS are a superset of the libsigrokdecode CFLAGS.
 AM_CFLAGS = $(SRD_EXTRA_CFLAGS) $(SRD_WFLAGS) $(TESTS_CFLAGS)
