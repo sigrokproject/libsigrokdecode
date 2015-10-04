@@ -460,7 +460,7 @@ class Decoder(srd.Decoder):
         else:
             c = '%02x %02x' % tuple(cmd)
             r = '%02x %02x' % tuple(ret)
-            self.putx(0, 16, ['Uknown command: %s (reply: %s)!' % (c, r)])
+            self.putx(0, 16, ['Unknown command: %s (reply: %s)!' % (c, r)])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
