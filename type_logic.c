@@ -73,14 +73,25 @@ static PyObject *srd_logic_iternext(PyObject *self)
 	return logic->sample;
 }
 
-/** @cond PRIVATE */
-SRD_PRIV PyTypeObject srd_logic_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-	.tp_name = "srd_logic",
-	.tp_basicsize = sizeof(srd_logic),
-	.tp_flags = Py_TPFLAGS_DEFAULT,
-	.tp_doc = "Sigrokdecode logic sample object",
-	.tp_iter = srd_logic_iter,
-	.tp_iternext = srd_logic_iternext,
-};
-/** @endcond */
+/** Create the srd_logic type.
+ * @return The new type object.
+ * @private
+ */
+SRD_PRIV PyObject *srd_logic_type_new(void)
+{
+	PyType_Spec spec;
+	PyType_Slot slots[] = {
+		{ Py_tp_doc, "sigrokdecode logic sample object" },
+		{ Py_tp_iter, (void *)&srd_logic_iter },
+		{ Py_tp_iternext, (void *)&srd_logic_iternext },
+		{ Py_tp_new, (void *)&PyType_GenericNew },
+		{ 0, NULL }
+	};
+	spec.name = "srd_logic";
+	spec.basicsize = sizeof(srd_logic);
+	spec.itemsize = 0;
+	spec.flags = Py_TPFLAGS_DEFAULT;
+	spec.slots = slots;
+
+	return PyType_FromSpec(&spec);
+}

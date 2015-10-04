@@ -22,6 +22,9 @@
 #ifndef LIBSIGROKDECODE_LIBSIGROKDECODE_INTERNAL_H
 #define LIBSIGROKDECODE_LIBSIGROKDECODE_INTERNAL_H
 
+/* Use the stable ABI subset as per PEP 384. */
+#define Py_LIMITED_API 0x03020000
+
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "libsigrokdecode.h"
 
@@ -83,16 +86,20 @@ SRD_PRIV int srd_log(int loglevel, const char *format, ...) G_GNUC_PRINTF(2, 3);
 #define srd_warn(...)	srd_log(SRD_LOG_WARN, __VA_ARGS__)
 #define srd_err(...)	srd_log(SRD_LOG_ERR,  __VA_ARGS__)
 
+/* type_decoder.c */
+SRD_PRIV PyObject *srd_Decoder_type_new(void);
+
+/* type_logic.c */
+SRD_PRIV PyObject *srd_logic_type_new(void);
+
 /* module_sigrokdecode.c */
 PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* util.c */
-SRD_PRIV int py_attr_as_str(const PyObject *py_obj, const char *attr,
-        char **outstr);
-SRD_PRIV int py_dictitem_as_str(const PyObject *py_obj, const char *key,
-        char **outstr);
-SRD_PRIV int py_str_as_str(const PyObject *py_str, char **outstr);
-SRD_PRIV int py_strseq_to_char(const PyObject *py_strseq, char ***outstr);
+SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
+SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
+SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv);
 
 /* exception.c */
 SRD_PRIV void srd_exception_catch(const char *format, ...);

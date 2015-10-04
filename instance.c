@@ -30,8 +30,8 @@
 
 extern SRD_PRIV GSList *sessions;
 
-/* type_logic.c */
-extern SRD_PRIV PyTypeObject srd_logic_type;
+/* module_sigrokdecode.c */
+extern SRD_PRIV PyObject *srd_logic_type;
 
 /** @endcond */
 
@@ -163,7 +163,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 err_out:
 	Py_XDECREF(py_optval);
 	if (PyErr_Occurred()) {
-		srd_exception_catch("Stray exception in srd_inst_option_set().");
+		srd_exception_catch("Stray exception in srd_inst_option_set()");
 		ret = SRD_ERR_PYTHON;
 	}
 
@@ -341,7 +341,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
-			srd_exception_catch("failed to create %s instance: ",
+			srd_exception_catch("Failed to create %s instance",
 					decoder_id);
 		g_free(di->dec_channelmap);
 		g_free(di);
@@ -505,7 +505,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 			di->inst_id);
 
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "start", NULL))) {
-		srd_exception_catch("Protocol decoder instance %s: ",
+		srd_exception_catch("Protocol decoder instance %s",
 				di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
@@ -572,7 +572,7 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 	 * Create new srd_logic object. Each iteration around the PD's loop
 	 * will fill one sample into this object.
 	 */
-	logic = PyObject_New(srd_logic, &srd_logic_type);
+	logic = PyObject_New(srd_logic, (PyTypeObject *)srd_logic_type);
 	Py_INCREF(logic);
 	logic->di = (struct srd_decoder_inst *)di;
 	logic->start_samplenum = start_samplenum;
@@ -585,7 +585,7 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 	Py_IncRef(di->py_inst);
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
 			"KKO", start_samplenum, end_samplenum, logic))) {
-		srd_exception_catch("Protocol decoder instance %s: ",
+		srd_exception_catch("Protocol decoder instance %s",
 				di->inst_id);
 		return SRD_ERR_PYTHON;
 	}

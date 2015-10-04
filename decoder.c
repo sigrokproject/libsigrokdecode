@@ -225,8 +225,7 @@ static int get_options(struct srd_decoder *d)
 				o->def = g_variant_new_double(dval);
 			} else {
 				srd_err("Protocol decoder %s option 'default' has "
-						"value of unsupported type '%s'.", d->name,
-						Py_TYPE(py_default)->tp_name);
+						"value of unsupported type.", d->name);
 				return SRD_ERR_PYTHON;
 			}
 			g_variant_ref_sink(o->def);
@@ -333,7 +332,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	/* Import the Python module. */
 	if (!(d->py_mod = PyImport_ImportModule(module_name))) {
-		srd_exception_catch("Import of '%s' failed.", module_name);
+		srd_exception_catch("Import of '%s' failed", module_name);
 		goto err_out;
 	}
 
@@ -376,7 +375,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "start");
-	if (!PyFunction_Check(py_method)) {
+	if (!PyCallable_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'start' "
 			"is not a method.", module_name);
 		goto err_out;
@@ -390,7 +389,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 		goto err_out;
 	}
 	py_method = PyObject_GetAttrString(d->py_dec, "decode");
-	if (!PyFunction_Check(py_method)) {
+	if (!PyCallable_Check(py_method)) {
 		srd_err("Protocol decoder %s Decoder class attribute 'decode' "
 			"is not a method.", module_name);
 		goto err_out;
@@ -588,7 +587,7 @@ SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 		return NULL;
 
 	if (!(py_str = PyObject_GetAttrString(dec->py_mod, "__doc__"))) {
-		srd_exception_catch("");
+		srd_exception_catch("Failed to get docstring");
 		return NULL;
 	}
 
