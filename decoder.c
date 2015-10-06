@@ -597,7 +597,7 @@ static int check_method(PyObject *py_dec, const char *mod_name,
  */
 SRD_API int srd_decoder_load(const char *module_name)
 {
-	PyObject *py_modname, *py_basedec, *py_apiver;
+	PyObject *py_basedec, *py_apiver;
 	struct srd_decoder *d;
 	long apiver;
 	int is_subclass;
@@ -617,13 +617,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	d = g_malloc0(sizeof(struct srd_decoder));
 
-	/* Import the Python module. */
-	py_modname = PyUnicode_FromString(module_name);
-	if (!py_modname)
-		goto except_out;
-
-	d->py_mod = PyImport_Import(py_modname);
-	Py_DECREF(py_modname);
+	d->py_mod = py_import_by_name(module_name);
 	if (!d->py_mod)
 		goto except_out;
 
@@ -806,15 +800,9 @@ static void srd_decoder_load_all_zip_path(char *path)
 	char *prefix;
 	size_t prefix_len;
 
-	zipimport_mod = NULL;
 	set = files = prefix_obj = zipimporter = zipimporter_class = NULL;
 
-	modname = PyUnicode_FromString("zipimport");
-	if (!modname)
-		goto err_out;
-
-	zipimport_mod = PyImport_Import(modname);
-	Py_DECREF(modname);
+	zipimport_mod = py_import_by_name("zipimport");
 	if (zipimport_mod == NULL)
 		goto err_out;
 

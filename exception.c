@@ -84,7 +84,7 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 {
 	va_list args;
 	PyObject *py_etype, *py_evalue, *py_etraceback;
-	PyObject *py_modname, *py_mod, *py_func, *py_tracefmt;
+	PyObject *py_mod, *py_func, *py_tracefmt;
 	char *msg, *etype_name, *evalue_str, *tracefmt_str;
 	const char *etype_name_fallback;
 
@@ -118,13 +118,7 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 	if (!py_etraceback)
 		goto cleanup;
 
-	py_modname = PyUnicode_FromString("traceback");
-	if (!py_modname)
-		goto cleanup;
-
-	py_mod = PyImport_Import(py_modname);
-	Py_DECREF(py_modname);
-
+	py_mod = py_import_by_name("traceback");
 	if (!py_mod)
 		goto cleanup;
 

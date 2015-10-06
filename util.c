@@ -22,6 +22,32 @@
 #include "libsigrokdecode-internal.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 
 /**
+ * Import a Python module by name.
+ *
+ * This function is implemented in terms of PyImport_Import() rather than
+ * PyImport_ImportModule(), so that the import hooks are not bypassed.
+ *
+ * @param[in] name The name of the module to load as UTF-8 string.
+ * @return The Python module object, or NULL if an exception occurred. The
+ *  caller is responsible for evaluating and clearing the Python error state.
+ *
+ * @private
+ */
+SRD_PRIV PyObject *py_import_by_name(const char *name)
+{
+	PyObject *py_mod, *py_modname;
+
+	py_modname = PyUnicode_FromString(name);
+	if (!py_modname)
+		return NULL;
+
+	py_mod = PyImport_Import(py_modname);
+	Py_DECREF(py_modname);
+
+	return py_mod;
+}
+
+/**
  * Get the value of a Python object's attribute, returned as a newly
  * allocated char *.
  *
@@ -196,6 +222,8 @@ err_out:
  *
  * @param[in] py_obj The Python object. Must not be NULL.
  * @return A floating reference to a new variant, or NULL on failure.
+ *
+ * @private
  */
 SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 {

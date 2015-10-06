@@ -96,6 +96,7 @@ SRD_PRIV PyObject *srd_logic_type_new(void);
 PyMODINIT_FUNC PyInit_sigrokdecode(void);
 
 /* util.c */
+SRD_PRIV PyObject *py_import_by_name(const char *name);
 SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
