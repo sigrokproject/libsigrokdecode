@@ -33,7 +33,9 @@ Packet:
  - 'ADDR', <addr>
  - 'EP', <ep>
  - 'CRC5', <crc5>
+ - 'CRC5 ERROR', <crc5>
  - 'CRC16', <crc16>
+ - 'CRC16 ERROR', <crc16>
  - 'EOP', <eop>
  - 'FRAMENUM', <framenum>
  - 'DATABYTE', <databyte>
