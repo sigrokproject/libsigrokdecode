@@ -145,7 +145,7 @@ def bitstr_to_num(bitstr):
 def reverse_number(num, count):
     out = list(count * '0')
     for i in range(0, count):
-        if (num >> i & 1):
+        if num >> i & 1:
             out[i] = '1';
     return int(''.join(out), 2)
 
@@ -154,7 +154,7 @@ def calc_crc5(bitstr):
     crc5 = 0x1f
     for bit in bitstr:
         crc5 <<= 1
-        if (int(bit) != (crc5 >> 5)):
+        if int(bit) != (crc5 >> 5):
             crc5 ^= poly5
         crc5 &= 0x1f
     crc5 ^= 0x1f
@@ -165,7 +165,7 @@ def calc_crc16(bitstr):
     crc16 = 0xffff
     for bit in bitstr:
         crc16 <<= 1
-        if (int(bit) != (crc16 >> 16)):
+        if int(bit) != (crc16 >> 16):
             crc16 ^= poly16
         crc16 &= 0xffff
     crc16 ^= 0xffff
@@ -314,7 +314,7 @@ class Decoder(srd.Decoder):
             crc5 = bitstr_to_num(packet[27:31 + 1])
             crc5_calc = calc_crc5(packet[16:27])
             self.ss, self.es = self.bits[27][1], self.bits[31][2]
-            if (crc5 == crc5_calc):
+            if crc5 == crc5_calc:
                 self.putpb(['CRC5', crc5])
                 self.putb([6, ['CRC5: 0x%02X' % crc5, 'CRC5', 'C']])
             else:
@@ -346,7 +346,7 @@ class Decoder(srd.Decoder):
             crc16 = bitstr_to_num(packet[-16:])
             crc16_calc = calc_crc16(packet[16:-16])
             self.ss, self.es = self.bits[-16][1], self.bits[-1][2]
-            if (crc16 == crc16_calc):
+            if crc16 == crc16_calc:
                 self.putpb(['CRC16', crc16])
                 self.putb([9, ['CRC16: 0x%04X' % crc16, 'CRC16', 'C']])
             else:

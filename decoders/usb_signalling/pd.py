@@ -217,11 +217,10 @@ class Decoder(srd.Decoder):
         self.syms.append(sym)
         self.putpb(['SYM', sym])
         b = '0' if self.oldsym != sym else '1'
-        if (self.oldsym != sym):
-            # edge
+        if self.oldsym != sym:
             edgesym = symbols[self.options['signalling']][tuple(self.edgepins)]
-            if (edgesym not in ('SE0', 'SE1')):
-                if (edgesym == sym):
+            if edgesym not in ('SE0', 'SE1'):
+                if edgesym == sym:
                     self.bitwidth = self.bitwidth - (0.001 * self.bitwidth)
                     self.samplepos = self.samplepos - (0.01 * self.bitwidth)
                 else:
