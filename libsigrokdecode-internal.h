@@ -100,6 +100,7 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
 SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv);
+SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj);
 
 /* exception.c */
 SRD_PRIV void srd_exception_catch(const char *format, ...);

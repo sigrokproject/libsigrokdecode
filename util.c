@@ -189,3 +189,53 @@ err_out:
 
 	return SRD_ERR_PYTHON;
 }
+
+/**
+ * Convert a Python scalar object to a GLib variant.
+ * Supported variant types are string, int64 and double.
+ *
+ * @param[in] py_obj The Python object. Must not be NULL.
+ * @return A floating reference to a new variant, or NULL on failure.
+ */
+SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
+{
+	GVariant *var = NULL;
+
+	if (PyUnicode_Check(py_obj)) { /* string */
+		PyObject *py_bytes;
+		const char *str;
+
+		py_bytes = PyUnicode_AsUTF8String(py_obj);
+		if (py_bytes) {
+			str = PyBytes_AsString(py_bytes);
+			if (str)
+				var = g_variant_new_string(str);
+			Py_DECREF(py_bytes);
+		}
+		if (!var)
+			srd_exception_catch("Failed to extract string value");
+
+	} else if (PyLong_Check(py_obj)) { /* integer */
+		int64_t val;
+
+		val = PyLong_AsLongLong(py_obj);
+		if (!PyErr_Occurred())
+			var = g_variant_new_int64(val);
+		else
+			srd_exception_catch("Failed to extract integer value");
+
+	} else if (PyFloat_Check(py_obj)) { /* float */
+		double val;
+
+		val = PyFloat_AsDouble(py_obj);
+		if (!PyErr_Occurred())
+			var = g_variant_new_double(val);
+		else
+			srd_exception_catch("Failed to extract float value");
+
+	} else {
+		srd_err("Failed to extract value of unsupported type.");
+	}
+
+	return var;
+}
