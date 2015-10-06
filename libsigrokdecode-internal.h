@@ -104,6 +104,15 @@ SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv);
 SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj);
 
 /* exception.c */
-SRD_PRIV void srd_exception_catch(const char *format, ...);
+#if defined(G_OS_WIN32) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4))
+/*
+ * On MinGW, we need to specify the gnu_printf format flavor or GCC
+ * will assume non-standard Microsoft printf syntax.
+ */
+SRD_PRIV void srd_exception_catch(const char *format, ...)
+		__attribute__((__format__ (__gnu_printf__, 1, 2)));
+#else
+SRD_PRIV void srd_exception_catch(const char *format, ...) G_GNUC_PRINTF(1, 2);
+#endif
 
 #endif
