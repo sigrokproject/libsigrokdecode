@@ -225,6 +225,7 @@ class Decoder(srd.Decoder):
         # The startbit must be 0. If not, we report an error.
         if self.startbit[rxtx] != 0:
             self.putp(['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
+            self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
             # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit[rxtx] = 0
@@ -324,7 +325,7 @@ class Decoder(srd.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
             self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
-            self.putg([rxtx + 8, ['Frame error', 'Frame err', 'FE']])
+            self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
             # TODO: Abort? Ignore the frame? Other?
 
         self.state[rxtx] = 'WAIT FOR START BIT'
