@@ -39,7 +39,7 @@
 
 /** @cond PRIVATE */
 
-/* The list of protocol decoders. */
+/* The list of loaded protocol decoders. */
 static GSList *pd_list = NULL;
 
 /* srd.c */
@@ -64,7 +64,7 @@ static gboolean srd_check_init(void)
 }
 
 /**
- * Returns the list of supported/loaded protocol decoders.
+ * Returns the list of loaded protocol decoders.
  *
  * This is a GSList of pointers to struct srd_decoder items.
  *
@@ -704,7 +704,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (get_binary_classes(d) != SRD_OK)
 		goto err_out;
 
-	/* Append it to the list of supported/loaded decoders. */
+	/* Append it to the list of loaded decoders. */
 	pd_list = g_slist_append(pd_list, d);
 
 	return SRD_OK;
@@ -786,6 +786,9 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 		sess = l->data;
 		srd_inst_free_all(sess, NULL);
 	}
+
+	/* Remove the PD from the list of loaded decoders. */
+	pd_list = g_slist_remove(pd_list, dec);
 
 	decoder_free(dec);
 
