@@ -34,7 +34,7 @@ Packet:
    channel was not supplied.
  - 'BITS': <data1>/<data2> contain a list of bit values in this MOSI/MISO data
    item, and for each of those also their respective start-/endsample numbers.
- - 'CS CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
+ - 'CS-CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
    Both data items are Python numbers (0/1), not strings. At the beginning of
    the decoding a packet is generated with <data1> = None and <data2> being the
    initial state of the CS# pin or None if the chip select pin is not supplied.
