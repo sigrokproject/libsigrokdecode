@@ -20,6 +20,9 @@
 ##
 
 import sigrokdecode as srd
+from collections import namedtuple
+
+Data = namedtuple('Data', ['ss', 'es', 'val'])
 
 '''
 OUTPUT_PYTHON format:
@@ -38,6 +41,9 @@ Packet:
    Both data items are Python numbers (0/1), not strings. At the beginning of
    the decoding a packet is generated with <data1> = None and <data2> being the
    initial state of the CS# pin or None if the chip select pin is not supplied.
+ - 'TRANSFER': <data1>/<data2> contain a list of Data() namedtuples for each
+   byte transferred during this block of CS# asserted time. Each Data() has
+   fields ss, es, and val.
 
 Examples:
  ['CS-CHANGE', None, 1]
@@ -51,6 +57,8 @@ Examples:
  ['DATA', 0xa8, None]
  ['DATA', None, 0x55]
  ['CS-CHANGE', 0, 1]
+ ['TRANSFER', [Data(ss=80, es=96, val=0xff), ...],
+              [Data(ss=80, es=96, val=0x3a), ...]]
 '''
 
 # Key: (CPOL, CPHA). Value: SPI mode.
@@ -123,8 +131,11 @@ class Decoder(srd.Decoder):
         self.misodata = self.mosidata = 0
         self.misobits = []
         self.mosibits = []
+        self.misobytes = []
+        self.mosibytes = []
         self.ss_block = -1
         self.samplenum = -1
+        self.ss_transfer = -1
         self.cs_was_deasserted = False
         self.oldcs = None
         self.oldpins = None
@@ -161,6 +172,11 @@ class Decoder(srd.Decoder):
 
         self.put(ss, es, self.out_python, ['BITS', si_bits, so_bits])
         self.put(ss, es, self.out_python, ['DATA', si, so])
+
+        if self.have_miso:
+            self.misobytes.append(Data(ss=ss, es=es, val=so))
+        if self.have_mosi:
+            self.mosibytes.append(Data(ss=ss, es=es, val=si))
 
         # Bit annotations.
         if self.have_miso:
@@ -253,6 +269,15 @@ class Decoder(srd.Decoder):
             self.put(self.samplenum, self.samplenum, self.out_python,
                      ['CS-CHANGE', self.oldcs, cs])
             self.oldcs = cs
+
+            if self.cs_asserted(cs):
+                self.ss_transfer = self.samplenum
+                self.misobytes = []
+                self.mosibytes = []
+            else:
+                self.put(self.ss_transfer, self.samplenum, self.out_python,
+                    ['TRANSFER', self.mosibytes, self.misobytes])
+
             # Reset decoder state when CS# changes (and the CS# pin is used).
             self.reset_decoder_state()
 
