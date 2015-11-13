@@ -113,7 +113,6 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
-        self.ss_sop = None
         self.ss_block = None
         self.samplenum = 0
         self.syms = []
@@ -171,8 +170,7 @@ class Decoder(srd.Decoder):
             self.oldsym = sym
             return
         self.consecutive_ones = 0
-        self.ss_sop = self.samplenum
-        self.samplepos = self.ss_sop - (self.bitwidth / 2) + 0.5
+        self.samplepos = self.samplenum - (self.bitwidth / 2) + 0.5
         self.set_new_target_samplenum()
         self.putpx(['SOP', None])
         self.putx([4, ['SOP', 'S']])
