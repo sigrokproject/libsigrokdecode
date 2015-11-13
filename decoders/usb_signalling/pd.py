@@ -209,6 +209,10 @@ class Decoder(srd.Decoder):
             self.putm([5, ['EOP', 'E']])
             self.state = 'IDLE'
             self.bitwidth = float(self.samplerate) / float(self.bitrate)
+        else:
+            self.putpm(['ERR', None])
+            self.putm([8, ['EOP Error', 'EErr', 'E']])
+            self.state = 'IDLE'
 
     def get_bit(self, sym):
         if sym == 'SE0':
