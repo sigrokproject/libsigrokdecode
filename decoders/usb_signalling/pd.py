@@ -34,6 +34,8 @@ Packet:
  - 'STUFF BIT', None
  - 'EOP', None
  - 'ERR', None
+ - 'KEEP ALIVE', None
+ - 'RESET', None
 
 <sym>:
  - 'J', 'K', 'SE0', or 'SE1'
@@ -104,9 +106,11 @@ class Decoder(srd.Decoder):
         ('bit', 'Bit'),
         ('stuffbit', 'Stuff bit'),
         ('error', 'Error'),
+        ('keep-alive', 'Low-speed keep-alive'),
+        ('reset', 'Reset'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (4, 5, 6, 7, 8)),
+        ('bits', 'Bits', (4, 5, 6, 7, 8, 9, 10)),
         ('symbols', 'Symbols', (0, 1, 2, 3)),
     )
 
@@ -124,7 +128,7 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.edgepins = None
         self.consecutive_ones = 0
-        self.state = 'IDLE'
+        self.state = 'INIT'
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -168,8 +172,7 @@ class Decoder(srd.Decoder):
 
     def wait_for_sop(self, sym):
         # Wait for a Start of Packet (SOP), i.e. a J->K symbol change.
-        if sym != 'K':
-            self.oldsym = sym
+        if sym != 'K' or self.oldsym != 'J':
             return
         self.consecutive_ones = 0
         self.samplepos = self.samplenum - (self.bitwidth / 2) + 0.5
@@ -239,6 +242,17 @@ class Decoder(srd.Decoder):
                     self.samplepos = self.samplepos + (0.01 * self.bitwidth)
         self.oldsym = sym
 
+    def handle_idle(self, sym):
+        self.samplenum_edge = self.samplenum
+        se0_length = float(self.samplenum - self.samplenum_lastedge) / self.samplerate
+        if se0_length > 2.5e-6: # 2.5us
+            self.putpb(['RESET', None])
+            self.putb([10, ['Reset', 'Res', 'R']])
+        elif se0_length > 1.2e-6 and self.options['signalling'] == 'low-speed':
+            self.putpb(['KEEP ALIVE', None])
+            self.putb([9, ['Keep-alive', 'KA', 'A']])
+        self.state = 'IDLE'
+
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -250,7 +264,11 @@ class Decoder(srd.Decoder):
                     continue
                 self.oldpins = pins
                 sym = symbols[self.options['signalling']][tuple(pins)]
-                self.wait_for_sop(sym)
+                if sym == 'SE0':
+                    self.samplenum_lastedge = self.samplenum
+                    self.state = 'WAIT IDLE'
+                else:
+                    self.wait_for_sop(sym)
                 self.edgepins = pins
             elif self.state in ('GET BIT', 'GET EOP'):
                 # Wait until we're in the middle of the desired bit.
@@ -263,3 +281,17 @@ class Decoder(srd.Decoder):
                     self.get_bit(sym)
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
+            elif self.state == 'WAIT IDLE':
+                if self.oldpins == pins:
+                    continue
+                sym = symbols[self.options['signalling']][tuple(pins)]
+                if self.samplenum - self.samplenum_lastedge > 1:
+                    self.handle_idle(sym)
+                else:
+                    self.wait_for_sop(sym)
+                self.oldpins = pins
+                self.edgepins = pins
+            elif self.state == 'INIT':
+                sym = symbols[self.options['signalling']][tuple(pins)]
+                self.handle_idle(sym)
+                self.oldpins = pins
