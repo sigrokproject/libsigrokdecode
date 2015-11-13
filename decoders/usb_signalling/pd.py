@@ -120,6 +120,7 @@ class Decoder(srd.Decoder):
         self.samplepos = None
         self.samplenum_target = None
         self.samplenum_edge = None
+        self.samplenum_lastedge = 0
         self.oldpins = None
         self.edgepins = None
         self.consecutive_ones = 0
@@ -134,33 +135,35 @@ class Decoder(srd.Decoder):
             self.samplerate = value
             self.bitrate = bitrates[self.options['signalling']]
             self.bitwidth = float(self.samplerate) / float(self.bitrate)
-            self.halfbit = int(self.bitwidth / 2)
 
     def putpx(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_python, data)
+        s = self.samplenum_edge
+        self.put(s, s, self.out_python, data)
 
     def putx(self, data):
-        self.put(self.samplenum, self.samplenum, self.out_ann, data)
+        s = self.samplenum_edge
+        self.put(s, s, self.out_ann, data)
 
     def putpm(self, data):
-        s, h = self.samplenum, self.halfbit
-        self.put(self.ss_block - h, s + h, self.out_python, data)
+        e = self.samplenum_edge
+        self.put(self.ss_block, e, self.out_python, data)
 
     def putm(self, data):
-        s, h = self.samplenum, self.halfbit
-        self.put(self.ss_block - h, s + h, self.out_ann, data)
+        e = self.samplenum_edge
+        self.put(self.ss_block, e, self.out_ann, data)
 
     def putpb(self, data):
-        s, h = self.samplenum, self.halfbit
-        self.put(self.samplenum_edge, s + h, self.out_python, data)
+        s, e = self.samplenum_lastedge, self.samplenum_edge
+        self.put(s, e, self.out_python, data)
 
     def putb(self, data):
-        s, h = self.samplenum, self.halfbit
-        self.put(self.samplenum_edge, s + h, self.out_ann, data)
+        s, e = self.samplenum_lastedge, self.samplenum_edge
+        self.put(s, e, self.out_ann, data)
 
     def set_new_target_samplenum(self):
         self.samplepos += self.bitwidth;
         self.samplenum_target = int(self.samplepos)
+        self.samplenum_lastedge = self.samplenum_edge
         self.samplenum_edge = int(self.samplepos - (self.bitwidth / 2))
 
     def wait_for_sop(self, sym):
@@ -197,9 +200,9 @@ class Decoder(srd.Decoder):
 
     def get_eop(self, sym):
         # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
+        self.set_new_target_samplenum()
         self.putpb(['SYM', sym])
         self.putb(sym_annotation[sym])
-        self.set_new_target_samplenum()
         self.oldsym = sym
         if sym == 'SE0':
             pass
@@ -215,10 +218,11 @@ class Decoder(srd.Decoder):
             self.state = 'IDLE'
 
     def get_bit(self, sym):
+        self.set_new_target_samplenum()
         if sym == 'SE0':
             # Start of an EOP. Change state, save edge
             self.state = 'GET EOP'
-            self.ss_block = self.samplenum
+            self.ss_block = self.samplenum_lastedge
         else:
             b = '0' if self.oldsym != sym else '1'
             self.handle_bit(b)
@@ -233,7 +237,6 @@ class Decoder(srd.Decoder):
                 else:
                     self.bitwidth = self.bitwidth + (0.001 * self.bitwidth)
                     self.samplepos = self.samplepos + (0.01 * self.bitwidth)
-        self.set_new_target_samplenum()
         self.oldsym = sym
 
     def decode(self, ss, es, data):
