@@ -33,12 +33,13 @@ Packet:
  - 'BIT', <bit>
  - 'STUFF BIT', None
  - 'EOP', None
+ - 'ERR', None
 
 <sym>:
  - 'J', 'K', 'SE0', or 'SE1'
 
 <bit>:
- - 0 or 1
+ - '0' or '1'
  - Note: Symbols like SE0, SE1, and the J that's part of EOP don't yield 'BIT'.
 '''
 
@@ -102,9 +103,10 @@ class Decoder(srd.Decoder):
         ('eop', 'End of packet (EOP)'),
         ('bit', 'Bit'),
         ('stuffbit', 'Stuff bit'),
+        ('error', 'Error'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (4, 5, 6, 7)),
+        ('bits', 'Bits', (4, 5, 6, 7, 8)),
         ('symbols', 'Symbols', (0, 1, 2, 3)),
     )
 
@@ -168,6 +170,7 @@ class Decoder(srd.Decoder):
         if sym != 'K':
             self.oldsym = sym
             return
+        self.consecutive_ones = 0
         self.ss_sop = self.samplenum
         self.samplepos = self.ss_sop - (self.bitwidth / 2) + 0.5
         self.set_new_target_samplenum()
@@ -176,11 +179,16 @@ class Decoder(srd.Decoder):
         self.state = 'GET BIT'
 
     def handle_bit(self, sym, b):
-        if self.consecutive_ones == 6 and b == '0':
-            # Stuff bit.
-            self.putpb(['STUFF BIT', None])
-            self.putb([7, ['Stuff bit: %s' % b, 'SB: %s' % b, '%s' % b]])
-            self.consecutive_ones = 0
+        if self.consecutive_ones == 6:
+            if b == '0':
+                # Stuff bit.
+                self.putpb(['STUFF BIT', None])
+                self.putb([7, ['Stuff bit: 0', 'SB: 0', '0']])
+                self.consecutive_ones = 0
+            else:
+                self.putpb(['ERR', None])
+                self.putb([8, ['Bit stuff error', 'BS ERR', 'B']])
+                self.state = 'IDLE'
         else:
             # Normal bit (not a stuff bit).
             self.putpb(['BIT', b])
@@ -202,7 +210,6 @@ class Decoder(srd.Decoder):
             self.putpm(['EOP', None])
             self.putm([5, ['EOP', 'E']])
             self.syms, self.state = [], 'IDLE'
-            self.consecutive_ones = 0
             self.bitwidth = float(self.samplerate) / float(self.bitrate)
 
     def get_bit(self, sym):
