@@ -66,11 +66,11 @@ bitrates = {
     'full-speed': 12000000, # 12Mb/s (+/- 0.25%)
 }
 
-sym_idx = {
-    'J': 0,
-    'K': 1,
-    'SE0': 2,
-    'SE1': 3,
+sym_annotation = {
+    'J': [0, ['J']],
+    'K': [1, ['K']],
+    'SE0': [2, ['SE0', '0']],
+    'SE1': [3, ['SE1', '1']],
 }
 
 class SamplerateError(Exception):
@@ -180,13 +180,11 @@ class Decoder(srd.Decoder):
             # Stuff bit.
             self.putpb(['STUFF BIT', None])
             self.putb([7, ['Stuff bit: %s' % b, 'SB: %s' % b, '%s' % b]])
-            self.putb([sym_idx[sym], ['%s' % sym]])
             self.consecutive_ones = 0
         else:
             # Normal bit (not a stuff bit).
             self.putpb(['BIT', b])
             self.putb([6, ['%s' % b]])
-            self.putb([sym_idx[sym], ['%s' % sym]])
             if b == '1':
                 self.consecutive_ones += 1
             else:
@@ -196,7 +194,7 @@ class Decoder(srd.Decoder):
         # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
         self.syms.append(sym)
         self.putpb(['SYM', sym])
-        self.putb([sym_idx[sym], ['%s' % sym, '%s' % sym[0]]])
+        self.putb(sym_annotation[sym])
         self.set_new_target_samplenum()
         self.oldsym = sym
         if self.syms[-2:] == ['SE0', 'J']:
@@ -217,6 +215,7 @@ class Decoder(srd.Decoder):
         self.syms.append(sym)
         self.putpb(['SYM', sym])
         b = '0' if self.oldsym != sym else '1'
+        self.putb(sym_annotation[sym])
         if self.oldsym != sym:
             edgesym = symbols[self.options['signalling']][tuple(self.edgepins)]
             if edgesym not in ('SE0', 'SE1'):
