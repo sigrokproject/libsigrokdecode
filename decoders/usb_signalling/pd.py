@@ -115,7 +115,6 @@ class Decoder(srd.Decoder):
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_block = None
         self.samplenum = 0
-        self.syms = []
         self.bitrate = None
         self.bitwidth = None
         self.samplepos = None
@@ -176,7 +175,7 @@ class Decoder(srd.Decoder):
         self.putx([4, ['SOP', 'S']])
         self.state = 'GET BIT'
 
-    def handle_bit(self, sym, b):
+    def handle_bit(self, b):
         if self.consecutive_ones == 6:
             if b == '0':
                 # Stuff bit.
@@ -198,28 +197,28 @@ class Decoder(srd.Decoder):
 
     def get_eop(self, sym):
         # EOP: SE0 for >= 1 bittime (usually 2 bittimes), then J.
-        self.syms.append(sym)
         self.putpb(['SYM', sym])
         self.putb(sym_annotation[sym])
         self.set_new_target_samplenum()
         self.oldsym = sym
-        if self.syms[-2:] == ['SE0', 'J']:
+        if sym == 'SE0':
+            pass
+        elif sym == 'J':
             # Got an EOP.
             self.putpm(['EOP', None])
             self.putm([5, ['EOP', 'E']])
-            self.syms, self.state = [], 'IDLE'
+            self.state = 'IDLE'
             self.bitwidth = float(self.samplerate) / float(self.bitrate)
 
     def get_bit(self, sym):
         if sym == 'SE0':
-            # Start of an EOP. Change state, run get_eop() for this bit.
+            # Start of an EOP. Change state, save edge
             self.state = 'GET EOP'
             self.ss_block = self.samplenum
-            self.get_eop(sym)
-            return
-        self.syms.append(sym)
+        else:
+            b = '0' if self.oldsym != sym else '1'
+            self.handle_bit(b)
         self.putpb(['SYM', sym])
-        b = '0' if self.oldsym != sym else '1'
         self.putb(sym_annotation[sym])
         if self.oldsym != sym:
             edgesym = symbols[self.options['signalling']][tuple(self.edgepins)]
@@ -230,7 +229,6 @@ class Decoder(srd.Decoder):
                 else:
                     self.bitwidth = self.bitwidth + (0.001 * self.bitwidth)
                     self.samplepos = self.samplepos + (0.01 * self.bitwidth)
-        self.handle_bit(sym, b)
         self.set_new_target_samplenum()
         self.oldsym = sym
 
