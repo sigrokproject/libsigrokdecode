@@ -22,7 +22,7 @@ import sigrokdecode as srd
 import struct
 import zlib   # for crc32
 
-# BMC encoding with a 600Khz datarate
+# BMC encoding with a 600kHz datarate
 UI_US = 1000000/600000.0
 
 # Threshold to discriminate half-1 from 0 in Binary Mark Conding
@@ -178,7 +178,6 @@ VDM_CMDS = {
 }
 VDM_ACK = ["REQ", "ACK", "NAK", "BSY"]
 
-
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'usb_power_delivery'
@@ -282,23 +281,23 @@ class Decoder(srd.Decoder):
 
     def get_vdm(self, idx, data):
         if idx == 0:    # VDM header
-                vid = data >> 16
-                struct = data & (1 << 15)
-                txt = "VDM"
-                if struct:  # Structured VDM
-                        cmd = data & 0x1f
-                        src = data & (1 << 5)
-                        ack = (data >> 6) & 3
-                        pos = (data >> 8) & 7
-                        ver = (data >> 13) & 3
-                        txt = VDM_ACK[ack] + " "
-                        txt += VDM_CMDS[cmd] if cmd in VDM_CMDS else "cmd?"
-                        txt += " pos %d" % (pos) if pos else " "
-                else:   # Unstructured VDM
-                        txt = "unstruct [%04x]" % (data & 0x7fff)
-                txt += " SVID:%04x" % (vid)
+            vid = data >> 16
+            struct = data & (1 << 15)
+            txt = "VDM"
+            if struct:  # Structured VDM
+                cmd = data & 0x1f
+                src = data & (1 << 5)
+                ack = (data >> 6) & 3
+                pos = (data >> 8) & 7
+                ver = (data >> 13) & 3
+                txt = VDM_ACK[ack] + " "
+                txt += VDM_CMDS[cmd] if cmd in VDM_CMDS else "cmd?"
+                txt += " pos %d" % (pos) if pos else " "
+            else:   # Unstructured VDM
+                txt = "unstruct [%04x]" % (data & 0x7fff)
+            txt += " SVID:%04x" % (vid)
         else:   # VDM payload
-                txt = "VDO:%08x" % (data)
+            txt = "VDO:%08x" % (data)
         return txt
 
     def get_bist(self, idx, data):
@@ -306,7 +305,7 @@ class Decoder(srd.Decoder):
         counter = data & 0xffff
         mode_name = BIST_MODES[mode] if mode in BIST_MODES else "INVALID"
         if mode == 2:
-                mode_name = "Counter[= %d]" % (counter)
+            mode_name = "Counter[= %d]" % (counter)
         # TODO check all 0 bits are 0 / emit warnings
         return "mode %s" % (mode_name) if idx == 0 else "invalid BRO"
 
@@ -441,7 +440,6 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.idx = 0
         self.packet_seq = 0
-
         self.samplenum = 0
         self.previous = 0
         self.oldpins = [0]
