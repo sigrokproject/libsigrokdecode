@@ -30,31 +30,31 @@ THRESHOLD_US = (UI_US + 2 * UI_US) / 2
 
 # Control Message type
 CTRL_TYPES = {
-    0: "reserved",
-    1: "GOOD CRC",
-    2: "GOTO MIN",
-    3: "ACCEPT",
-    4: "REJECT",
-    5: "PING",
-    6: "PS RDY",
-    7: "GET SOURCE CAP",
-    8: "GET SINK CAP",
-    9: "DR SWAP",
-    10: "PR SWAP",
-    11: "VCONN SWAP",
-    12: "WAIT",
-    13: "SOFT RESET",
-    14: "reserved",
-    15: "reserved"
+    0: 'reserved',
+    1: 'GOOD CRC',
+    2: 'GOTO MIN',
+    3: 'ACCEPT',
+    4: 'REJECT',
+    5: 'PING',
+    6: 'PS RDY',
+    7: 'GET SOURCE CAP',
+    8: 'GET SINK CAP',
+    9: 'DR SWAP',
+    10: 'PR SWAP',
+    11: 'VCONN SWAP',
+    12: 'WAIT',
+    13: 'SOFT RESET',
+    14: 'reserved',
+    15: 'reserved'
 }
 
 # Data message type
 DATA_TYPES = {
-    1: "SOURCE CAP",
-    2: "REQUEST",
-    3: "BIST",
-    4: "SINK CAP",
-    15: "VDM"
+    1: 'SOURCE CAP',
+    2: 'REQUEST',
+    3: 'BIST',
+    4: 'SINK CAP',
+    15: 'VDM'
 }
 
 # 4b5b encoding of the symbols
@@ -103,13 +103,13 @@ SYNC_CODES = [SYNC1, SYNC2, SYNC3]
 HRST_CODES = [RST1, RST1, RST1, RST2]
 
 START_OF_PACKETS = {
-    (SYNC1, SYNC1, SYNC1, SYNC2): "SOP",
+    (SYNC1, SYNC1, SYNC1, SYNC2): 'SOP',
     (SYNC1, SYNC1, SYNC3, SYNC3): "SOP'",
     (SYNC1, SYNC3, SYNC1, SYNC3): 'SOP"',
     (SYNC1, RST2,  RST2,  SYNC3): "SOP' Debug",
     (SYNC1, RST2,  SYNC3, SYNC2): 'SOP" Debug',
-    (RST1,  SYNC1, RST1,  SYNC3): "Cable Reset",
-    (RST1,  RST1,  RST1,   RST2): "Hard Reset",
+    (RST1,  SYNC1, RST1,  SYNC3): 'Cable Reset',
+    (RST1,  RST1,  RST1,   RST2): 'Hard Reset',
 }
 
 SYM_NAME = [
@@ -139,44 +139,44 @@ SYM_NAME = [
 ]
 
 RDO_FLAGS = {
-    (1 << 24): "no_suspend",
-    (1 << 25): "comm_cap",
-    (1 << 26): "cap_mismatch",
-    (1 << 27): "give_back"
+    (1 << 24): 'no_suspend',
+    (1 << 25): 'comm_cap',
+    (1 << 26): 'cap_mismatch',
+    (1 << 27): 'give_back'
 }
-PDO_TYPE = ["", "BATT:", "VAR:", "<bad>"]
+PDO_TYPE = ['', 'BATT:', 'VAR:', '<bad>']
 PDO_FLAGS = {
-    (1 << 29): "dual_role_power",
-    (1 << 28): "suspend",
-    (1 << 27): "ext",
-    (1 << 26): "comm_cap",
-    (1 << 25): "dual_role_data"
+    (1 << 29): 'dual_role_power',
+    (1 << 28): 'suspend',
+    (1 << 27): 'ext',
+    (1 << 26): 'comm_cap',
+    (1 << 25): 'dual_role_data'
 }
 
 BIST_MODES = {
-        0: "Receiver",
-        1: "Transmit",
-        2: "Counters",
-        3: "Carrier 0",
-        4: "Carrier 1",
-        5: "Carrier 2",
-        6: "Carrier 3",
-        7: "Eye",
+        0: 'Receiver',
+        1: 'Transmit',
+        2: 'Counters',
+        3: 'Carrier 0',
+        4: 'Carrier 1',
+        5: 'Carrier 2',
+        6: 'Carrier 3',
+        7: 'Eye',
 }
 
 VDM_CMDS = {
-        1: "Disc Ident",
-        2: "Disc SVID",
-        3: "Disc Mode",
-        4: "Enter Mode",
-        5: "Exit Mode",
-        6: "Attention",
+        1: 'Disc Ident',
+        2: 'Disc SVID',
+        3: 'Disc Mode',
+        4: 'Enter Mode',
+        5: 'Exit Mode',
+        6: 'Attention',
         # 16..31: SVID Specific Commands
         # DisplayPort Commands
-        16: "DP Status",
-        17: "DP Configure",
+        16: 'DP Status',
+        17: 'DP Configure',
 }
-VDM_ACK = ["REQ", "ACK", "NAK", "BSY"]
+VDM_ACK = ['REQ', 'ACK', 'NAK', 'BSY']
 
 class Decoder(srd.Decoder):
     api_version = 2
@@ -225,93 +225,93 @@ class Decoder(srd.Decoder):
         pos = (rdo >> 28) & 7
         op_ma = ((rdo >> 10) & 0x3ff) * 10
         max_ma = (rdo & 0x3ff) * 10
-        flags = ""
+        flags = ''
         for f in RDO_FLAGS.keys():
             if rdo & f:
-                flags += " " + RDO_FLAGS[f]
-        return "[%d]%d/%d mA%s" % (pos, op_ma, max_ma, flags)
+                flags += ' ' + RDO_FLAGS[f]
+        return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
 
     def get_source_cap(self, pdo):
         t = (pdo >> 30) & 3
         if t == 0:
             mv = ((pdo >> 10) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
-            p = "%.1fV %.1fA" % (mv/1000.0, ma/1000.0)
+            p = '%.1fV %.1fA' % (mv/1000.0, ma/1000.0)
         elif t == 1:
             minv = ((pdo >> 10) & 0x3ff) * 50
             maxv = ((pdo >> 20) & 0x3ff) * 50
             mw = ((pdo >> 0) & 0x3ff) * 250
-            p = "%.1f/%.1fV %.1fW" % (minv/1000.0, maxv/1000.0, mw/1000.0)
+            p = '%.1f/%.1fV %.1fW' % (minv/1000.0, maxv/1000.0, mw/1000.0)
         elif t == 2:
             minv = ((pdo >> 10) & 0x3ff) * 50
             maxv = ((pdo >> 20) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
-            p = "%.1f/%.1fV %.1fA" % (minv/1000.0, maxv/1000.0, ma/1000.0)
+            p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
         else:
-            p = ""
-        flags = ""
+            p = ''
+        flags = ''
         for f in PDO_FLAGS.keys():
             if pdo & f:
-                flags += " " + PDO_FLAGS[f]
-        return "%s%s%s" % (PDO_TYPE[t], p, flags)
+                flags += ' ' + PDO_FLAGS[f]
+        return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_sink_cap(self, pdo):
         t = (pdo >> 30) & 3
         if t == 0:
             mv = ((pdo >> 10) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
-            p = "%.1fV %.1fA" % (mv/1000.0, ma/1000.0)
+            p = '%.1fV %.1fA' % (mv/1000.0, ma/1000.0)
         elif t == 1:
             minv = ((pdo >> 10) & 0x3ff) * 50
             maxv = ((pdo >> 20) & 0x3ff) * 50
             mw = ((pdo >> 0) & 0x3ff) * 250
-            p = "%.1f/%.1fV %.1fW" % (minv/1000.0, maxv/1000.0, mw/1000.0)
+            p = '%.1f/%.1fV %.1fW' % (minv/1000.0, maxv/1000.0, mw/1000.0)
         elif t == 2:
             minv = ((pdo >> 10) & 0x3ff) * 50
             maxv = ((pdo >> 20) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
-            p = "%.1f/%.1fV %.1fA" % (minv/1000.0, maxv/1000.0, ma/1000.0)
+            p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
         else:
-            p = ""
-        flags = ""
+            p = ''
+        flags = ''
         for f in PDO_FLAGS.keys():
             if pdo & f:
-                flags += " " + PDO_FLAGS[f]
-        return "%s%s%s" % (PDO_TYPE[t], p, flags)
+                flags += ' ' + PDO_FLAGS[f]
+        return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_vdm(self, idx, data):
         if idx == 0:    # VDM header
             vid = data >> 16
             struct = data & (1 << 15)
-            txt = "VDM"
+            txt = 'VDM'
             if struct:  # Structured VDM
                 cmd = data & 0x1f
                 src = data & (1 << 5)
                 ack = (data >> 6) & 3
                 pos = (data >> 8) & 7
                 ver = (data >> 13) & 3
-                txt = VDM_ACK[ack] + " "
-                txt += VDM_CMDS[cmd] if cmd in VDM_CMDS else "cmd?"
-                txt += " pos %d" % (pos) if pos else " "
+                txt = VDM_ACK[ack] + ' '
+                txt += VDM_CMDS[cmd] if cmd in VDM_CMDS else 'cmd?'
+                txt += ' pos %d' % (pos) if pos else ' '
             else:   # Unstructured VDM
-                txt = "unstruct [%04x]" % (data & 0x7fff)
-            txt += " SVID:%04x" % (vid)
+                txt = 'unstruct [%04x]' % (data & 0x7fff)
+            txt += ' SVID:%04x' % (vid)
         else:   # VDM payload
-            txt = "VDO:%08x" % (data)
+            txt = 'VDO:%08x' % (data)
         return txt
 
     def get_bist(self, idx, data):
         mode = data >> 28
         counter = data & 0xffff
-        mode_name = BIST_MODES[mode] if mode in BIST_MODES else "INVALID"
+        mode_name = BIST_MODES[mode] if mode in BIST_MODES else 'INVALID'
         if mode == 2:
-            mode_name = "Counter[= %d]" % (counter)
+            mode_name = 'Counter[= %d]' % (counter)
         # TODO check all 0 bits are 0 / emit warnings
-        return "mode %s" % (mode_name) if idx == 0 else "invalid BRO"
+        return 'mode %s' % (mode_name) if idx == 0 else 'invalid BRO'
 
     def putpayload(self, s0, s1, idx):
         t = self.head_type()
-        txt = "???"
+        txt = '???'
         if t == 2:
             txt = self.get_request(self.data[idx])
         elif t == 1:
@@ -323,20 +323,20 @@ class Decoder(srd.Decoder):
         elif t == 3:
             txt = self.get_bist(idx, self.data[idx])
         self.putx(s0, s1, [11, [txt, txt]])
-        self.text += " - " + txt
+        self.text += ' - ' + txt
 
     def puthead(self):
         ann_type = 9 if self.head_power_role() else 10
-        role = "SRC" if self.head_power_role() else "SNK"
+        role = 'SRC' if self.head_power_role() else 'SNK'
         if self.head_data_role() != self.head_power_role():
-            role += "/DFP" if self.head_data_role() else "/UFP"
+            role += '/DFP' if self.head_data_role() else '/UFP'
         t = self.head_type()
         if self.head_count() == 0:
             shortm = CTRL_TYPES[t]
         else:
-            shortm = DATA_TYPES[t] if t in DATA_TYPES else "DAT???"
+            shortm = DATA_TYPES[t] if t in DATA_TYPES else 'DAT???'
 
-        longm = "{:s}[{:d}]:{:s}".format(role, self.head_id(), shortm)
+        longm = '{:s}[{:d}]:{:s}'.format(role, self.head_id(), shortm)
         self.putx(0, -1, [ann_type, [longm, shortm]])
         self.text += longm
 
@@ -365,7 +365,7 @@ class Decoder(srd.Decoder):
         self.putx(0, -1, [8, [longm, shortm]])
 
     def compute_crc32(self):
-        bdata = struct.pack("<H"+"I"*len(self.data), self.head & 0xffff,
+        bdata = struct.pack('<H'+'I'*len(self.data), self.head & 0xffff,
                             *tuple([d & 0xffffffff for d in self.data]))
         return zlib.crc32(bdata)
 
@@ -384,7 +384,7 @@ class Decoder(srd.Decoder):
         i = self.idx
         # Check it's not a truncated packet
         if len(self.bits) - i <= 20:
-            self.putwarn("Truncated", "!")
+            self.putwarn('Truncated', '!')
             return 0x0BAD
         k = [self.get_sym(i), self.get_sym(i+5),
              self.get_sym(i+10), self.get_sym(i+15)]
@@ -423,17 +423,17 @@ class Decoder(srd.Decoder):
                 self.rec_sym(i+10, k[2])
                 self.rec_sym(i+15, k[3])
                 if sym == 'Hard Reset':
-                    self.text += "HRST"
+                    self.text += 'HRST'
                     return -1   # Hard reset
                 elif sym == 'Cable Reset':
-                    self.text += "CRST"
+                    self.text += 'CRST'
                     return -1   # Cable reset
                 else:
                     self.putx(i, i+20, [2, [sym, 'S']])
                 return i+20
         self.putx(0, len(self.bits), [1, ['Junk???', 'XXX']])
-        self.text += "Junk???"
-        self.putwarn("No start of packet found", "XXX")
+        self.text += 'Junk???'
+        self.putwarn('No start of packet found', 'XXX')
         return -1   # No Start Of Packet
 
     def __init__(self, **kwargs):
@@ -469,20 +469,20 @@ class Decoder(srd.Decoder):
 
     def us2samples(self, us):
         if self.samplerate is None:
-            raise Exception("Need the samplerate.")
+            raise Exception('Need the samplerate.')
         return int(us * self.samplerate / 1000000)
 
     def decode_packet(self):
         self.data = []
         self.idx = 0
-        self.text = ""
+        self.text = ''
 
         if len(self.edges) < 50:
             return  # Not a real PD packet
 
         self.packet_seq += 1
         tstamp = float(self.startsample) / self.samplerate
-        self.text += "#%-4d (%8.6fms): " % (self.packet_seq, tstamp*1000)
+        self.text += '#%-4d (%8.6fms): ' % (self.packet_seq, tstamp*1000)
 
         self.idx = self.scan_eop()
         if self.idx < 0:
@@ -506,7 +506,7 @@ class Decoder(srd.Decoder):
         self.crc = self.get_word()
         ccrc = self.compute_crc32()
         if self.crc != ccrc:
-            self.putwarn("Bad CRC %08x != %08x" % (self.crc, ccrc), "CRC!")
+            self.putwarn('Bad CRC %08x != %08x' % (self.crc, ccrc), 'CRC!')
         self.putx(self.idx-40, self.idx, [5, ['CRC:%08x' % (self.crc), 'CRC']])
 
         # End of Packet
@@ -514,7 +514,7 @@ class Decoder(srd.Decoder):
             self.putx(self.idx, self.idx + 5, [6, ['EOP', 'E']])
             self.idx += 5
         else:
-            self.putwarn("No EOP", "EOP!")
+            self.putwarn('No EOP', 'EOP!')
         # Full text trace
         if self.options['fulltext'] == 'yes':
             self.putx(0, self.idx, [12, [self.text, '...']])
@@ -528,7 +528,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         if self.samplerate is None:
-            raise Exception("Cannot decode without samplerate.")
+            raise Exception('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
             # find edges ...
             if self.oldpins == pins:
