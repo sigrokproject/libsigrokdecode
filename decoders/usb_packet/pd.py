@@ -371,7 +371,7 @@ class Decoder(srd.Decoder):
         (ptype, pdata) = data
 
         # We only care about certain packet types for now.
-        if ptype not in ('SOP', 'BIT', 'EOP'):
+        if ptype not in ('SOP', 'BIT', 'EOP', 'ERR'):
             return
 
         # State machine.
@@ -383,7 +383,7 @@ class Decoder(srd.Decoder):
         elif self.state == 'GET BIT':
             if ptype == 'BIT':
                 self.bits.append([pdata, ss, es])
-            elif ptype == 'EOP':
+            elif ptype == 'EOP' or ptype == 'ERR':
                 self.es_packet = es
                 self.handle_packet()
                 self.packet, self.packet_summary = [], ''
