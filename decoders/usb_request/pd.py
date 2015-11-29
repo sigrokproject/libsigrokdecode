@@ -178,7 +178,7 @@ class Decoder(srd.Decoder):
 
     def handle_transfer(self):
         request_started = 0
-        request_end = self.handshake in ('ACK', 'STALL')
+        request_end = self.handshake in ('ACK', 'STALL', 'timeout')
         ep = self.transaction_ep
         addr = self.transaction_addr
         if not (addr, ep) in self.request:
@@ -306,6 +306,16 @@ class Decoder(srd.Decoder):
         if pcategory == 'TOKEN':
             if pname == 'SOF':
                 return
+            if self.transaction_state == 'TOKEN RECEIVED':
+                transaction_timeout = self.transaction_es
+                # token length is 35 bits, timeout is 16..18 bit times (USB 2.0 7.1.19.1)
+                transaction_timeout += int((self.transaction_es - self.transaction_ss) / 2)
+                if (ss > transaction_timeout):
+                    self.transaction_es = transaction_timeout
+                    self.handshake = 'timeout'
+                    self.handle_transfer()
+                    self.transaction_state = 'IDLE'
+
             if self.transaction_state != 'IDLE':
                 self.putr(ss, es, [4, ['ERR: received %s token in state %s' %
                     (pname, self.transaction_state)]])
@@ -314,6 +324,7 @@ class Decoder(srd.Decoder):
             sync, pid, addr, ep, crc5 = pinfo
             self.transaction_data = []
             self.transaction_ss = ss
+            self.transaction_es = es
             self.transaction_state = 'TOKEN RECEIVED'
             self.transaction_ep = ep
             self.transaction_addr = addr
