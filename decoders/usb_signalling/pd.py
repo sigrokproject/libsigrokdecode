@@ -272,6 +272,7 @@ class Decoder(srd.Decoder):
         elif sym == 'LS_J':
             self.signalling = 'low-speed'
             self.update_bitrate()
+        self.oldsym = 'J'
         self.state = 'IDLE'
 
     def decode(self, ss, es, data):
@@ -302,8 +303,9 @@ class Decoder(srd.Decoder):
                     self.get_bit(sym)
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
+                self.oldpins = pins
             elif self.state == 'WAIT IDLE':
-                if self.oldpins == pins:
+                if tuple(pins) == (0, 0):
                     continue
                 if self.samplenum - self.samplenum_lastedge > 1:
                     sym = symbols[self.options['signalling']][tuple(pins)]
