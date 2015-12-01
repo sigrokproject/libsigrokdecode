@@ -148,6 +148,7 @@ class Decoder(srd.Decoder):
         self.oldpins = None
         self.edgepins = None
         self.consecutive_ones = 0
+        self.bits = None
         self.state = 'INIT'
 
     def start(self):
@@ -200,6 +201,7 @@ class Decoder(srd.Decoder):
         if sym != 'K' or self.oldsym != 'J':
             return
         self.consecutive_ones = 0
+        self.bits = ""
         self.update_bitrate()
         self.samplepos = self.samplenum - (self.bitwidth / 2) + 0.5
         self.set_new_target_samplenum()
@@ -247,16 +249,26 @@ class Decoder(srd.Decoder):
 
     def get_bit(self, sym):
         self.set_new_target_samplenum()
+        b = '0' if self.oldsym != sym else '1'
+        self.oldsym = sym
         if sym == 'SE0':
             # Start of an EOP. Change state, save edge
             self.state = 'GET EOP'
             self.ss_block = self.samplenum_lastedge
         else:
-            b = '0' if self.oldsym != sym else '1'
             self.handle_bit(b)
         self.putpb(['SYM', sym])
         self.putb(sym_annotation[sym])
-        if self.oldsym != sym:
+        if len(self.bits) <= 16:
+            self.bits += b
+        if len(self.bits) == 16 and self.bits == '0000000100111100':
+            # Sync and low-speed PREamble seen
+            self.putpx(['EOP', None])
+            self.state = 'IDLE'
+            self.signalling = 'low-speed-rp'
+            self.update_bitrate()
+            self.oldsym = 'J'
+        if b == '0':
             edgesym = symbols[self.signalling][tuple(self.edgepins)]
             if edgesym not in ('SE0', 'SE1'):
                 if edgesym == sym:
@@ -265,7 +277,6 @@ class Decoder(srd.Decoder):
                 else:
                     self.bitwidth = self.bitwidth + (0.001 * self.bitwidth)
                     self.samplepos = self.samplepos + (0.01 * self.bitwidth)
-        self.oldsym = sym
 
     def handle_idle(self, sym):
         self.samplenum_edge = self.samplenum
