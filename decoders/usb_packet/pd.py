@@ -113,7 +113,7 @@ pids = {
 
     # Special
     '00111100': ['PRE', 'Host-issued preamble; enables downstream bus traffic to low-speed devices'],
-    '00111100': ['ERR', 'Split transaction error handshake'],
+    #'00111100': ['ERR', 'Split transaction error handshake'],
     '00011110': ['SPLIT', 'HS split transaction token'],
     '00101101': ['PING', 'HS flow control probe for a bulk/control EP'],
     '00001111': ['Reserved', 'Reserved PID'],
@@ -281,7 +281,7 @@ class Decoder(srd.Decoder):
         self.packet.append(pid)
         self.packet_summary += pidname
 
-        if pidname in ('OUT', 'IN', 'SOF', 'SETUP', 'PRE', 'PING'):
+        if pidname in ('OUT', 'IN', 'SOF', 'SETUP', 'PING'):
             if len(packet) < 32:
                 self.putp([28, ['Invalid packet (shorter than 32 bits)']])
                 return
@@ -357,6 +357,8 @@ class Decoder(srd.Decoder):
             self.packet.append(crc16)
         elif pidname in ('ACK', 'NAK', 'STALL', 'NYET', 'ERR'):
             pass # Nothing to do, these only have SYNC+PID+EOP fields.
+        elif pidname in ('PRE'):
+            pass # Nothing to do, PRE  only has SYNC+PID fields.
         else:
             pass # TODO: Handle 'SPLIT' and possibly 'Reserved' packets.
 

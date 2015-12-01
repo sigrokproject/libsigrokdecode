@@ -350,6 +350,9 @@ class Decoder(srd.Decoder):
             self.transaction_es = es
             self.handle_transfer()
 
+        elif pname == 'PRE':
+            return
+
         else:
             self.putr(ss, es, [4, ['ERR: received unhandled %s token in state %s' %
                 (pname, self.transaction_state)]])
