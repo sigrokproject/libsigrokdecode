@@ -69,10 +69,22 @@ symbols = {
         (0, 1): 'LS_J',
         (1, 1): 'SE1',
     },
+# After a PREamble PID, the bus segment between Host and Hub uses LS signalling
+# rate and FS signalling polarity (USB 2.0 spec, 11.8.4: "For both upstream and
+# downstream low-speed data, the hub is responsible for inverting the polarity of
+# the data before transmitting to/from a low-speed port."
+    'low-speed-rp': {
+        # (<dp>, <dm>): <symbol/state>
+        (0, 0): 'SE0',
+        (1, 0): 'J',
+        (0, 1): 'K',
+        (1, 1): 'SE1',
+    },
 }
 
 bitrates = {
     'low-speed': 1500000,   # 1.5Mb/s (+/- 1.5%)
+    'low-speed-rp': 1500000,   # 1.5Mb/s (+/- 1.5%)
     'full-speed': 12000000, # 12Mb/s (+/- 0.25%)
     'automatic': None
 }
@@ -227,7 +239,7 @@ class Decoder(srd.Decoder):
             # Got an EOP.
             self.putpm(['EOP', None])
             self.putm([5, ['EOP', 'E']])
-            self.state = 'IDLE'
+            self.state = 'WAIT IDLE'
         else:
             self.putpm(['ERR', None])
             self.putm([8, ['EOP Error', 'EErr', 'E']])
