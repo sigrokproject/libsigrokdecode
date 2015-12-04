@@ -358,7 +358,7 @@ class Decoder(srd.Decoder):
         elif pidname in ('ACK', 'NAK', 'STALL', 'NYET', 'ERR'):
             pass # Nothing to do, these only have SYNC+PID+EOP fields.
         elif pidname in ('PRE'):
-            pass # Nothing to do, PRE  only has SYNC+PID fields.
+            pass # Nothing to do, PRE only has SYNC+PID fields.
         else:
             pass # TODO: Handle 'SPLIT' and possibly 'Reserved' packets.
 

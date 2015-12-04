@@ -69,10 +69,11 @@ symbols = {
         (0, 1): 'LS_J',
         (1, 1): 'SE1',
     },
-# After a PREamble PID, the bus segment between Host and Hub uses LS signalling
-# rate and FS signalling polarity (USB 2.0 spec, 11.8.4: "For both upstream and
-# downstream low-speed data, the hub is responsible for inverting the polarity of
-# the data before transmitting to/from a low-speed port."
+    # After a PREamble PID, the bus segment between Host and Hub uses LS
+    # signalling rate and FS signalling polarity (USB 2.0 spec, 11.8.4: "For
+    # both upstream and downstream low-speed data, the hub is responsible for
+    # inverting the polarity of the data before transmitting to/from a
+    # low-speed port.").
     'low-speed-rp': {
         # (<dp>, <dm>): <symbol/state>
         (0, 0): 'SE0',
@@ -83,8 +84,8 @@ symbols = {
 }
 
 bitrates = {
-    'low-speed': 1500000,   # 1.5Mb/s (+/- 1.5%)
-    'low-speed-rp': 1500000,   # 1.5Mb/s (+/- 1.5%)
+    'low-speed': 1500000, # 1.5Mb/s (+/- 1.5%)
+    'low-speed-rp': 1500000, # 1.5Mb/s (+/- 1.5%)
     'full-speed': 12000000, # 12Mb/s (+/- 0.25%)
     'automatic': None
 }
@@ -201,7 +202,7 @@ class Decoder(srd.Decoder):
         if sym != 'K' or self.oldsym != 'J':
             return
         self.consecutive_ones = 0
-        self.bits = ""
+        self.bits = ''
         self.update_bitrate()
         self.samplepos = self.samplenum - (self.bitwidth / 2) + 0.5
         self.set_new_target_samplenum()

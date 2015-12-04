@@ -270,8 +270,8 @@ class Decoder(srd.Decoder):
             # Issue PCAP 'SUBMIT' packet.
             ts = self.ts_from_samplenum(ss)
             pkt = pcap_usb_pkt(request, ts, True)
-            self.putb(ss, (0, pkt.record_header()))
-            self.putb(ss, (0, pkt.packet()))
+            self.putb(ss, [0, pkt.record_header()])
+            self.putb(ss, [0, pkt.packet()])
 
         if request_end == 1:
             # Write annotation.
@@ -288,8 +288,8 @@ class Decoder(srd.Decoder):
             # Issue PCAP 'COMPLETE' packet.
             ts = self.ts_from_samplenum(es)
             pkt = pcap_usb_pkt(request, ts, False)
-            self.putb(ss, (0, pkt.record_header()))
-            self.putb(ss, (0, pkt.packet()))
+            self.putb(ss, [0, pkt.record_header()])
+            self.putb(ss, [0, pkt.packet()])
             del self.request[(addr, ep)]
 
     def decode(self, ss, es, data):
@@ -308,9 +308,10 @@ class Decoder(srd.Decoder):
                 return
             if self.transaction_state == 'TOKEN RECEIVED':
                 transaction_timeout = self.transaction_es
-                # token length is 35 bits, timeout is 16..18 bit times (USB 2.0 7.1.19.1)
+                # Token length is 35 bits, timeout is 16..18 bit times
+                # (USB 2.0 7.1.19.1).
                 transaction_timeout += int((self.transaction_es - self.transaction_ss) / 2)
-                if (ss > transaction_timeout):
+                if ss > transaction_timeout:
                     self.transaction_es = transaction_timeout
                     self.handshake = 'timeout'
                     self.handle_transfer()
