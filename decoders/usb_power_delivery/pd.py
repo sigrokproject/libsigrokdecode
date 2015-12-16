@@ -468,7 +468,7 @@ class Decoder(srd.Decoder):
         )
 
     def us2samples(self, us):
-        if self.samplerate is None:
+        if not self.samplerate:
             raise Exception('Need the samplerate.')
         return int(us * self.samplerate / 1000000)
 
@@ -527,7 +527,7 @@ class Decoder(srd.Decoder):
         self.put(es, ss, self.out_binary, (0, bytes(self.bits)))
 
     def decode(self, ss, es, data):
-        if self.samplerate is None:
+        if not self.samplerate:
             raise Exception('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
             # find edges ...
