@@ -45,18 +45,21 @@ class Decoder(srd.Decoder):
         {'id': 'coilfreq', 'desc': 'Coil frequency', 'default': '125000'},
     )
     annotations = (
-        ('headerbit', 'Header bit'),
-        ('databit', 'Version bit'),
-        ('rowparity', 'Row Parity'),
-        ('databit', 'Data bit'),
-        ('colparity', 'Column Parity'),
+        ('bit', 'Bit'),
+        ('header', 'Header'),
+        ('version-customer', 'Version/customer'),
+        ('data', 'Data'),
+        ('rowparity-ok', 'Row parity OK'),
+        ('rowparity-err', 'Row parity error'),
+        ('colparity-ok', 'Column parity OK'),
+        ('colparity-err', 'Column parity error'),
         ('stopbit', 'Stop bit'),
-        ('rowparity_check', 'Row Parity Check'),
+        ('tag', 'Tag'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0,)),
-        ('fields', 'Fields', (1, 2, 4, 7)),
-        ('value', 'Value', (3, 5, 6, 8)),
+        ('fields', 'Fields', (1, 2, 3, 4, 5, 6, 7, 8)),
+        ('tags', 'Tags', (9,)),
     )
 
     def __init__(self, **kwargs):
@@ -81,6 +84,9 @@ class Decoder(srd.Decoder):
         self.payload_cnt = 0
         self.data_col_parity = [0, 0, 0, 0, 0, 0]
         self.col_parity = [0, 0, 0, 0, 0, 0]
+        self.tag = 0
+        self.all_row_parity_ok = True
+        self.col_parity_pos = []
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -119,18 +125,17 @@ class Decoder(srd.Decoder):
                 self.data_parity = 0
             self.data_bits += 1
             if self.data_bits == 5:
+                s = 'Version/customer' if self.payload_cnt <= 10 else 'Data'
+                c = 2 if self.payload_cnt <= 10 else 3
                 self.put(int(self.data_start), int(bit_start), self.out_ann,
-                         [2, ['Data', 'Da', 'D']])
+                         [c, [s + ': %X' % self.data, '%X' % self.data]])
+                s = 'OK' if self.data_parity == bit else 'ERROR'
+                c = 4 if s == 'OK' else 5
+                if s == 'ERROR':
+                    self.all_row_parity_ok = False
                 self.put(int(bit_start), int(bit_stop), self.out_ann,
-                         [4, ['Parity', 'Par', 'Pa', 'P']])
-                self.put(int(self.data_start), int(bit_start), self.out_ann,
-                         [3, [str("%X" % self.data)]])
-                if self.data_parity == bit:
-                    p_string = ['OK', 'O']
-                else:
-                    p_string = ['ERROR', 'ERR', 'ER', 'E']
-                self.put(int(bit_start), int(bit_stop), self.out_ann,
-                         [6, p_string])
+                         [c, ['Row parity: ' + s, 'RP: ' + s, 'RP', 'R']])
+                self.tag = (self.tag << 4) | self.data
                 self.data_bits = 0
                 if self.payload_cnt == 50:
                     self.state = 'TRAILER'
@@ -149,28 +154,37 @@ class Decoder(srd.Decoder):
                 self.data_parity = 0
             self.data_bits += 1
             self.col_parity[self.data_bits] = bit
+            self.col_parity_pos.append([int(bit_start), int(bit_stop)])
 
             if self.data_bits == 5:
-                p_string = ['ERROR', 'ERR', 'ER', 'E']
-                if self.data_col_parity[1] == self.col_parity[1]:
-                    if self.data_col_parity[2] == self.col_parity[2]:
-                        if self.data_col_parity[3] == self.col_parity[3]:
-                            if self.data_col_parity[4] == self.col_parity[4]:
-                                p_string = ['OK', 'O']
-
-                self.put(int(self.data_start), int(bit_start), self.out_ann,
-                         [4, ['Column parity', 'Col par', 'CP', 'P']])
                 self.put(int(bit_start), int(bit_stop), self.out_ann,
-                         [4, ['Stop bit', 'St bi', 'SB', 'S']])
-                self.put(int(self.data_start), int(bit_start), self.out_ann,
-                         [6, p_string])
+                         [8, ['Stop bit', 'SB', 'S']])
 
+                for i in range(1, 5):
+                    s = 'OK' if self.data_col_parity[i] == \
+                                self.col_parity[i] else 'ERROR'
+                    c = 6 if s == 'OK' else 7
+                    self.put(self.col_parity_pos[i - 1][0],
+                             self.col_parity_pos[i - 1][1], self.out_ann,
+                             [c, ['Column parity %d: %s' % (i, s),
+                                  'CP%d: %s' % (i, s), 'CP%d' % i, 'C']])
+
+                # Emit an annotation for valid-looking tags.
+                all_col_parity_ok = (self.data_col_parity[1:5] == self.col_parity[1:5])
+                if all_col_parity_ok and self.all_row_parity_ok:
+                    self.put(int(self.first_start), int(bit_stop), self.out_ann,
+                             [9, ['Tag: %010X' % self.tag, 'Tag', 'T']])
+
+                self.tag = 0
                 self.data_bits = 0
+
                 if self.payload_cnt == 5:
                     self.state = 'HEADER'
                     self.payload_cnt = 0
                     self.data_col_parity = [0, 0, 0, 0, 0, 0]
                     self.col_parity = [0, 0, 0, 0, 0, 0]
+                    self.col_parity_pos = []
+                    self.all_row_parity_ok = True
 
     def putbit(self, bit, bit_start, bit_stop):
         self.put(int(bit_start), int(bit_stop), self.out_ann,
