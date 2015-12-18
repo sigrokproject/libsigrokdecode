@@ -38,11 +38,11 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-high',
             'values': ('active-low', 'active-high')},
-        {'id': 'datarate' , 'desc': 'Data rate', 'default': '64',
-            'values': ('64', '32', '16')},
+        {'id': 'datarate' , 'desc': 'Data rate', 'default': 64,
+            'values': (64, 32, 16)},
 #        {'id': 'coding', 'desc': 'Bit coding', 'default': 'biphase',
 #            'values': ('biphase', 'manchester', 'psk')},
-        {'id': 'coilfreq', 'desc': 'Coil frequency', 'default': '125000'},
+        {'id': 'coilfreq', 'desc': 'Coil frequency', 'default': 125000},
     )
     annotations = (
         ('bit', 'Bit'),
@@ -91,7 +91,7 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-        self.bit_width = (self.samplerate / (int(self.options['coilfreq']))) * int(self.options['datarate'])
+        self.bit_width = (self.samplerate / self.options['coilfreq']) * self.options['datarate']
         self.halfbit_limit = self.bit_width/2 + self.bit_width/4
         self.polarity = 0 if self.options['polarity'] == 'active-low' else 1
 
@@ -104,7 +104,7 @@ class Decoder(srd.Decoder):
                 if self.first_one > 0:
                     self.first_one += 1
                 if self.first_one == 9:
-                    self.put(int(self.first_start), int(bit_stop), self.out_ann,
+                    self.put(self.first_start, bit_stop, self.out_ann,
                              [1, ['Header', 'Head', 'He', 'H']])
                     self.first_one = 0
                     self.state = 'PAYLOAD'
@@ -127,13 +127,13 @@ class Decoder(srd.Decoder):
             if self.data_bits == 5:
                 s = 'Version/customer' if self.payload_cnt <= 10 else 'Data'
                 c = 2 if self.payload_cnt <= 10 else 3
-                self.put(int(self.data_start), int(bit_start), self.out_ann,
+                self.put(self.data_start, bit_start, self.out_ann,
                          [c, [s + ': %X' % self.data, '%X' % self.data]])
                 s = 'OK' if self.data_parity == bit else 'ERROR'
                 c = 4 if s == 'OK' else 5
                 if s == 'ERROR':
                     self.all_row_parity_ok = False
-                self.put(int(bit_start), int(bit_stop), self.out_ann,
+                self.put(bit_start, bit_stop, self.out_ann,
                          [c, ['Row parity: ' + s, 'RP: ' + s, 'RP', 'R']])
                 self.tag = (self.tag << 4) | self.data
                 self.data_bits = 0
@@ -154,10 +154,10 @@ class Decoder(srd.Decoder):
                 self.data_parity = 0
             self.data_bits += 1
             self.col_parity[self.data_bits] = bit
-            self.col_parity_pos.append([int(bit_start), int(bit_stop)])
+            self.col_parity_pos.append([bit_start, bit_stop])
 
             if self.data_bits == 5:
-                self.put(int(bit_start), int(bit_stop), self.out_ann,
+                self.put(bit_start, bit_stop, self.out_ann,
                          [8, ['Stop bit', 'SB', 'S']])
 
                 for i in range(1, 5):
@@ -172,7 +172,7 @@ class Decoder(srd.Decoder):
                 # Emit an annotation for valid-looking tags.
                 all_col_parity_ok = (self.data_col_parity[1:5] == self.col_parity[1:5])
                 if all_col_parity_ok and self.all_row_parity_ok:
-                    self.put(int(self.first_start), int(bit_stop), self.out_ann,
+                    self.put(self.first_start, bit_stop, self.out_ann,
                              [9, ['Tag: %010X' % self.tag, 'Tag', 'T']])
 
                 self.tag = 0
@@ -187,8 +187,7 @@ class Decoder(srd.Decoder):
                     self.all_row_parity_ok = True
 
     def putbit(self, bit, bit_start, bit_stop):
-        self.put(int(bit_start), int(bit_stop), self.out_ann,
-                 [0, [str(bit)]])
+        self.put(bit_start, bit_stop, self.out_ann, [0, [str(bit)]])
         self.add_bit(bit, bit_start, bit_stop)
 
     def manchester_decode(self, samplenum, pl, pp, pin):
@@ -214,13 +213,13 @@ class Decoder(srd.Decoder):
             t = samples / self.samplerate
 
             if self.oldpl > self.halfbit_limit:
-                bit_start = self.oldsamplenum - self.oldpl/2
+                bit_start = int(self.oldsamplenum - self.oldpl/2)
                 bit_stop = int(samplenum)
                 self.putbit(bit, bit_start, bit_stop)
                 self.last_bit_pos = int(samplenum)
             if self.oldpl <= self.halfbit_limit:
                 if self.last_bit_pos <= self.oldsamplenum - self.oldpl:
-                    bit_start = self.oldsamplenum - self.oldpl
+                    bit_start = int(self.oldsamplenum - self.oldpl)
                     bit_stop = int(samplenum)
                     self.putbit(bit, bit_start, bit_stop)
                     self.last_bit_pos = int(samplenum)
