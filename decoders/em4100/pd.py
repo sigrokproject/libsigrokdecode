@@ -74,12 +74,12 @@ class Decoder(srd.Decoder):
         self.oldpl = 0
         self.oldsamplenum = 0
         self.last_bit_pos = 0
-        self.first_start = 0
+        self.first_ss = 0
         self.first_one = 0
         self.state = 'HEADER'
         self.data = 0
         self.data_bits = 0
-        self.data_start = 0
+        self.data_ss = 0
         self.data_parity = 0
         self.payload_cnt = 0
         self.data_col_parity = [0, 0, 0, 0, 0, 0]
@@ -98,20 +98,20 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def add_bit(self, bit, bit_start, bit_stop):
+    def add_bit(self, bit, ss, es):
         if self.state == 'HEADER':
             if bit == 1:
                 if self.first_one > 0:
                     self.first_one += 1
                 if self.first_one == 9:
-                    self.put(self.first_start, bit_stop, self.out_ann,
+                    self.put(self.first_ss, es, self.out_ann,
                              [1, ['Header', 'Head', 'He', 'H']])
                     self.first_one = 0
                     self.state = 'PAYLOAD'
                     return
                 if self.first_one == 0:
                     self.first_one = 1
-                    self.first_start = bit_start
+                    self.first_ss = ss
 
             if bit == 0:
                 self.first_one = 0
@@ -120,20 +120,20 @@ class Decoder(srd.Decoder):
         if self.state == 'PAYLOAD':
             self.payload_cnt += 1
             if self.data_bits == 0:
-                self.data_start = bit_start
+                self.data_ss = ss
                 self.data = 0
                 self.data_parity = 0
             self.data_bits += 1
             if self.data_bits == 5:
                 s = 'Version/customer' if self.payload_cnt <= 10 else 'Data'
                 c = 2 if self.payload_cnt <= 10 else 3
-                self.put(self.data_start, bit_start, self.out_ann,
+                self.put(self.data_ss, ss, self.out_ann,
                          [c, [s + ': %X' % self.data, '%X' % self.data]])
                 s = 'OK' if self.data_parity == bit else 'ERROR'
                 c = 4 if s == 'OK' else 5
                 if s == 'ERROR':
                     self.all_row_parity_ok = False
-                self.put(bit_start, bit_stop, self.out_ann,
+                self.put(ss, es, self.out_ann,
                          [c, ['Row parity: ' + s, 'RP: ' + s, 'RP', 'R']])
                 self.tag = (self.tag << 4) | self.data
                 self.data_bits = 0
@@ -149,16 +149,15 @@ class Decoder(srd.Decoder):
         if self.state == 'TRAILER':
             self.payload_cnt += 1
             if self.data_bits == 0:
-                self.data_start = bit_start
+                self.data_ss = ss
                 self.data = 0
                 self.data_parity = 0
             self.data_bits += 1
             self.col_parity[self.data_bits] = bit
-            self.col_parity_pos.append([bit_start, bit_stop])
+            self.col_parity_pos.append([ss, es])
 
             if self.data_bits == 5:
-                self.put(bit_start, bit_stop, self.out_ann,
-                         [8, ['Stop bit', 'SB', 'S']])
+                self.put(ss, es, self.out_ann, [8, ['Stop bit', 'SB', 'S']])
 
                 for i in range(1, 5):
                     s = 'OK' if self.data_col_parity[i] == \
@@ -172,7 +171,7 @@ class Decoder(srd.Decoder):
                 # Emit an annotation for valid-looking tags.
                 all_col_parity_ok = (self.data_col_parity[1:5] == self.col_parity[1:5])
                 if all_col_parity_ok and self.all_row_parity_ok:
-                    self.put(self.first_start, bit_stop, self.out_ann,
+                    self.put(self.first_ss, es, self.out_ann,
                              [9, ['Tag: %010X' % self.tag, 'Tag', 'T']])
 
                 self.tag = 0
@@ -186,26 +185,25 @@ class Decoder(srd.Decoder):
                     self.col_parity_pos = []
                     self.all_row_parity_ok = True
 
-    def putbit(self, bit, bit_start, bit_stop):
-        self.put(bit_start, bit_stop, self.out_ann, [0, [str(bit)]])
-        self.add_bit(bit, bit_start, bit_stop)
+    def putbit(self, bit, ss, es):
+        self.put(ss, es, self.out_ann, [0, [str(bit)]])
+        self.add_bit(bit, ss, es)
 
     def manchester_decode(self, samplenum, pl, pp, pin):
-        bit_start = 0
-        bit_stop = 0
+        ss, es = 0, 0
         bit = self.oldpin ^ self.polarity
         if pl > self.halfbit_limit:
             samples = samplenum - self.oldsamplenum
             t = samples / self.samplerate
 
             if self.oldpl > self.halfbit_limit:
-                bit_start = int(self.oldsamplenum - self.oldpl/2)
-                bit_stop = int(samplenum - pl/2)
-                self.putbit(bit, bit_start, bit_stop)
+                ss = int(self.oldsamplenum - self.oldpl/2)
+                es = int(samplenum - pl/2)
+                self.putbit(bit, ss, es)
             if self.oldpl <= self.halfbit_limit:
-                bit_start = int(self.oldsamplenum - self.oldpl)
-                bit_stop = int(samplenum - pl/2)
-                self.putbit(bit, bit_start, bit_stop)
+                ss = int(self.oldsamplenum - self.oldpl)
+                es = int(samplenum - pl/2)
+                self.putbit(bit, ss, es)
             self.last_bit_pos = int(samplenum - pl/2)
 
         if pl < self.halfbit_limit:
@@ -213,15 +211,15 @@ class Decoder(srd.Decoder):
             t = samples / self.samplerate
 
             if self.oldpl > self.halfbit_limit:
-                bit_start = int(self.oldsamplenum - self.oldpl/2)
-                bit_stop = int(samplenum)
-                self.putbit(bit, bit_start, bit_stop)
+                ss = int(self.oldsamplenum - self.oldpl/2)
+                es = int(samplenum)
+                self.putbit(bit, ss, es)
                 self.last_bit_pos = int(samplenum)
             if self.oldpl <= self.halfbit_limit:
                 if self.last_bit_pos <= self.oldsamplenum - self.oldpl:
-                    bit_start = int(self.oldsamplenum - self.oldpl)
-                    bit_stop = int(samplenum)
-                    self.putbit(bit, bit_start, bit_stop)
+                    ss = int(self.oldsamplenum - self.oldpl)
+                    es = int(samplenum)
+                    self.putbit(bit, ss, es)
                     self.last_bit_pos = int(samplenum)
 
     def decode(self, ss, es, data):
