@@ -98,7 +98,8 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def add_bit(self, bit, ss, es):
+    def putbit(self, bit, ss, es):
+        self.put(ss, es, self.out_ann, [0, [str(bit)]])
         if self.state == 'HEADER':
             if bit == 1:
                 if self.first_one > 0:
@@ -185,40 +186,25 @@ class Decoder(srd.Decoder):
                     self.col_parity_pos = []
                     self.all_row_parity_ok = True
 
-    def putbit(self, bit, ss, es):
-        self.put(ss, es, self.out_ann, [0, [str(bit)]])
-        self.add_bit(bit, ss, es)
-
     def manchester_decode(self, samplenum, pl, pp, pin):
-        ss, es = 0, 0
         bit = self.oldpin ^ self.polarity
         if pl > self.halfbit_limit:
-            samples = samplenum - self.oldsamplenum
-            t = samples / self.samplerate
-
+            es = int(samplenum - pl/2)
             if self.oldpl > self.halfbit_limit:
                 ss = int(self.oldsamplenum - self.oldpl/2)
-                es = int(samplenum - pl/2)
-                self.putbit(bit, ss, es)
-            if self.oldpl <= self.halfbit_limit:
+            else:
                 ss = int(self.oldsamplenum - self.oldpl)
-                es = int(samplenum - pl/2)
-                self.putbit(bit, ss, es)
+            self.putbit(bit, ss, es)
             self.last_bit_pos = int(samplenum - pl/2)
-
-        if pl < self.halfbit_limit:
-            samples = samplenum - self.oldsamplenum
-            t = samples / self.samplerate
-
+        else:
+            es = int(samplenum)
             if self.oldpl > self.halfbit_limit:
                 ss = int(self.oldsamplenum - self.oldpl/2)
-                es = int(samplenum)
                 self.putbit(bit, ss, es)
                 self.last_bit_pos = int(samplenum)
-            if self.oldpl <= self.halfbit_limit:
+            else:
                 if self.last_bit_pos <= self.oldsamplenum - self.oldpl:
                     ss = int(self.oldsamplenum - self.oldpl)
-                    es = int(samplenum)
                     self.putbit(bit, ss, es)
                     self.last_bit_pos = int(samplenum)
 
@@ -244,9 +230,7 @@ class Decoder(srd.Decoder):
             if self.oldpin != pin:
                 pl = samplenum - self.oldsamplenum
                 pp = pin
-
                 self.manchester_decode(samplenum, pl, pp, pin)
-
                 self.oldpl = pl
                 self.oldpp = pp
                 self.oldsamplenum = samplenum
