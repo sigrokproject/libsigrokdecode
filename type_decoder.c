@@ -50,9 +50,9 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	char **ann_text;
 
 	/* Should be a list of [annotation class, [string, ...]]. */
-	if (!PyList_Check(obj) && !PyTuple_Check(obj)) {
+	if (!PyList_Check(obj)) {
 		srd_err("Protocol decoder %s submitted an annotation that"
-			" is not a list or tuple", di->decoder->name);
+			" is not a list", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
