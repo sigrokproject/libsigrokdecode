@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
@@ -84,7 +84,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.samplenum, self.out_python, data)
 
     def putbin(self, data):
-        self.put(self.ss_block, self.samplenum, self.out_bin, data)
+        self.put(self.ss_block, self.samplenum, self.out_binary, data)
 
     def putb(self, data):
         self.put(self.ss_block, self.samplenum, self.out_ann, data)
@@ -154,7 +154,7 @@ class Decoder(srd.Decoder):
             if self.ss_block is not None:
 
                 if not self.wrote_wav_header:
-                    self.put(0, 0, self.out_bin, [0, self.wav_header()])
+                    self.put(0, 0, self.out_binary, [0, self.wav_header()])
                     self.wrote_wav_header = True
 
                 self.samplesreceived += 1

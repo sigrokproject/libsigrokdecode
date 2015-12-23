@@ -157,7 +157,7 @@ class Decoder(srd.Decoder):
 
     def putbin(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
-        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_bin, data)
+        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_binary, data)
 
     def __init__(self, **kwargs):
         self.samplerate = None
@@ -176,7 +176,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):

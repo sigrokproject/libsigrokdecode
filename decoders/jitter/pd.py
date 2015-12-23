@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
         self.clk_edge = edge_detector[self.options['clk_polarity']]
         self.sig_edge = edge_detector[self.options['sig_polarity']]
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_clk_missed = self.register(srd.OUTPUT_META,
             meta=(int, 'Clock missed', 'Clock transition missed'))
         self.out_sig_missed = self.register(srd.OUTPUT_META,
@@ -111,7 +111,7 @@ class Decoder(srd.Decoder):
             return
         # Format the delta to an ASCII float value terminated by a newline.
         x = str(delta) + '\n'
-        self.put(self.clk_start, self.sig_start, self.out_bin,
+        self.put(self.clk_start, self.sig_start, self.out_binary,
                  [0, x.encode('UTF-8')])
 
     # Helper function for missed clock and signal annotations.

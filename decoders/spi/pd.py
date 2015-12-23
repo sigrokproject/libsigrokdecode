@@ -149,7 +149,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate during transfers'))
 
@@ -165,10 +165,10 @@ class Decoder(srd.Decoder):
 
         if self.have_miso:
             ss, es = self.misobits[-1][1], self.misobits[0][2]
-            self.put(ss, es, self.out_bin, [0, bytes([so])])
+            self.put(ss, es, self.out_binary, [0, bytes([so])])
         if self.have_mosi:
             ss, es = self.mosibits[-1][1], self.mosibits[0][2]
-            self.put(ss, es, self.out_bin, [1, bytes([si])])
+            self.put(ss, es, self.out_binary, [1, bytes([si])])
 
         self.put(ss, es, self.out_python, ['BITS', si_bits, so_bits])
         self.put(ss, es, self.out_python, ['DATA', si, so])

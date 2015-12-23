@@ -78,7 +78,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.chip = chips[self.options['chip']]
         self.addr_counter = self.options['addr_counter']
 
@@ -86,7 +86,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def putbin(self, data):
-        self.put(self.ss_block, self.es_block, self.out_bin, data)
+        self.put(self.ss_block, self.es_block, self.out_binary, data)
 
     def putbits(self, bit1, bit2, bits, data):
         self.put(bits[bit1][1], bits[bit2][2], self.out_ann, data)

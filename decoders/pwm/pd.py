@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.startedge = 0 if self.options['polarity'] == 'active-low' else 1
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_average = \
             self.register(srd.OUTPUT_META,
                           meta=(float, 'Average', 'PWM base (cycle) frequency'))
@@ -92,7 +92,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, [1, [period_s]])
 
     def putb(self, data):
-        self.put(self.num_cycles, self.num_cycles, self.out_bin, data)
+        self.put(self.num_cycles, self.num_cycles, self.out_binary, data)
 
     def decode(self, ss, es, data):
 

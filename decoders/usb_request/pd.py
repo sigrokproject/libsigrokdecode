@@ -152,7 +152,7 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_ann, data)
 
     def putb(self, ts, data):
-        self.put(ts, ts, self.out_bin, data)
+        self.put(ts, ts, self.out_binary, data)
 
     def pcap_global_header(self):
         # See https://wiki.wireshark.org/Development/LibpcapFileFormat.
@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
             self.secs_per_sample = float(1) / float(self.samplerate)
 
     def start(self):
-        self.out_bin = self.register(srd.OUTPUT_BINARY)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def handle_transfer(self):
@@ -242,7 +242,7 @@ class Decoder(srd.Decoder):
 
     def write_pcap_header(self):
         if not self.wrote_pcap_header:
-            self.put(0, 0, self.out_bin, [0, self.pcap_global_header()])
+            self.put(0, 0, self.out_binary, [0, self.pcap_global_header()])
             self.wrote_pcap_header = True
 
     def request_summary(self, request):
