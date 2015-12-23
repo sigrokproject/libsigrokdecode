@@ -284,8 +284,8 @@ class Decoder(srd.Decoder):
         elif f == 'bin':
             self.putx(rxtx, [rxtx, [bin(b)[2:].zfill(8)]])
 
-        self.putbin(rxtx, (rxtx, bytes([b])))
-        self.putbin(rxtx, (2, bytes([b])))
+        self.putbin(rxtx, [rxtx, bytes([b])])
+        self.putbin(rxtx, [2, bytes([b])])
 
         self.databits = [[], []]
 

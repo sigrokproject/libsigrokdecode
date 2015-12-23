@@ -224,7 +224,7 @@ class Decoder(srd.Decoder):
         self.putp(['BITS', self.bits])
         self.putp([cmd, d])
 
-        self.putb((bin_class, bytes([d])))
+        self.putb([bin_class, bytes([d])])
 
         for bit in self.bits:
             self.put(bit[1], bit[2], self.out_ann, [5, ['%d' % bit[0]]])

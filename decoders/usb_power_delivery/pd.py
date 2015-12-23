@@ -524,7 +524,7 @@ class Decoder(srd.Decoder):
         bitrate = self.samplerate*len(self.bits) / float(es - ss)
         self.put(es, ss, self.out_bitrate, int(bitrate))
         # Raw binary data (BMC decoded)
-        self.put(es, ss, self.out_binary, (0, bytes(self.bits)))
+        self.put(es, ss, self.out_binary, [0, bytes(self.bits)])
 
     def decode(self, ss, es, data):
         if not self.samplerate:

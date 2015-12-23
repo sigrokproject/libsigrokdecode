@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
                     self.putx([0, ['%f%%' % percent]])
 
                     # Report the duty cycle in the binary output.
-                    self.putb((0, bytes([int(ratio * 256)])))
+                    self.putb([0, bytes([int(ratio * 256)])])
 
                     # Report the period in units of time.
                     period_t = float(period / self.samplerate)

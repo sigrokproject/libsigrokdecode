@@ -242,7 +242,7 @@ class Decoder(srd.Decoder):
 
     def write_pcap_header(self):
         if not self.wrote_pcap_header:
-            self.put(0, 0, self.out_bin, (0, self.pcap_global_header()))
+            self.put(0, 0, self.out_bin, [0, self.pcap_global_header()])
             self.wrote_pcap_header = True
 
     def request_summary(self, request):

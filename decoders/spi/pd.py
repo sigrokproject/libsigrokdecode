@@ -165,10 +165,10 @@ class Decoder(srd.Decoder):
 
         if self.have_miso:
             ss, es = self.misobits[-1][1], self.misobits[0][2]
-            self.put(ss, es, self.out_bin, (0, bytes([so])))
+            self.put(ss, es, self.out_bin, [0, bytes([so])])
         if self.have_mosi:
             ss, es = self.mosibits[-1][1], self.mosibits[0][2]
-            self.put(ss, es, self.out_bin, (1, bytes([si])))
+            self.put(ss, es, self.out_bin, [1, bytes([si])])
 
         self.put(ss, es, self.out_python, ['BITS', si_bits, so_bits])
         self.put(ss, es, self.out_python, ['DATA', si, so])

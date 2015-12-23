@@ -154,7 +154,7 @@ class Decoder(srd.Decoder):
             if self.ss_block is not None:
 
                 if not self.wrote_wav_header:
-                    self.put(0, 0, self.out_bin, (0, self.wav_header()))
+                    self.put(0, 0, self.out_bin, [0, self.wav_header()])
                     self.wrote_wav_header = True
 
                 self.samplesreceived += 1
@@ -167,7 +167,7 @@ class Decoder(srd.Decoder):
                 self.putpb(['DATA', [c3, self.data]])
                 self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
                                  '%s: %s' % (c3, v), c3]])
-                self.putbin((0, self.wav_sample(self.data)))
+                self.putbin([0, self.wav_sample(self.data)])
 
                 # Check that the data word was the correct length.
                 if self.wordlength != -1 and self.wordlength != self.bitcount:

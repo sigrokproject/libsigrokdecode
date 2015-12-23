@@ -111,25 +111,25 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 	int bin_class;
 	char *class_name, *buf;
 
-	/* Should be a tuple of (binary class, bytes). */
-	if (!PyTuple_Check(obj)) {
-		srd_err("Protocol decoder %s submitted non-tuple for SRD_OUTPUT_BINARY.",
+	/* Should be a list of [binary class, bytes]. */
+	if (!PyList_Check(obj)) {
+		srd_err("Protocol decoder %s submitted non-list for SRD_OUTPUT_BINARY.",
 			di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
 
 	/* Should have 2 elements. */
-	if (PyTuple_Size(obj) != 2) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple "
+	if (PyList_Size(obj) != 2) {
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list "
 				"with %zd elements instead of 2", di->decoder->name,
 				PyList_Size(obj));
 		return SRD_ERR_PYTHON;
 	}
 
 	/* The first element should be an integer. */
-	py_tmp = PyTuple_GetItem(obj, 0);
+	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple, "
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, "
 			"but first element was not an integer.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}
@@ -141,9 +141,9 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 	}
 
 	/* Second element should be bytes. */
-	py_tmp = PyTuple_GetItem(obj, 1);
+	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyBytes_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY tuple, "
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, "
 			"but second element was not bytes.", di->decoder->name);
 		return SRD_ERR_PYTHON;
 	}

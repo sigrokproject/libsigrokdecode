@@ -165,7 +165,7 @@ class Decoder(srd.Decoder):
         self.putb([cls, ['%s (%s): %s' % (s, self.addr_and_len(), \
                   self.hexbytes(self.chip['addr_bytes'])),
                   '%s (%s)' % (s, self.addr_and_len()), s, a, s[0]]])
-        self.putbin((0, bytes(self.bytebuf[self.chip['addr_bytes']:])))
+        self.putbin([0, bytes(self.bytebuf[self.chip['addr_bytes']:])])
 
     def addr_and_len(self):
         if self.chip['addr_bytes'] == 1:
@@ -215,7 +215,7 @@ class Decoder(srd.Decoder):
                 [8, ['Data', 'D']])
             self.putb([11, ['Current address read: %02X' % self.bytebuf[0],
                        'Current address read', 'Cur addr read', 'CAR', 'C']])
-            self.putbin((0, bytes([self.bytebuf[0]])))
+            self.putbin([0, bytes([self.bytebuf[0]])])
             self.addr_counter += 1
         elif self.is_random_access_read:
             # Random access read: word address, one data byte.

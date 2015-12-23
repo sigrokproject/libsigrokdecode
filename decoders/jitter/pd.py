@@ -112,7 +112,7 @@ class Decoder(srd.Decoder):
         # Format the delta to an ASCII float value terminated by a newline.
         x = str(delta) + '\n'
         self.put(self.clk_start, self.sig_start, self.out_bin,
-                 (0, x.encode('UTF-8')))
+                 [0, x.encode('UTF-8')])
 
     # Helper function for missed clock and signal annotations.
     def putm(self, data):
