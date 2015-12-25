@@ -178,6 +178,9 @@ VDM_CMDS = {
 }
 VDM_ACK = ['REQ', 'ACK', 'NAK', 'BSY']
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'usb_power_delivery'
@@ -469,7 +472,7 @@ class Decoder(srd.Decoder):
 
     def us2samples(self, us):
         if not self.samplerate:
-            raise Exception('Need the samplerate.')
+            raise SamplerateError('Need the samplerate.')
         return int(us * self.samplerate / 1000000)
 
     def decode_packet(self):
@@ -528,7 +531,7 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         if not self.samplerate:
-            raise Exception('Cannot decode without samplerate.')
+            raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
             # find edges ...
             if self.oldpins == pins:
