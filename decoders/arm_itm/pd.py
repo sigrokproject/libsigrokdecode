@@ -21,6 +21,7 @@
 import sigrokdecode as srd
 import string
 import subprocess
+import re
 
 ARM_EXCEPTIONS = {
     0: 'Thread',
@@ -46,11 +47,12 @@ class Decoder(srd.Decoder):
     inputs = ['uart']
     outputs = ['arm_itm']
     options = (
-        {'id': 'addr2line', 'desc': 'addr2line path',
-            'default': 'arm-none-eabi-addr2line'},
-        {'id': 'addr2line_opts', 'desc': 'addr2line options',
-            'default': '-f -C -s -p'},
-        {'id': 'elffile', 'desc': '.elf path', 'default': ''},
+        {'id': 'objdump', 'desc': 'objdump path',
+            'default': 'arm-none-eabi-objdump'},
+        {'id': 'objdump_opts', 'desc': 'objdump options',
+            'default': '-lSC'},
+        {'id': 'elffile', 'desc': '.elf path',
+            'default': ''},
     )
     annotations = (
         ('trace', 'Trace information'),
@@ -63,7 +65,8 @@ class Decoder(srd.Decoder):
         ('mode_thread', 'Current mode: thread'),
         ('mode_irq', 'Current mode: IRQ'),
         ('mode_exc', 'Current mode: Exception'),
-        ('location', 'Current location')
+        ('location', 'Current location'),
+        ('function', 'Current function'),
     )
     annotation_rows = (
         ('trace', 'Trace information', (0, 1)),
@@ -72,8 +75,9 @@ class Decoder(srd.Decoder):
         ('dwt_watchpoint', 'DWT watchpoint', (4,)),
         ('dwt_exc', 'Exception trace', (5,)),
         ('dwt_pc', 'Program counter', (6,)),
-        ('mode', 'Current mode', (7, 8, 9,)),
+        ('mode', 'Current mode', (7, 8, 9)),
         ('location', 'Current location', (10,)),
+        ('function', 'Current function', (11,)),
     )
 
     def __init__(self, **kwargs):
@@ -83,10 +87,50 @@ class Decoder(srd.Decoder):
         self.prevsample = 0
         self.dwt_timestamp = 0
         self.current_mode = None
-        self.current_loc = None
+        self.file_lookup = {}
+        self.func_lookup = {}
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.load_objdump()
+
+    def load_objdump(self):
+        '''Parse disassembly obtained from objdump into a lookup tables'''
+        if not (self.options['objdump'] and self.options['elffile']):
+            return
+
+        opts = [self.options['objdump']]
+        opts += self.options['objdump_opts'].split()
+        opts += [self.options['elffile']]
+
+        try:
+            disasm = subprocess.check_output(opts)
+        except subprocess.CalledProcessError:
+            return
+
+        disasm = disasm.decode('utf-8', 'replace')
+
+        instpat = re.compile('\s*([0-9a-fA-F]+):\t+([0-9a-fA-F ]+)\t+([a-zA-Z][^;]+)\s*;?.*')
+        filepat = re.compile('[^\s]+[/\\\\]([a-zA-Z0-9._-]+:[0-9]+)(?:\s.*)?')
+        funcpat = re.compile('[0-9a-fA-F]+\s*<([^>]+)>:.*')
+
+        prev_file = ''
+        prev_func = ''
+
+        for line in disasm.split('\n'):
+            m = instpat.match(line)
+            if m:
+                addr = int(m.group(1), 16)
+                self.file_lookup[addr] = prev_file
+                self.func_lookup[addr] = prev_func
+            else:
+                m = funcpat.match(line)
+                if m:
+                    prev_func = m.group(1)
+                else:
+                    m = filepat.match(line)
+                    if m:
+                        prev_file = m.group(1)
 
     def get_packet_type(self, byte):
         '''Identify packet type based on its first byte.
@@ -125,26 +169,17 @@ class Decoder(srd.Decoder):
         else:
             self.current_mode = (self.startsample, new_mode)
 
-    def location_change(self, new_pc):
-        if self.options['addr2line'] and self.options['elffile']:
-            opts = [self.options['addr2line'], '-e', self.options['elffile']]
-            opts += self.options['addr2line_opts'].split()
-            opts += ['0x%08x' % new_pc]
+    def location_change(self, pc):
+        new_loc = self.file_lookup.get(pc)
+        new_func = self.func_lookup.get(pc)
+        ss = self.startsample
+        es = self.prevsample
 
-            try:
-                new_loc = subprocess.check_output(opts)
-            except subprocess.CalledProcessError:
-                return
+        if new_loc is not None:
+            self.put(ss, es, self.out_ann, [10, [new_loc]])
 
-            new_loc = new_loc.decode('utf-8', 'replace').strip()
-
-            if self.current_loc is not None:
-                start, loc = self.current_loc
-                if loc == new_loc:
-                    return # Still on same line.
-                self.put(start, self.startsample, self.out_ann, [10, [loc]])
-
-            self.current_loc = (self.startsample, new_loc)
+        if new_func is not None:
+            self.put(ss, es, self.out_ann, [11, [new_func]])
 
     def fallback(self, buf):
         ptype = self.get_packet_type(buf[0])
