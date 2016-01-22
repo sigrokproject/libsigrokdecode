@@ -138,6 +138,7 @@ class Decoder(srd.Decoder):
         ('tx', 'TX dump'),
         ('rxtx', 'RX/TX dump'),
     )
+    idle_state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
 
     def putx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
@@ -171,7 +172,7 @@ class Decoder(srd.Decoder):
         self.startsample = [-1, -1]
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.oldbit = [1, 1]
-        self.oldpins = [1, 1]
+        self.oldpins = [-1, -1]
         self.databits = [[], []]
 
     def start(self):
@@ -338,10 +339,12 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         for (self.samplenum, pins) in data:
 
-            # Note: Ignoring identical samples here for performance reasons
-            # is not possible for this PD, at least not in the current state.
-            # if self.oldpins == pins:
-            #     continue
+            # We want to skip identical samples for performance reasons but,
+            # for now, we can only do that when we are in the idle state
+            # (meaning both channels are waiting for the start bit).
+            if self.state == self.idle_state and self.oldpins == pins:
+                continue
+
             self.oldpins, (rx, tx) = pins, pins
 
             if self.options['invert_rx'] == 'yes':
