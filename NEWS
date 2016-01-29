@@ -1,3 +1,147 @@
+0.4.0 (2016-01-29)
+------------------
+
+Note: This release DOES change the libsigrokdecode public C API. This
+means it is NOT backwards-compatible and frontends will need updates.
+
+ * New supported protocol decoders:
+   - adns5020       Bidirectional command and data over an SPI-like protocol
+   - am230x         Aosong AM230x/DHTxx/RHTxx humidity/temperature sensor
+   - arm_etmv3      Decode ETM instruction trace packets
+   - arm_itm        Trace data from Cortex-M / ARMv7m ITM module
+   - arm_tpiu       Filter TPIU formatted trace data into separate streams
+   - eeprom24xx     24xx series I²C EEPROM protocol
+   - em4100         EM4100 100-150kHz RFID protocol
+   - jitter         Retrieves the timing jitter between two digital signals
+   - max7219        8-digit LED display driver
+   - mdio           Half-duplex sync serial bus for MII management (MAC/PHY)
+   - modbus         Modbus RTU protocol for industrial applications
+   - mrf24j40       IEEE 802.15.4 2.4 GHz RF tranceiver chip
+   - nrf24l01       2.4GHz transceiver chip
+   - pwm            Analog level encoded in duty cycle percentage
+   - qi             Async serial protocol for Qi charger receivers
+   - rfm12          HopeRF RFM12 wireless transceiver control protocol
+   - sdcard_sd      Secure Digital card (SD mode) low-level protocol
+   - spdif          Serial bus for connecting digital audio devices
+   - stepper_motor  Absolute position and movement speed from step/dir
+   - swd            Two-wire protocol for debug access to ARM CPUs
+   - tca6408a       Texas Instruments TCA6408A 8-bit I²C I/O expander
+   - timing         Calculate time between edges
+   - usb_power_delivery USB Power Delivery protocol
+   - usb_request    USB (low-speed and full-speed) transaction/request protocol
+ * The 'mx25lxx05d' decoder was renamed to 'spiflash' and made more generic.
+ * arm_itm:
+   - Use objdump instead of addr2line (bug #564).
+ * can:
+   - Emit bit value annotations.
+   - Improve stuff bit annotation placement.
+ * ds1307:
+   - Emit per-bit annotations for registers.
+   - Add more annotation classes (and annotation rows).
+   - Handle register 0x07 (control register).
+   - Handle SRAM register accesses.
+   - Correctly handle address wrap-around.
+   - Warn about (and ignore) non-DS1307 traffic.
+ * edid:
+   - Handle more EDID structure sections.
+   - Add annotation rows.
+ * jitter:
+   - Avoid Unicode string literals (bug #569).
+ * jtag:
+   - Fix/enable OUT_PYTHON output.
+   - Add more annotations, fix a SHIFT-IR/-DR issue.
+ * jtag_stm32:
+   - Fix incorrect handling of registers.
+   - Decode more fields, improve IDCODE handling.
+   - Decode IDCODE contents as strings (not just hex values).
+ * midi:
+   - Fix two incorrect sample numbers.
+   - Update for a change (emit databyte/bits at the same time) in the uart PD.
+ * mrf24j40:
+   - Fix a register address typo.
+ * nunchuk:
+   - Fix inverted button press logic.
+ * pan1321:
+   - Update for a change (emit databyte/bits at the same time) in the uart PD.
+ * onewire_link:
+   - Fix a bug when the samplerate is too low for the PD (bug #357).
+ * parallel:
+   - Enforce that at least one pin must be provided.
+ * pwm:
+   - Avoid Unicode string literals (bug #569).
+ * spi:
+   - OUT_PYTHON docs: Fix order of MISO/MOSI data items.
+   - Tell stacked decoders about missing CS# signal.
+   - Add binary output facilities for MISO/MOSI (bug #424).
+   - Don't decode data lines if CS# isn't asserted (bug #559).
+   - Add a 'TRANSFER' output type.
+ * spiflash:
+   - Implement FAST READ command.
+   - Add a 'chip' option in preparation for supporting more devices.
+   - Fix incorrect 'inputs' field.
+ * tlc5620:
+   - Fix incorrect DAC selection decode, add more annotations.
+   - Only decode the last 11 bits, ignore the rest.
+   - Properly handle LOAD and LDAC based operations.
+   - Handle the case of less than 11 bits in a command.
+   - Add options for per-DAC Vref, show voltages.
+ * uart:
+   - Add signal inversion options 'invert_tx' and 'invert_rx'.
+   - Emit databyte and bits list at the same time to simplify stacked PDs.
+   - Improve sample positions at high data rates.
+   - Handle framing errors better.
+   - Performance-optimize handling of samples when TX and RX are both idle.
+ * usb_packet:
+   - Fix incorrect DATA*/MDATA handling (bug #623).
+   - Handle invalid packets more gracefully (bug #186).
+   - Calculate and check CRC5/CRC16.
+   - Handle errors from usb_signalling.
+   - Handle PREamble transmissions.
+ * usb_request:
+   - Handle transmission timeouts.
+   - Handle PREamble transmissions.
+ * usb_signalling:
+   - Track USB symbol width to compensate frequency errors.
+   - Detect bit stuffing errors.
+   - Handle symbol errors in EOP state.
+   - Use explicit positions for packet start/end (avoids glitches).
+   - Decode RESET and Keep-Alive signalling conditions.
+   - Add option to automatically set signalling speed.
+   - Fix SOP detection after an error condition.
+   - Add signalling states needed after LS PREamble PID.
+   - Detect PREamble PID.
+ * Drop the PD testing framework. It's in the 'sigrok-test' repository now
+   (and is not meant for "end users" or distro packages anyway; it's a pure
+   developer tool/system). This also fixes some PD test related build issues.
+ * Makefile.am: Use libtool's -no-undefined option (fixes MinGW shared build).
+ * Support loading decoders stored in ZIP files.
+ * Updated build requirements:
+   - libglib >= 2.28.0
+   - Drop obsolete (optional) dependencies: python3-coverage, libsigrok.
+ * README: Use clearer descriptions for the dependencies.
+ * Remove all references to the obsolete sigrok-commits mailing list.
+ * Fix incorrect doxygen comment for srd_decoder_list() function (bug #378).
+ * configure.ac:
+   - Fix a shell portability issue ("==" vs. "=").
+   - Use AM_CFLAGS instead of CFLAGS.
+   - Only link the 'check' library into the unit tests (not the lib).
+ * Unit tests:
+   - Fix out-of-tree build.
+ * libsigrokdecode.pc (pkg-config) file:
+   - Fix an issue related to the Python lib dependencies.
+   - Publish decodersdir variable.
+ * Add "-git-<hash>" suffix to development version numbers.
+ * Pass unitsize per sample chunk (bug #352).
+ * Modernize the whole autotools setup.
+ * Build with _POSIX_C_SOURCE=200112L per default.
+ * Build: Show CC and CFLAGS in configuration summary.
+ * Also look for decoders in XDG data directories.
+ * Restrict Python code to stable ABI subset (PEP 384).
+ * Fix various memory leaks.
+ * Fix an issue with PDs not being properly removed upon unload.
+ * Don't let Python override signal handlers (bug #461).
+ * configure: Also check for Python 3.5 (bug #739).
+
 0.3.0 (2014-05-06)
 ------------------
 
