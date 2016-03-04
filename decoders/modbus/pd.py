@@ -816,7 +816,7 @@ class Decoder(srd.Decoder):
     name = 'Modbus'
     longname = 'Modbus RTU over RS232/RS485'
     desc = 'Modbus RTU protocol for industrial applications.'
-    license = 'gplv2+'
+    license = 'gplv3+'
     inputs = ['uart']
     outputs = ['modbus']
     annotations = (

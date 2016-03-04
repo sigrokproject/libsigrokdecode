@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
     name = 'ADNS-5020'
     longname = 'Avago ADNS-5020 optical mouse sensor'
     desc = 'Bidirectional command and data over an SPI-like protocol.'
-    license = 'gplv2'
+    license = 'gplv2+'
     inputs = ['spi']
     outputs = ['adns5020']
     annotations = (
