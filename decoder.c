@@ -849,7 +849,7 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	 */
 	for (l = sessions; l; l = l->next) {
 		sess = l->data;
-		srd_inst_free_all(sess, NULL);
+		srd_inst_free_all(sess);
 	}
 
 	/* Remove the PD from the list of loaded decoders. */

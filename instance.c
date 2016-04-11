@@ -297,6 +297,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	struct srd_decoder_inst *di;
 	char *inst_id;
 
+	i = 1;
 	srd_dbg("Creating new %s instance.", decoder_id);
 
 	if (session_is_valid(sess) != SRD_OK) {
@@ -313,12 +314,22 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 
 	di->decoder = dec;
 	di->sess = sess;
+
 	if (options) {
 		inst_id = g_hash_table_lookup(options, "id");
-		di->inst_id = g_strdup(inst_id ? inst_id : decoder_id);
+		if (inst_id)
+			di->inst_id = g_strdup(inst_id);
 		g_hash_table_remove(options, "id");
-	} else
-		di->inst_id = g_strdup(decoder_id);
+	}
+
+	/* Create a unique instance ID (as none was provided). */
+	if (!di->inst_id) {
+		di->inst_id = g_strdup_printf("%s-%d", decoder_id, i++);
+		while (srd_inst_find_by_id(sess, di->inst_id)) {
+			g_free(di->inst_id);
+			di->inst_id = g_strdup_printf("%s-%d", decoder_id, i++);
+		}
+	}
 
 	/*
 	 * Prepare a default channel map, where samples come in the
@@ -368,6 +379,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 
 	/* Instance takes input from a frontend by default. */
 	sess->di_list = g_slist_append(sess->di_list, di);
+	srd_dbg("Created new %s instance with ID %s.", decoder_id, di->inst_id);
 
 	return di;
 }
@@ -1018,27 +1030,14 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 }
 
 /** @private */
-SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack)
+SRD_PRIV void srd_inst_free_all(struct srd_session *sess)
 {
-	GSList *l;
-	struct srd_decoder_inst *di;
-
 	if (session_is_valid(sess) != SRD_OK) {
 		srd_err("Invalid session.");
 		return;
 	}
 
-	di = NULL;
-	for (l = stack ? stack : sess->di_list; di == NULL && l != NULL; l = l->next) {
-		di = l->data;
-		if (di->next_di)
-			srd_inst_free_all(sess, di->next_di);
-		srd_inst_free(di);
-	}
-	if (!stack) {
-		g_slist_free(sess->di_list);
-		sess->di_list = NULL;
-	}
+	g_slist_free_full(sess->di_list, (GDestroyNotify)srd_inst_free);
 }
 
 /** @} */

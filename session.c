@@ -278,7 +278,7 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
 
 	session_id = sess->session_id;
 	if (sess->di_list)
-		srd_inst_free_all(sess, NULL);
+		srd_inst_free_all(sess);
 	if (sess->callbacks)
 		g_slist_free_full(sess->callbacks, g_free);
 	sessions = g_slist_remove(sessions, sess);
