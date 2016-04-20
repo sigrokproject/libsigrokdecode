@@ -71,24 +71,24 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        for (samplenum, (pin,)) in data:
+        for (self.samplenum, (pin,)) in data:
             # Ignore identical samples early on (for performance reasons).
             if self.oldpin == pin:
                 continue
 
             if self.oldpin is None:
                 self.oldpin = pin
-                self.last_samplenum = samplenum
+                self.last_samplenum = self.samplenum
                 continue
 
             if self.oldpin != pin:
-                samples = samplenum - self.last_samplenum
+                samples = self.samplenum - self.last_samplenum
                 t = samples / self.samplerate
 
                 # Report the timing normalized.
-                self.put(self.last_samplenum, samplenum, self.out_ann,
+                self.put(self.last_samplenum, self.samplenum, self.out_ann,
                          [0, [normalize_time(t)]])
 
                 # Store data for next round.
-                self.last_samplenum = samplenum
+                self.last_samplenum = self.samplenum
                 self.oldpin = pin
