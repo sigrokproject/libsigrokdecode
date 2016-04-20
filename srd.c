@@ -169,6 +169,12 @@ SRD_API int srd_init(const char *path)
 		}
 	}
 #ifdef DECODERS_DIR
+	/* Common modules for use by any decoder. */
+	if ((ret = srd_decoder_searchpath_add(COMMON_DIR)) != SRD_OK) {
+		Py_Finalize();
+		return ret;
+	}
+
 	/* Hardcoded decoders install location, if defined. */
 	if ((ret = srd_decoder_searchpath_add(DECODERS_DIR)) != SRD_OK) {
 		Py_Finalize();
