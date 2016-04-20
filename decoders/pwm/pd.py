@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self, **kwargs):
-        self.ss = self.es = None
+        self.ss_block = self.es_block = None
         self.first_transition = True
         self.first_samplenum = None
         self.start_samplenum = None
@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
                           meta=(float, 'Average', 'PWM base (cycle) frequency'))
 
     def putx(self, data):
-        self.put(self.ss, self.es, self.out_ann, data)
+        self.put(self.ss_block, self.es_block, self.out_ann, data)
 
     def putp(self, period_t):
         # Adjust granularity.
@@ -89,7 +89,7 @@ class Decoder(srd.Decoder):
         else:
             period_s = '%.1f ms' % (period_t * 1e3)
 
-        self.put(self.ss, self.es, self.out_ann, [1, [period_s]])
+        self.put(self.ss_block, self.es_block, self.out_ann, [1, [period_s]])
 
     def putb(self, data):
         self.put(self.num_cycles, self.num_cycles, self.out_binary, data)
@@ -122,10 +122,10 @@ class Decoder(srd.Decoder):
                     ratio = float(duty / period)
 
                     # This interval starts at this edge.
-                    self.ss = self.start_samplenum
+                    self.ss_block = self.start_samplenum
                     # Store the new rising edge position and the ending
                     # edge interval.
-                    self.start_samplenum = self.es = self.samplenum
+                    self.start_samplenum = self.es_block = self.samplenum
 
                     # Report the duty cycle in percent.
                     percent = float(ratio * 100)
@@ -141,10 +141,10 @@ class Decoder(srd.Decoder):
                     # Update and report the new duty cycle average.
                     self.num_cycles += 1
                     self.average += percent
-                    self.put(self.first_samplenum, self.es, self.out_average,
+                    self.put(self.first_samplenum, self.es_block, self.out_average,
                              float(self.average / self.num_cycles))
                 else:
                     # Falling edge
-                    self.end_samplenum = self.ss = self.samplenum
+                    self.end_samplenum = self.ss_block = self.samplenum
 
             self.oldpin = pins[0]
