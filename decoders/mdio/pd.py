@@ -77,6 +77,9 @@ class Decoder(srd.Decoder):
         if self.options['show_debug_bits'] == 'yes':
             self.put(ss, es, self.out_ann, [1, ['%d' % (self.bitcount - 1), '%d' % ((self.bitcount - 1) % 10)]])
 
+    def putff(self, data):
+        self.put(self.ss_frame_field, self.samplenum, self.out_ann, data)
+
     def putdata(self):
         self.put(self.ss_frame_field, self.mdiobits[0][2], self.out_ann,
                  [2, ['DATA: %04X' % self.data, 'DATA', 'D']])
@@ -194,8 +197,7 @@ class Decoder(srd.Decoder):
                 st = ['ST (Clause 45)', 'ST 45']
             else:
                 st = ['ST (Clause 22)', 'ST 22']
-            self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                     [2, st + ['ST', 'S']])
+            self.putff([2, st + ['ST', 'S']])
             self.ss_frame_field = self.samplenum
 
             if mdio:
@@ -225,11 +227,9 @@ class Decoder(srd.Decoder):
                     op = ['OP: READ', 'OP: R']
             else:
                 op = ['OP: READ', 'OP: R'] if self.opcode else ['OP: WRITE', 'OP: W']
-            self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                     [2, op + ['OP', 'O']])
+            self.putff([2, op + ['OP', 'O']])
             if self.op_invalid:
-                self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                         [4, ['OP %s' % self.op_invalid, 'OP', 'O']])
+                self.putff([4, ['OP %s' % self.op_invalid, 'OP', 'O']])
             self.ss_frame_field = self.samplenum
         self.portad_bits -= 1
         self.portad |= mdio << self.portad_bits
@@ -243,8 +243,7 @@ class Decoder(srd.Decoder):
                 prtad = ['PRTAD: %02d' % self.portad, 'PRT', 'P']
             else:
                 prtad = ['PHYAD: %02d' % self.portad, 'PHY', 'P']
-            self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                     [2, prtad])
+            self.putff([2, prtad])
             self.ss_frame_field = self.samplenum
         self.devad_bits -= 1
         self.devad |= mdio << self.devad_bits
@@ -258,8 +257,7 @@ class Decoder(srd.Decoder):
                 regad = ['DEVAD: %02d' % self.devad, 'DEV', 'D']
             else:
                 regad = ['REGAD: %02d' % self.devad, 'REG', 'R']
-            self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                     [2, regad])
+            self.putff([2, regad])
             self.ss_frame_field = self.samplenum
             if mdio != 1 and ((self.clause45 and self.opcode < 2)
             or (not self.clause45 and self.opcode == 0)):
@@ -275,11 +273,9 @@ class Decoder(srd.Decoder):
     def state_DATA(self, mdio):
         if self.data == -1:
             self.data = 0
-            self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                     [2, ['TA', 'T']])
+            self.putff([2, ['TA', 'T']])
             if self.ta_invalid:
-                self.put(self.ss_frame_field, self.samplenum, self.out_ann,
-                         [4, ['TA%s' % self.ta_invalid, 'TA', 'T']])
+                self.putff([4, ['TA%s' % self.ta_invalid, 'TA', 'T']])
             self.ss_frame_field = self.samplenum
         self.data_bits -= 1
         self.data |= mdio << self.data_bits
