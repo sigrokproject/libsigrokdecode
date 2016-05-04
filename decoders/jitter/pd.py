@@ -91,17 +91,17 @@ class Decoder(srd.Decoder):
     def putx(self, delta):
         # Adjust granularity.
         if delta == 0 or delta >= 1:
-            delta_s = "%.1fs" % (delta)
+            delta_s = '%.1fs' % (delta)
         elif delta <= 1e-12:
-            delta_s = "%.1ffs" % (delta * 1e15)
+            delta_s = '%.1ffs' % (delta * 1e15)
         elif delta <= 1e-9:
-            delta_s = "%.1fps" % (delta * 1e12)
+            delta_s = '%.1fps' % (delta * 1e12)
         elif delta <= 1e-6:
-            delta_s = "%.1fns" % (delta * 1e9)
+            delta_s = '%.1fns' % (delta * 1e9)
         elif delta <= 1e-3:
-            delta_s = "%.1fμs" % (delta * 1e6)
+            delta_s = '%.1fμs' % (delta * 1e6)
         else:
-            delta_s = "%.1fms" % (delta * 1e3)
+            delta_s = '%.1fms' % (delta * 1e3)
 
         self.put(self.clk_start, self.sig_start, self.out_ann, [0, [delta_s]])
 
