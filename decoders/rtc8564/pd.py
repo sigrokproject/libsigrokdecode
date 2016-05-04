@@ -19,10 +19,7 @@
 ##
 
 import sigrokdecode as srd
-
-# Return the specified BCD number (max. 8 bits) as integer.
-def bcd2int(b):
-    return (b & 0x0f) + ((b >> 4) * 10)
+from srdhelper import bcd2int
 
 def reg_list():
     l = []
