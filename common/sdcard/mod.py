@@ -1,7 +1,7 @@
 ##
-## This file is part of the sigrok project.
+## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2015 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 # seem to be mentioned in the spec, but aren't marked as reserved either.
 cmd_names = {
     0:  'GO_IDLE_STATE',
-    # 1: Reserved
+    1:  'SEND_OP_COND', # Reserved in SD mode
     2:  'ALL_SEND_CID',
     3:  'SEND_RELATIVE_ADDR',
     4:  'SET_DSR',
@@ -53,8 +53,8 @@ cmd_names = {
     29: 'CLR_WRITE_PROT',
     30: 'SEND_WRITE_PROT',
     # 31: Reserved
-    32: 'ERASE_WR_BLK_START',
-    33: 'ERASE_WR_BLK_END',
+    32: 'ERASE_WR_BLK_START', # SPI mode: ERASE_WR_BLK_START_ADDR
+    33: 'ERASE_WR_BLK_END', # SPI mode: ERASE_WR_BLK_END_ADDR
     34: 'Reserved for CMD6', # New since spec 1.10
     35: 'Reserved for CMD6', # New since spec 1.10
     36: 'Reserved for CMD6', # New since spec 1.10
@@ -73,7 +73,8 @@ cmd_names = {
     55: 'APP_CMD',
     56: 'GEN_CMD',
     57: 'Reserved for CMD6', # New since spec 1.10
-    # 58-59: Reserved
+    58: 'READ_OCR', # Reserved in SD mode
+    59: 'CRC_ON_OFF', # Reserved in SD mode
     60: 'Reserved for manufacturer',
     61: 'Reserved for manufacturer',
     62: 'Reserved for manufacturer',
