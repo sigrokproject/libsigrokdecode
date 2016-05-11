@@ -137,8 +137,7 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.samplerate = 8e6 # None
-        self.secs_per_sample = float(1) / float(self.samplerate)
+        self.samplerate = None
         self.request = {}
         self.request_id = 0
         self.transaction_state = 'IDLE'
