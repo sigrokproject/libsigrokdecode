@@ -37,7 +37,7 @@ class Decoder(srd.Decoder):
         {'id': 'active', 'desc': 'Data lines active level',
          'default': 'low', 'values': ('low', 'high')},
         {'id': 'bitwidth_ms', 'desc': 'Single bit width in milliseconds',
-         'default': '4', 'values': ('1', '2', '4', '8', '16', '32')},
+         'default': 4, 'values': (1, 2, 4, 8, 16, 32)},
     )
     annotations = (
         ('bits', 'Bits'),
