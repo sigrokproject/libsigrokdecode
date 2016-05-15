@@ -170,7 +170,7 @@ class Decoder(srd.Decoder):
             'default': 'alternative', 'values': ('alternative', 'original')},
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.buf = []
         self.syncbuf = []
         self.prevsample = 0

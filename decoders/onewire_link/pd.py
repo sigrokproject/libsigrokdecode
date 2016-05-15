@@ -93,7 +93,7 @@ class Decoder(srd.Decoder):
     def putrs(self, data):
         self.put(self.rise, self.samplenum, self.out_ann, data)
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.samplenum = 0
         self.state = 'WAIT FOR FALLING EDGE'

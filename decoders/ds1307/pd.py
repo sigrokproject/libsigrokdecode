@@ -75,7 +75,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (28,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.hours = -1
         self.minutes = -1

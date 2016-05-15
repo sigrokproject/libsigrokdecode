@@ -37,7 +37,7 @@ class Decoder(srd.Decoder):
         ('text-verbose', 'Human-readable text (verbose)'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.cmd = []
         self.state = 'IDLE'
         self.ss = None

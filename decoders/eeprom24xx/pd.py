@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
         ('binary', 'Binary'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.reset()
 
     def start(self):

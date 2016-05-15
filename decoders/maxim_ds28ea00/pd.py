@@ -48,7 +48,7 @@ class Decoder(srd.Decoder):
         ('text', 'Human-readable text'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.trn_beg = 0
         self.trn_end = 0
         self.state = 'ROM'

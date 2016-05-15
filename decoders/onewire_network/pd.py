@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
         ('text', 'Human-readable text'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ss_block = 0
         self.es_block = 0
         self.state = 'COMMAND'

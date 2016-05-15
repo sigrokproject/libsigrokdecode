@@ -51,7 +51,7 @@ class Decoder(srd.Decoder):
         ('dev', 'Device', (9,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.mosi_bytes, self.miso_bytes = [], []
         self.ss_cmd, self.es_cmd = 0, 0

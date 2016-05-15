@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
         ('ascii-float', 'Jitter values as newline-separated ASCII floats'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'CLK'
         self.samplerate = None
         self.oldpin = None

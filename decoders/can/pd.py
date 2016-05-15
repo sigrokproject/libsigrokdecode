@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', tuple(range(15)) + (16,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.reset_variables()
 

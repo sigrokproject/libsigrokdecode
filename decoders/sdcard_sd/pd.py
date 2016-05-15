@@ -61,7 +61,7 @@ class Decoder(srd.Decoder):
         ('cmd', 'Commands', tuple(range(128))),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'GET COMMAND TOKEN'
         self.token = []
         self.oldpins = None

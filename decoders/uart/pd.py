@@ -160,7 +160,7 @@ class Decoder(srd.Decoder):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
         self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_binary, data)
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.samplenum = 0
         self.frame_start = [-1, -1]

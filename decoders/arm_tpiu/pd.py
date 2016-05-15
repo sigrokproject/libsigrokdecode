@@ -42,7 +42,7 @@ class Decoder(srd.Decoder):
         ('data', 'Stream data', (1,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.buf = []
         self.syncbuf = []
         self.prevsample = 0

@@ -48,7 +48,7 @@ class Decoder(srd.Decoder):
         ('state', 'Stream state', (1,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self._samples_per_bit = 10
 
         self._d0_prev = None

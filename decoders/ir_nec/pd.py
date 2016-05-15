@@ -99,7 +99,7 @@ class Decoder(srd.Decoder):
                  [11, ['%s: %s' % (dev, btn[0]), '%s: %s' % (dev, btn[1]),
                  '%s' % btn[1]]])
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.ss_bit = self.ss_start = self.ss_other_edge = self.ss_remote = 0
         self.data = self.count = self.active = self.old_ir = None

@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
         ('decode', 'Decode', (10,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.oldpin = None
         self.last_samplenum = None

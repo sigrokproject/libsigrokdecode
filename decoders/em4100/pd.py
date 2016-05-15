@@ -62,7 +62,7 @@ class Decoder(srd.Decoder):
         ('tags', 'Tags', (9,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.oldpin = None
         self.last_samplenum = None

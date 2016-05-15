@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
         ('date-time', 'Date/time', (9, 10)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.hours = -1
         self.minutes = -1

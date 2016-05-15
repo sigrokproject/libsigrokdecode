@@ -39,7 +39,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Human-readable warnings'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.cmd = ['', '']
         self.ss_block = None
 

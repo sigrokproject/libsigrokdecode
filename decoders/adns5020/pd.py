@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (2,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ss_cmd, self.es_cmd = 0, 0
         self.mosi_bytes = []
 

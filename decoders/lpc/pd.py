@@ -136,7 +136,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (0,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.oldlclk = -1
         self.samplenum = 0

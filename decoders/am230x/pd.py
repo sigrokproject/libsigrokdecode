@@ -123,7 +123,7 @@ class Decoder(srd.Decoder):
             checksum += self.bits2num(bitlist[i-8:i])
         return checksum % 256
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.reset()
 

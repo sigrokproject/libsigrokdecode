@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', (0,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = None
         # Received data items, used as an index into samplenum/data
         self.cnt = 0

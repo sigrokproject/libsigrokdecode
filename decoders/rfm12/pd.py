@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
         ('interpretation', 'Interpretation', (5,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.mosi_bytes, self.miso_bytes = [], []
         self.mosi_bits, self.miso_bits = [], []
         self.row_pos = [0, 0, 0]

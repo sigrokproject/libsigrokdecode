@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
         ('position', 'Position', (1,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.oldstep = None
         self.prev_step_ss = None
         self.pos = 0

@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
             'values': tuple(chips.keys())},
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = None
         self.cmdstate = 1
         self.addr = 0

@@ -49,7 +49,7 @@ class Decoder(srd.Decoder):
         ('raw', 'RAW file'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ss_block = self.es_block = None
         self.first_transition = True
         self.first_samplenum = None

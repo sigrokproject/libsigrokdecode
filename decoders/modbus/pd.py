@@ -846,7 +846,7 @@ class Decoder(srd.Decoder):
             'values': ('RX', 'TX')},
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ADUSc = None # Start off with empty slave -> client ADU.
         self.ADUCs = None # Start off with empty client -> slave ADU.
 

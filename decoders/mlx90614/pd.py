@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
         ('kelvin', 'Temperature in Kelvin'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IGNORE START REPEAT'
         self.data = []
 

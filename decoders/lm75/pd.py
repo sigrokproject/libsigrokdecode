@@ -62,7 +62,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Human-readable warnings'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.reg = 0x00 # Currently selected register
         self.databytes = []

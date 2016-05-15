@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
         ('dest', 'Destination address'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ncnt = 0
         self.nmax = 0
         self.addr = 0

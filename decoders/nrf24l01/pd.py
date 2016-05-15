@@ -94,7 +94,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (ann_warn,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.next()
         self.requirements_met = True
         self.cs_was_released = False

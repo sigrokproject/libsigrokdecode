@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
         ('rgb', 'RGB', (2,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.oldpin = None
         self.packet_ss = None

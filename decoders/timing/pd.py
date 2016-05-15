@@ -55,7 +55,7 @@ class Decoder(srd.Decoder):
         ('time', 'Time', (0,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.oldpin = None
         self.last_samplenum = None

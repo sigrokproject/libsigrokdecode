@@ -110,7 +110,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (Ann.WARN,))
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.prev_cycle = Cycle.NONE
         self.op_state   = self.state_IDLE
 
