@@ -24,6 +24,19 @@ from .lists import *
 def cmd_annotation_classes():
     return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
 
+def decode_dual_bytes(sio0, sio1):
+    # Given a byte in SIO0 (MOSI) of even bits and a byte in
+    # SIO1 (MISO) of odd bits, return a tuple of two bytes.
+    def combine_byte(even, odd):
+        result = 0
+        for bit in range(4):
+            if even & (1 << bit):
+                result |= 1 << (bit*2)
+            if odd & (1 << bit):
+                result |= 1 << ((bit*2) + 1)
+        return result
+    return (combine_byte(sio0 >> 4, sio1 >> 4), combine_byte(sio0, sio1))
+
 def decode_status_reg(data):
     # TODO: Additional per-bit(s) self.put() calls with correct start/end.
 
@@ -192,13 +205,27 @@ class Decoder(srd.Decoder):
             # Bytes 6-x: Master reads data bytes (until CS# de-asserted).
             if self.cmdstate == 6:
                 self.ss_block = self.ss
-                self.on_end_transaction = lambda: self.output_block("Read")
+                self.on_end_transaction = lambda: self.output_data_block('Read')
             self.data.append(miso)
 
         self.cmdstate += 1
 
     def handle_2read(self, mosi, miso):
-        pass # TODO
+        # Fast read dual I/O: Same as fast read, but all data
+        # after the command is sent via two I/O pins.
+        # MOSI = SIO0 = even bits, MISO = SIO1 = odd bits.
+        # Recombine the bytes and pass them up to the handle_fast_read command.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([5, ['Command: %s' % cmds[self.state][1]]])
+            self.cmdstate = 2
+        else:
+            # Dual I/O mode.
+            a, b = decode_dual_bytes(mosi, miso)
+            # Pass same byte in as both MISO & MOSI, parser state determines
+            # which one it cares about.
+            self.handle_fast_read(a, a)
+            self.handle_fast_read(b, b)
 
     # TODO: Warn/abort if we don't see the necessary amount of bytes.
     # TODO: Warn if WREN was not seen before.
