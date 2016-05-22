@@ -90,6 +90,14 @@ class Decoder(srd.Decoder):
         self.on_end_transaction = None
         self.end_current_transaction()
 
+        # Build dict mapping command keys to handler functions. Each
+        # command in 'cmds' (defined in lists.py) has a matching
+        # handler self.handle_<shortname>.
+        def get_handler(cmd):
+            s = 'handle_%s' % cmds[cmd][0].lower().replace('/', '_')
+            return getattr(self, s)
+        self.cmd_handlers = dict((cmd, get_handler(cmd)) for cmd in cmds.keys())
+
     def end_current_transaction(self):
         if self.on_end_transaction is not None: # Callback for CS# transition.
             self.on_end_transaction()
@@ -373,10 +381,8 @@ class Decoder(srd.Decoder):
             self.cmdstate = 1
 
         # Handle commands.
-        if self.state in cmds:
-            s = 'handle_%s' % cmds[self.state][0].lower().replace('/', '_')
-            handle_reg = getattr(self, s)
-            handle_reg(mosi, miso)
-        else:
+        try:
+            self.cmd_handlers[self.state](mosi, miso)
+        except KeyError:
             self.putx([24, ['Unknown command: 0x%02x' % mosi]])
             self.state = None
