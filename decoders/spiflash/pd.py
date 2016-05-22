@@ -74,6 +74,13 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.on_end_transaction = None
+        self.end_current_transaction()
+
+    def end_current_transaction(self):
+        if self.on_end_transaction is not None: # Callback for CS# transition.
+            self.on_end_transaction()
+            self.on_end_transaction = None
         self.state = None
         self.cmdstate = 1
         self.addr = 0
@@ -133,13 +140,8 @@ class Decoder(srd.Decoder):
             self.putx([3, ['Command: %s' % cmds[self.state][1]]])
         elif self.cmdstate >= 2:
             # Bytes 2-x: Slave sends status register as long as master clocks.
-            if self.cmdstate <= 3: # TODO: While CS# asserted.
-                self.putx([24, ['Status register: 0x%02x' % miso]])
-                self.putx([25, [decode_status_reg(miso)]])
-
-            if self.cmdstate == 3: # TODO: If CS# got de-asserted.
-                self.state = None
-                return
+            self.putx([24, ['Status register: 0x%02x' % miso]])
+            self.putx([25, [decode_status_reg(miso)]])
 
         self.cmdstate += 1
 
@@ -162,19 +164,10 @@ class Decoder(srd.Decoder):
                 self.addr = 0
         elif self.cmdstate >= 5:
             # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
-            # TODO: For now we hardcode 256 bytes per READ command.
-            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
-                self.data.append(miso)
-                # self.putx([0, ['New read byte: 0x%02x' % miso]])
-
-            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
-                # s = ', '.join(map(hex, self.data))
-                s = ''.join(map(chr, self.data))
-                self.putx([24, ['Read data']])
-                self.putx([25, ['Read data: %s' % s]])
-                self.data = []
-                self.state = None
-                return
+            if self.cmdstate == 5:
+                self.ss_block = self.ss
+                self.on_end_transaction = lambda: self.output_data_block('Read')
+            self.data.append(miso)
 
         self.cmdstate += 1
 
@@ -197,18 +190,10 @@ class Decoder(srd.Decoder):
             self.addr = 0
         elif self.cmdstate >= 6:
             # Bytes 6-x: Master reads data bytes (until CS# de-asserted).
-            # TODO: For now we hardcode 32 bytes per FAST READ command.
             if self.cmdstate == 6:
                 self.ss_block = self.ss
-            if self.cmdstate <= 32 + 5: # TODO: While CS# asserted.
-                self.data.append(miso)
-            if self.cmdstate == 32 + 5: # TODO: If CS# got de-asserted.
-                self.es_block = self.es
-                s = ' '.join([hex(b)[2:] for b in self.data])
-                self.putb([25, ['Read data: %s' % s]])
-                self.data = []
-                self.state = None
-                return
+                self.on_end_transaction = lambda: self.output_block("Read")
+            self.data.append(miso)
 
         self.cmdstate += 1
 
@@ -266,19 +251,10 @@ class Decoder(srd.Decoder):
                 self.addr = 0
         elif self.cmdstate >= 5:
             # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
-            # TODO: For now we hardcode 256 bytes per page / PP command.
-            if self.cmdstate <= 256 + 4: # TODO: While CS# asserted.
-                self.data.append(mosi)
-                # self.putx([0, ['New data byte: 0x%02x' % mosi]])
-
-            if self.cmdstate == 256 + 4: # TODO: If CS# got de-asserted.
-                # s = ', '.join(map(hex, self.data))
-                s = ''.join(map(chr, self.data))
-                self.putx([24, ['Page data']])
-                self.putx([25, ['Page data: %s' % s]])
-                self.data = []
-                self.state = None
-                return
+            if self.cmdstate == 5:
+                self.ss_block = self.ss
+                self.on_end_transaction = lambda: self.output_data_block('Page data')
+            self.data.append(mosi)
 
         self.cmdstate += 1
 
@@ -346,23 +322,23 @@ class Decoder(srd.Decoder):
     def handle_dsry(self, mosi, miso):
         pass # TODO
 
-    def decode(self, ss, es, data):
+    def output_data_block(self, label):
+        # Print accumulated block of data
+        # (called on CS# de-assert via self.on_end_transaction callback).
+        self.es_block = self.es # Ends on the CS# de-assert sample.
+        s = ' '.join([('%02x' % b) for b in self.data])
+        self.putb([25, ['%s %d bytes: %s' % (label, len(self.data), s)]])
 
+    def decode(self, ss, es, data):
         ptype, mosi, miso = data
 
-        # if ptype == 'DATA':
-        #     self.putx([0, ['MOSI: 0x%02x, MISO: 0x%02x' % (mosi, miso)]])
+        self.ss, self.es = ss, es
 
-        # if ptype == 'CS-CHANGE':
-        #     if mosi == 1 and miso == 0:
-        #         self.putx([0, ['Asserting CS#']])
-        #     elif mosi == 0 and miso == 1:
-        #         self.putx([0, ['De-asserting CS#']])
+        if ptype == 'CS-CHANGE':
+            self.end_current_transaction()
 
         if ptype != 'DATA':
             return
-
-        self.ss, self.es = ss, es
 
         # If we encountered a known chip command, enter the resp. state.
         if self.state is None:
