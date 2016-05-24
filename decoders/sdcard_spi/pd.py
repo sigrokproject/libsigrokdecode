@@ -19,7 +19,7 @@
 ##
 
 import sigrokdecode as srd
-from sdcard import (cmd_names, acmd_names)
+from common.sdcard import (cmd_names, acmd_names)
 
 class Decoder(srd.Decoder):
     api_version = 2

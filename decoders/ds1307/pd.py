@@ -21,7 +21,7 @@
 
 import re
 import sigrokdecode as srd
-from srdhelper import bcd2int
+from common.srdhelper import bcd2int
 
 days_of_week = (
     'Sunday', 'Monday', 'Tuesday', 'Wednesday',

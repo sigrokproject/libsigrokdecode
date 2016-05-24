@@ -18,7 +18,7 @@
 ##
 
 import sigrokdecode as srd
-from plugtrx import (MODULE_ID, ALARM_THRESHOLDS, AD_READOUTS, GCS_BITS,
+from common.plugtrx import (MODULE_ID, ALARM_THRESHOLDS, AD_READOUTS, GCS_BITS,
         CONNECTOR, TRANSCEIVER, SERIAL_ENCODING, XMIT_TECH, CDR, DEVICE_TECH,
         ENHANCED_OPTS, AUX_TYPES)
 
