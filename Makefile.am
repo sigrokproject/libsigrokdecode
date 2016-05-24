@@ -23,12 +23,11 @@ AM_LIBTOOLFLAGS = --silent
 GNUMAKEFLAGS = --no-print-directory
 
 DECODERS_DIR = $(pkgdatadir)/decoders
-COMMON_DIR = $(pkgdatadir)/common
 # Do not hard-code the decoders location on Windows.
 if WIN32
 AM_CPPFLAGS =
 else
-AM_CPPFLAGS = -DDECODERS_DIR='"$(DECODERS_DIR)"' -DCOMMON_DIR='"$(COMMON_DIR)"'
+AM_CPPFLAGS = -DDECODERS_DIR='"$(DECODERS_DIR)"'
 endif
 
 # The tests CFLAGS are a superset of the libsigrokdecode CFLAGS.
@@ -89,20 +88,14 @@ ChangeLog:
 dist-hook: ChangeLog
 	$(MKDIR_P) $(distdir)/tools
 	cp ${top_srcdir}/tools/install-decoders $(distdir)/tools
-	$(MKDIR_P) $(distdir)/common
-	cp -a ${top_srcdir}/common $(distdir)
 	$(MKDIR_P) $(distdir)/decoders
 	${top_srcdir}/tools/install-decoders -i ${top_srcdir}/decoders \
 		-o $(distdir)/decoders
-
-install-common:
-	$(MKDIR_P) $(DESTDIR)$(COMMON_DIR)
-	cp -a ${top_srcdir}/common $(DESTDIR)$(pkgdatadir)
 
 install-decoders:
 	$(MKDIR_P) $(DESTDIR)$(DECODERS_DIR)
 	$(PYTHON3) ${top_srcdir}/tools/install-decoders \
 		-i ${top_srcdir}/decoders -o $(DESTDIR)$(DECODERS_DIR)
 
-install-data-hook: install-common install-decoders
+install-data-hook: install-decoders
 

@@ -24,7 +24,7 @@ from shutil import copy
 from getopt import getopt
 
 
-def install(srcdir, dstdir):
+def install(srcdir, dstdir, s):
     worklist = []
     for pd in os.listdir(srcdir):
         pd_dir = srcdir + '/' + pd
@@ -39,9 +39,10 @@ def install(srcdir, dstdir):
                 install_list.extend(config_get_extra_install(pd_file))
             elif f[-3:] == '.py':
                 install_list.append(f)
-        worklist.append((pd, pd_dir, install_list))
+        if install_list:
+            worklist.append((pd, pd_dir, install_list))
 
-    print("Installing %d protocol decoders:" % len(worklist))
+    print("Installing %d %s:" % (len(worklist), s))
     col = 0
     for pd, pd_dir, install_list in worklist:
         msg = pd + ' '
@@ -107,6 +108,7 @@ except Exception as e:
 if len(args) != 0 or dst is None:
     usage()
 
-install(src, dst)
+install(src, dst, 'protocol decoders')
+install(src + '/common', dst + '/common', 'common modules')
 
 
