@@ -84,6 +84,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'chip', 'desc': 'Chip', 'default': tuple(chips.keys())[0],
             'values': tuple(chips.keys())},
+        {'id': 'format', 'desc': 'Data format', 'default': 'hex',
+            'values': ('hex', 'ascii')},
     )
 
     def __init__(self):
@@ -361,7 +363,10 @@ class Decoder(srd.Decoder):
         # Print accumulated block of data
         # (called on CS# de-assert via self.on_end_transaction callback).
         self.es_block = self.es # Ends on the CS# de-assert sample.
-        s = ' '.join([('%02x' % b) for b in self.data])
+        if self.options['format'] == 'hex':
+            s = ' '.join([('%02x' % b) for b in self.data])
+        else:
+            s = ''.join(map(chr, self.data))
         self.putb([25, ['%s %d bytes: %s' % (label, len(self.data), s)]])
 
     def decode(self, ss, es, data):
