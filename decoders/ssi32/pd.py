@@ -11,16 +11,24 @@
 ## the Free Software Foundation; either version 2 of the License, or
 ## (at your option) any later version.
 ##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+##
 
 import sigrokdecode as srd
-from .lists import *
 
 class Decoder(srd.Decoder):
     api_version = 2
     id = 'ssi32'
     name = 'SSI32'
-    longname = 'Bosch SSI32 Protocol'
-    desc = 'Bosch SSI32 Protocol'
+    longname = 'Bosch SSI32'
+    desc = 'Bosch SSI32 protocol.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['ssi32']
@@ -31,11 +39,11 @@ class Decoder(srd.Decoder):
         ('ctrl-tx', 'CTRL TX'),
         ('ack-tx', 'ACK TX'),
         ('ctrl-rx', 'CTRL RX'),
-        ('ack-rx', 'ACK Tx'),
+        ('ack-rx', 'ACK RX'),
     )
     annotation_rows = (
-        ('tx', 'TX', (0, 1,)),
-        ('rx', 'RX', (2, 3,)),
+        ('tx', 'TX', (0, 1)),
+        ('rx', 'RX', (2, 3)),
     )
 
     def __init__(self):
@@ -58,9 +66,7 @@ class Decoder(srd.Decoder):
         self.es_array = []
 
     def handle_ack(self):
-        # Only first byte should have ACK data, other 3 bytes
-        # are reserved.
-
+        # Only first byte should have ACK data, other 3 bytes are reserved.
         self.es_cmd = self.es_array[0]
         self.putx([1, ['> ACK:0x%02x' % (self.mosi_bytes[0])]])
         self.putx([3, ['< ACK:0x%02x' % (self.miso_bytes[0])]])
@@ -76,14 +82,12 @@ class Decoder(srd.Decoder):
             miso = ', DATA:0x' + ''.join(format(x, '02x') for x in self.miso_bytes[4:self.rx_size + 4])
 
         self.es_cmd = self.es_array[self.tx_size + 3]
-        self.putx([0,
-                  ['> CTRL:0x%02x, LUN:0x%02x, SIZE:0x%02x, CRC:0x%02x%s'
+        self.putx([0, ['> CTRL:0x%02x, LUN:0x%02x, SIZE:0x%02x, CRC:0x%02x%s'
                    % (self.mosi_bytes[0], self.mosi_bytes[1],
                       self.mosi_bytes[2], self.mosi_bytes[3], mosi)]])
 
         self.es_cmd = self.es_array[self.rx_size + 3]
-        self.putx([2,
-                  ['< CTRL:0x%02x, LUN:0x%02x, SIZE:0x%02x, CRC:0x%02x%s'
+        self.putx([2, ['< CTRL:0x%02x, LUN:0x%02x, SIZE:0x%02x, CRC:0x%02x%s'
                    % (self.miso_bytes[0], self.miso_bytes[1],
                       self.miso_bytes[2], self.miso_bytes[3], miso)]])
 
