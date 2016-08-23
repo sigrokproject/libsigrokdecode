@@ -27,8 +27,8 @@ class Decoder(srd.Decoder):
     api_version = 2
     id = 'ssi32'
     name = 'SSI32'
-    longname = 'Bosch SSI32'
-    desc = 'Bosch SSI32 protocol.'
+    longname = 'Synchronous Serial Interface (32bit)'
+    desc = 'Synchronous Serial Interface (32bit) protocol.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['ssi32']
