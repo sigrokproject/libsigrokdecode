@@ -543,6 +543,7 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 {
 	PyObject *py_res;
 	srd_logic *logic;
+	long apiver;
 
 	/* Return an error upon unusable input. */
 	if (!di) {
@@ -566,28 +567,32 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
 		di->inst_id);
 
-	/*
-	 * Create new srd_logic object. Each iteration around the PD's loop
-	 * will fill one sample into this object.
-	 */
-	logic = PyObject_New(srd_logic, (PyTypeObject *)srd_logic_type);
-	Py_INCREF(logic);
-	logic->di = (struct srd_decoder_inst *)di;
-	logic->start_samplenum = start_samplenum;
-	logic->itercnt = 0;
-	logic->inbuf = (uint8_t *)inbuf;
-	logic->inbuflen = inbuflen;
-	logic->sample = PyList_New(2);
-	Py_INCREF(logic->sample);
+	apiver = srd_decoder_apiver(di->decoder);
 
-	Py_IncRef(di->py_inst);
-	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
+	if (apiver == 2) {
+		/*
+		 * Create new srd_logic object. Each iteration around the PD's
+		 * loop will fill one sample into this object.
+		 */
+		logic = PyObject_New(srd_logic, (PyTypeObject *)srd_logic_type);
+		Py_INCREF(logic);
+		logic->di = (struct srd_decoder_inst *)di;
+		logic->start_samplenum = start_samplenum;
+		logic->itercnt = 0;
+		logic->inbuf = (uint8_t *)inbuf;
+		logic->inbuflen = inbuflen;
+		logic->sample = PyList_New(2);
+		Py_INCREF(logic->sample);
+
+		Py_IncRef(di->py_inst);
+		if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
 			"KKO", start_samplenum, end_samplenum, logic))) {
-		srd_exception_catch("Protocol decoder instance %s",
-				di->inst_id);
-		return SRD_ERR_PYTHON;
+			srd_exception_catch("Protocol decoder instance %s",
+					di->inst_id);
+			return SRD_ERR_PYTHON;
+		}
+		Py_DecRef(py_res);
 	}
-	Py_DecRef(py_res);
 
 	return SRD_OK;
 }
