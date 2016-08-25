@@ -86,6 +86,9 @@ SRD_PRIV int srd_log(int loglevel, const char *format, ...) G_GNUC_PRINTF(2, 3);
 #define srd_warn(...)	srd_log(SRD_LOG_WARN, __VA_ARGS__)
 #define srd_err(...)	srd_log(SRD_LOG_ERR,  __VA_ARGS__)
 
+/* decoder.c */
+SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d);
+
 /* type_decoder.c */
 SRD_PRIV PyObject *srd_Decoder_type_new(void);
 

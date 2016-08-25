@@ -587,6 +587,29 @@ static int check_method(PyObject *py_dec, const char *mod_name,
 }
 
 /**
+ * Get the API version of the specified decoder.
+ *
+ * @param d The decoder to use. Must not be NULL.
+ *
+ * @return The API version of the decoder, or 0 upon errors.
+ */
+SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d)
+{
+	PyObject *py_apiver;
+	long apiver;
+
+	if (!d)
+		return 0;
+
+	py_apiver = PyObject_GetAttrString(d->py_dec, "api_version");
+	apiver = (py_apiver && PyLong_Check(py_apiver))
+			? PyLong_AsLong(py_apiver) : 0;
+	Py_XDECREF(py_apiver);
+
+	return apiver;
+}
+
+/**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
  * @param module_name The module name to be loaded.
@@ -597,7 +620,7 @@ static int check_method(PyObject *py_dec, const char *mod_name,
  */
 SRD_API int srd_decoder_load(const char *module_name)
 {
-	PyObject *py_basedec, *py_apiver;
+	PyObject *py_basedec;
 	struct srd_decoder *d;
 	long apiver;
 	int is_subclass;
@@ -648,11 +671,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	 * Check that this decoder has the correct PD API version.
 	 * PDs of different API versions are incompatible and cannot work.
 	 */
-	py_apiver = PyObject_GetAttrString(d->py_dec, "api_version");
-	apiver = (py_apiver && PyLong_Check(py_apiver))
-			? PyLong_AsLong(py_apiver) : 0;
-	Py_XDECREF(py_apiver);
-
+	apiver = srd_decoder_apiver(d);
 	if (apiver != 2) {
 		srd_exception_catch("Only PDs of API version 2 are supported");
 		goto err_out;
