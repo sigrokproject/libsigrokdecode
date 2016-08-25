@@ -224,12 +224,12 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
  * has been configured, it is the minimum number of bytes needed to store
  * the default channels.
  *
- * @param sess The session to use.
+ * @param sess The session to use. Must not be NULL.
  * @param start_samplenum The sample number of the first sample in this chunk.
  * @param end_samplenum The sample number of the last sample in this chunk.
- * @param inbuf Pointer to sample data.
- * @param inbuflen Length in bytes of the buffer.
- * @param unitsize The number of bytes per sample.
+ * @param inbuf Pointer to sample data. Must not be NULL.
+ * @param inbuflen Length in bytes of the buffer. Must be > 0.
+ * @param unitsize The number of bytes per sample. Must be > 0.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
