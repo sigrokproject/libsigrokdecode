@@ -522,7 +522,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 }
 
 /**
- * Run the specified decoder function.
+ * Decode a chunk of samples.
  *
  * @param di The decoder instance to call. Must not be NULL.
  * @param start_samplenum The starting sample number for the buffer's sample
@@ -531,13 +531,11 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
  * 			  set, relative to the start of capture.
  * @param inbuf The buffer to decode. Must not be NULL.
  * @param inbuflen Length of the buffer. Must be > 0.
- * @param unitsize The number of bytes per sample.
+ * @param unitsize The number of bytes per sample. Must be > 0.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
- *
- * @since 0.4.0
  */
 SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		uint64_t start_samplenum, uint64_t end_samplenum,
@@ -562,7 +560,7 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 
 	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
 
-	srd_dbg("Calling decode(), start sample %" PRIu64 ", end sample %"
+	srd_dbg("Decoding: start sample %" PRIu64 ", end sample %"
 		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
 		"%d), instance %s.", start_samplenum, end_samplenum,
 		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
