@@ -558,6 +558,10 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		srd_dbg("empty buffer");
 		return SRD_ERR_ARG;
 	}
+	if (unitsize == 0) {
+		srd_dbg("unitsize 0");
+		return SRD_ERR_ARG;
+	}
 
 	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
 
