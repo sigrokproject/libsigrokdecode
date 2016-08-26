@@ -471,8 +471,6 @@ class Decoder(srd.Decoder):
         )
 
     def us2samples(self, us):
-        if not self.samplerate:
-            raise SamplerateError('Need the samplerate.')
         return int(us * self.samplerate / 1000000)
 
     def decode_packet(self):
