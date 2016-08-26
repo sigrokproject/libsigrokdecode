@@ -47,7 +47,7 @@ def normalize_time(t):
         return '%f' % t
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'timing'
     name = 'Timing'
     longname = 'Timing calculation with frequency and averaging'
@@ -83,12 +83,14 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.initial_pins = [0]
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+        while True:
+            pin = self.wait({0: 'e'})
 
-        for (self.samplenum, (pin,)) in data:
             if self.oldpin is None:
                 self.oldpin = pin
                 self.last_samplenum = self.samplenum
