@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'stepper_motor'
     name = 'Stepper motor'
     longname = 'Stepper motor position / speed'
@@ -87,11 +87,9 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-
-        for (self.samplenum, (step, direction)) in data:
-            if step == 1 and self.oldstep == 0:
-                self.step(self.samplenum, direction)
-            self.oldstep = step
+        while True:
+            step, direction = self.wait({0: 'r'})
+            self.step(self.samplenum, direction)
