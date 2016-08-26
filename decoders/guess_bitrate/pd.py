@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2013-2016 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'guess_bitrate'
     name = 'Guess bitrate'
     longname = 'Guess bitrate/baudrate'
@@ -43,7 +43,6 @@ class Decoder(srd.Decoder):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def __init__(self):
-        self.olddata = None
         self.ss_edge = None
         self.first_transition = True
         self.bitwidth = None
@@ -51,25 +50,19 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+        self.initial_pins = [1] # TODO: Not generally correct.
+
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
 
-            data = pins[0]
-
-            # Wait for any transition on the data line.
-            if data == self.olddata:
-                continue
-
-            # Initialize first self.olddata with the first sample value.
-            if self.olddata is None:
-                self.olddata = data
-                continue
+        while True:
+            # Wait for any transition/edge on the data line.
+            self.wait({0: 'e'})
 
             # Get the smallest distance between two transitions
             # and use that to calculate the bitrate/baudrate.
@@ -83,5 +76,3 @@ class Decoder(srd.Decoder):
                     bitrate = int(float(self.samplerate) / float(b))
                     self.putx([0, ['%d' % bitrate]])
                 self.ss_edge = self.samplenum
-
-            self.olddata = data
