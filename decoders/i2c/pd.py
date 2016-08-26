@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2010-2014 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2010-2016 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'i2c'
     name = 'I²C'
     longname = 'Inter-Integrated Circuit'
@@ -111,14 +111,11 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.samplerate = None
         self.ss = self.es = self.ss_byte = -1
-        self.samplenum = None
         self.bitcount = 0
         self.databyte = 0
         self.wr = -1
         self.is_repeat_start = 0
         self.state = 'FIND START'
-        self.oldscl = self.oldsda = 1
-        self.oldpins = [1, 1]
         self.pdu_start = None
         self.pdu_bits = 0
         self.bits = []
@@ -134,6 +131,10 @@ class Decoder(srd.Decoder):
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
+        # Assume that the initial SCL/SDA pin state is high (logic 1).
+        # This is a good default, since both pins have pullups as per spec.
+        self.initial_pins = [1, 1]
+
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
@@ -143,25 +144,7 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.put(self.ss, self.es, self.out_binary, data)
 
-    def is_start_condition(self, scl, sda):
-        # START condition (S): SDA = falling, SCL = high
-        if (self.oldsda == 1 and sda == 0) and scl == 1:
-            return True
-        return False
-
-    def is_data_bit(self, scl, sda):
-        # Data sampling of receiver: SCL = rising
-        if self.oldscl == 0 and scl == 1:
-            return True
-        return False
-
-    def is_stop_condition(self, scl, sda):
-        # STOP condition (P): SDA = rising, SCL = high
-        if (self.oldsda == 0 and sda == 1) and scl == 1:
-            return True
-        return False
-
-    def found_start(self, scl, sda):
+    def handle_start(self, pins):
         self.ss, self.es = self.samplenum, self.samplenum
         self.pdu_start = self.samplenum
         self.pdu_bits = 0
@@ -175,7 +158,10 @@ class Decoder(srd.Decoder):
         self.bits = []
 
     # Gather 8 bits of data plus the ACK/NACK bit.
-    def found_address_or_data(self, scl, sda):
+    def handle_address_or_data(self, pins):
+        scl, sda = pins
+        self.pdu_bits += 1
+
         # Address and data are transmitted MSB-first.
         self.databyte <<= 1
         self.databyte |= sda
@@ -243,7 +229,8 @@ class Decoder(srd.Decoder):
         self.bits = []
         self.state = 'FIND ACK'
 
-    def get_ack(self, scl, sda):
+    def get_ack(self, pins):
+        scl, sda = pins
         self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
         cmd = 'NACK' if (sda == 1) else 'ACK'
         self.putp([cmd, None])
@@ -252,7 +239,7 @@ class Decoder(srd.Decoder):
         # another data byte or a STOP condition next.
         self.state = 'FIND DATA'
 
-    def found_stop(self, scl, sda):
+    def handle_stop(self, pins):
         # Meta bitrate
         elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
         bitrate = int(1 / elapsed * self.pdu_bits)
@@ -267,35 +254,35 @@ class Decoder(srd.Decoder):
         self.wr = -1
         self.bits = []
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
 
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins, (scl, sda) = pins, pins
+        self.wait({})
 
-            self.pdu_bits += 1
-
+        while True:
             # State machine.
             if self.state == 'FIND START':
-                if self.is_start_condition(scl, sda):
-                    self.found_start(scl, sda)
+                # Wait for a START condition (S): SCL = high, SDA = falling.
+                self.handle_start(self.wait({0: 'h', 1: 'f'}))
             elif self.state == 'FIND ADDRESS':
-                if self.is_data_bit(scl, sda):
-                    self.found_address_or_data(scl, sda)
+                # Wait for a data bit: SCL = rising.
+                self.handle_address_or_data(self.wait({0: 'r'}))
             elif self.state == 'FIND DATA':
-                if self.is_data_bit(scl, sda):
-                    self.found_address_or_data(scl, sda)
-                elif self.is_start_condition(scl, sda):
-                    self.found_start(scl, sda)
-                elif self.is_stop_condition(scl, sda):
-                    self.found_stop(scl, sda)
-            elif self.state == 'FIND ACK':
-                if self.is_data_bit(scl, sda):
-                    self.get_ack(scl, sda)
+                # Wait for any of the following conditions (or combinations):
+                #  a) Data sampling of receiver: SCL = rising, and/or
+                #  b) START condition (S): SCL = high, SDA = falling, and/or
+                #  c) STOP condition (P): SCL = high, SDA = rising
+                conds = [{0: 'r'}, {0: 'h', 1: 'f'}, {0: 'h', 1: 'r'}]
+                pins = self.wait(conds[:]) # TODO
 
-            # Save current SDA/SCL values for the next round.
-            self.oldscl, self.oldsda = scl, sda
+                # Check which of the condition(s) matched and handle them.
+                if self.matched[0]:
+                    self.handle_address_or_data(pins)
+                elif self.matched[1]:
+                    self.handle_start(pins)
+                elif self.matched[2]:
+                    self.handle_stop(pins)
+            elif self.state == 'FIND ACK':
+                # Wait for a data/ack bit: SCL = rising.
+                self.get_ack(self.wait({0: 'r'}))
