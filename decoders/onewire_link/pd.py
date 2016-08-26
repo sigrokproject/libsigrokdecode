@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'onewire_link'
     name = '1-Wire link layer'
     longname = '1-Wire serial communication bus (link layer)'
@@ -95,7 +95,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.samplenum = 0
         self.state = 'WAIT FOR FALLING EDGE'
         self.present = 0
         self.bit = 0
@@ -108,6 +107,8 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+
+        self.initial_pins = [1, 1]
 
     def checks(self):
         # Check if samplerate is appropriate.
@@ -189,33 +190,28 @@ class Decoder(srd.Decoder):
         self.cnt_reset = [self.cnt_normal_reset, self.cnt_overdrive_reset]
         self.cnt_slot = [self.cnt_normal_slot, self.cnt_overdrive_slot]
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, (owr, pwr)) in data:
-            if self.samplenum == 0:
-                self.checks()
+        self.checks()
+        while True:
             # State machine.
             if self.state == 'WAIT FOR FALLING EDGE':
-                # The start of a cycle is a falling edge.
-                if owr != 0:
-                    continue
+                # The start of a cycle is a falling edge on OWR.
+                self.wait({0: 'f'})
                 # Save the sample number for the falling edge.
                 self.fall = self.samplenum
-                # Go to waiting for sample time.
                 self.state = 'WAIT FOR DATA SAMPLE'
             elif self.state == 'WAIT FOR DATA SAMPLE':
                 # Sample data bit.
-                t = self.samplenum - self.fall
-                if t == self.cnt_bit[self.overdrive]:
-                    self.bit = owr
-                    self.state = 'WAIT FOR DATA SLOT END'
+                t = self.fall + self.cnt_bit[self.overdrive]
+                self.bit, pwr = self.wait({'skip': t - self.samplenum})
+                self.state = 'WAIT FOR DATA SLOT END'
             elif self.state == 'WAIT FOR DATA SLOT END':
                 # A data slot ends in a recovery period, otherwise, this is
                 # probably a reset.
-                t = self.samplenum - self.fall
-                if t != self.cnt_slot[self.overdrive]:
-                    continue
+                t = self.fall + self.cnt_slot[self.overdrive]
+                owr, pwr = self.wait({'skip': t - self.samplenum})
 
                 if owr == 0:
                     # This seems to be a reset slot, wait for its end.
@@ -237,8 +233,7 @@ class Decoder(srd.Decoder):
                 self.state = 'WAIT FOR FALLING EDGE'
             elif self.state == 'WAIT FOR RISING EDGE':
                 # The end of a cycle is a rising edge.
-                if owr != 1:
-                    continue
+                self.wait({0: 'r'})
 
                 # Check if this was a reset cycle.
                 t = self.samplenum - self.fall
@@ -264,15 +259,14 @@ class Decoder(srd.Decoder):
                     self.state = 'WAIT FOR FALLING EDGE'
             elif self.state == 'WAIT FOR PRESENCE DETECT':
                 # Sample presence status.
-                t = self.samplenum - self.rise
-                if t == self.cnt_presence[self.overdrive]:
-                    self.present = owr
-                    self.state = 'WAIT FOR RESET SLOT END'
+                t = self.rise + self.cnt_presence[self.overdrive]
+                owr, pwr = self.wait({'skip': t - self.samplenum})
+                self.present = owr
+                self.state = 'WAIT FOR RESET SLOT END'
             elif self.state == 'WAIT FOR RESET SLOT END':
                 # A reset slot ends in a long recovery period.
-                t = self.samplenum - self.rise
-                if t != self.cnt_reset[self.overdrive]:
-                    continue
+                t = self.rise + self.cnt_reset[self.overdrive]
+                owr, pwr = self.wait({'skip': t - self.samplenum})
 
                 if owr == 0:
                     # This seems to be a reset slot, wait for its end.
