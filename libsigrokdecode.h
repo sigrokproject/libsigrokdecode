@@ -228,6 +228,43 @@ struct srd_decoder_inst {
 	int data_unitsize;
 	uint8_t *channel_samples;
 	GSList *next_di;
+
+	/** List of conditions a PD wants to wait for. */
+	GSList *condition_list;
+
+	/** Array of booleans denoting which conditions matched. */
+	GArray *match_array;
+
+	/** Absolute start sample number. */
+	uint64_t start_samplenum;
+
+	/** Absolute end sample number. */
+	uint64_t end_samplenum;
+
+	/** Pointer to the buffer/chunk of input samples. */
+	const uint8_t *inbuf;
+
+	/** Length (in bytes) of the input sample buffer. */
+	uint64_t inbuflen;
+
+	/** Absolute current samplenumber. */
+	uint64_t cur_samplenum;
+
+	/** Array of "old" (previous sample) pin values. */
+	GArray *old_pins_array;
+
+	/** Handle for this PD stack's worker thread. */
+	GThread *thread_handle;
+
+	/** Indicates whether new samples are available for processing. */
+	gboolean got_new_samples;
+
+	/** Indicates whether the worker thread has handled all samples. */
+	gboolean handled_all_samples;
+
+	GCond got_new_samples_cond;
+	GCond handled_all_samples_cond;
+	GMutex data_mutex;
 };
 
 struct srd_pd_output {

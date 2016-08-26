@@ -354,6 +354,18 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		return NULL;
 	}
 
+	di->condition_list = NULL;
+	di->match_array = NULL;
+	di->start_samplenum = 0;
+	di->end_samplenum = 0;
+	di->inbuf = NULL;
+	di->inbuflen = 0;
+	di->cur_samplenum = 0;
+	di->old_pins_array = NULL;
+	di->thread_handle = NULL;
+	di->got_new_samples = FALSE;
+	di->handled_all_samples = FALSE;
+
 	/* Instance takes input from a frontend by default. */
 	sess->di_list = g_slist_append(sess->di_list, di);
 
@@ -493,6 +505,56 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 	return di;
 }
 
+/**
+ * Set the list of initial (assumed) pin values.
+ *
+ * If the list already exists, do nothing.
+ *
+ * @param di Decoder instance to use. Must not be NULL.
+ *
+ * @private
+ */
+static void set_initial_pin_values(struct srd_decoder_inst *di)
+{
+	int i;
+	GString *s;
+	PyObject *py_initial_pins;
+
+	if (!di || !di->py_inst) {
+		srd_err("Invalid decoder instance.");
+		return;
+	}
+
+	/* Nothing to do if di->old_pins_array is already != NULL. */
+	if (di->old_pins_array) {
+		srd_dbg("Initial pins already set, nothing to do.");
+		return;
+	}
+
+	/* Create an array of old (previous sample) pins, init to 0. */
+	di->old_pins_array = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), di->dec_num_channels);
+	g_array_set_size(di->old_pins_array, di->dec_num_channels);
+
+	/* Check if the decoder has set self.initial_pins. */
+	if (!PyObject_HasAttrString(di->py_inst, "initial_pins")) {
+		srd_dbg("Initial pins: all 0 (self.initial_pins not set).");
+		return;
+	}
+
+	/* Get self.initial_pins. */
+	py_initial_pins = PyObject_GetAttrString(di->py_inst, "initial_pins");
+
+	/* Fill di->old_pins_array based on self.initial_pins. */
+	s = g_string_sized_new(100);
+	for (i = 0; i < di->dec_num_channels; i++) {
+		di->old_pins_array->data[i] = PyLong_AsLong(PyList_GetItem(py_initial_pins, i));
+		g_string_append_printf(s, "%d, ", di->old_pins_array->data[i]);
+	}
+	s = g_string_truncate(s, s->len - 2);
+	srd_dbg("Initial pins: %s.", s->str);
+	g_string_free(s, TRUE);
+}
+
 /** @private */
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 {
@@ -504,12 +566,22 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	srd_dbg("Calling start() method on protocol decoder instance %s.",
 			di->inst_id);
 
+	/* Run self.start(). */
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "start", NULL))) {
 		srd_exception_catch("Protocol decoder instance %s",
 				di->inst_id);
 		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
+
+	/* Set the initial pins based on self.initial_pins. */
+	set_initial_pin_values(di);
+
+	/* Set self.samplenum to 0. */
+	PyObject_SetAttrString(di->py_inst, "samplenum", PyLong_FromLong(0));
+
+	/* Set self.matches to None. */
+	PyObject_SetAttrString(di->py_inst, "matches", Py_None);
 
 	/* Start all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {
@@ -519,6 +591,304 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	}
 
 	return SRD_OK;
+}
+
+/**
+ * Check whether the specified sample matches the specified term.
+ *
+ * In the case of SRD_TERM_SKIP, this function can modify
+ * term->num_samples_already_skipped.
+ *
+ * @param old_sample The value of the previous sample (0/1).
+ * @param sample The value of the current sample (0/1).
+ * @param term The term that should be checked for a match. Must not be NULL.
+ *
+ * @retval TRUE The current sample matches the specified term.
+ * @retval FALSE The current sample doesn't match the specified term, or an
+ *               invalid term was provided.
+ *
+ * @private
+ */
+static gboolean sample_matches(uint8_t old_sample, uint8_t sample, struct srd_term *term)
+{
+	if (!term)
+		return FALSE;
+
+	switch (term->type) {
+	case SRD_TERM_HIGH:
+		if (sample == 1)
+			return TRUE;
+		break;
+	case SRD_TERM_LOW:
+		if (sample == 0)
+			return TRUE;
+		break;
+	case SRD_TERM_RISING_EDGE:
+		if (old_sample == 0 && sample == 1)
+			return TRUE;
+		break;
+	case SRD_TERM_FALLING_EDGE:
+		if (old_sample == 1 && sample == 0)
+			return TRUE;
+		break;
+	case SRD_TERM_EITHER_EDGE:
+		if ((old_sample == 1 && sample == 0) || (old_sample == 0 && sample == 1))
+			return TRUE;
+		break;
+	case SRD_TERM_NO_EDGE:
+		if ((old_sample == 0 && sample == 0) || (old_sample == 1 && sample == 1))
+			return TRUE;
+		break;
+	case SRD_TERM_SKIP:
+		if (term->num_samples_already_skipped == term->num_samples_to_skip)
+			return TRUE;
+		term->num_samples_already_skipped++;
+		break;
+	default:
+		srd_err("Unknown term type %d.", term->type);
+		break;
+	}
+
+	return FALSE;
+}
+
+SRD_PRIV void match_array_free(struct srd_decoder_inst *di)
+{
+	if (!di || !di->match_array)
+		return;
+
+	g_array_free(di->match_array, TRUE);
+	di->match_array = NULL;
+}
+
+SRD_PRIV void condition_list_free(struct srd_decoder_inst *di)
+{
+	GSList *l, *ll;
+
+	if (!di)
+		return;
+
+	for (l = di->condition_list; l; l = l->next) {
+		ll = l->data;
+		if (ll)
+			g_slist_free_full(ll, g_free);
+	}
+
+	di->condition_list = NULL;
+}
+
+static gboolean have_non_null_conds(const struct srd_decoder_inst *di)
+{
+	GSList *l, *cond;
+
+	if (!di)
+		return FALSE;
+
+	for (l = di->condition_list; l; l = l->next) {
+		cond = l->data;
+		if (cond)
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+static void update_old_pins_array(struct srd_decoder_inst *di,
+		const uint8_t *sample_pos)
+{
+	uint8_t sample;
+	int i, byte_offset, bit_offset;
+
+	if (!di || !di->dec_channelmap || !sample_pos)
+		return;
+
+	for (i = 0; i < di->dec_num_channels; i++) {
+		byte_offset = di->dec_channelmap[i] / 8;
+		bit_offset = di->dec_channelmap[i] % 8;
+		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+		di->old_pins_array->data[i] = sample;
+	}
+}
+
+static gboolean term_matches(const struct srd_decoder_inst *di,
+		struct srd_term *term, const uint8_t *sample_pos)
+{
+	uint8_t old_sample, sample;
+	int byte_offset, bit_offset, ch;
+
+	if (!di || !di->dec_channelmap || !term || !sample_pos)
+		return FALSE;
+
+	/* Overwritten below (or ignored for SRD_TERM_SKIP). */
+	old_sample = sample = 0;
+
+	if (term->type != SRD_TERM_SKIP) {
+		ch = term->channel;
+		byte_offset = di->dec_channelmap[ch] / 8;
+		bit_offset = di->dec_channelmap[ch] % 8;
+		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+		old_sample = di->old_pins_array->data[ch];
+	}
+
+	return sample_matches(old_sample, sample, term);
+}
+
+static gboolean all_terms_match(const struct srd_decoder_inst *di,
+		const GSList *cond, const uint8_t *sample_pos)
+{
+	const GSList *l;
+	struct srd_term *term;
+
+	if (!di || !cond || !sample_pos)
+		return FALSE;
+
+	for (l = cond; l; l = l->next) {
+		term = l->data;
+		if (!term_matches(di, term, sample_pos))
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+static gboolean at_least_one_condition_matched(
+		const struct srd_decoder_inst *di, unsigned int num_conditions)
+{
+	unsigned int i;
+
+	if (!di)
+		return FALSE;
+
+	for (i = 0; i < num_conditions; i++) {
+		if (di->match_array->data[i])
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+static gboolean find_match(struct srd_decoder_inst *di)
+{
+	static uint64_t s = 0;
+	uint64_t i, j, num_samples_to_process;
+	GSList *l, *cond;
+	const uint8_t *sample_pos;
+	unsigned int num_conditions;
+
+	/* Check whether the condition list is NULL/empty. */
+	if (!di->condition_list) {
+		srd_dbg("NULL/empty condition list, automatic match.");
+		return TRUE;
+	}
+
+	/* Check whether we have any non-NULL conditions. */
+	if (!have_non_null_conds(di)) {
+		srd_dbg("Only NULL conditions in list, automatic match.");
+		return TRUE;
+	}
+
+	num_samples_to_process = di->end_samplenum - di->cur_samplenum;
+	num_conditions = g_slist_length(di->condition_list);
+
+	/* di->match_array is NULL here. Create a new GArray. */
+	di->match_array = g_array_sized_new(FALSE, TRUE, sizeof(gboolean), num_conditions);
+	g_array_set_size(di->match_array, num_conditions);
+
+	for (i = 0, s = 0; i < num_samples_to_process; i++, s++, (di->cur_samplenum)++) {
+
+		sample_pos = di->inbuf + ((di->cur_samplenum - di->start_samplenum) * di->data_unitsize);
+
+		/* Check whether the current sample matches at least one of the conditions (logical OR). */
+		/* IMPORTANT: We need to check all conditions, even if there was a match already! */
+		for (l = di->condition_list, j = 0; l; l = l->next, j++) {
+			cond = l->data;
+			if (!cond)
+				continue;
+			/* All terms in 'cond' must match (logical AND). */
+			di->match_array->data[j] = all_terms_match(di, cond, sample_pos);
+		}
+
+		update_old_pins_array(di, sample_pos);
+
+		/* If at least one condition matched we're done. */
+		if (at_least_one_condition_matched(di, num_conditions))
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+/**
+ * Process available samples and check if they match the defined conditions.
+ *
+ * This function returns if there is an error, or when a match is found, or
+ * when all samples have been processed (whether a match was found or not).
+ *
+ * @param di The decoder instance to use. Must not be NULL.
+ * @param found_match Will be set to TRUE if at least one condition matched,
+ *                    FALSE otherwise. Must not be NULL.
+ *
+ * @retval SRD_OK No errors occured, see found_match for the result.
+ * @retval SRD_ERR_ARG Invalid arguments.
+ *
+ * @private
+ */
+SRD_PRIV int process_samples_until_condition_match(struct srd_decoder_inst *di, gboolean *found_match)
+{
+	if (!di || !found_match)
+		return SRD_ERR_ARG;
+
+	/* Check if any of the current condition(s) match. */
+	while (TRUE) {
+		/* Feed the (next chunk of the) buffer to find_match(). */
+		*found_match = find_match(di);
+
+		/* Did we handle all samples yet? */
+		if (di->cur_samplenum >= di->end_samplenum) {
+			srd_dbg("Done, handled all samples (%" PRIu64 "/%" PRIu64 ").",
+				di->cur_samplenum, di->end_samplenum);
+			return SRD_OK;
+		}
+
+		/* If we didn't find a match, continue looking. */
+		if (!(*found_match))
+			continue;
+
+		/* At least one condition matched, return. */
+		return SRD_OK;
+	}
+
+	return SRD_OK;
+}
+
+/**
+ * Worker thread (per PD-stack).
+ *
+ * @param data Pointer to the lowest-level PD's device instance.
+ *             Must not be NULL.
+ *
+ * @return NULL if there was an error.
+ */
+static gpointer di_thread(gpointer data)
+{
+	PyObject *py_res;
+	struct srd_decoder_inst *di;
+
+	if (!data)
+		return NULL;
+
+	di = data;
+
+	/* Call self.decode(). Only returns if the PD throws an exception. */
+	Py_IncRef(di->py_inst);
+	if (!(py_res = PyObject_CallMethod(di->py_inst, "decode", NULL))) {
+		srd_exception_catch("Protocol decoder instance %s: ", di->inst_id);
+		exit(1); /* TODO: Proper shutdown. This is a hack. */
+		return NULL;
+	}
+	Py_DecRef(py_res);
+
+	return NULL;
 }
 
 /**
@@ -537,7 +907,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
  *
  * @private
  */
-SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
+SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		uint64_t start_samplenum, uint64_t end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
@@ -563,7 +933,7 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 		return SRD_ERR_ARG;
 	}
 
-	((struct srd_decoder_inst *)di)->data_unitsize = unitsize;
+	di->data_unitsize = unitsize;
 
 	srd_dbg("Decoding: start sample %" PRIu64 ", end sample %"
 		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
@@ -596,6 +966,30 @@ SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
 			return SRD_ERR_PYTHON;
 		}
 		Py_DecRef(py_res);
+	} else {
+		/* If this is the first call, start the worker thread. */
+		if (!di->thread_handle)
+			di->thread_handle = g_thread_new("di_thread",
+							 di_thread, di);
+
+		/* Push the new sample chunk to the worker thread. */
+		g_mutex_lock(&di->data_mutex);
+		di->start_samplenum = start_samplenum;
+		di->end_samplenum = end_samplenum;
+		di->inbuf = inbuf;
+		di->inbuflen = inbuflen;
+		di->got_new_samples = TRUE;
+		di->handled_all_samples = FALSE;
+
+		/* Signal the thread that we have new data. */
+		g_cond_signal(&di->got_new_samples_cond);
+		g_mutex_unlock(&di->data_mutex);
+
+		/* When all samples in this chunk were handled, return. */
+		g_mutex_lock(&di->data_mutex);
+		while (!di->handled_all_samples)
+			g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
+		g_mutex_unlock(&di->data_mutex);
 	}
 
 	return SRD_OK;

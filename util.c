@@ -113,6 +113,84 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
 }
 
 /**
+ * Get the value of a Python dictionary item, returned as a newly
+ * allocated char *.
+ *
+ * @param py_obj The dictionary to probe.
+ * @param py_key Key of the item to retrieve.
+ * @param outstr Pointer to char * storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a malloc()ed string upon success.
+ *
+ * @private
+ */
+SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key,
+				char **outstr)
+{
+	PyObject *py_value;
+
+	if (!py_obj || !py_key || !outstr)
+		return SRD_ERR_ARG;
+
+	if (!PyDict_Check(py_obj)) {
+		srd_dbg("Object is not a dictionary.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_value = PyDict_GetItem(py_obj, py_key))) {
+		srd_dbg("Dictionary has no such key.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!PyUnicode_Check(py_value)) {
+		srd_dbg("Dictionary value should be a string.");
+		return SRD_ERR_PYTHON;
+	}
+
+	return py_str_as_str(py_value, outstr);
+}
+
+/**
+ * Get the value of a Python dictionary item, returned as a newly
+ * allocated char *.
+ *
+ * @param py_obj The dictionary to probe.
+ * @param py_key Key of the item to retrieve.
+ * @param out TODO.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @private
+ */
+SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out)
+{
+	PyObject *py_value;
+
+	if (!py_obj || !py_key || !out)
+		return SRD_ERR_ARG;
+
+	if (!PyDict_Check(py_obj)) {
+		srd_dbg("Object is not a dictionary.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_value = PyDict_GetItem(py_obj, py_key))) {
+		srd_dbg("Dictionary has no such key.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!PyLong_Check(py_value)) {
+		srd_dbg("Dictionary value should be a long.");
+		return SRD_ERR_PYTHON;
+	}
+
+	*out = PyLong_AsUnsignedLongLong(py_value);
+
+	return SRD_OK;
+}
+
+/**
  * Get the value of a Python unicode string object, returned as a newly
  * allocated char *.
  *

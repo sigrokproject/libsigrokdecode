@@ -682,8 +682,8 @@ SRD_API int srd_decoder_load(const char *module_name)
 	 * PDs of different API versions are incompatible and cannot work.
 	 */
 	apiver = srd_decoder_apiver(d);
-	if (apiver != 2) {
-		srd_exception_catch("Only PD API version 2 is supported, "
+	if (apiver != 2 && apiver != 3) {
+		srd_exception_catch("Only PD API version 2/3 is supported, "
 			"decoder %s has version %ld", module_name, apiver);
 		fail_txt = "API version mismatch";
 		goto err_out;

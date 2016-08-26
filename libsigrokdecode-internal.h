@@ -28,6 +28,23 @@
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "libsigrokdecode.h"
 
+enum {
+	SRD_TERM_HIGH,
+	SRD_TERM_LOW,
+	SRD_TERM_RISING_EDGE,
+	SRD_TERM_FALLING_EDGE,
+	SRD_TERM_EITHER_EDGE,
+	SRD_TERM_NO_EDGE,
+	SRD_TERM_SKIP,
+};
+
+struct srd_term {
+	int type;
+	int channel;
+	uint64_t num_samples_to_skip;
+	uint64_t num_samples_already_skipped;
+};
+
 /* Custom Python types: */
 
 typedef struct {
@@ -62,9 +79,12 @@ SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session 
 SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj( const GSList *stack,
 		const PyObject *obj);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di);
-SRD_PRIV int srd_inst_decode(const struct srd_decoder_inst *di,
+SRD_PRIV void match_array_free(struct srd_decoder_inst *di);
+SRD_PRIV void condition_list_free(struct srd_decoder_inst *di);
+SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		uint64_t start_samplenum, uint64_t end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
+SRD_PRIV int process_samples_until_condition_match(struct srd_decoder_inst *di, gboolean *found_match);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess, GSList *stack);
 
@@ -102,6 +122,8 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void);
 SRD_PRIV PyObject *py_import_by_name(const char *name);
 SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
+SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key, char **outstr);
+SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
 SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv);
 SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj);

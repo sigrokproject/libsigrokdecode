@@ -369,16 +369,352 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	return py_new_output_id;
 }
 
+static int get_term_type(const char *v)
+{
+	switch (v[0]) {
+	case 'h':
+		return SRD_TERM_HIGH;
+	case 'l':
+		return SRD_TERM_LOW;
+	case 'r':
+		return SRD_TERM_RISING_EDGE;
+	case 'f':
+		return SRD_TERM_FALLING_EDGE;
+	case 'e':
+		return SRD_TERM_EITHER_EDGE;
+	case 'n':
+		return SRD_TERM_NO_EDGE;
+	}
+
+	return -1;
+}
+
+/**
+ * Get the pin values at the current sample number.
+ *
+ * @param di The decoder instance to use. Must not be NULL.
+ *           The number of channels must be >= 1.
+ *
+ * @return A newly allocated PyTuple containing the pin values at the
+ *         current sample number.
+ */
+static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
+{
+	int i;
+	uint8_t sample;
+	const uint8_t *sample_pos;
+	int byte_offset, bit_offset;
+	PyObject *py_pinvalues;
+
+	if (!di) {
+		srd_err("Invalid decoder instance.");
+		return NULL;
+	}
+
+	py_pinvalues = PyTuple_New(di->dec_num_channels);
+
+	for (i = 0; i < di->dec_num_channels; i++) {
+		/* A channelmap value of -1 means "unused optional channel". */
+		if (di->dec_channelmap[i] == -1) {
+			/* Value of unused channel is 0xff, instead of 0 or 1. */
+			PyTuple_SetItem(py_pinvalues, i, PyLong_FromLong(0xff));
+		} else {
+			sample_pos = di->inbuf + ((di->cur_samplenum - di->start_samplenum) * di->data_unitsize);
+			byte_offset = di->dec_channelmap[i] / 8;
+			bit_offset = di->dec_channelmap[i] % 8;
+			sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+			PyTuple_SetItem(py_pinvalues, i, PyLong_FromLong(sample));
+		}
+	}
+
+	Py_IncRef(py_pinvalues);
+
+	return py_pinvalues;
+}
+
+/**
+ * Create a list of terms in the specified condition.
+ *
+ * If there are no terms in the condition, 'term_list' will be NULL.
+ *
+ * @param py_dict A Python dict containing terms. Must not be NULL.
+ * @param term_list Pointer to a GSList which will be set to the newly
+ *                  created list of terms. Must not be NULL.
+ *
+ * @return SRD_OK upon success, a negative error code otherwise.
+ */
+static int create_term_list(PyObject *py_dict, GSList **term_list)
+{
+	Py_ssize_t pos = 0;
+	PyObject *py_key, *py_value;
+	struct srd_term *term;
+	uint64_t num_samples_to_skip;
+	char *term_str;
+
+	if (!py_dict || !term_list)
+		return SRD_ERR_ARG;
+
+	/* "Create" an empty GSList of terms. */
+	*term_list = NULL;
+
+	/* Iterate over all items in the current dict. */
+	while (PyDict_Next(py_dict, &pos, &py_key, &py_value)) {
+		/* Check whether the current key is a string or a number. */
+		if (PyLong_Check(py_key)) {
+			/* The key is a number. */
+			/* TODO: Check if the number is a valid channel. */
+			/* Get the value string. */
+			if ((py_pydictitem_as_str(py_dict, py_key, &term_str)) != SRD_OK) {
+				srd_err("Failed to get the value.");
+				return SRD_ERR;
+			}
+			term = g_malloc0(sizeof(struct srd_term));
+			term->type = get_term_type(term_str);
+			term->channel = PyLong_AsLong(py_key);
+			g_free(term_str);
+		} else if (PyUnicode_Check(py_key)) {
+			/* The key is a string. */
+			/* TODO: Check if it's "skip". */
+			if ((py_pydictitem_as_long(py_dict, py_key, &num_samples_to_skip)) != SRD_OK) {
+				srd_err("Failed to get number of samples to skip.");
+				return SRD_ERR;
+			}
+			term = g_malloc0(sizeof(struct srd_term));
+			term->type = SRD_TERM_SKIP;
+			term->num_samples_to_skip = num_samples_to_skip;
+			term->num_samples_already_skipped = 0;
+		} else {
+			srd_err("Term key is neither a string nor a number.");
+			return SRD_ERR;
+		}
+
+		/* Add the term to the list of terms. */
+		*term_list = g_slist_append(*term_list, term);
+	}
+
+	return SRD_OK;
+}
+
+/**
+ * Replace the current condition list with the new one.
+ *
+ * @param self TODO. Must not be NULL.
+ * @param args TODO. Must not be NULL.
+ *
+ * @retval SRD_OK The new condition list was set successfully.
+ * @retval SRD_ERR There was an error setting the new condition list.
+ *                 The contents of di->condition_list are undefined.
+ * @retval 9999 TODO.
+ */
+static int set_new_condition_list(PyObject *self, PyObject *args)
+{
+	struct srd_decoder_inst *di;
+	GSList *term_list;
+	PyObject *py_conditionlist, *py_conds, *py_dict;
+	int i, num_conditions, ret;
+
+	if (!self || !args)
+		return SRD_ERR_ARG;
+
+	/* Get the decoder instance. */
+	if (!(di = srd_inst_find_by_obj(NULL, self))) {
+		PyErr_SetString(PyExc_Exception, "decoder instance not found");
+		return SRD_ERR;
+	}
+
+	/* Parse the argument of self.wait() into 'py_conds'. */
+	if (!PyArg_ParseTuple(args, "O", &py_conds)) {
+		/* Let Python raise this exception. */
+		return SRD_ERR;
+	}
+
+	/* Check whether 'py_conds' is a dict or a list. */
+	if (PyList_Check(py_conds)) {
+		/* 'py_conds' is a list. */
+		py_conditionlist = py_conds;
+		num_conditions = PyList_Size(py_conditionlist);
+		if (num_conditions == 0)
+			return 9999; /* The PD invoked self.wait([]). */
+	} else if (PyDict_Check(py_conds)) {
+		/* 'py_conds' is a dict. */
+		if (PyDict_Size(py_conds) == 0)
+			return 9999; /* The PD invoked self.wait({}). */
+		/* Make a list and put the dict in there for convenience. */
+		py_conditionlist = PyList_New(1);
+		PyList_SetItem(py_conditionlist, 0, py_conds);
+		num_conditions = 1;
+	} else {
+		srd_err("Condition list is neither a list nor a dict.");
+		return SRD_ERR;
+	}
+
+	/* Free the old condition list. */
+	condition_list_free(di);
+
+	ret = SRD_OK;
+
+	/* Iterate over the conditions, set di->condition_list accordingly. */
+	for (i = 0; i < num_conditions; i++) {
+		/* Get a condition (dict) from the condition list. */
+		py_dict = PyList_GetItem(py_conditionlist, i);
+		if (!PyDict_Check(py_dict)) {
+			srd_err("Condition is not a dict.");
+			ret = SRD_ERR;
+			break;
+		}
+
+		/* Create the list of terms in this condition. */
+		if ((ret = create_term_list(py_dict, &term_list)) < 0)
+			break;
+
+		/* Add the new condition to the PD instance's condition list. */
+		di->condition_list = g_slist_append(di->condition_list, term_list);
+	}
+
+	Py_DecRef(py_conditionlist);
+
+	return ret;
+}
+
+static PyObject *Decoder_wait(PyObject *self, PyObject *args)
+{
+	int ret;
+	unsigned int i;
+	gboolean found_match;
+	struct srd_decoder_inst *di;
+	PyObject *py_pinvalues, *py_matched;
+
+	if (!self || !args)
+		return NULL;
+
+	if (!(di = srd_inst_find_by_obj(NULL, self))) {
+		PyErr_SetString(PyExc_Exception, "decoder instance not found");
+		Py_RETURN_NONE;
+	}
+
+	ret = set_new_condition_list(self, args);
+
+	if (ret == 9999) {
+		/* Empty condition list, automatic match. */
+		PyObject_SetAttrString(di->py_inst, "matched", Py_None);
+		/* Leave self.samplenum unchanged (== di->cur_samplenum). */
+		return get_current_pinvalues(di);
+	}
+
+	while (1) {
+		/* Wait for new samples to process. */
+		g_mutex_lock(&di->data_mutex);
+		while (!di->got_new_samples)
+			g_cond_wait(&di->got_new_samples_cond, &di->data_mutex);
+
+		/* Check whether any of the current condition(s) match. */
+		ret = process_samples_until_condition_match(di, &found_match);
+
+		/* If there's a match, set self.samplenum etc. and return. */
+		if (found_match) {
+			/* Set self.samplenum to the (absolute) sample number that matched. */
+			PyObject_SetAttrString(di->py_inst, "samplenum",
+				PyLong_FromLong(di->cur_samplenum));
+
+			if (di->match_array && di->match_array->len > 0) {
+				py_matched = PyTuple_New(di->match_array->len);
+				for (i = 0; i < di->match_array->len; i++)
+					PyTuple_SetItem(py_matched, i, PyBool_FromLong(di->match_array->data[i]));
+				PyObject_SetAttrString(di->py_inst, "matched", py_matched);
+				match_array_free(di);
+			} else {
+				PyObject_SetAttrString(di->py_inst, "matched", Py_None);
+			}
+	
+			py_pinvalues = get_current_pinvalues(di);
+
+			g_mutex_unlock(&di->data_mutex);
+
+			return py_pinvalues;
+		}
+
+		/* No match, reset state for the next chunk. */
+		di->got_new_samples = FALSE;
+		di->handled_all_samples = TRUE;
+		di->start_samplenum = 0;
+		di->end_samplenum = 0;
+		di->inbuf = NULL;
+		di->inbuflen = 0;
+
+		/* Signal the main thread that we handled all samples. */
+		g_cond_signal(&di->handled_all_samples_cond);
+
+		g_mutex_unlock(&di->data_mutex);
+	}
+
+	Py_RETURN_NONE;
+}
+
+/**
+ * Return whether the specified channel was supplied to the decoder.
+ *
+ * @param self TODO. Must not be NULL.
+ * @param args TODO. Must not be NULL.
+ *
+ * @retval Py_True The channel has been supplied by the frontend.
+ * @retval Py_False The channel has been supplied by the frontend.
+ * @retval NULL An error occurred.
+ */
+static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
+{
+	int idx, max_idx;
+	struct srd_decoder_inst *di;
+	PyObject *py_channel;
+
+	if (!self || !args)
+		return NULL;
+
+	if (!(di = srd_inst_find_by_obj(NULL, self))) {
+		PyErr_SetString(PyExc_Exception, "decoder instance not found");
+		return NULL;
+	}
+
+	/* Parse the argument of self.has_channel() into 'py_channel'. */
+	if (!PyArg_ParseTuple(args, "O", &py_channel)) {
+		/* Let Python raise this exception. */
+		return NULL;
+	}
+
+	if (!PyLong_Check(py_channel)) {
+		PyErr_SetString(PyExc_Exception, "channel index not a number");
+		return NULL;
+	}
+
+	idx = PyLong_AsLong(py_channel);
+	max_idx = g_slist_length(di->decoder->channels)
+		+ g_slist_length(di->decoder->opt_channels) - 1;
+
+	if (idx < 0 || idx > max_idx) {
+		srd_err("Invalid channel index %d/%d.", idx, max_idx);
+		PyErr_SetString(PyExc_Exception, "invalid channel");
+		return NULL;
+	}
+
+	return (di->dec_channelmap[idx] == -1) ? Py_False : Py_True;
+}
+
 static PyMethodDef Decoder_methods[] = {
 	{"put", Decoder_put, METH_VARARGS,
 	 "Accepts a dictionary with the following keys: startsample, endsample, data"},
 	{"register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
 			"Register a new output stream"},
+	{"wait", Decoder_wait, METH_VARARGS,
+			"Wait for one or more conditions to occur"},
+	{"has_channel", Decoder_has_channel, METH_VARARGS,
+			"Report whether a channel was supplied"},
 	{NULL, NULL, 0, NULL}
 };
 
-/** Create the sigrokdecode.Decoder type.
+/**
+ * Create the sigrokdecode.Decoder type.
+ *
  * @return The new type object.
+ *
  * @private
  */
 SRD_PRIV PyObject *srd_Decoder_type_new(void)
