@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2016 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'dcf77'
     name = 'DCF77'
     longname = 'DCF77 time protocol'
@@ -68,9 +68,6 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.samplerate = None
         self.state = 'WAIT FOR RISING EDGE'
-        self.oldpins = None
-        self.oldval = None
-        self.samplenum = 0
         self.ss_bit = self.ss_bit_old = self.es_bit = self.ss_block = 0
         self.datebits = []
         self.bitcount = 0 # Counter for the DCF77 bits (0..58)
@@ -78,6 +75,9 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+
+        # Assume that the initial pin state is logic 1.
+        self.initial_pins = [1]
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -244,21 +244,13 @@ class Decoder(srd.Decoder):
         else:
             raise Exception('Invalid DCF77 bit: %d' % c)
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins, (val,) = pins, pins
-
+        while True:
             if self.state == 'WAIT FOR RISING EDGE':
                 # Wait until the next rising edge occurs.
-                if not (self.oldval == 0 and val == 1):
-                    self.oldval = val
-                    continue
+                self.wait({0: 'r'})
 
                 # Save the sample number where the DCF77 bit begins.
                 self.ss_bit = self.samplenum
@@ -283,9 +275,7 @@ class Decoder(srd.Decoder):
 
             elif self.state == 'GET BIT':
                 # Wait until the next falling edge occurs.
-                if not (self.oldval == 1 and val == 0):
-                    self.oldval = val
-                    continue
+                self.wait({0: 'f'})
 
                 # Save the sample number where the DCF77 bit ends.
                 self.es_bit = self.samplenum
@@ -309,5 +299,3 @@ class Decoder(srd.Decoder):
                     self.bitcount += 1
 
                 self.state = 'WAIT FOR RISING EDGE'
-
-            self.oldval = val
