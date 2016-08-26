@@ -28,7 +28,7 @@ dacs = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'tlc5620'
     name = 'TI TLC5620'
     longname = 'Texas Instruments TLC5620'
@@ -72,7 +72,6 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.oldpins = self.oldclk = self.oldload = self.oldldac = None
         self.bits = []
         self.ss_dac_first = None
         self.ss_dac = self.es_dac = 0
@@ -183,28 +182,25 @@ class Decoder(srd.Decoder):
                  [8, ['Updating voltages: %s' % s, s, s.replace('DAC', '')]])
         self.ss_dac_first = None
 
-    def handle_new_dac_bit(self):
-        self.bits.append([self.datapin, self.samplenum])
+    def handle_new_dac_bit(self, datapin):
+        self.bits.append([datapin, self.samplenum])
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins, (clk, self.datapin, load, ldac) = pins, pins
-            self.ldac = ldac
-
+    def decode(self):
+        while True:
             # DATA is shifted in the DAC on the falling CLK edge (MSB-first).
             # A falling edge of LOAD will latch the data.
 
-            if self.oldload == 1 and load == 0:
-                self.handle_falling_edge_load()
-            if self.oldldac == 1 and ldac == 0:
-                self.handle_falling_edge_ldac()
-            if self.oldclk == 1 and clk == 0:
-                self.handle_new_dac_bit()
+            # Wait for one (or multiple) of the following conditions:
+            #   a) Falling edge on CLK, and/or
+            #   b) Falling edge on LOAD, and/or
+            #   b) Falling edge on LDAC
+            pins = self.wait([{0: 'f'}, {2: 'f'}, {3: 'f'}])
+            self.ldac = pins[3]
 
-            self.oldclk = clk
-            self.oldload = load
-            self.oldldac = ldac
+            # Handle those conditions (one or more) that matched this time.
+            if self.matched[0]:
+                self.handle_new_dac_bit(pins[1])
+            if self.matched[1]:
+                self.handle_falling_edge_load()
+            if self.matched[2]:
+                self.handle_falling_edge_ldac()
