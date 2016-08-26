@@ -65,7 +65,7 @@ BIT_CTRLSTAT_ORUNDETECT = 1
 ANNOTATIONS = ['reset', 'enable', 'read', 'write', 'ack', 'data', 'parity']
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'swd'
     name = 'SWD'
     longname = 'Serial Wire Debug'
@@ -95,7 +95,6 @@ class Decoder(srd.Decoder):
     def __init__(self):
         # SWD data/clock state
         self.state = 'UNKNOWN'
-        self.oldclk = -1
         self.sample_edge = RISING
         self.ack = None # Ack state of the current phase
         self.ss_req = 0 # Start sample of current req
@@ -142,11 +141,10 @@ class Decoder(srd.Decoder):
         }[(self.apdp, self.rw)]
         self.putp(ptype, (self.addr, self.data, self.ack))
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, (clk, dio)) in data:
-            if clk == self.oldclk:
-                continue # Not a clock edge.
-            self.oldclk = clk
+    def decode(self):
+        while True:
+            # Wait for any clock edge.
+            clk, dio = self.wait({0: 'e'})
 
             # Count rising edges with DIO held high,
             # as a line reset (50+ high edges) can happen from any state.
