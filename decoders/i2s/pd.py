@@ -37,7 +37,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'i2s'
     name = 'I²S'
     longname = 'Integrated Interchip Sound'
@@ -61,7 +61,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.oldsck = 1
         self.oldws = 1
         self.bitcount = 0
         self.data = 0
@@ -130,18 +129,12 @@ class Decoder(srd.Decoder):
         lo, hi = s & 0xff, (s >> 8) & 0xff
         return bytes([lo, hi])
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for self.samplenum, (sck, ws, sd) in data:
-
-            # Ignore sample if the bit clock hasn't changed.
-            if sck == self.oldsck:
-                continue
-
-            self.oldsck = sck
-            if sck == 0:   # Ignore the falling clock edge.
-                continue
+        while True:
+            # Wait for a rising edge on the SCK pin.
+            sck, ws, sd = self.wait({0: 'r'})
 
             self.data = (self.data << 1) | sd
             self.bitcount += 1
