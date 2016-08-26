@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2013-2016 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -64,8 +64,10 @@ def channel_list(num_channels):
 class ChannelError(Exception):
     pass
 
+NUM_CHANNELS = 8
+
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'parallel'
     name = 'Parallel'
     longname = 'Parallel sync bus'
@@ -73,7 +75,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['parallel']
-    optional_channels = channel_list(8)
+    optional_channels = channel_list(NUM_CHANNELS)
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},
@@ -87,18 +89,19 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.oldclk = None
         self.items = []
         self.itemcount = 0
         self.saved_item = None
-        self.samplenum = 0
-        self.oldpins = None
         self.ss_item = self.es_item = None
         self.first = True
+        self.num_channels = 0
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+
+        # Assume that the initial pin state of all pins is logic 1.
+        self.initial_pins = [1] * (NUM_CHANNELS + 1)
 
     def putpb(self, data):
         self.put(self.ss_item, self.es_item, self.out_python, data)
@@ -118,7 +121,7 @@ class Decoder(srd.Decoder):
             self.ss_word = self.samplenum
 
         # Get the bits for this item.
-        item, used_pins = 0, datapins.count(b'\x01') + datapins.count(b'\x00')
+        item, used_pins = 0, datapins.count(1) + datapins.count(0)
         for i in range(used_pins):
             item |= datapins[i] << i
 
@@ -159,34 +162,25 @@ class Decoder(srd.Decoder):
 
         self.itemcount, self.items = 0, []
 
-    def find_clk_edge(self, clk, datapins):
-        # Ignore sample if the clock pin hasn't changed.
-        if clk == self.oldclk:
-            return
-        self.oldclk = clk
+    def decode(self):
+        for i in range(len(self.optional_channels)):
+            if self.has_channel(i):
+                self.num_channels += 1
 
-        # Sample data on rising/falling clock edge (depends on config).
-        c = self.options['clock_edge']
-        if c == 'rising' and clk == 0: # Sample on rising clock edge.
-            return
-        elif c == 'falling' and clk == 1: # Sample on falling clock edge.
-            return
+        if self.num_channels == 0:
+            raise ChannelError('At least one channel has to be supplied.')
 
-        # Found the correct clock edge, now get the bits.
-        self.handle_bits(datapins)
-
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins = pins
-
-            if sum(1 for p in pins if p in (0, 1)) == 0:
-                raise ChannelError('At least one channel has to be supplied.')
-
-            if pins[0] not in (0, 1):
+        if not self.has_channel(0):
+            # CLK was not supplied, sample on ANY edge of ANY of the pins
+            # (but only of those pins that were actually supplied).
+            conds = []
+            for i in range(1, len(self.optional_channels)):
+                if self.has_channel(i):
+                    conds.append({i: 'e'})
+            while True:
+                self.handle_bits(self.wait(conds[:])[1:])
+        else:
+            # Sample on the rising or falling CLK edge (depends on config).
+            while True:
+                pins = self.wait({0: self.options['clock_edge'][0]})
                 self.handle_bits(pins[1:])
-            else:
-                self.find_clk_edge(pins[0], pins[1:])
