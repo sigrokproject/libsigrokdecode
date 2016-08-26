@@ -25,7 +25,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ir_nec'
     name = 'IR NEC'
     longname = 'IR NEC'
@@ -102,13 +102,15 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.state = 'IDLE'
         self.ss_bit = self.ss_start = self.ss_other_edge = self.ss_remote = 0
-        self.data = self.count = self.active = self.old_ir = None
+        self.data = self.count = self.active = None
         self.addr = self.cmd = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.active = 0 if self.options['polarity'] == 'active-low' else 1
-        self.old_ir = 1 if self.active == 0 else 0
+
+        # Set the initial (assumed) value of the pin as per user-config.
+        self.initial_pins = [1 if self.active == 0 else 0]
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -150,18 +152,16 @@ class Decoder(srd.Decoder):
         self.ss_bit = self.ss_start = self.samplenum
         return ret == 0
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
-            self.ir = pins[0]
+        while True:
+            # Wait for any edge (rising or falling).
+            (self.ir,) = self.wait({0: 'e'})
 
-            # Wait for an "interesting" edge, but also record the other ones.
-            if self.old_ir == self.ir:
-                continue
             if self.ir != self.active:
+                # Save the non-active edge, then wait for the next edge.
                 self.ss_other_edge = self.samplenum
-                self.old_ir = self.ir
                 continue
 
             b = self.samplenum - self.ss_bit
@@ -202,5 +202,3 @@ class Decoder(srd.Decoder):
                 self.putremote()
                 self.ss_bit = self.ss_start = self.samplenum
                 self.state = 'IDLE'
-
-            self.old_ir = self.ir
