@@ -182,7 +182,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'usb_power_delivery'
     name = 'USB PD'
     longname = 'USB Power Delivery'
@@ -443,9 +443,7 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.idx = 0
         self.packet_seq = 0
-        self.samplenum = 0
         self.previous = 0
-        self.oldpins = [0]
         self.startsample = None
         self.bits = []
         self.edges = []
@@ -527,15 +525,11 @@ class Decoder(srd.Decoder):
         # Raw binary data (BMC decoded)
         self.put(es, ss, self.out_binary, [0, bytes(self.bits)])
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
-            # find edges ...
-            if self.oldpins == pins:
-                continue
-
-            self.oldpins, (cc, ) = pins, pins
+        while True:
+            self.wait({0: 'e'})
 
             # First sample of the packet, just record the start date
             if not self.startsample:
