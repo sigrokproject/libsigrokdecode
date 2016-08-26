@@ -55,7 +55,7 @@ jtag_states = [
 ]
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'jtag'
     name = 'JTAG'
     longname = 'Joint Test Action Group (IEEE 1149.1)'
@@ -92,13 +92,10 @@ class Decoder(srd.Decoder):
         # self.state = 'TEST-LOGIC-RESET'
         self.state = 'RUN-TEST/IDLE'
         self.oldstate = None
-        self.oldpins = (-1, -1, -1, -1)
-        self.oldtck = -1
         self.bits_tdi = []
         self.bits_tdo = []
         self.bits_samplenums_tdi = []
         self.bits_samplenums_tdo = []
-        self.samplenum = 0
         self.ss_item = self.es_item = None
         self.ss_bitstring = self.es_bitstring = None
         self.saved_item = None
@@ -162,7 +159,9 @@ class Decoder(srd.Decoder):
         elif self.state == 'UPDATE-IR':
             self.state = 'SELECT-DR-SCAN' if (tms) else 'RUN-TEST/IDLE'
 
-    def handle_rising_tck_edge(self, tdi, tdo, tck, tms):
+    def handle_rising_tck_edge(self, pins):
+        (tdi, tdo, tck, tms, trst, srst, rtck) = pins
+
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
 
@@ -230,28 +229,7 @@ class Decoder(srd.Decoder):
 
         self.ss_item = self.samplenum
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-
-            # If none of the pins changed, there's nothing to do.
-            if self.oldpins == pins:
-                continue
-
-            # Store current pin values for the next round.
-            self.oldpins = pins
-
-            # Get individual pin values into local variables.
-            # Unused channels will have a value of > 1.
-            (tdi, tdo, tck, tms, trst, srst, rtck) = pins
-
-            # We only care about TCK edges (either rising or falling).
-            if (self.oldtck == tck):
-                continue
-
-            # Store start/end sample for later usage.
-            self.ss, self.es = ss, es
-
-            if (self.oldtck == 0 and tck == 1):
-                self.handle_rising_tck_edge(tdi, tdo, tck, tms)
-
-            self.oldtck = tck
+    def decode(self):
+        while True:
+            # Wait for a rising edge on TCK.
+            self.handle_rising_tck_edge(self.wait({2: 'r'}))
