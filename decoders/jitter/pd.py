@@ -31,7 +31,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'jitter'
     name = 'Jitter'
     longname = 'Timing jitter calculation'
@@ -66,8 +66,7 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.state = 'CLK'
         self.samplerate = None
-        self.oldpin = None
-        self.oldclk = self.oldsig = None
+        self.oldclk, self.oldsig = 0, 0
         self.clk_start = None
         self.sig_start = None
         self.clk_missed = 0
@@ -174,19 +173,12 @@ class Decoder(srd.Decoder):
             # everything we can with this sample.
             return True
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-
-        for (self.samplenum, pins) in data:
-            # We are only interested in transitions.
-            if self.oldpin == pins:
-                continue
-
-            self.oldpin, (clk, sig) = pins, pins
-
-            if self.oldclk is None and self.oldsig is None:
-                self.oldclk, self.oldsig = clk, sig
+        while True:
+            # Wait for a transition on CLK and/or SIG.
+            clk, sig = self.wait([{0: 'e'}, {1: 'e'}])
 
             # State machine:
             # For each sample we can move 2 steps forward in the state machine.
