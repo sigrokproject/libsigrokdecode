@@ -26,7 +26,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'aud'
     name = 'AUD'
     longname = 'Advanced User Debugger'
@@ -51,8 +51,6 @@ class Decoder(srd.Decoder):
         self.nmax = 0
         self.addr = 0
         self.lastaddr = 0
-        self.samplenum = 0
-        self.oldclk = 0
         self.ss = 0
 
     def start(self):
@@ -61,15 +59,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss, self.samplenum, self.out_ann, data)
 
-    def find_clk_edge(self, clk, sync, datapins):
-        # Ignore sample if there's no edge.
-        if clk == self.oldclk:
-            return
-        self.oldclk = clk
-        # Ignore falling edges.
-        if clk == 0:
-            return
-
+    def handle_clk_edge(self, clk, sync, datapins):
         # Reconstruct nibble.
         nib = 0
         for i in range(4):
@@ -106,9 +96,10 @@ class Decoder(srd.Decoder):
                 self.addr |= nib << (self.ncnt * 4)
                 self.ncnt += 1
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
+    def decode(self):
+        while True:
+            pins = self.wait({0: 'r'})
             clk = pins[0]
             sync = pins[1]
             d = pins[2:]
-            self.find_clk_edge(clk, sync, d)
+            self.handle_clk_edge(clk, sync, d)
