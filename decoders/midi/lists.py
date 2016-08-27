@@ -18,40 +18,41 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+# Each status byte has 3 string names, each shorter than the previous
 status_bytes = {
     # Channel voice messages
-    0x80: 'note off',
-    0x90: 'note on', # However, velocity = 0 means "note off".
-    0xa0: 'polyphonic key pressure / aftertouch',
-    0xb0: 'control change',
-    0xc0: 'program change',
-    0xd0: 'channel pressure / aftertouch',
-    0xe0: 'pitch bend change',
+    0x80: ['note off', 'note off', 'N off'],
+    0x90: ['note on', 'note on', 'N on'], # However, velocity = 0 means "note off".
+    0xa0: ['polyphonic key pressure / aftertouch', 'key pressure', 'KP' ],
+    0xb0: ['control change', 'ctl chg', 'CC'],
+    0xc0: ['program change', 'prgm chg', 'PC'],
+    0xd0: ['channel pressure / aftertouch', 'channel pressure', 'CP'],
+    0xe0: ['pitch bend change', 'pitch bend', 'PB'],
 
     # Channel mode messages
     # 0xb0: 'select channel mode', # Note: Same as 'control change'.
 
     # System exclusive messages
-    0xf0: 'system exclusive (SysEx)',
+    0xf0: ['system exclusive', 'SysEx', 'SE'],
 
     # System common messages
-    0xf1: 'MIDI time code quarter frame',
-    0xf2: 'song position pointer',
-    0xf3: 'song select',
-    0xf4: 'undefined 0xf4',
-    0xf5: 'undefined 0xf5',
-    0xf6: 'tune request',
-    0xf7: 'end of system exclusive (EOX)',
+    0xf1: ['MIDI time code quarter frame', 'MIDI time code', 'MIDI time'],
+    0xf2: ['song position pointer', 'song position', 'position'],
+    0xf3: ['song select', 'song select', 'song select'],
+    0xf4: ['undefined 0xf4', 'undef 0xf4', 'undef'],
+    0xf5: ['undefined 0xf5', 'undef 0xf5', 'undef'],
+    0xf6: ['tune request', 'tune request', 'tune request'],
+    0xf7: ['end of system exclusive (EOX)', 'end of SysEx', 'EOX'],
 
     # System real time messages
-    0xf8: 'timing clock',
-    0xf9: 'undefined 0xf9',
-    0xfa: 'start',
-    0xfb: 'continue',
-    0xfc: 'stop',
-    0xfd: 'undefined 0xfd',
-    0xfe: 'active sensing',
-    0xff: 'system reset',
+    0xf8: ['timing clock', 'timing clock', 'timing clock'],
+    0xf9: ['undefined 0xf9', 'undef 0xf9', 'undef'],
+    0xfa: ['start', 'start', 'start'],
+    0xfb: ['continue', 'continue', 'continue'],
+    0xfc: ['stop', 'stop', 'stop'],
+    0xfd: ['undefined 0xfd', 'undef 0xfd', 'undef'],
+    0xfe: ['active sensing', 'active sensing', 'sensing'],
+    0xff: ['system reset', 'reset', 'reset'],
 }
 
 # Universal system exclusive (SysEx) messages, non-realtime (0x7e)
@@ -409,89 +410,89 @@ sysex_manufacturer_ids = {
 }
 
 control_functions = {
-    0x00: 'bank select MSB',
-    0x01: 'modulation wheel/lever MSB',
-    0x02: 'breath controller MSB',
+    0x00: ['bank select MSB', 'bank MSB', 'bank-M'],
+    0x01: ['modulation wheel/lever MSB', 'modulation MSB', 'mod-M'],
+    0x02: ['breath controller MSB', 'breath MSB', 'breath-M'],
     # 0x03: undefined MSB
-    0x04: 'foot controller MSB',
-    0x05: 'portamento time MSB',
-    0x06: 'data entry MSB',
-    0x07: 'channel volume MSB (formerly main volume)',
-    0x08: 'balance MSB',
+    0x04: ['foot controller MSB', 'foot MSB', 'foot-M'],
+    0x05: ['portamento time MSB', 'portamento MSB', 'porta.-M'],
+    0x06: ['data entry MSB', 'data entry MSB', 'data-M'],
+    0x07: ['channel volume MSB (formerly main volume)', 'channel volume MSB', 'ch vol-M'],
+    0x08: ['balance MSB', 'bal MSB', 'bal-M'],
     # 0x09: undefined MSB
-    0x0a: 'pan MSB',
-    0x0b: 'expression controller MSB',
-    0x0c: 'effect control 1 MSB',
-    0x0d: 'effect control 2 MSB',
+    0x0a: ['pan MSB', 'pan MSB', 'pan-M'],
+    0x0b: ['expression controller MSB', 'expression MSB', 'expr-M'],
+    0x0c: ['effect control 1 MSB', 'effect 1 MSB', 'effect-1-M'],
+    0x0d: ['effect control 2 MSB', 'effect 2 MSB', 'effect-2-M'],
     # 0x0e-0x0f: undefined MSB
-    0x10: 'general purpose controller 1 MSB',
-    0x11: 'general purpose controller 2 MSB',
-    0x12: 'general purpose controller 3 MSB',
-    0x13: 'general purpose controller 4 MSB',
+    0x10: ['general purpose controller 1 MSB', 'GP controller 1 MSB', 'GPC-1-M'],
+    0x11: ['general purpose controller 2 MSB', 'GP controller 2 MSB', 'GPC-2-M'],
+    0x12: ['general purpose controller 3 MSB', 'GP controller 3 MSB', 'GPC-3-M'],
+    0x13: ['general purpose controller 4 MSB', 'GP controller 4 MSB', 'GPC-4-M'],
     # 0x14-0x1f: undefined MSB
-    0x20: 'bank select LSB',
-    0x21: 'modulation wheel/lever LSB',
-    0x22: 'breath controller LSB',
+    0x20: ['bank select LSB', 'bank LSB', 'bank-L'],
+    0x21: ['modulation wheel/lever LSB', 'modulation LSB', 'mod-L'],
+    0x22: ['breath controller LSB', 'breath LSB', 'breath-L'],
     # 0x23: undefined LSB
-    0x24: 'foot controller LSB',
-    0x25: 'portamento time LSB',
-    0x26: 'data entry LSB',
-    0x27: 'channel volume LSB (formerly main volume)',
-    0x28: 'balance LSB',
+    0x24: ['foot controller LSB', 'foot LSB', 'foot-L'],
+    0x25: ['portamento time LSB', 'portamento LSB', 'porta.-L'],
+    0x26: ['data entry LSB', 'data entry LSB', 'data-L'],
+    0x27: ['channel volume LSB (formerly main volume)', 'channel volume LSB', 'ch vol-L'],
+    0x28: ['balance LSB', 'bal LSB', 'bal-L'],
     # 0x29: undefined LSB
-    0x2a: 'pan LSB',
-    0x2b: 'expression controller LSB',
-    0x2c: 'effect control 1 LSB',
-    0x2d: 'effect control 2 LSB',
+    0x2a: ['pan LSB', 'pan LSB', 'pan-L'],
+    0x2b: ['expression controller LSB', 'expression LSB', 'expr-L'],
+    0x2c: ['effect control 1 LSB', 'effect 1 LSB', 'effect-1-L'],
+    0x2d: ['effect control 2 LSB', 'effect 2 LSB', 'effect-2-L'],
     # 0x2e-0x2f: undefined LSB
-    0x30: 'general purpose controller 1 LSB',
-    0x31: 'general purpose controller 2 LSB',
-    0x32: 'general purpose controller 3 LSB',
-    0x33: 'general purpose controller 4 LSB',
+    0x30: ['general purpose controller 1 LSB', 'GP controller 1 LSB', 'GPC-1-L'],
+    0x31: ['general purpose controller 2 LSB', 'GP controller 2 LSB', 'GPC-2-L'],
+    0x32: ['general purpose controller 3 LSB', 'GP controller 3 LSB', 'GPC-3-L'],
+    0x33: ['general purpose controller 4 LSB', 'GP controller 4 LSB', 'GPC-4-L'],
     # 0x34-0x3f: undefined LSB
-    0x40: 'damper pedal (sustain)',
-    0x41: 'portamento on/off',
-    0x42: 'sostenuto',
-    0x43: 'soft pedal',
-    0x44: 'legato footswitch', # vv: 00-3f = normal, 40-7f = legato
-    0x45: 'hold 2',
-    0x46: 'sound controller 1 (default: sound variation)',
-    0x47: 'sound controller 2 (default: timbre / harmonic intensity)',
-    0x48: 'sound controller 3 (default: release time)',
-    0x49: 'sound controller 4 (default: attack time)',
-    0x4a: 'sound controller 5 (default: brightness)',
-    0x4b: 'sound controller 6 (GM2 default: decay time)',
-    0x4c: 'sound controller 7 (GM2 default: vibrato rate)',
-    0x4d: 'sound controller 8 (GM2 default: vibrato depth)',
-    0x4e: 'sound controller 9 (GM2 default: vibrato delay)',
-    0x4f: 'sound controller 10',
-    0x50: 'general purpose controller 5',
-    0x51: 'general purpose controller 6',
-    0x52: 'general purpose controller 7',
-    0x53: 'general purpose controller 8',
-    0x54: 'portamento control',
+    0x40: ['damper pedal (sustain)', 'sustain', 'sust.'],
+    0x41: ['portamento on/off', 'porta. on/off', 'porta. on/off'],
+    0x42: ['sostenuto', 'sostenuto', 'sostenuto'],
+    0x43: ['soft pedal', 'soft pedal', 'soft pedal'],
+    0x44: ['legato footswitch', 'legato switch', 'legato?'], # vv: 00-3f = normal, 40-7f = legato
+    0x45: ['hold 2', 'hold 2', 'hold 2'],
+    0x46: ['sound controller 1 (default: sound variation)', 'sound controller 1', 'snd cntlr 1'],
+    0x47: ['sound controller 2 (default: timbre / harmonic intensity)', 'sound controller 2', 'snd cntlr 2'],
+    0x48: ['sound controller 3 (default: release time)', 'sound controller 3', 'snd cntlr 3'],
+    0x49: ['sound controller 4 (default: attack time)', 'sound controller 4', 'snd cntlr 4'],
+    0x4a: ['sound controller 5 (default: brightness)', 'sound controller 5', 'snd cntlr 5'],
+    0x4b: ['sound controller 6 (GM2 default: decay time)', 'sound controller 6', 'snd cntlr 6'],
+    0x4c: ['sound controller 7 (GM2 default: vibrato rate)', 'sound controller 7', 'snd cntlr 7'],
+    0x4d: ['sound controller 8 (GM2 default: vibrato depth)', 'sound controller 8', 'snd cntlr 8'],
+    0x4e: ['sound controller 9 (GM2 default: vibrato delay)', 'sound controller 9', 'snd cntlr 9'],
+    0x4f: ['sound controller 10', 'sound controller 10', 'snd cntlr 10'],
+    0x50: ['general purpose controller 5', 'GP controller 5', 'GPC-5'],
+    0x51: ['general purpose controller 6', 'GP controller 6', 'GPC-6'],
+    0x52: ['general purpose controller 7', 'GP controller 7', 'GPC-7'],
+    0x53: ['general purpose controller 8', 'GP controller 8', 'GPC-8'],
+    0x54: ['portamento control', 'portamento ctl', 'porta. ctl'],
     # 0x55-0x5a: undefined
-    0x5b: 'effects 1 depth (formerly external effects depth)',
-    0x5c: 'effects 2 depth (formerly tremolo depth)',
-    0x5d: 'effects 3 depth (formerly chorus depth)',
-    0x5e: 'effects 4 depth (formerly celeste/detune depth)',
-    0x5f: 'effects 5 depth (formerly phaser depth)',
-    0x60: 'data increment',
-    0x61: 'data decrement',
-    0x62: 'Non-Registered Parameter Number LSB',
-    0x63: 'Non-Registered Parameter Number MSB',
-    0x64: 'Registered Parameter Number LSB',
-    0x65: 'Registered Parameter Number MSB',
+    0x5b: ['effects 1 depth (formerly external effects depth)', 'effects 1 depth', 'effects 1 depth'],
+    0x5c: ['effects 2 depth (formerly tremolo depth)', 'effects 2 depth', 'effects 2 depth'],
+    0x5d: ['effects 3 depth (formerly chorus depth)', 'effects 3 depth', 'effects 3 depth'],
+    0x5e: ['effects 4 depth (formerly celeste/detune depth)', 'effects 4 depth', 'effects 4 depth'],
+    0x5f: ['effects 5 depth (formerly phaser depth)', 'effects 5 depth', 'effects 5 depth'],
+    0x60: ['data increment', 'data inc', 'data++'],
+    0x61: ['data decrement', 'data dec', 'data--'],
+    0x62: ['Non-Registered Parameter Number LSB', 'NRPN LSB', 'NRPN-L'],
+    0x63: ['Non-Registered Parameter Number MSB', 'NRPN MSB', 'NRPN-M'],
+    0x64: ['Registered Parameter Number LSB', 'RPN LSB', 'RPN-L'],
+    0x65: ['Registered Parameter Number MSB', 'RPN MSB', 'RPN-M'],
     # 0x66-0x77: undefined
     # 0x78-0x7f: reserved for channel mode messages
-    0x78: 'all sound off',
-    0x79: 'reset all controllers',
-    0x7a: 'local control',
-    0x7b: 'all notes off',
-    0x7c: 'omni mode off', # all notes off
-    0x7d: 'omni mode on', # all notes off
-    0x7e: 'mono mode on', # mono mode on, all notes off
-    0x7f: 'poly mode on', # mono mode off, all notes off
+    0x78: ['all sound off', 'all snd off', 'snd off'],
+    0x79: ['reset all controllers', 'reset all cntlrs', 'reset cntlrs'],
+    0x7a: ['local control', 'local cntl', 'local ctl'],
+    0x7b: ['all notes off', 'notes off', 'notes off'],
+    0x7c: ['omni mode off', 'omni off', 'omni off'], # all notes off
+    0x7d: ['omni mode on', 'omni on', 'omni on'], # all notes off
+    0x7e: ['mono mode on', 'mono on', 'mono'], # mono mode on, all notes off
+    0x7f: ['poly mode on', 'poly on', 'poly'], # mono mode off, all notes off
 }
 
 gm_instruments = {
@@ -638,22 +639,23 @@ drum_kit = {
     128: 'GS CM-64/CM-32 Kit',
 }
 
+# Each quarter frame type has 2 string names, each shorter than the previous
 quarter_frame_type = {
-    0: 'frame count LS nibble',
-    1: 'frame count MS nibble',
-    2: 'seconds count LS nibble',
-    3: 'seconds count MS nibble',
-    4: 'minutes count LS nibble',
-    5: 'minutes count MS nibble',
-    6: 'hours count LS nibble',
-    7: 'hours count MS nibble and SMPTE type',
+    0: ['frame count LS nibble', 'frame LSN'],
+    1: ['frame count MS nibble', 'frame MSN'],
+    2: ['seconds LS nibble', 'sec LSN'],
+    3: ['seconds MS nibble', 'sec MSN'],
+    4: ['minutes LS nibble', 'min LSN'],
+    5: ['minutes MS nibble', 'min MSN'],
+    6: ['hours LS nibble', 'hrs LSN'],
+    7: ['hours MS nibble and SMPTE type', 'hrs MSN'],
 }
 
 smpte_type = {
-    0: '24 frames/second',
-    1: '25 frames/second',
-    2: '30 frames/second (drop-frame)',
-    3: '30 frames/second (non-drop)',
+    0: '24 fps',
+    1: '25 fps',
+    2: '30 fps (drop-frame)',
+    3: '30 fps (non-drop)',
 }
 
 chromatic_notes = {
