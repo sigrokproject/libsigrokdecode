@@ -179,6 +179,7 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.bw = (self.options['num_data_bits'] + 7) // 8
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -279,8 +280,9 @@ class Decoder(srd.Decoder):
         if formatted is not None:
             self.putx(rxtx, [rxtx, [formatted]])
 
-        self.putbin(rxtx, [rxtx, bytes([b])])
-        self.putbin(rxtx, [2, bytes([b])])
+        bdata = b.to_bytes(self.bw, byteorder='big')
+        self.putbin(rxtx, [rxtx, bdata])
+        self.putbin(rxtx, [2, bdata])
 
         self.databits[rxtx] = []
 
