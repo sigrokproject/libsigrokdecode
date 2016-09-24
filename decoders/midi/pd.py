@@ -330,9 +330,10 @@ class Decoder(srd.Decoder):
     def handle_sysex_msg(self, newbyte):
         # SysEx message: 1 status byte, 1-3 manuf. bytes, x data bytes, EOX byte
         #
-        # SysEx message are variable length, can be terminated by EOX byte or
+        # SysEx messages are variable length, can be terminated by EOX or
         # by any non-SysReal status byte, and it clears self.status_byte.
-        # Note: all System message code doesn't utilize self.status_byte
+        #
+        # Note: All System message codes don't utilize self.status_byte.
         self.hard_clear_status_byte()
         if newbyte != 0xf7 and newbyte is not None: # EOX
             self.cmd.append(newbyte)
@@ -399,7 +400,7 @@ class Decoder(srd.Decoder):
         # n = message type
         # d = values
         #
-        # Note: all System message code don't utilize self.status_byte,
+        # Note: All System message codes don't utilize self.status_byte,
         # and System Exclusive and System Common clear it.
         c = self.cmd
         if len(c) < 2:
@@ -442,7 +443,8 @@ class Decoder(srd.Decoder):
         #
         # Note: While the MIDI lists 0xf7 as a "system common" message, it
         # is actually only used with SysEx messages so it is processed there.
-        # Note 2: all System message code doesn't utilize self.status_byte
+        #
+        # Note: All System message codes don't utilize self.status_byte.
         self.hard_clear_status_byte()
         if newbyte is not None:
             self.cmd.append(newbyte)
@@ -496,50 +498,46 @@ class Decoder(srd.Decoder):
     def handle_sysrealtime_msg(self, newbyte):
         # System realtime message: 0b11111ttt (t = message type)
         #
-        # Important: these messages are handled different from all others
+        # Important: These messages are handled differently from all others
         # because they are allowed to temporarily interrupt other messages.
         # The interrupted messages resume after the realtime message is done.
         # Thus, they mostly leave 'self' the way it was found.
-        # Note: all System message code doesn't utilize self.status_byte
-        old_ss_block = self.ss_block
-        old_es_block = self.es_block
-        self.ss_block = self.ss
-        self.es_block = self.es
+        #
+        # Note: All System message codes don't utilize self.status_byte.
+        old_ss_block, old_es_block = self.ss_block, self.es_block
+        self.ss_block, self.es_block = self.ss, self.es
         group = ('System Realtime', 'SysReal', 'SR')
         self.putx([1, ['%s: %s' % (group[0], status_bytes[newbyte][0]),
                       '%s: %s' % (group[1], status_bytes[newbyte][1]),
                       '%s: %s' % (group[2], status_bytes[newbyte][2])]])
-        self.ss_block = old_ss_block
-        self.es_block = old_es_block
-        # Deliberately not resetting self.cmd or self.state
+        self.ss_block, self.es_block = old_ss_block, old_es_block
+        # Deliberately not resetting self.cmd or self.state.
 
     def handle_garbage_msg(self, newbyte):
-        # Handles messages that are either not handled or are corrupt
+        # Handle messages that are either not handled or are corrupt.
         self.es_block = self.es
         if newbyte is not None:
             self.cmd.append(newbyte)
             return
         payload = '<empty>'
-        max_bytes = 16    # Put a limit on the length on the hex dump
-        for index in range( 0, len(self.cmd) ):
+        max_bytes = 16 # Put a limit on the length on the hex dump.
+        for index in range(len(self.cmd)):
             if index == max_bytes:
-                payload = payload + ' ...'
+                payload += ' ...'
                 break
             if index == 0:
                 payload = '0x%02x' % self.cmd[index]
             else:
-                payload = payload + ' 0x%02x' % self.cmd[index]
+                payload += ' 0x%02x' % self.cmd[index]
         self.putx([2, ['UNHANDLED DATA: %s' % payload,
-                      'UNHANDLED',
-                      '???',
-                      '?']])
+                      'UNHANDLED', '???', '?']])
         self.cmd, self.state = [], 'IDLE'
         self.hard_clear_status_byte()
 
     def handle_state(self, state, newbyte):
         # 'newbyte' can either be:
-        # 1. Value between 0x00-0xff, deal with the byte normally
-        # 2. Value of 'None' which means flush any buffered data.
+        # 1. Value between 0x00-0xff, deal with the byte normally.
+        # 2. Value of 'None' which means "flush any buffered data".
         if state == 'HANDLE CHANNEL MSG':
             self.handle_channel_msg(newbyte)
         elif state == 'HANDLE SYSEX MSG':
@@ -552,10 +550,9 @@ class Decoder(srd.Decoder):
             self.handle_garbage_msg(newbyte)
 
     def get_next_state(self, newbyte):
-        # 'newbyte' must be a valid byte between 0x00 and 0xff
+        # 'newbyte' must be a valid byte between 0x00 and 0xff.
         #
-        # Try to determine the state based off of 'newbyte' parameter
-        # ... if it is >= 0x80.
+        # Try to determine the state based off of the 'newbyte' parameter.
         if newbyte in range(0x80, 0xef + 1):
             return 'HANDLE CHANNEL MSG'
         if newbyte == 0xf0:
@@ -564,10 +561,10 @@ class Decoder(srd.Decoder):
             return'HANDLE SYSCOMMON MSG'
         if newbyte in range(0xf8, 0xff + 1):
             return 'HANDLE SYSREALTIME MSG'
-        # Passing 0xf7 is an error; messages don't start with 0xf7
+        # Passing 0xf7 is an error; messages don't start with 0xf7.
         if newbyte == 0xf7:
             return 'BUFFER GARBAGE MSG'
-        # Next, base the state off of self.status_byte
+        # Next, base the state off of self.status_byte.
         if self.status_byte < 0x80:
             return 'BUFFER GARBAGE MSG'
         return self.get_next_state(self.status_byte)
@@ -588,10 +585,10 @@ class Decoder(srd.Decoder):
         #  - Most messages: 1 status byte, 1-2 data bytes.
         #  - Real-time system messages: always 1 byte.
         #  - SysEx messages: 1 status byte, n data bytes, EOX byte.
-
+        #
         # Aspects of the MIDI protocol that complicate decoding:
         #  - MIDI System Realtime messages can briefly interrupt other
-        #    message already in progress.
+        #    messages already in progress.
         #  - "Running Status" allows for omitting the status byte in most
         #    scenarios if sequential messages have the same status byte.
         #  - System Exclusive (SysEx) messages can be terminated by ANY
@@ -601,16 +598,18 @@ class Decoder(srd.Decoder):
         if pdata >= 0x80 and pdata != 0xf7:
             state = self.get_next_state(pdata)
             if state != 'HANDLE SYSREALTIME MSG' and self.state != 'IDLE':
-                # Flush the previous data since a new message is starting
+                # Flush the previous data since a new message is starting.
                 self.handle_state(self.state, None)
-            # Cache ss and es -after- flushing previous data
+            # Cache ss and es -after- flushing previous data.
             self.ss, self.es = ss, es
             # This is a status byte, remember the start sample.
-            if state != 'HANDLE SYSREALTIME MSG': self.ss_block = ss
+            if state != 'HANDLE SYSREALTIME MSG':
+                self.ss_block = ss
         elif self.state == 'IDLE' or self.state == 'BUFFER GARBAGE MSG':
-            # Deal with "running status" or that we're buffering garbage
+            # Deal with "running status" or that we're buffering garbage.
             self.ss, self.es = ss, es
-            if self.state == 'IDLE': self.ss_block = ss
+            if self.state == 'IDLE':
+                self.ss_block = ss
             state = self.get_next_state(pdata)
         else:
             self.ss, self.es = ss, es
