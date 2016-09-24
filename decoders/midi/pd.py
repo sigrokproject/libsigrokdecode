@@ -317,7 +317,7 @@ class Decoder(srd.Decoder):
         self.soft_clear_status_byte()
 
     def handle_channel_msg(self, newbyte):
-        if newbyte != None:
+        if newbyte is not None:
             if newbyte >= 0x80:
                 self.set_status_byte(newbyte)
             else:
@@ -325,7 +325,7 @@ class Decoder(srd.Decoder):
         msg_type = self.status_byte & 0xf0
         handle_msg = getattr(self, 'handle_channel_msg_0x%02x' % msg_type,
                              self.handle_channel_msg_generic)
-        handle_msg(newbyte == None)
+        handle_msg(newbyte is None)
 
     def handle_sysex_msg(self, newbyte):
         # SysEx message: 1 status byte, 1-3 manuf. bytes, x data bytes, EOX byte
@@ -334,7 +334,7 @@ class Decoder(srd.Decoder):
         # by any non-SysReal status byte, and it clears self.status_byte.
         # Note: all System message code doesn't utilize self.status_byte
         self.hard_clear_status_byte()
-        if newbyte != 0xf7 and newbyte != None: # EOX
+        if newbyte != 0xf7 and newbyte is not None: # EOX
             self.cmd.append(newbyte)
             return
         self.es_block = self.es
@@ -403,7 +403,7 @@ class Decoder(srd.Decoder):
         # and System Exclusive and System Common clear it.
         c = self.cmd
         if len(c) < 2:
-            if newbyte == None:
+            if newbyte is None:
                 self.handle_garbage_msg(None)
             return
         msg = c[0]
@@ -444,7 +444,7 @@ class Decoder(srd.Decoder):
         # is actually only used with SysEx messages so it is processed there.
         # Note 2: all System message code doesn't utilize self.status_byte
         self.hard_clear_status_byte()
-        if newbyte != None:
+        if newbyte is not None:
             self.cmd.append(newbyte)
         c = self.cmd
         msg = c[0]
@@ -457,7 +457,7 @@ class Decoder(srd.Decoder):
             # Song position pointer: F2 ll mm
             # ll = LSB position, mm = MSB position
             if len(c) < 3:
-                if newbyte == None:
+                if newbyte is None:
                     self.handle_garbage_msg(None)
                 return
             ll, mm = c[1], c[2]
@@ -473,7 +473,7 @@ class Decoder(srd.Decoder):
             # Song select: F3 ss
             # ss = song selection number
             if len(c) < 2:
-                if newbyte == None:
+                if newbyte is None:
                     self.handle_garbage_msg(None)
                 return
             ss = c[1]
@@ -516,7 +516,7 @@ class Decoder(srd.Decoder):
     def handle_garbage_msg(self, newbyte):
         # Handles messages that are either not handled or are corrupt
         self.es_block = self.es
-        if newbyte != None:
+        if newbyte is not None:
             self.cmd.append(newbyte)
             return
         payload = '<empty>'
