@@ -201,7 +201,7 @@ class Decoder(srd.Decoder):
             self.handle_request(request_started, request_end)
 
         # CONTROL, SETUP stage
-        elif request['type'] == None and self.transaction_type == 'SETUP':
+        elif request['type'] is None and self.transaction_type == 'SETUP':
             request['setup_data'] = self.transaction_data
             request['wLength'] = struct.unpack('<H',
                 bytes(self.transaction_data[6:8]))[0]
