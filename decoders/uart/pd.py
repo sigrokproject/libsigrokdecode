@@ -288,7 +288,7 @@ class Decoder(srd.Decoder):
         self.putbin(rxtx, [rxtx, bytes([b])])
         self.putbin(rxtx, [2, bytes([b])])
 
-        self.databits = [[], []]
+        self.databits[rxtx] = []
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
