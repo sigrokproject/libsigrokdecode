@@ -66,8 +66,8 @@ class Decoder(srd.Decoder):
             return 'assuming ' + percussion_notes.get(note, 'undefined')
 
     def check_for_garbage_flush(self, is_flushed):
-        if is_flushed == True:
-            if self.explicit_status_byte == True:
+        if is_flushed:
+            if self.explicit_status_byte:
                 self.cmd.insert(0, self.status_byte)
             self.handle_garbage_msg(None)
 
