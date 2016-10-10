@@ -482,9 +482,9 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 				 start_sample,
 				 end_sample, output_type_name(pdo->output_type),
 				 output_id, pdo->proto_id, next_di->inst_id);
-			if (!(py_res = PyObject_CallMethod(
-				next_di->py_inst, "decode", "KKO", start_sample,
-				end_sample, py_data))) {
+			py_res = PyObject_CallMethod(next_di->py_inst, "decode",
+				"KKO", start_sample, end_sample, py_data);
+			if (!py_res) {
 				srd_exception_catch("Calling %s decode() failed",
 							next_di->inst_id);
 			}
