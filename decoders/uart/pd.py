@@ -31,7 +31,7 @@ This is the list of <ptype>s and their respective <pdata> values:
  - 'STARTBIT': The data is the (integer) value of the start bit (0/1).
  - 'DATA': This is always a tuple containing two items:
    - 1st item: the (integer) value of the UART data. Valid values
-     range from 0 to 512 (as the data can be up to 9 bits in size).
+     range from 0 to 511 (as the data can be up to 9 bits in size).
    - 2nd item: the list of individual data bits and their ss/es numbers.
  - 'PARITYBIT': The data is the (integer) value of the parity bit (0/1).
  - 'STOPBIT': The data is the (integer) value of the stop bit (0 or 1).
@@ -272,23 +272,57 @@ class Decoder(srd.Decoder):
         self.putpx(rxtx, ['DATA', rxtx,
             (self.datavalue[rxtx], self.databits[rxtx])])
 
-        b, f = self.datavalue[rxtx], self.options['format']
-        if f == 'ascii':
-            c = chr(b) if b in range(30, 126 + 1) else '[%02X]' % b
-            self.putx(rxtx, [rxtx, [c]])
-        elif f == 'dec':
-            self.putx(rxtx, [rxtx, [str(b)]])
-        elif f == 'hex':
-            self.putx(rxtx, [rxtx, [hex(b)[2:].zfill(2).upper()]])
-        elif f == 'oct':
-            self.putx(rxtx, [rxtx, [oct(b)[2:].zfill(3)]])
-        elif f == 'bin':
-            self.putx(rxtx, [rxtx, [bin(b)[2:].zfill(8)]])
+        b = self.datavalue[rxtx]
+        formatted = self.format_value(b)
+        if formatted is not None:
+            self.putx(rxtx, [rxtx, [formatted]])
 
         self.putbin(rxtx, [rxtx, bytes([b])])
         self.putbin(rxtx, [2, bytes([b])])
 
         self.databits[rxtx] = []
+
+    def format_value(self, v):
+        # Format value 'v' according to configured options.
+        # Reflects the user selected kind of representation, as well as
+        # the number of data bits in the UART frames.
+
+        fmt, bits = self.options['format'], self.options['num_data_bits']
+
+        # Assume "is printable" for values from 32 to including 126,
+        # below 32 is "control" and thus not printable, above 127 is
+        # "not ASCII" in its strict sense, 127 (DEL) is not printable,
+        # fall back to hex representation for non-printables.
+        if fmt == 'ascii':
+            if v in range(32, 126 + 1):
+                return chr(v)
+            hexfmt = "[{:02X}]" if bits <= 8 else "[{:03X}]"
+            return hexfmt.format(v)
+
+        # Mere number to text conversion without prefix and padding
+        # for the "decimal" output format.
+        if fmt == 'dec':
+            return "{:d}".format(v)
+
+        # Padding with leading zeroes for hex/oct/bin formats, but
+        # without a prefix for density -- since the format is user
+        # specified, there is no ambiguity.
+        if fmt == 'hex':
+            digits = (bits + 4 - 1) // 4
+            fmtchar = "X"
+        elif fmt == 'oct':
+            digits = (bits + 3 - 1) // 3
+            fmtchar = "o"
+        elif fmt == 'bin':
+            digits = bits
+            fmtchar = "b"
+        else:
+            fmtchar = None
+        if fmtchar is not None:
+            fmt = "{{:0{:d}{:s}}}".format(digits, fmtchar)
+            return fmt.format(v)
+
+        return None
 
     def get_parity_bit(self, rxtx, signal):
         # If no parity is used/configured, skip to the next state immediately.
