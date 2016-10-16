@@ -624,6 +624,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	struct srd_decoder *d;
 	long apiver;
 	int is_subclass;
+	const char *fail_txt;
 
 	if (!srd_check_init())
 		return SRD_ERR;
@@ -639,24 +640,32 @@ SRD_API int srd_decoder_load(const char *module_name)
 	srd_dbg("Loading protocol decoder '%s'.", module_name);
 
 	d = g_malloc0(sizeof(struct srd_decoder));
+	fail_txt = NULL;
 
 	d->py_mod = py_import_by_name(module_name);
-	if (!d->py_mod)
+	if (!d->py_mod) {
+		fail_txt = "import by name failed";
 		goto except_out;
+	}
 
 	if (!mod_sigrokdecode) {
 		srd_err("sigrokdecode module not loaded.");
+		fail_txt = "sigrokdecode(3) not loaded";
 		goto err_out;
 	}
 
 	/* Get the 'Decoder' class as Python object. */
 	d->py_dec = PyObject_GetAttrString(d->py_mod, "Decoder");
-	if (!d->py_dec)
+	if (!d->py_dec) {
+		fail_txt = "no 'Decoder' attribute in imported module";
 		goto except_out;
+	}
 
 	py_basedec = PyObject_GetAttrString(mod_sigrokdecode, "Decoder");
-	if (!py_basedec)
+	if (!py_basedec) {
+		fail_txt = "no 'Decoder' attribute in sigrokdecode(3)";
 		goto except_out;
+	}
 
 	is_subclass = PyObject_IsSubclass(d->py_dec, py_basedec);
 	Py_DECREF(py_basedec);
@@ -664,6 +673,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	if (!is_subclass) {
 		srd_err("Decoder class in protocol decoder module %s is not "
 			"a subclass of sigrokdecode.Decoder.", module_name);
+		fail_txt = "not a subclass of sigrokdecode.Decoder";
 		goto err_out;
 	}
 
@@ -673,55 +683,83 @@ SRD_API int srd_decoder_load(const char *module_name)
 	 */
 	apiver = srd_decoder_apiver(d);
 	if (apiver != 2) {
-		srd_exception_catch("Only PDs of API version 2 are supported");
+		srd_exception_catch("Only PD API version 2 is supported, "
+			"decoder %s has version %ld", module_name, apiver);
+		fail_txt = "API version mismatch";
 		goto err_out;
 	}
 
 	/* Check Decoder class for required methods.
 	 */
-	if (check_method(d->py_dec, module_name, "start") != SRD_OK)
+	if (check_method(d->py_dec, module_name, "start") != SRD_OK) {
+		fail_txt = "no 'start()' method";
 		goto err_out;
+	}
 
-	if (check_method(d->py_dec, module_name, "decode") != SRD_OK)
+	if (check_method(d->py_dec, module_name, "decode") != SRD_OK) {
+		fail_txt = "no 'decode()' method";
 		goto err_out;
+	}
 
 	/* Store required fields in newly allocated strings. */
-	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK)
+	if (py_attr_as_str(d->py_dec, "id", &(d->id)) != SRD_OK) {
+		fail_txt = "no 'id' attribute";
 		goto err_out;
+	}
 
-	if (py_attr_as_str(d->py_dec, "name", &(d->name)) != SRD_OK)
+	if (py_attr_as_str(d->py_dec, "name", &(d->name)) != SRD_OK) {
+		fail_txt = "no 'name' attribute";
 		goto err_out;
+	}
 
-	if (py_attr_as_str(d->py_dec, "longname", &(d->longname)) != SRD_OK)
+	if (py_attr_as_str(d->py_dec, "longname", &(d->longname)) != SRD_OK) {
+		fail_txt = "no 'longname' attribute";
 		goto err_out;
+	}
 
-	if (py_attr_as_str(d->py_dec, "desc", &(d->desc)) != SRD_OK)
+	if (py_attr_as_str(d->py_dec, "desc", &(d->desc)) != SRD_OK) {
+		fail_txt = "no 'desc' attribute";
 		goto err_out;
+	}
 
-	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK)
+	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK) {
+		fail_txt = "no 'license' attribute";
 		goto err_out;
+	}
 
 	/* All options and their default values. */
-	if (get_options(d) != SRD_OK)
+	if (get_options(d) != SRD_OK) {
+		fail_txt = "cannot get options";
 		goto err_out;
+	}
 
 	/* Check and import required channels. */
-	if (get_channels(d, "channels", &d->channels, 0) != SRD_OK)
+	if (get_channels(d, "channels", &d->channels, 0) != SRD_OK) {
+		fail_txt = "cannot get channels";
 		goto err_out;
+	}
 
 	/* Check and import optional channels. */
 	if (get_channels(d, "optional_channels", &d->opt_channels,
-				g_slist_length(d->channels)) != SRD_OK)
+				g_slist_length(d->channels)) != SRD_OK) {
+		fail_txt = "cannot get optional channels";
 		goto err_out;
+	}
 
-	if (get_annotations(d) != SRD_OK)
+	if (get_annotations(d) != SRD_OK) {
+		fail_txt = "cannot get annotations";
 		goto err_out;
+	}
 
-	if (get_annotation_rows(d) != SRD_OK)
+	if (get_annotation_rows(d) != SRD_OK) {
+		fail_txt = "cannot get annotation rows";
 		goto err_out;
+	}
 
-	if (get_binary_classes(d) != SRD_OK)
+	if (get_binary_classes(d) != SRD_OK) {
+		fail_txt = "cannot get binary classes";
 		goto err_out;
+	}
 
 	/* Append it to the list of loaded decoders. */
 	pd_list = g_slist_append(pd_list, d);
@@ -729,8 +767,16 @@ SRD_API int srd_decoder_load(const char *module_name)
 	return SRD_OK;
 
 except_out:
-	srd_exception_catch("Failed to load decoder %s", module_name);
+	if (fail_txt) {
+		srd_exception_catch("Failed to load decoder %s: %s",
+				    module_name, fail_txt);
+		fail_txt = NULL;
+	} else {
+		srd_exception_catch("Failed to load decoder %s", module_name);
+	}
 err_out:
+	if (fail_txt)
+		srd_err("Failed to load decoder %s: %s", module_name, fail_txt);
 	decoder_free(d);
 
 	return SRD_ERR_PYTHON;
