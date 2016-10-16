@@ -223,11 +223,13 @@ class Decoder(srd.Decoder):
 
         self.startbit[rxtx] = signal
 
-        # The startbit must be 0. If not, we report an error.
+        # The startbit must be 0. If not, we report an error and wait
+        # for the next start bit (assuming this one was spurious).
         if self.startbit[rxtx] != 0:
             self.putp(['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
             self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
-            # TODO: Abort? Ignore rest of the frame?
+            self.state[rxtx] = 'WAIT FOR START BIT'
+            return
 
         self.cur_data_bit[rxtx] = 0
         self.datavalue[rxtx] = 0
