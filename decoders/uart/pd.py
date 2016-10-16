@@ -166,7 +166,7 @@ class Decoder(srd.Decoder):
         self.frame_start = [-1, -1]
         self.startbit = [-1, -1]
         self.cur_data_bit = [0, 0]
-        self.databyte = [0, 0]
+        self.datavalue = [0, 0]
         self.paritybit = [-1, -1]
         self.stopbit1 = [-1, -1]
         self.startsample = [-1, -1]
@@ -230,7 +230,7 @@ class Decoder(srd.Decoder):
             # TODO: Abort? Ignore rest of the frame?
 
         self.cur_data_bit[rxtx] = 0
-        self.databyte[rxtx] = 0
+        self.datavalue[rxtx] = 0
         self.startsample[rxtx] = -1
 
         self.state[rxtx] = 'GET DATA BITS'
@@ -249,12 +249,12 @@ class Decoder(srd.Decoder):
 
         # Get the next data bit in LSB-first or MSB-first fashion.
         if self.options['bit_order'] == 'lsb-first':
-            self.databyte[rxtx] >>= 1
-            self.databyte[rxtx] |= \
+            self.datavalue[rxtx] >>= 1
+            self.datavalue[rxtx] |= \
                 (signal << (self.options['num_data_bits'] - 1))
         else:
-            self.databyte[rxtx] <<= 1
-            self.databyte[rxtx] |= (signal << 0)
+            self.datavalue[rxtx] <<= 1
+            self.datavalue[rxtx] |= (signal << 0)
 
         self.putg([rxtx + 12, ['%d' % signal]])
 
@@ -270,9 +270,9 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'GET PARITY BIT'
 
         self.putpx(rxtx, ['DATA', rxtx,
-            (self.databyte[rxtx], self.databits[rxtx])])
+            (self.datavalue[rxtx], self.databits[rxtx])])
 
-        b, f = self.databyte[rxtx], self.options['format']
+        b, f = self.datavalue[rxtx], self.options['format']
         if f == 'ascii':
             c = chr(b) if b in range(30, 126 + 1) else '[%02X]' % b
             self.putx(rxtx, [rxtx, [c]])
@@ -305,7 +305,7 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'GET STOP BITS'
 
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
-                     self.databyte[rxtx], self.options['num_data_bits']):
+                     self.datavalue[rxtx], self.options['num_data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
             self.putg([rxtx + 4, ['Parity bit', 'Parity', 'P']])
         else:
