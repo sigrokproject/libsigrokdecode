@@ -302,7 +302,20 @@ class Decoder(srd.Decoder):
         pass # TODO
 
     def handle_rdp_res(self, mosi, miso):
-        pass # TODO
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.ss_block = self.ss
+            self.putx([16, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends three dummy bytes.
+            self.putx([24, ['Dummy byte: %02x' % mosi]])
+        elif self.cmdstate == 5:
+            # Byte 5: Slave sends device ID.
+            self.ids = [miso]
+            self.putx([24, ['Device: Macronix %s' % device_name[self.ids[0]]]])
+            self.state = None
+
+        self.cmdstate += 1
 
     def handle_rems(self, mosi, miso):
         if self.cmdstate == 1:
