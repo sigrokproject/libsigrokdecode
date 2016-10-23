@@ -102,7 +102,7 @@ class Decoder(srd.Decoder):
             'values': (0.0, 0.5, 1.0, 1.5)},
         {'id': 'bit_order', 'desc': 'Bit order', 'default': 'lsb-first',
             'values': ('lsb-first', 'msb-first')},
-        {'id': 'format', 'desc': 'Data format', 'default': 'ascii',
+        {'id': 'format', 'desc': 'Data format', 'default': 'hex',
             'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
         {'id': 'invert_rx', 'desc': 'Invert RX?', 'default': 'no',
             'values': ('yes', 'no')},
