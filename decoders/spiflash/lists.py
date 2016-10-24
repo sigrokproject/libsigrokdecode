@@ -47,9 +47,11 @@ cmds = {
 }
 
 device_name = {
-    0x14: 'MX25L1605D',
-    0x15: 'MX25L3205D',
-    0x16: 'MX25L6405D',
+    'macronix': {
+        0x14: 'MX25L1605D',
+        0x15: 'MX25L3205D',
+        0x16: 'MX25L6405D',
+    },
 }
 
 chips = {

@@ -89,6 +89,7 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.device_id = -1
         self.on_end_transaction = None
         self.end_current_transaction()
 
@@ -112,6 +113,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.chip = chips[self.options['chip']]
+        self.vendor = self.options['chip'].split('_')[0]
 
     def putx(self, data):
         # Simplification, most annotations span exactly one SPI byte/packet.
@@ -119,6 +121,10 @@ class Decoder(srd.Decoder):
 
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
+
+    def vendor_device(self):
+        dev = device_name[self.vendor].get(self.device_id, 'Unknown')
+        return '%s %s' % (self.chip['vendor'], dev)
 
     def handle_wren(self, mosi, miso):
         self.putx([0, ['Command: %s' % cmds[self.state][1]]])
@@ -145,9 +151,8 @@ class Decoder(srd.Decoder):
             self.putx([2, ['Device ID: 0x%02x' % miso]])
 
         if self.cmdstate == 4:
-            # TODO: Check self.device_id is valid & exists in device_names.
             # TODO: Same device ID? Check!
-            d = 'Device: Macronix %s' % device_name[self.device_id]
+            d = 'Device: %s' % self.vendor_device()
             self.put(self.ss_block, self.es, self.out_ann, [0, [d]])
             self.state = None
         else:
@@ -311,8 +316,8 @@ class Decoder(srd.Decoder):
             self.putx([24, ['Dummy byte: %02x' % mosi]])
         elif self.cmdstate == 5:
             # Byte 5: Slave sends device ID.
-            self.ids = [miso]
-            self.putx([24, ['Device: Macronix %s' % device_name[self.ids[0]]]])
+            self.device_id = miso
+            self.putx([24, ['Device: %s' % self.vendor_device()]])
             self.state = None
 
         self.cmdstate += 1
@@ -346,7 +351,8 @@ class Decoder(srd.Decoder):
 
         if self.cmdstate == 6:
             id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            self.putx([24, ['Device: Macronix %s' % device_name[id]]])
+            self.device_id = id
+            self.putx([24, ['Device: %s' % self.vendor_device()]])
             self.state = None
         else:
             self.cmdstate += 1
