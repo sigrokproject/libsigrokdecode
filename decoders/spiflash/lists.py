@@ -47,6 +47,9 @@ cmds = {
 }
 
 device_name = {
+    'fidelix': {
+        0x15: 'FM25Q32',
+    },
     'macronix': {
         0x14: 'MX25L1605D',
         0x15: 'MX25L3205D',
@@ -55,6 +58,18 @@ device_name = {
 }
 
 chips = {
+    # FIDELIX
+    'fidelix_fm25q32': {
+        'vendor': 'FIDELIX',
+        'model': 'FM25Q32',
+        'res_id': 0x15,
+        'rems_id': 0xa115,
+        'rems2_id': 0xa115,
+        'rdid_id': 0xa14016,
+        'page_size': 256,
+        'sector_size': 4 * 1024,
+        'block_size': 64 * 1024,
+    },
     # Macronix
     'macronix_mx25l1605d': {
         'vendor': 'Macronix',
