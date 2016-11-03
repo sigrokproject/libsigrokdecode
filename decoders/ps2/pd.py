@@ -32,7 +32,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ps2']
-    optional_channels = (
+    channels = (
         {'id': 'clk', 'name': 'Clock', 'desc': 'Clock line'},
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
