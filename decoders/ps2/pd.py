@@ -19,9 +19,12 @@
 ##
 
 import sigrokdecode as srd
+from collections import namedtuple
 
 class Ann:
-    START, STOP, PARITY, WORD = range(4)
+    BIT, START, STOP, PARITY_OK, PARITY_ERR, DATA, WORD = range(7)
+
+Bit = namedtuple('Bit', 'val ss es')
 
 class Decoder(srd.Decoder):
     api_version = 2
@@ -37,10 +40,17 @@ class Decoder(srd.Decoder):
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
     annotations = (
+        ('bit', 'Bit'),
         ('start-bit', 'Start bit'),
         ('stop-bit', 'Stop bit'),
-        ('parity-bit', 'Parity bit'),
-        ('word', 'Word')
+        ('parity-ok', 'Parity OK bit'),
+        ('parity-err', 'Parity error bit'),
+        ('data-bit', 'Data bit'),
+        ('word', 'Word'),
+    )
+    annotation_rows = (
+        ('bits', 'Bits', (0,)),
+        ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),
     )
 
     def __init__(self):
@@ -48,46 +58,62 @@ class Decoder(srd.Decoder):
         self.prev_pins = None
         self.prev_clock = None
         self.samplenum = 0
-        self.ss_word = None
         self.clock_was_high = False
+        self.bitcount = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def putb(self, bit, ann_idx):
+        b = self.bits[bit]
+        self.put(b.ss, b.es, self.out_ann, [ann_idx, [str(b.val)]])
+
+    def putx(self, bit, ann):
+        self.put(self.bits[bit].ss, self.bits[bit].es, self.out_ann, ann)
+
     def handle_bits(self, datapin):
         # Ignore non start condition bits (useful during keyboard init).
-        if len(self.bits) == 0 and datapin == 1:
+        if self.bitcount == 0 and datapin == 1:
             return
 
-        # If this is the first bit in a word, save its sample number.
-        if len(self.bits) == 0:
-            self.ss_word = self.samplenum
+        # Store individual bits and their start/end samplenumbers.
+        self.bits.append(Bit(datapin, self.samplenum, self.samplenum))
 
-        self.bits.append(datapin)
+        # Fix up end sample numbers of the bits.
+        if self.bitcount > 0:
+            b = self.bits[self.bitcount - 1]
+            self.bits[self.bitcount - 1] = Bit(b.val, b.ss, self.samplenum)
+        if self.bitcount == 11:
+            self.bitwidth = self.bits[1].es - self.bits[2].es
+            b = self.bits[-1]
+            self.bits[-1] = Bit(b.val, b.ss, b.es + self.bitwidth)
 
         # Find all 11 bits. Start + 8 data + odd parity + stop.
-        if len(self.bits) < 11:
+        if self.bitcount < 11:
+            self.bitcount += 1
             return
 
         # Extract data word.
         word = 0
         for i in range(8):
-            word |= (self.bits[i + 1] << i)
+            word |= (self.bits[i + 1].val << i)
 
-        bit_start, bit_stop, bit_parity = self.bits[0], \
-            self.bits[10], self.bits[9]
+        # Calculate parity.
+        parity_ok = (bin(word).count('1') + self.bits[9].val) % 2 == 1
 
-        bitstring = ''.join([str(i) for i in self.bits])
-        parity_ok = (bin(word).count('1') + bit_parity) % 2 == 1
-
-        if bit_start == 0 and bit_stop == 1 and parity_ok:
-            self.put(self.ss_word, self.samplenum, self.out_ann, [Ann.WORD,
-                     ['OK: %X (%s)' % (word, bitstring)]])
+        # Emit annotations.
+        for i in range(11):
+            self.putb(i, Ann.BIT)
+        self.putx(0, [Ann.START, ['Start bit', 'Start', 'S']])
+        self.put(self.bits[1].ss, self.bits[8].es, self.out_ann, [Ann.WORD,
+                 ['Data: %02x' % word, 'D: %02x' % word, '%02x' % word]])
+        if parity_ok:
+            self.putx(9, [Ann.PARITY_OK, ['Parity OK', 'Par OK', 'P']])
         else:
-            self.put(self.ss_word, self.samplenum, self.out_ann, [Ann.WORD,
-                     ['Fail: %X (%s)' % (word, bitstring)]])
+            self.putx(9, [Ann.PARITY_ERR, ['Parity error', 'Par err', 'PE']])
+        self.putx(10, [Ann.STOP, ['Stop bit', 'Stop', 'St', 'T']])
 
-        self.bits, self.ss_word = [], 0
+        self.bits, self.bitcount = [], 0
 
     def find_clk_edge(self, clock_pin, data_pin):
         # Ignore sample if the clock pin hasn't changed.
