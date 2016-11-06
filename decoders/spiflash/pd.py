@@ -174,7 +174,20 @@ class Decoder(srd.Decoder):
         self.cmdstate += 1
 
     def handle_wrsr(self, mosi, miso):
-        pass # TODO
+        # Write status register: Master asserts CS#, sends WRSR command,
+        # writes 1 or 2 status register byte(s).
+        # When done, the master de-asserts CS# again. If this doesn't happen
+        # the WRSR command will not be executed.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([3, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate in (2, 3):
+            # Bytes 2 and/or 3: Master sends status register byte(s).
+            self.putx([24, ['Status register: 0x%02x' % miso]])
+            self.putx([25, [decode_status_reg(miso)]])
+            # TODO: Handle status register 2 correctly.
+
+        self.cmdstate += 1
 
     def handle_read(self, mosi, miso):
         # Read data bytes: Master asserts CS#, sends READ command, sends
