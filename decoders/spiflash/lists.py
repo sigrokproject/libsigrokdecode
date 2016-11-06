@@ -24,6 +24,7 @@ cmds = {
     0x04: ('WRDI', 'Write disable'),
     0x9f: ('RDID', 'Read identification'),
     0x05: ('RDSR', 'Read status register'),
+    0x35: ('RDSR2', 'Read status register 2'),
     0x01: ('WRSR', 'Write status register'),
     0x03: ('READ', 'Read data'),
     0x0b: ('FAST/READ', 'Fast read data'),

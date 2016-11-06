@@ -173,6 +173,22 @@ class Decoder(srd.Decoder):
 
         self.cmdstate += 1
 
+    def handle_rdsr2(self, mosi, miso):
+        # Read status register 2: Master asserts CS#, sends RDSR2 command,
+        # reads status register 2 byte. If CS# is kept asserted, the status
+        # register 2 can be read continuously / multiple times in a row.
+        # When done, the master de-asserts CS# again.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.putx([3, ['Command: %s' % cmds[self.state][1]]])
+        elif self.cmdstate >= 2:
+            # Bytes 2-x: Slave sends status register 2 as long as master clocks.
+            self.putx([24, ['Status register 2: 0x%02x' % miso]])
+            self.putx([25, [decode_status_reg(miso)]])
+            # TODO: Handle status register 2 correctly.
+
+        self.cmdstate += 1
+
     def handle_wrsr(self, mosi, miso):
         # Write status register: Master asserts CS#, sends WRSR command,
         # writes 1 or 2 status register byte(s).
