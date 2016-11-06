@@ -44,7 +44,7 @@ cmds = OrderedDict([
     (0xad, ('CP', 'Continuously program mode')),
     (0xb1, ('ENSO', 'Enter secured OTP')),
     (0xb9, ('DP', 'Deep power down')),
-    (0xbb, ('2READ', '2x I/O read')),
+    (0xbb, ('2READ', '2x I/O read')), # a.k.a. "Fast read dual I/O".
     (0xc1, ('EXSO', 'Exit secured OTP')),
     (0xc7, ('CE2', 'Chip erase')), # Alternative command ID
     (0xd8, ('BE', 'Block erase')),
