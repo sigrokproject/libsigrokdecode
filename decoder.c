@@ -992,13 +992,7 @@ SRD_API int srd_decoder_load_all(void)
  */
 SRD_API int srd_decoder_unload_all(void)
 {
-	GSList *l;
-	struct srd_decoder *dec;
-
-	for (l = pd_list; l; l = l->next) {
-		dec = l->data;
-		srd_decoder_unload(dec);
-	}
+	g_slist_foreach(pd_list, (GFunc)srd_decoder_unload, NULL);
 	g_slist_free(pd_list);
 	pd_list = NULL;
 

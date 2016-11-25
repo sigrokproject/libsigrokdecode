@@ -219,12 +219,9 @@ SRD_API int srd_init(const char *path)
  */
 SRD_API int srd_exit(void)
 {
-	GSList *l;
-
 	srd_dbg("Exiting libsigrokdecode.");
 
-	for (l = sessions; l; l = l->next)
-		srd_session_destroy((struct srd_session *)l->data);
+	g_slist_foreach(sessions, (GFunc)srd_session_destroy, NULL);
 
 	srd_decoder_unload_all();
 	g_slist_free_full(searchpaths, g_free);
