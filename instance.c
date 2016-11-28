@@ -424,10 +424,42 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 }
 
 /**
+ * Search a decoder instance and its stack for instance ID.
+ *
+ * @param[in] inst_id ID to search for.
+ * @param[in] stack A decoder instance, potentially with stacked instances.
+ *
+ * @return The matching instance, or NULL.
+ */
+static struct srd_decoder_inst *srd_inst_find_by_id_stack(const char *inst_id,
+		struct srd_decoder_inst *stack)
+{
+	const GSList *l;
+	struct srd_decoder_inst *tmp, *di;
+
+	if (!strcmp(stack->inst_id, inst_id))
+		return stack;
+
+	/* Otherwise, look recursively in our stack. */
+	di = NULL;
+	if (stack->next_di) {
+		for (l = stack->next_di; l; l = l->next) {
+			tmp = l->data;
+			if (!strcmp(tmp->inst_id, inst_id)) {
+				di = tmp;
+				break;
+			}
+		}
+	}
+
+	return di;
+}
+
+/**
  * Find a decoder instance by its instance ID.
  *
- * Only the bottom level of instances are searched -- instances already stacked
- * on top of another one will not be found.
+ * This will recurse to find the instance anywhere in the stack tree of the
+ * given session.
  *
  * @param sess The session holding the protocol decoder instance.
  * @param inst_id The instance ID to be found.
@@ -450,10 +482,8 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 	di = NULL;
 	for (l = sess->di_list; l; l = l->next) {
 		tmp = l->data;
-		if (!strcmp(tmp->inst_id, inst_id)) {
-			di = tmp;
+		if (di = srd_inst_find_by_id_stack(inst_id, tmp))
 			break;
-		}
 	}
 
 	return di;
