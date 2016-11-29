@@ -612,6 +612,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 	Py_DecRef(di->py_inst);
 	g_free(di->inst_id);
 	g_free(di->dec_channelmap);
+	g_free(di->channel_samples);
 	g_slist_free(di->next_di);
 	for (l = di->pd_output; l; l = l->next) {
 		pdo = l->data;
