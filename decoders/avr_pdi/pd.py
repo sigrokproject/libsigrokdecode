@@ -112,7 +112,7 @@ class PDI:
     }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'avr_pdi'
     name = 'AVR PDI'
     longname = 'Atmel Program and Debug Interface'
@@ -155,9 +155,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        # Detect input changes and clock edges.
-        self.prev_pins = None
-        self.prev_clock = None
         self.clear_state()
 
     def clear_state(self):
@@ -546,12 +543,7 @@ class Decoder(srd.Decoder):
         # Reset internal state for the next frame.
         self.bits = []
 
-    def find_clk_edge(self, samplenum, clock_pin, data_pin):
-        # Ignore the sample if the clock pin has not changed.
-        if clock_pin == self.prev_clock:
-            return
-        self.prev_clock = clock_pin
-
+    def handle_clk_edge(self, samplenum, clock_pin, data_pin):
         # Sample the data line on rising clock edges. Always, for TX and for
         # RX bytes alike.
         if clock_pin == 1:
@@ -573,14 +565,7 @@ class Decoder(srd.Decoder):
         bit_val = self.data_sample
         self.handle_bits(bit_ss, bit_es, bit_val)
 
-    def decode(self, ss, es, data):
-        for samplenum, pins in data:
-
-            # Ignore identical samples.
-            if self.prev_pins == pins:
-                continue
-            self.prev_pins = pins
-
-            # Have DATA processed at appropriate clock edges.
-            clock_pin, data_pin = pins[0], pins[1]
-            self.find_clk_edge(samplenum, clock_pin, data_pin)
+    def decode(self):
+        while True:
+            clock_pin, data_pin = self.wait({0: 'e'})
+            self.handle_clk_edge(self.samplenum, clock_pin, data_pin)
