@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     name = 'MRF24J40'
     longname = 'Microchip MRF24J40'
     desc = 'IEEE 802.15.4 2.4 GHz RF tranceiver chip.'
-    license = 'gplv2'
+    license = 'gplv2+'
     inputs = ['spi']
     outputs = ['mrf24j40']
     annotations = (
@@ -43,7 +43,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (4,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.ss_cmd, self.es_cmd = 0, 0
         self.mosi_bytes = []
         self.miso_bytes = []

@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
         ('text', 'Human-readable text'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
 
     def start(self):

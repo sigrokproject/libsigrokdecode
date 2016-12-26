@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.packets = [] # Local cache of I²C packets
         self.slaves = [] # List of known slave addresses
         self.stream = -1 # Current output stream

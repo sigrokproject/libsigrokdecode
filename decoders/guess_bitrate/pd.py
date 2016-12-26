@@ -42,7 +42,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.olddata = None
         self.ss_edge = None
         self.first_transition = True

@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []

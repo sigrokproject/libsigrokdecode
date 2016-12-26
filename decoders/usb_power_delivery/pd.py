@@ -439,7 +439,7 @@ class Decoder(srd.Decoder):
         self.putwarn('No start of packet found', 'XXX')
         return -1   # No Start Of Packet
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.idx = 0
         self.packet_seq = 0
@@ -471,8 +471,6 @@ class Decoder(srd.Decoder):
         )
 
     def us2samples(self, us):
-        if not self.samplerate:
-            raise SamplerateError('Need the samplerate.')
         return int(us * self.samplerate / 1000000)
 
     def decode_packet(self):

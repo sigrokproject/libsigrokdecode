@@ -1,21 +1,29 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2014 Aurelien Jacobs <aurel@gnuage.org>
+## Copyright (C) 2016 Elias Oenal <sigrok@eliasoenal.com>
+## All rights reserved.
 ##
-## This program is free software; you can redistribute it and/or modify
-## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation; either version 2 of the License, or
-## (at your option) any later version.
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
 ##
-## This program is distributed in the hope that it will be useful,
-## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-## GNU General Public License for more details.
+## 1. Redistributions of source code must retain the above copyright notice,
+##    this list of conditions and the following disclaimer.
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
 ##
-## You should have received a copy of the GNU General Public License
-## along with this program; if not, write to the Free Software
-## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+## POSSIBILITY OF SUCH DAMAGE.
 ##
 
 import sigrokdecode as srd
@@ -26,235 +34,297 @@ class Decoder(srd.Decoder):
     name = 'MDIO'
     longname = 'Management Data Input/Output'
     desc = 'Half-duplex sync serial bus for MII management between MAC and PHY.'
-    license = 'gplv2+'
+    license = 'bsd'
     inputs = ['logic']
     outputs = ['mdio']
     channels = (
         {'id': 'mdc', 'name': 'MDC', 'desc': 'Clock'},
         {'id': 'mdio', 'name': 'MDIO', 'desc': 'Data'},
     )
+    options = (
+        {'id': 'show_debug_bits', 'desc': 'Show debug bits',
+            'default': 'no', 'values': ('yes', 'no')},
+    )
     annotations = (
-        ('mdio-data', 'MDIO data'),
-        ('mdio-bits', 'MDIO bits'),
-        ('errors', 'Human-readable errors'),
+        ('bit-val', 'Bit value'),
+        ('bit-num', 'Bit number'),
+        ('frame', 'Frame'),
+        ('frame-idle', 'Bus idle state'),
+        ('frame-error', 'Frame error'),
+        ('decode', 'Decode'),
     )
     annotation_rows = (
-        ('mdio-data', 'MDIO data', (0,)),
-        ('mdio-bits', 'MDIO bits', (1,)),
-        ('other', 'Other', (2,)),
+        ('bit-val', 'Bit value', (0,)),
+        ('bit-num', 'Bit number', (1,)),
+        ('frame', 'Frame', (2, 3)),
+        ('frame-error', 'Frame error', (4,)),
+        ('decode', 'Decode', (5,)),
     )
 
     def __init__(self):
-        self.oldmdc = 0
-        self.ss_block = -1
+        self.last_mdc = 1
+        self.illegal_bus = 0
         self.samplenum = -1
-        self.oldpins = None
+        self.clause45_addr = -1 # Clause 45 is context sensitive.
         self.reset_decoder_state()
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def putw(self, data):
-        self.put(self.ss_block, self.samplenum, self.out_ann, data)
+    def putbit(self, mdio, ss, es):
+        self.put(ss, es, self.out_ann, [0, ['%d' % mdio]])
+        if self.options['show_debug_bits'] == 'yes':
+            self.put(ss, es, self.out_ann, [1, ['%d' % (self.bitcount - 1), '%d' % ((self.bitcount - 1) % 10)]])
 
-    def putbit(self, mdio, start, stop):
-        # Bit annotations.
-        self.put(start, stop, self.out_ann, [1, ['%d' % mdio]])
+    def putff(self, data):
+        self.put(self.ss_frame_field, self.samplenum, self.out_ann, data)
 
     def putdata(self):
-        # FIXME: Only pass data, no bits.
-        # Pass MDIO bits and then data to the next PD up the stack.
-        ss, es = self.mdiobits[-1][1], self.mdiobits[0][2]
+        self.put(self.ss_frame_field, self.mdiobits[0][2], self.out_ann,
+                 [2, ['DATA: %04X' % self.data, 'DATA', 'D']])
 
-        # self.put(ss, es, self.out_python, ['BITS', self.mdiobits])
-        self.put(ss, es, self.out_python, ['DATA', self.mdiodata])
+        if self.clause45 and self.opcode == 0:
+            self.clause45_addr = self.data
 
-        # Bit annotations.
-        for bit in self.mdiobits:
-            self.put(bit[1], bit[2], self.out_ann, [1, ['%d' % bit[0]]])
+        # Decode data.
+        if self.opcode > 0 or not self.clause45:
+            decoded_min = ''
+            if self.clause45 and self.clause45_addr != -1:
+                decoded_min += str.format('ADDR: %04X ' % self.clause45_addr)
+            elif self.clause45:
+                decoded_min += str.format('ADDR: UKWN ' % self.clause45_addr)
 
-        # Error annotation if an error happened.
-        if self.error:
-            self.put(self.ss_bit, self.es_error, self.out_ann, [2, [self.error]])
-            return
+            if self.clause45 and self.opcode > 1 \
+            or (not self.clause45 and self.opcode):
+                decoded_min += str.format('READ:  %04X' % self.data)
+                is_read = 1
+            else:
+                decoded_min += str.format('WRITE: %04X' % self.data)
+                is_read = 0
+            decoded_ext = str.format(' %s: %02d' % \
+                        ('PRTAD' if self.clause45 else 'PHYAD', self.portad))
+            decoded_ext += str.format(' %s: %02d' % \
+                        ('DEVAD' if self.clause45 else 'REGAD', self.devad))
+            if self.ta_invalid or self.op_invalid:
+                decoded_ext += ' ERROR'
+            self.put(self.ss_frame, self.mdiobits[0][2], self.out_ann,
+                     [5, [decoded_min + decoded_ext, decoded_min]])
 
-        op = 'READ' if self.operation else 'WRITE'
+            self.put(self.ss_frame, self.mdiobits[0][2], self.out_python,
+                     [(bool(self.clause45), int(self.clause45_addr), \
+                       bool(is_read), int(self.portad), int(self.devad), \
+                       int(self.data))])
 
-        # Dataword annotations.
-        if self.ss_preamble != -1:
-            self.put(self.ss_preamble, self.ss_start, self.out_ann, [0, ['PREAMBLE']])
-        self.put(self.ss_start, self.ss_operation, self.out_ann, [0, ['START']])
-        self.put(self.ss_operation, self.ss_phy, self.out_ann, [0, [op]])
-        self.put(self.ss_phy, self.ss_reg, self.out_ann, [0, ['PHY: %d' % self.phy]])
-        self.put(self.ss_reg, self.ss_turnaround, self.out_ann, [0, ['REG: %d' % self.reg]])
-        self.put(self.ss_turnaround, self.ss_data, self.out_ann, [0, ['TURNAROUND']])
-        self.put(self.ss_data, self.es_data, self.out_ann, [0, ['DATA: %04X' % self.data]])
+        # Post read increment address.
+        if self.clause45 and self.opcode == 2 and self.clause45_addr != -1:
+            self.clause45_addr += 1
 
     def reset_decoder_state(self):
-        self.mdiodata = 0
         self.mdiobits = []
-        self.bitcount = 0
-        self.ss_preamble = -1
-        self.ss_start = -1
-        self.ss_operation = -1
-        self.ss_phy = -1
-        self.ss_reg = -1
-        self.ss_turnaround = -1
-        self.ss_data = -1
-        self.phy = 0
-        self.phy_bits = 0
-        self.reg = 0
-        self.reg_bits = 0
-        self.data = 0
-        self.data_bits = 0
-        self.state = 'PREAMBLE'
-        self.error = None
+        self.bitcount = -1
+        self.opcode = -1
+        self.clause45 = 0
+        self.ss_frame = -1
+        self.ss_frame_field = -1
+        self.preamble_len = 0
+        self.ta_invalid = -1
+        self.op_invalid = ''
+        self.portad = -1
+        self.portad_bits = 5
+        self.devad = -1
+        self.devad_bits = 5
+        self.data = -1
+        self.data_bits = 16
+        self.state = 'PRE'
 
-    def parse_preamble(self, mdio):
-        if self.ss_preamble == -1:
-            self.ss_preamble = self.samplenum
-        if mdio != 1:
-            self.error = 'Invalid preamble: could not find 32 consecutive bits set to 1'
-            self.state = 'ERROR'
-        elif self.bitcount == 31:
-            self.state = 'START'
+    def state_PRE(self, mdio):
+        if self.illegal_bus:
+            if mdio == 0:   # Stay in illegal bus state.
+                return
+            else:           # Leave and continue parsing.
+                self.illegal_bus = 0
+                self.put(self.ss_illegal, self.samplenum, self.out_ann,
+                         [4, ['ILLEGAL BUS STATE', 'ILL']])
+                self.ss_frame = self.samplenum
 
-    def parse_start(self, mdio):
-        if self.ss_start == -1:
+        if self.ss_frame == -1:
+            self.ss_frame = self.samplenum
+
+        if mdio == 1:
+            self.preamble_len += 1
+
+        # Valid MDIO can't clock more than 16 succeeding ones without being
+        # in either IDLE or PRE.
+        if self.preamble_len > 16:
+            if self.preamble_len >= 10000 + 32:
+                self.put(self.ss_frame, self.mdiobits[32][1], self.out_ann,
+                    [3, ['IDLE #%d' % (self.preamble_len - 32), 'IDLE', 'I']])
+                self.ss_frame = self.mdiobits[32][1]
+                self.preamble_len = 32
+                # This is getting out of hand, free some memory.
+                del self.mdiobits[33:-1]
+            if mdio == 0:
+                if self.preamble_len < 32:
+                    self.ss_frame = self.mdiobits[self.preamble_len][1]
+                    self.put(self.ss_frame, self.samplenum, self.out_ann,
+                             [4, ['SHORT PREAMBLE', 'SHRT PRE']])
+                elif self.preamble_len > 32:
+                    self.ss_frame = self.mdiobits[32][1]
+                    self.put(self.mdiobits[self.preamble_len][1],
+                             self.mdiobits[32][1], self.out_ann,
+                             [3, ['IDLE #%d' % (self.preamble_len - 32),
+                             'IDLE', 'I']])
+                    self.preamble_len = 32
+                else:
+                    self.ss_frame = self.mdiobits[32][1]
+                self.put(self.ss_frame, self.samplenum, self.out_ann,
+                         [2, ['PRE #%d' % self.preamble_len, 'PRE', 'P']])
+                self.ss_frame_field = self.samplenum
+                self.state = 'ST'
+        elif mdio == 0:
+                self.ss_illegal = self.ss_frame
+                self.illegal_bus = 1
+
+    def state_ST(self, mdio):
+        if mdio == 0:
+            self.clause45 = 1
+        self.state = 'OP'
+
+    def state_OP(self, mdio):
+        if self.opcode == -1:
+            if self.clause45:
+                st = ['ST (Clause 45)', 'ST 45']
+            else:
+                st = ['ST (Clause 22)', 'ST 22']
+            self.putff([2, st + ['ST', 'S']])
+            self.ss_frame_field = self.samplenum
+
+            if mdio:
+                self.opcode = 2
+            else:
+                self.opcode = 0
+        else:
+            if self.clause45:
+                self.state = 'PRTAD'
+                self.opcode += mdio
+            else:
+                if mdio == self.opcode:
+                    self.op_invalid = 'invalid for Clause 22'
+                self.state = 'PRTAD'
+
+    def state_PRTAD(self, mdio):
+        if self.portad == -1:
+            self.portad = 0
+            if self.clause45:
+                if self.opcode == 0:
+                    op = ['OP: ADDR', 'OP: A']
+                elif self.opcode == 1:
+                    op = ['OP: WRITE', 'OP: W']
+                elif self.opcode == 2:
+                    op = ['OP: READINC', 'OP: RI']
+                elif self.opcode == 3:
+                    op = ['OP: READ', 'OP: R']
+            else:
+                op = ['OP: READ', 'OP: R'] if self.opcode else ['OP: WRITE', 'OP: W']
+            self.putff([2, op + ['OP', 'O']])
+            if self.op_invalid:
+                self.putff([4, ['OP %s' % self.op_invalid, 'OP', 'O']])
+            self.ss_frame_field = self.samplenum
+        self.portad_bits -= 1
+        self.portad |= mdio << self.portad_bits
+        if not self.portad_bits:
+            self.state = 'DEVAD'
+
+    def state_DEVAD(self, mdio):
+        if self.devad == -1:
+            self.devad = 0
+            if self.clause45:
+                prtad = ['PRTAD: %02d' % self.portad, 'PRT', 'P']
+            else:
+                prtad = ['PHYAD: %02d' % self.portad, 'PHY', 'P']
+            self.putff([2, prtad])
+            self.ss_frame_field = self.samplenum
+        self.devad_bits -= 1
+        self.devad |= mdio << self.devad_bits
+        if not self.devad_bits:
+            self.state = 'TA'
+
+    def state_TA(self, mdio):
+        if self.ta_invalid == -1:
+            self.ta_invalid = ''
+            if self.clause45:
+                regad = ['DEVAD: %02d' % self.devad, 'DEV', 'D']
+            else:
+                regad = ['REGAD: %02d' % self.devad, 'REG', 'R']
+            self.putff([2, regad])
+            self.ss_frame_field = self.samplenum
+            if mdio != 1 and ((self.clause45 and self.opcode < 2)
+            or (not self.clause45 and self.opcode == 0)):
+                self.ta_invalid = ' invalid (bit1)'
+        else:
             if mdio != 0:
-                self.error = 'Invalid start bits: should be 01'
-                self.state = 'ERROR'
-            else:
-                self.ss_start = self.samplenum
-        else:
-            if mdio != 1:
-                self.error = 'Invalid start bits: should be 01'
-                self.state = 'ERROR'
-            else:
-                self.state = 'OPERATION'
+                if self.ta_invalid:
+                    self.ta_invalid = ' invalid (bit1 and bit2)'
+                else:
+                    self.ta_invalid = ' invalid (bit2)'
+            self.state = 'DATA'
 
-    def parse_operation(self, mdio):
-        if self.ss_operation == -1:
-            self.ss_operation = self.samplenum
-            self.operation = mdio
-        else:
-            if mdio == self.operation:
-                self.error = 'Invalid operation bits'
-                self.state = 'ERROR'
-            else:
-                self.state = 'PHY'
+    def state_DATA(self, mdio):
+        if self.data == -1:
+            self.data = 0
+            self.putff([2, ['TURNAROUND', 'TA', 'T']])
+            if self.ta_invalid:
+                self.putff([4, ['TURNAROUND%s' % self.ta_invalid,
+                                'TA%s' % self.ta_invalid, 'TA', 'T']])
+            self.ss_frame_field = self.samplenum
+        self.data_bits -= 1
+        self.data |= mdio << self.data_bits
+        if not self.data_bits:
+            # Output final bit.
+            self.mdiobits[0][2] = self.mdiobits[0][1] + self.quartile_cycle_length()
+            self.bitcount += 1
+            self.putbit(self.mdiobits[0][0], self.mdiobits[0][1], self.mdiobits[0][2])
+            self.putdata()
+            self.reset_decoder_state()
 
-    def parse_phy(self, mdio):
-        if self.ss_phy == -1:
-            self.ss_phy = self.samplenum
-        self.phy_bits += 1
-        self.phy |= mdio << (5 - self.phy_bits)
-        if self.phy_bits == 5:
-            self.state = 'REG'
+    def process_state(self, argument, mdio):
+        method_name = 'state_' + str(argument)
+        method = getattr(self, method_name)
+        return method(mdio)
 
-    def parse_reg(self, mdio):
-        if self.ss_reg == -1:
-            self.ss_reg = self.samplenum
-        self.reg_bits += 1
-        self.reg |= mdio << (5 - self.reg_bits)
-        if self.reg_bits == 5:
-            self.state = 'TURNAROUND'
-
-    def parse_turnaround(self, mdio):
-        if self.ss_turnaround == -1:
-            if self.operation == 0 and mdio != 1:
-                self.error = 'Invalid turnaround bits'
-                self.state = 'ERROR'
-            else:
-                self.ss_turnaround = self.samplenum
-        else:
-            if mdio != 0:
-                self.error = 'Invalid turnaround bits'
-                self.state = 'ERROR'
-            else:
-                self.state = 'DATA'
-
-    def parse_data(self, mdio):
-        if self.ss_data == -1:
-            self.ss_data = self.samplenum
-        self.data_bits += 1
-        self.data |= mdio << (16 - self.data_bits)
-        if self.data_bits == 16:
-            self.es_data = self.samplenum + int((self.samplenum - self.ss_data) / 15)
-            self.state = 'DONE'
-
-    def parse_error(self, mdio):
-        if self.bitcount == 63:
-            self.es_error = self.samplenum + int((self.samplenum - self.ss_bit) / 63)
-            self.state = 'DONE'
+    # Returns the first quartile point of the frames cycle lengths. This is a
+    # conservative guess for the end of the last cycle. On average it will be
+    # more likely to fall short, than being too long, which makes for better
+    # readability in GUIs.
+    def quartile_cycle_length(self):
+        # 48 is the minimum number of samples we have to have at the end of a
+        # frame. The last sample only has a leading clock edge and is ignored.
+        bitlen = []
+        for i in range(1, 49):
+            bitlen.append(self.mdiobits[i][2] - self.mdiobits[i][1])
+        bitlen = sorted(bitlen)
+        return bitlen[12]
 
     def handle_bit(self, mdio):
-        # If this is the first bit of a command, save its sample number.
-        if self.bitcount == 0:
-            self.ss_bit = self.samplenum
-            # No preamble?
-            if mdio == 0:
-                self.state = 'START'
-
-        # Guesstimate the endsample for this bit (can be overridden below).
-        es = self.samplenum
-        if self.bitcount > 0:
-            es += self.samplenum - self.mdiobits[0][1]
-
-        self.mdiobits.insert(0, [mdio, self.samplenum, es])
-
-        if self.bitcount > 0:
-            self.bitsamples = (self.samplenum - self.ss_bit) / self.bitcount
-            self.mdiobits[1][2] = self.samplenum
-
-        if self.state == 'PREAMBLE':
-            self.parse_preamble(mdio)
-        elif self.state == 'START':
-            self.parse_start(mdio)
-        elif self.state == 'OPERATION':
-            self.parse_operation(mdio)
-        elif self.state == 'PHY':
-            self.parse_phy(mdio)
-        elif self.state == 'REG':
-            self.parse_reg(mdio)
-        elif self.state == 'TURNAROUND':
-            self.parse_turnaround(mdio)
-        elif self.state == 'DATA':
-            self.parse_data(mdio)
-        elif self.state == 'ERROR':
-            self.parse_error(mdio)
-
         self.bitcount += 1
-        if self.state == 'DONE':
-            self.putdata()
-            self.reset_decoder_state()
+        self.mdiobits.insert(0, [mdio, self.samplenum, -1])
 
-    def find_mdc_edge(self, mdc, mdio):
-        # Output the current error annotation if the clock stopped running
-        if self.state == 'ERROR' and self.samplenum - self.clocksample > (1.5 * self.bitsamples):
-            self.es_error = self.clocksample + int((self.clocksample - self.ss_bit) / self.bitcount)
-            self.putdata()
-            self.reset_decoder_state()
+        if self.bitcount > 0:
+            self.mdiobits[1][2] = self.samplenum # Note end of last cycle.
+            # Output the last bit we processed.
+            self.putbit(self.mdiobits[1][0], self.mdiobits[1][1], self.mdiobits[1][2])
 
-        # Ignore sample if the clock pin hasn't changed.
-        if mdc == self.oldmdc:
-            return
-
-        self.oldmdc = mdc
-
-        if mdc == 0:   # Sample on rising clock edge.
-            return
-
-        # Found the correct clock edge, now get/handle the bit(s).
-        self.clocksample = self.samplenum
-        self.handle_bit(mdio)
+        self.process_state(self.state, mdio)
 
     def decode(self, ss, es, data):
         for (self.samplenum, pins) in data:
             # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
+            if self.last_mdc == pins[0]:
                 continue
-            self.oldpins, (mdc, mdio) = pins, pins
+            self.last_mdc = pins[0]
+            if pins[0] == 0: # Check for rising edge.
+                continue
 
-            self.find_mdc_edge(mdc, mdio)
+            # Found the correct clock edge, now get/handle the bit(s).
+            self.handle_bit(pins[1])

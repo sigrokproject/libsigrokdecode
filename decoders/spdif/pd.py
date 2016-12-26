@@ -58,7 +58,7 @@ class Decoder(srd.Decoder):
     def puty(self, data):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'GET FIRST PULSE WIDTH'
         self.olddata = None
         self.ss_edge = None

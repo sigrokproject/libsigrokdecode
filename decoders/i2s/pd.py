@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
         ('wav', 'WAV file'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.oldsck = 1
         self.oldws = 1

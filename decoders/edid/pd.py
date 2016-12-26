@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', (0,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = None
         # Received data items, used as an index into samplenum/data
         self.cnt = 0
@@ -140,10 +140,10 @@ class Decoder(srd.Decoder):
                         [ANN_SECTIONS, ['EDID Version']])
                 self.put(self.sn[OFF_VERSION][0], self.sn[OFF_VERSION][1],
                         self.out_ann, [ANN_FIELDS,
-                            ["Version %d" % self.cache[-2]]])
+                            ['Version %d' % self.cache[-2]]])
                 self.put(self.sn[OFF_VERSION+1][0], self.sn[OFF_VERSION+1][1],
                         self.out_ann, [ANN_FIELDS,
-                            [ "Revision %d" % self.cache[-1]]])
+                            ['Revision %d' % self.cache[-1]]])
             elif self.cnt == OFF_CHROM:
                 self.put(self.sn[OFF_BASIC][0], es, self.out_ann,
                         [ANN_SECTIONS, ['Basic display']])

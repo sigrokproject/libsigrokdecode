@@ -80,7 +80,7 @@ class Decoder(srd.Decoder):
         ('function', 'Current function', (11,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.buf = []
         self.syncbuf = []
         self.swpackets = {}

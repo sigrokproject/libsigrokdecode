@@ -71,7 +71,7 @@ class Decoder(srd.Decoder):
         ('errors', 'Errors', (9,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.oldpins = self.oldclk = self.oldload = self.oldldac = None
         self.bits = []
         self.ss_dac_first = None

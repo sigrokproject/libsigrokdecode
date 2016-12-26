@@ -38,7 +38,7 @@ class Decoder(srd.Decoder):
             'values': ('read', 'write', 'both')}
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.curslave = -1
         self.curdirection = None
         self.packets = [] # Local cache of I²C packets

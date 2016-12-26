@@ -18,8 +18,8 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-"""
-USB Power Delivery - baseband protocol decoder / checker
-"""
+'''
+USB Power Delivery - baseband protocol decoder / checker.
+'''
 
 from .pd import *

@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (2,)),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'IDLE'
         self.chip = -1
 

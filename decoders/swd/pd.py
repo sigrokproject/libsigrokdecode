@@ -92,7 +92,7 @@ class Decoder(srd.Decoder):
         ('parity', 'PARITY'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         # SWD data/clock state
         self.state = 'UNKNOWN'
         self.oldclk = -1

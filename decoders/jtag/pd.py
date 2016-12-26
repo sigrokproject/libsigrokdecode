@@ -88,7 +88,7 @@ class Decoder(srd.Decoder):
         ('states', 'States', tuple(range(15 + 1))),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         # self.state = 'TEST-LOGIC-RESET'
         self.state = 'RUN-TEST/IDLE'
         self.oldstate = None

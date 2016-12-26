@@ -108,7 +108,7 @@ class Decoder(srd.Decoder):
         ('data-write', 'Data write'),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.samplerate = None
         self.ss = self.es = self.ss_byte = -1
         self.samplenum = None
