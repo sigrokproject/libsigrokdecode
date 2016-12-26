@@ -543,7 +543,7 @@ class Decoder(srd.Decoder):
         # Reset internal state for the next frame.
         self.bits = []
 
-    def handle_clk_edge(self, samplenum, clock_pin, data_pin):
+    def handle_clk_edge(self, clock_pin, data_pin):
         # Sample the data line on rising clock edges. Always, for TX and for
         # RX bytes alike.
         if clock_pin == 1:
@@ -556,7 +556,7 @@ class Decoder(srd.Decoder):
         # periods (avoid interpreting the DATA line when the "enabled" state
         # has not yet been determined).
         self.ss_last_fall = self.ss_curr_fall
-        self.ss_curr_fall = samplenum
+        self.ss_curr_fall = self.samplenum
         if self.ss_last_fall is None:
             return
 
@@ -567,5 +567,4 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         while True:
-            clock_pin, data_pin = self.wait({0: 'e'})
-            self.handle_clk_edge(self.samplenum, clock_pin, data_pin)
+            self.handle_clk_edge(*self.wait({0: 'e'}))
