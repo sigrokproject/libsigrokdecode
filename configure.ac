@@ -86,14 +86,14 @@ SR_PKG_CHECK_SUMMARY([srd_pkglibs_summary])
 
 # Python 3 is always needed.
 SR_PKG_CHECK([python3], [SRD_PKGLIBS],
-	[python3 >= 3.2], [python-3.5 >= 3.5], [python-3.4 >= 3.4], [python-3.3 >= 3.3], [python-3.2 >= 3.2])
+	[python3 >= 3.2], [python-3.6 >= 3.6], [python-3.5 >= 3.5], [python-3.4 >= 3.4], [python-3.3 >= 3.3], [python-3.2 >= 3.2])
 AS_IF([test "x$sr_have_python3" = xno],
 	[AC_MSG_ERROR([Cannot find Python 3 development headers.])])
 
 # We also need to find the name of the python3 executable (for 'make install').
 # Some OSes call this python3, some call it python3.2, etc. etc.
 AC_ARG_VAR([PYTHON3], [Python 3 interpreter])
-AC_CHECK_PROGS([PYTHON3], [python3.5 python3.4 python3.3 python3.2 python3])
+AC_CHECK_PROGS([PYTHON3], [python3.6 python3.5 python3.4 python3.3 python3.2 python3])
 AS_IF([test "x$PYTHON3" = x],
 	[AC_MSG_ERROR([Cannot find Python 3 interpreter.])])
 
