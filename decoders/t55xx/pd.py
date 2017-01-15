@@ -23,7 +23,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 't55xx'
     name = 'T55xx'
     longname = 'RFID T55xx'
@@ -67,7 +67,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.oldpin = None
         self.last_samplenum = None
         self.lastlast_samplenum = None
         self.state = 'START_GAP'
@@ -254,77 +253,70 @@ class Decoder(srd.Decoder):
             self.bits_pos[self.bit_nr][2] = bit_end
             self.bit_nr += 1
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, (pin,)) in data:
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpin == pin:
-                continue
 
-            if self.oldpin is None:
-                self.oldpin = pin
-                self.last_samplenum = self.samplenum
-                self.lastlast_samplenum = self.samplenum
-                self.last_edge = self.samplenum
-                self.oldpl = 0
-                self.oldpp = 0
-                self.oldsamplenum = 0
-                self.last_bit_pos = 0
+        self.last_samplenum = 0
+        self.lastlast_samplenum = 0
+        self.last_edge = 0
+        self.oldpl = 0
+        self.oldpp = 0
+        self.oldsamplenum = 0
+        self.last_bit_pos = 0
+        self.old_gap_start = 0
+        self.old_gap_end = 0
+        self.gap_detected = 0
+        self.bit_nr = 0
 
-                self.old_gap_start = 0
-                self.old_gap_end = 0
-                self.gap_detected = 0
-                self.bit_nr = 0
-                continue
+        while True:
+            (pin,) = self.wait({0: 'e'})
 
-            if self.oldpin != pin:
-                pl = self.samplenum - self.oldsamplenum
-                pp = pin
-                samples = self.samplenum - self.last_samplenum
+            pl = self.samplenum - self.oldsamplenum
+            pp = pin
+            samples = self.samplenum - self.last_samplenum
 
-                if self.state == 'WRITE_GAP':
-                    if pl > self.writegap:
-                        self.gap_detected = 1
-                        self.put(self.last_samplenum, self.samplenum,
-                                 self.out_ann, [2, ['Write gap']])
-                    if (self.last_samplenum-self.old_gap_end) > self.nogap:
-                        self.gap_detected = 0
-                        self.state = 'START_GAP'
-                        self.put(self.old_gap_end, self.last_samplenum,
-                                 self.out_ann, [3, ['Write mode exit']])
-                        self.put_fields()
-
-                if self.state == 'START_GAP':
-                    if pl > self.startgap:
-                        self.gap_detected = 1
-                        self.put(self.last_samplenum, self.samplenum,
-                                 self.out_ann, [1, ['Start gap']])
-                        self.state = 'WRITE_GAP'
-
-                if self.gap_detected == 1:
+            if self.state == 'WRITE_GAP':
+                if pl > self.writegap:
+                    self.gap_detected = 1
+                    self.put(self.last_samplenum, self.samplenum,
+                             self.out_ann, [2, ['Write gap']])
+                if (self.last_samplenum-self.old_gap_end) > self.nogap:
                     self.gap_detected = 0
-                    if (self.last_samplenum - self.old_gap_end) > self.wzmin \
-                            and (self.last_samplenum - self.old_gap_end) < self.wzmax:
-                        self.put(self.old_gap_end, self.last_samplenum,
-                                 self.out_ann, [0, ['0']])
-                        self.put(self.old_gap_end, self.last_samplenum,
-                                 self.out_ann, [4, ['Bit']])
-                        self.add_bits_pos(0, self.old_gap_end,
-                                          self.last_samplenum)
-                    if (self.last_samplenum - self.old_gap_end) > self.womin \
-                            and (self.last_samplenum - self.old_gap_end) < self.womax:
-                        self.put(self.old_gap_end, self.last_samplenum,
-                                 self.out_ann, [0, ['1']])
-                        self.put(self.old_gap_end, self.last_samplenum,
-                                 self.out_ann, [4, ['Bit']])
-                        self.add_bits_pos(1, self.old_gap_end, self.last_samplenum)
+                    self.state = 'START_GAP'
+                    self.put(self.old_gap_end, self.last_samplenum,
+                             self.out_ann, [3, ['Write mode exit']])
+                    self.put_fields()
 
-                    self.old_gap_start = self.last_samplenum
-                    self.old_gap_end = self.samplenum
+            if self.state == 'START_GAP':
+                if pl > self.startgap:
+                    self.gap_detected = 1
+                    self.put(self.last_samplenum, self.samplenum,
+                             self.out_ann, [1, ['Start gap']])
+                    self.state = 'WRITE_GAP'
 
-                self.oldpl = pl
-                self.oldpp = pp
-                self.oldsamplenum = self.samplenum
-                self.last_samplenum = self.samplenum
-                self.oldpin = pin
+            if self.gap_detected == 1:
+                self.gap_detected = 0
+                if (self.last_samplenum - self.old_gap_end) > self.wzmin \
+                        and (self.last_samplenum - self.old_gap_end) < self.wzmax:
+                    self.put(self.old_gap_end, self.last_samplenum,
+                             self.out_ann, [0, ['0']])
+                    self.put(self.old_gap_end, self.last_samplenum,
+                             self.out_ann, [4, ['Bit']])
+                    self.add_bits_pos(0, self.old_gap_end,
+                                      self.last_samplenum)
+                if (self.last_samplenum - self.old_gap_end) > self.womin \
+                        and (self.last_samplenum - self.old_gap_end) < self.womax:
+                    self.put(self.old_gap_end, self.last_samplenum,
+                             self.out_ann, [0, ['1']])
+                    self.put(self.old_gap_end, self.last_samplenum,
+                             self.out_ann, [4, ['Bit']])
+                    self.add_bits_pos(1, self.old_gap_end, self.last_samplenum)
+
+                self.old_gap_start = self.last_samplenum
+                self.old_gap_end = self.samplenum
+
+            self.oldpl = pl
+            self.oldpp = pp
+            self.oldsamplenum = self.samplenum
+            self.last_samplenum = self.samplenum
