@@ -45,7 +45,7 @@ def bits_to_uint(bits):
     return reduce(lambda i, v: (i >> 1) | (v << (len(bits) - 1)), bits, 0)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'qi'
     name = 'Qi'
     longname = 'Qi charger protocol'
@@ -228,16 +228,13 @@ class Decoder(srd.Decoder):
             self.bits.clear()
             self.bitsi.clear()
 
-    def next_sample(self, s):
-        if s == self.prev:
-            self.counter += 1
-        else:
-            self.handle_transition(self.counter, s == 0)
-            self.prev = s
-            self.counter = 1
-
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, (qi,)) in data:
-            self.next_sample(qi)
+
+        (qi,) = self.wait({'skip': 1})
+        self.handle_transition(self.samplenum, qi == 0)
+        while True:
+            prev = self.samplenum
+            (qi,) = self.wait({0: 'e'})
+            self.handle_transition(self.samplenum - prev, qi == 0)
