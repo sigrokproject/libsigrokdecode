@@ -64,7 +64,7 @@ def signed_byte(byte):
     return byte if byte < 128 else byte - 256
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id       = 'z80'
     name     = 'Z80'
     longname = 'Zilog Z80 CPU'
@@ -129,8 +129,10 @@ class Decoder(srd.Decoder):
         self.op_state   = self.state_IDLE
         self.instr_len  = 0
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
+    def decode(self):
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            pins = self.wait({'skip': 1})
             cycle = Cycle.NONE
             if pins[Pin.MREQ] != 1: # default to asserted
                 if pins[Pin.RD] == 0:
