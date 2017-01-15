@@ -21,7 +21,7 @@ import sigrokdecode as srd
 from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status, sd_status)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'sdcard_sd'
     name = 'SD card (SD mode)'
     longname = 'Secure Digital card (SD mode)'
@@ -63,8 +63,6 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.state = 'GET COMMAND TOKEN'
         self.token = []
-        self.oldpins = None
-        self.oldclk = 0
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.cmd = None
         self.arg = None
@@ -403,19 +401,10 @@ class Decoder(srd.Decoder):
 
         self.token, self.state = [], 'GET COMMAND TOKEN'
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins, (cmd, clk, dat0, dat1, dat2, dat3) = pins, pins
-
+    def decode(self):
+        while True:
             # Wait for a rising CLK edge.
-            if not (self.oldclk == 0 and clk == 1):
-                self.oldclk = clk
-                continue
-            self.oldclk = clk
+            (cmd, clk, dat0, dat1, dat2, dat3) = self.wait({1: 'r'})
 
             # State machine.
             if self.state == 'GET COMMAND TOKEN':
