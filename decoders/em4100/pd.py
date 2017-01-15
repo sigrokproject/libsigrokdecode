@@ -23,7 +23,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'em4100'
     name = 'EM4100'
     longname = 'RFID EM4100'
@@ -185,52 +185,50 @@ class Decoder(srd.Decoder):
                     self.col_parity_pos = []
                     self.all_row_parity_ok = True
 
-    def manchester_decode(self, samplenum, pl, pp, pin):
+    def manchester_decode(self, pl, pp, pin):
         bit = self.oldpin ^ self.polarity
         if pl > self.halfbit_limit:
-            es = int(samplenum - pl/2)
+            es = int(self.samplenum - pl/2)
             if self.oldpl > self.halfbit_limit:
                 ss = int(self.oldsamplenum - self.oldpl/2)
             else:
                 ss = int(self.oldsamplenum - self.oldpl)
             self.putbit(bit, ss, es)
-            self.last_bit_pos = int(samplenum - pl/2)
+            self.last_bit_pos = int(self.samplenum - pl/2)
         else:
-            es = int(samplenum)
+            es = int(self.samplenum)
             if self.oldpl > self.halfbit_limit:
                 ss = int(self.oldsamplenum - self.oldpl/2)
                 self.putbit(bit, ss, es)
-                self.last_bit_pos = int(samplenum)
+                self.last_bit_pos = int(self.samplenum)
             else:
                 if self.last_bit_pos <= self.oldsamplenum - self.oldpl:
                     ss = int(self.oldsamplenum - self.oldpl)
                     self.putbit(bit, ss, es)
-                    self.last_bit_pos = int(samplenum)
+                    self.last_bit_pos = int(self.samplenum)
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (samplenum, (pin,)) in data:
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpin == pin:
-                continue
 
-            if self.oldpin is None:
-                self.oldpin = pin
-                self.last_samplenum = samplenum
-                self.lastlast_samplenum = samplenum
-                self.last_edge = samplenum
-                self.oldpl = 0
-                self.oldpp = 0
-                self.oldsamplenum = 0
-                self.last_bit_pos = 0
-                continue
+        # Initialize internal state from the very first sample.
+        (pin,) = self.wait({'skip': 1})
+        self.oldpin = pin
+        self.last_samplenum = self.samplenum
+        self.lastlast_samplenum = self.samplenum
+        self.last_edge = self.samplenum
+        self.oldpl = 0
+        self.oldpp = 0
+        self.oldsamplenum = 0
+        self.last_bit_pos = 0
 
-            if self.oldpin != pin:
-                pl = samplenum - self.oldsamplenum
-                pp = pin
-                self.manchester_decode(samplenum, pl, pp, pin)
-                self.oldpl = pl
-                self.oldpp = pp
-                self.oldsamplenum = samplenum
-                self.oldpin = pin
+        while True:
+            # Ignore identical samples, only process edges.
+            (pin,) = self.wait({0: 'e'})
+            pl = self.samplenum - self.oldsamplenum
+            pp = pin
+            self.manchester_decode(pl, pp, pin)
+            self.oldpl = pl
+            self.oldpp = pp
+            self.oldsamplenum = self.samplenum
+            self.oldpin = pin
