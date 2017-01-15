@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'wiegand'
     name = 'Wiegand'
     longname = 'Wiegand interface'
@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
     def start(self):
         'Register output types and verify user supplied decoder values.'
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self._active = self.options['active'] == 'high' and 1 or 0
+        self._active = 1 if self.options['active'] == 'high' else 0
         self._inactive = 1 - self._active
 
     def metadata(self, key, value):
@@ -102,8 +102,11 @@ class Decoder(srd.Decoder):
             self._state = state
             self._bits = []
 
-    def decode(self, ss, es, data):
-        for self.samplenum, (d0, d1) in data:
+    def decode(self):
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            (d0, d1) = self.wait({'skip': 1})
+
             if d0 == self._d0_prev and d1 == self._d1_prev:
                 if self.es_bit and self.samplenum >= self.es_bit:
                     if (d0, d1) == (self._inactive, self._inactive):
