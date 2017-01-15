@@ -29,7 +29,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'mdio'
     name = 'MDIO'
     longname = 'Management Data Input/Output'
@@ -62,7 +62,7 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.last_mdc = 1
+        self.initial_pins = [1, 1]
         self.illegal_bus = 0
         self.samplenum = -1
         self.clause45_addr = -1 # Clause 45 is context sensitive.
@@ -317,14 +317,8 @@ class Decoder(srd.Decoder):
 
         self.process_state(self.state, mdio)
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-            # Ignore identical samples early on (for performance reasons).
-            if self.last_mdc == pins[0]:
-                continue
-            self.last_mdc = pins[0]
-            if pins[0] == 0: # Check for rising edge.
-                continue
-
-            # Found the correct clock edge, now get/handle the bit(s).
+    def decode(self):
+        while True:
+            # Process pin state upon rising MDC edge.
+            pins = self.wait({0: 'r'})
             self.handle_bit(pins[1])
