@@ -116,8 +116,9 @@ class Decoder(srd.Decoder):
                     # Report the timing normalized.
                     self.put(self.last_samplenum, self.samplenum, self.out_ann,
                              [0, [normalize_time(t)]])
-                    self.put(self.last_samplenum, self.samplenum, self.out_ann,
-                             [1, [normalize_time(sum(self.last_n) / len(self.last_n))]])
+                    if self.options['avg_period'] > 0:
+                        self.put(self.last_samplenum, self.samplenum, self.out_ann,
+                                 [1, [normalize_time(sum(self.last_n) / len(self.last_n))]])
 
                 # Store data for next round.
                 self.last_samplenum = self.samplenum
