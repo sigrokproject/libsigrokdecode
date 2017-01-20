@@ -25,19 +25,19 @@ class SamplerateError(Exception):
     pass
 
 def normalize_time(t):
-    if t >= 1.0:
+    if abs(t) >= 1.0:
         return '%.3f s  (%.3f Hz)' % (t, (1/t))
-    elif t >= 0.001:
+    elif abs(t) >= 0.001:
         if 1/t/1000 < 1:
             return '%.3f ms (%.3f Hz)' % (t * 1000.0, (1/t))
         else:
             return '%.3f ms (%.3f kHz)' % (t * 1000.0, (1/t)/1000)
-    elif t >= 0.000001:
+    elif abs(t) >= 0.000001:
         if 1/t/1000/1000 < 1:
             return '%.3f μs (%.3f kHz)' % (t * 1000.0 * 1000.0, (1/t)/1000)
         else:
             return '%.3f μs (%.3f MHz)' % (t * 1000.0 * 1000.0, (1/t)/1000/1000)
-    elif t >= 0.000000001:
+    elif abs(t) >= 0.000000001:
         if 1/t/1000/1000/1000:
             return '%.3f ns (%.3f MHz)' % (t * 1000.0 * 1000.0 * 1000.0, (1/t)/1000/1000)
         else:
