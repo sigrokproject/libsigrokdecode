@@ -482,7 +482,7 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 	di = NULL;
 	for (l = sess->di_list; l; l = l->next) {
 		tmp = l->data;
-		if (di = srd_inst_find_by_id_stack(inst_id, tmp))
+		if ((di = srd_inst_find_by_id_stack(inst_id, tmp)) != NULL)
 			break;
 	}
 
