@@ -52,6 +52,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.sample_usec = None
         self.run_start = -1

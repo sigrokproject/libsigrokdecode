@@ -39,6 +39,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.cmd = ['', '']
         self.ss_block = None
 

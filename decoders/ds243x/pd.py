@@ -77,6 +77,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         # Bytes for function command.
         self.bytes = []
         self.family_code = None

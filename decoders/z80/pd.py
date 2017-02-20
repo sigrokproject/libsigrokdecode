@@ -111,6 +111,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.prev_cycle = Cycle.NONE
         self.op_state   = self.state_IDLE
 

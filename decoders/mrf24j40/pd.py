@@ -43,6 +43,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ss_cmd, self.es_cmd = 0, 0
         self.mosi_bytes = []
         self.miso_bytes = []

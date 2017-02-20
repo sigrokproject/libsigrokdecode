@@ -98,6 +98,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.device_id = -1
         self.on_end_transaction = None
         self.end_current_transaction()

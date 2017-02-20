@@ -49,6 +49,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ss_block = self.es_block = None
 
     def metadata(self, key, value):

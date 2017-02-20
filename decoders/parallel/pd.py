@@ -88,6 +88,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.items = []
         self.itemcount = 0
         self.saved_item = None

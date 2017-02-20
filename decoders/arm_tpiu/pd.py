@@ -42,6 +42,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.buf = []
         self.syncbuf = []
         self.prevsample = 0

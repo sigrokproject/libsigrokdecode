@@ -42,6 +42,9 @@ class Decoder(srd.Decoder):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ss_edge = None
 
     def start(self):

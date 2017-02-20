@@ -61,6 +61,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'GET COMMAND TOKEN'
         self.token = []
         self.is_acmd = False # Indicates CMD vs. ACMD

@@ -44,6 +44,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.status_byte = 0
         self.explicit_status_byte = False

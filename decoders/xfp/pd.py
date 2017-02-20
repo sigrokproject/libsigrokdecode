@@ -37,6 +37,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         # Received data items, used as an index into samplenum/data
         self.cnt = -1
         # Start/end sample numbers per data item

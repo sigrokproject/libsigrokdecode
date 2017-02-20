@@ -101,6 +101,9 @@ class Decoder(srd.Decoder):
     annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.num_channels = 0
         self.samplerate = None
         self.last_n = deque()

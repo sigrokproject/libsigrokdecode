@@ -847,6 +847,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ADUSc = None # Start off with empty slave -> client ADU.
         self.ADUCs = None # Start off with empty client -> slave ADU.
 

@@ -135,6 +135,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_block = None

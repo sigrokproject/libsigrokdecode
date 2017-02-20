@@ -91,6 +91,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = None
         # Received data items, used as an index into samplenum/data
         self.cnt = 0

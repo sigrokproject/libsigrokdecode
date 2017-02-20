@@ -137,6 +137,9 @@ class Decoder(srd.Decoder):
     annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
 
     def metadata(self, key, value):

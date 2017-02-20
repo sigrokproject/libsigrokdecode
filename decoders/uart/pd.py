@@ -160,6 +160,9 @@ class Decoder(srd.Decoder):
         self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_binary, data)
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.samplenum = 0
         self.frame_start = [-1, -1]

@@ -136,6 +136,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.oldlclk = -1
         self.samplenum = 0

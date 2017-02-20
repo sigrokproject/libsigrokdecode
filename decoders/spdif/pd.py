@@ -58,6 +58,9 @@ class Decoder(srd.Decoder):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'GET FIRST PULSE WIDTH'
         self.ss_edge = None
         self.first_edge = True

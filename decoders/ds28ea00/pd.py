@@ -48,6 +48,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.trn_beg = 0
         self.trn_end = 0
         self.state = 'ROM'

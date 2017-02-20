@@ -62,6 +62,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.reg = 0x00 # Currently selected register
         self.databytes = []

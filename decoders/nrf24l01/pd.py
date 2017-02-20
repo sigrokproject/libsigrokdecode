@@ -94,6 +94,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.next()
         self.requirements_met = True
         self.cs_was_released = False

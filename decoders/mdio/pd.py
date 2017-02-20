@@ -62,6 +62,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.illegal_bus = 0
         self.samplenum = -1
         self.clause45_addr = -1 # Clause 45 is context sensitive.

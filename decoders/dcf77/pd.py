@@ -65,6 +65,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.state = 'WAIT FOR RISING EDGE'
         self.ss_bit = self.ss_bit_old = self.es_bit = self.ss_block = 0

@@ -121,6 +121,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.bitcount = 0
         self.misodata = self.mosidata = 0

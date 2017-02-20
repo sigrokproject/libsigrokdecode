@@ -55,6 +55,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.saved_ATN = False
         self.saved_EOI = False
         self.ss_item = self.es_item = None

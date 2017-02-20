@@ -45,6 +45,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ss_block = 0
         self.es_block = 0
         self.state = 'COMMAND'

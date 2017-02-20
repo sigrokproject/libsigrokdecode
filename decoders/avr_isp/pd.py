@@ -51,6 +51,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.mosi_bytes, self.miso_bytes = [], []
         self.ss_cmd, self.es_cmd = 0, 0

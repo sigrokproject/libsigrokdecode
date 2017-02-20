@@ -439,6 +439,9 @@ class Decoder(srd.Decoder):
         return -1   # No Start Of Packet
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.idx = 0
         self.packet_seq = 0
