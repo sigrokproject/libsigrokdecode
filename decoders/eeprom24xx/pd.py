@@ -73,7 +73,7 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.reset()
+        self.reset_variables()
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
     def putbits(self, bit1, bit2, bits, data):
         self.put(bits[bit1][1], bits[bit2][2], self.out_ann, data)
 
-    def reset(self):
+    def reset_variables(self):
         self.state = 'WAIT FOR START'
         self.packets = []
         self.bytebuf = []
@@ -179,7 +179,7 @@ class Decoder(srd.Decoder):
 
     def decide_on_seq_or_rnd_read(self):
         if len(self.bytebuf) < 2:
-            self.reset()
+            self.reset_variables()
             return
         if len(self.bytebuf) == 2:
             self.is_random_access_read = True
@@ -237,7 +237,7 @@ class Decoder(srd.Decoder):
     def handle_get_control_word(self):
         # The packet after START must be an ADDRESS READ or ADDRESS WRITE.
         if self.cmd not in ('ADDRESS READ', 'ADDRESS WRITE'):
-            self.reset()
+            self.reset_variables()
             return
         self.packet_append()
         self.put_control_word(self.bits)
@@ -249,18 +249,18 @@ class Decoder(srd.Decoder):
         elif self.cmd == 'NACK':
             self.es_block = self.es
             self.putb([0, ['Warning: No reply from slave!']])
-            self.reset()
+            self.reset_variables()
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r_get_word_addr_or_byte(self):
         if self.cmd == 'STOP':
             self.es_block = self.es
             self.putb([0, ['Warning: Slave replied, but master aborted!']])
-            self.reset()
+            self.reset_variables()
             return
         elif self.cmd != 'DATA READ':
-            self.reset()
+            self.reset_variables()
             return
         self.packet_append()
         self.state = 'R GET ACK NACK AFTER WORD ADDR OR BYTE'
@@ -272,20 +272,20 @@ class Decoder(srd.Decoder):
             self.is_cur_addr_read = True
             self.state = 'GET STOP AFTER LAST BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r_get_restart(self):
         if self.cmd == 'RESTART':
             self.state = 'R READ BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r_read_byte(self):
         if self.cmd == 'DATA READ':
             self.packet_append()
             self.state = 'R GET ACK NACK AFTER BYTE WAS READ'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r_get_ack_nack_after_byte_was_read(self):
         if self.cmd == 'ACK':
@@ -294,7 +294,7 @@ class Decoder(srd.Decoder):
             # It's either a RANDOM READ or a SEQUENTIAL READ.
             self.state = 'GET STOP AFTER LAST BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_w_get_ack_nack_after_control_word(self):
         if self.cmd == 'ACK':
@@ -302,18 +302,18 @@ class Decoder(srd.Decoder):
         elif self.cmd == 'NACK':
             self.es_block = self.es
             self.putb([0, ['Warning: No reply from slave!']])
-            self.reset()
+            self.reset_variables()
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_w_get_word_addr(self):
         if self.cmd == 'STOP':
             self.es_block = self.es
             self.putb([0, ['Warning: Slave replied, but master aborted!']])
-            self.reset()
+            self.reset_variables()
             return
         elif self.cmd != 'DATA WRITE':
-            self.reset()
+            self.reset_variables()
             return
         self.packet_append()
         self.state = 'W GET ACK AFTER WORD ADDR'
@@ -322,7 +322,7 @@ class Decoder(srd.Decoder):
         if self.cmd == 'ACK':
             self.state = 'W DETERMINE EEPROM READ OR WRITE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_w_determine_eeprom_read_or_write(self):
         if self.cmd == 'START REPEAT':
@@ -332,7 +332,7 @@ class Decoder(srd.Decoder):
             self.packet_append()
             self.state = 'W GET ACK NACK AFTER BYTE WAS WRITTEN'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_w_write_byte(self):
         if self.cmd == 'DATA WRITE':
@@ -340,7 +340,7 @@ class Decoder(srd.Decoder):
             self.state = 'W GET ACK NACK AFTER BYTE WAS WRITTEN'
         elif self.cmd == 'STOP':
             if len(self.bytebuf) < 2:
-                self.reset()
+                self.reset_variables()
                 return
             self.es_block = self.es
             if len(self.bytebuf) == 2:
@@ -348,31 +348,31 @@ class Decoder(srd.Decoder):
             else:
                 self.is_page_write = True
             self.put_operation()
-            self.reset()
+            self.reset_variables()
         elif self.cmd == 'START REPEAT':
             # It's either a RANDOM ACCESS READ or SEQUENTIAL RANDOM READ.
             self.state = 'R2 GET CONTROL WORD'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_w_get_ack_nack_after_byte_was_written(self):
         if self.cmd == 'ACK':
             self.state = 'W WRITE BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r2_get_control_word(self):
         if self.cmd == 'ADDRESS READ':
             self.packet_append()
             self.state = 'R2 GET ACK AFTER ADDR READ'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r2_get_ack_after_addr_read(self):
         if self.cmd == 'ACK':
             self.state = 'R2 READ BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r2_read_byte(self):
         if self.cmd == 'DATA READ':
@@ -383,9 +383,9 @@ class Decoder(srd.Decoder):
             self.es_block = self.es
             self.putb([0, ['Warning: STOP expected after a NACK (not ACK)']])
             self.put_operation()
-            self.reset()
+            self.reset_variables()
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_r2_get_ack_nack_after_byte_was_read(self):
         if self.cmd == 'ACK':
@@ -394,22 +394,22 @@ class Decoder(srd.Decoder):
             self.decide_on_seq_or_rnd_read()
             self.state = 'GET STOP AFTER LAST BYTE'
         else:
-            self.reset()
+            self.reset_variables()
 
     def handle_get_stop_after_last_byte(self):
         if self.cmd == 'STOP':
             self.es_block = self.es
             self.put_operation()
-            self.reset()
+            self.reset_variables()
         elif self.cmd == 'START REPEAT':
             self.es_block = self.es
             self.putb([0, ['Warning: STOP expected (not RESTART)']])
             self.put_operation()
-            self.reset()
+            self.reset_variables()
             self.ss_block = self.ss
             self.state = 'GET CONTROL WORD'
         else:
-            self.reset()
+            self.reset_variables()
 
     def decode(self, ss, es, data):
         self.cmd, self.databyte = data
