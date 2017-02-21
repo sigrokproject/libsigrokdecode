@@ -235,10 +235,10 @@ struct srd_decoder_inst {
 	GArray *match_array;
 
 	/** Absolute start sample number. */
-	uint64_t start_samplenum;
+	uint64_t abs_start_samplenum;
 
 	/** Absolute end sample number. */
-	uint64_t end_samplenum;
+	uint64_t abs_end_samplenum;
 
 	/** Pointer to the buffer/chunk of input samples. */
 	const uint8_t *inbuf;
@@ -247,7 +247,7 @@ struct srd_decoder_inst {
 	uint64_t inbuflen;
 
 	/** Absolute current samplenumber. */
-	uint64_t cur_samplenum;
+	uint64_t abs_cur_samplenum;
 
 	/** Array of "old" (previous sample) pin values. */
 	GArray *old_pins_array;
@@ -312,7 +312,7 @@ SRD_API int srd_session_start(struct srd_session *sess);
 SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		GVariant *data);
 SRD_API int srd_session_send(struct srd_session *sess,
-		uint64_t start_samplenum, uint64_t end_samplenum,
+		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
 SRD_API int srd_session_destroy(struct srd_session *sess);
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,

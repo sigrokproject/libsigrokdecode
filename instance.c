@@ -367,11 +367,11 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 
 	di->condition_list = NULL;
 	di->match_array = NULL;
-	di->start_samplenum = 0;
-	di->end_samplenum = 0;
+	di->abs_start_samplenum = 0;
+	di->abs_end_samplenum = 0;
 	di->inbuf = NULL;
 	di->inbuflen = 0;
-	di->cur_samplenum = 0;
+	di->abs_cur_samplenum = 0;
 	di->old_pins_array = NULL;
 	di->thread_handle = NULL;
 	di->got_new_samples = FALSE;
@@ -829,16 +829,16 @@ static gboolean find_match(struct srd_decoder_inst *di)
 		return TRUE;
 	}
 
-	num_samples_to_process = di->end_samplenum - di->cur_samplenum;
+	num_samples_to_process = di->abs_end_samplenum - di->abs_cur_samplenum;
 	num_conditions = g_slist_length(di->condition_list);
 
 	/* di->match_array is NULL here. Create a new GArray. */
 	di->match_array = g_array_sized_new(FALSE, TRUE, sizeof(gboolean), num_conditions);
 	g_array_set_size(di->match_array, num_conditions);
 
-	for (i = 0, s = 0; i < num_samples_to_process; i++, s++, (di->cur_samplenum)++) {
+	for (i = 0, s = 0; i < num_samples_to_process; i++, s++, (di->abs_cur_samplenum)++) {
 
-		sample_pos = di->inbuf + ((di->cur_samplenum - di->start_samplenum) * di->data_unitsize);
+		sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
 
 		/* Check whether the current sample matches at least one of the conditions (logical OR). */
 		/* IMPORTANT: We need to check all conditions, even if there was a match already! */
@@ -886,9 +886,10 @@ SRD_PRIV int process_samples_until_condition_match(struct srd_decoder_inst *di, 
 		*found_match = find_match(di);
 
 		/* Did we handle all samples yet? */
-		if (di->cur_samplenum >= di->end_samplenum) {
-			srd_dbg("Done, handled all samples (%" PRIu64 "/%" PRIu64 ").",
-				di->cur_samplenum, di->end_samplenum);
+		if (di->abs_cur_samplenum >= di->abs_end_samplenum) {
+			srd_dbg("Done, handled all samples (abs cur %" PRIu64
+				" / abs end %" PRIu64 ").",
+				di->abs_cur_samplenum, di->abs_end_samplenum);
 			return SRD_OK;
 		}
 
@@ -936,11 +937,45 @@ static gpointer di_thread(gpointer data)
 /**
  * Decode a chunk of samples.
  *
+ * The calls to this function must provide the samples that shall be
+ * used by the protocol decoder
+ *  - in the correct order ([...]5, 6, 4, 7, 8[...] is a bug),
+ *  - starting from sample zero (2, 3, 4, 5, 6[...] is a bug),
+ *  - consecutively, with no gaps (0, 1, 2, 4, 5[...] is a bug).
+ *
+ * The start- and end-sample numbers are absolute sample numbers (relative
+ * to the start of the whole capture/file/stream), i.e. they are not relative
+ * sample numbers within the chunk specified by 'inbuf' and 'inbuflen'.
+ *
+ * Correct example (4096 samples total, 4 chunks @ 1024 samples each):
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 1024, 2047, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 2048, 3071, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 3072, 4095, inbuf, 1024, 1);
+ *
+ * The chunk size ('inbuflen') can be arbitrary and can differ between calls.
+ *
+ * Correct example (4096 samples total, 7 chunks @ various samples each):
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 1024, 1123, inbuf,  100, 1);
+ *   srd_inst_decode(di, 1124, 1423, inbuf,  300, 1);
+ *   srd_inst_decode(di, 1424, 1642, inbuf,  219, 1);
+ *   srd_inst_decode(di, 1643, 2047, inbuf,  405, 1);
+ *   srd_inst_decode(di, 2048, 3071, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 3072, 4095, inbuf, 1024, 1);
+ *
+ * INCORRECT example (4096 samples total, 4 chunks @ 1024 samples each, but
+ * the start- and end-samplenumbers are not absolute):
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *
  * @param di The decoder instance to call. Must not be NULL.
- * @param start_samplenum The starting sample number for the buffer's sample
- * 			  set, relative to the start of capture.
- * @param end_samplenum The ending sample number for the buffer's sample
- * 			  set, relative to the start of capture.
+ * @param abs_start_samplenum The absolute starting sample number for the
+ * 		buffer's sample set, relative to the start of capture.
+ * @param abs_end_samplenum The absolute ending sample number for the
+ * 		buffer's sample set, relative to the start of capture.
  * @param inbuf The buffer to decode. Must not be NULL.
  * @param inbuflen Length of the buffer. Must be > 0.
  * @param unitsize The number of bytes per sample. Must be > 0.
@@ -950,7 +985,7 @@ static gpointer di_thread(gpointer data)
  * @private
  */
 SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
-		uint64_t start_samplenum, uint64_t end_samplenum,
+		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
 	PyObject *py_res;
@@ -977,10 +1012,10 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 
 	di->data_unitsize = unitsize;
 
-	srd_dbg("Decoding: start sample %" PRIu64 ", end sample %"
+	srd_dbg("Decoding: abs start sample %" PRIu64 ", abs end sample %"
 		PRIu64 " (%" PRIu64 " samples, %" PRIu64 " bytes, unitsize = "
-		"%d), instance %s.", start_samplenum, end_samplenum,
-		end_samplenum - start_samplenum, inbuflen, di->data_unitsize,
+		"%d), instance %s.", abs_start_samplenum, abs_end_samplenum,
+		abs_end_samplenum - abs_start_samplenum, inbuflen, di->data_unitsize,
 		di->inst_id);
 
 	apiver = srd_decoder_apiver(di->decoder);
@@ -993,7 +1028,7 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		logic = PyObject_New(srd_logic, (PyTypeObject *)srd_logic_type);
 		Py_INCREF(logic);
 		logic->di = (struct srd_decoder_inst *)di;
-		logic->start_samplenum = start_samplenum;
+		logic->abs_start_samplenum = abs_start_samplenum;
 		logic->itercnt = 0;
 		logic->inbuf = (uint8_t *)inbuf;
 		logic->inbuflen = inbuflen;
@@ -1002,7 +1037,7 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 
 		Py_IncRef(di->py_inst);
 		if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
-			"KKO", start_samplenum, end_samplenum, logic))) {
+			"KKO", abs_start_samplenum, abs_end_samplenum, logic))) {
 			srd_exception_catch("Protocol decoder instance %s",
 					di->inst_id);
 			return SRD_ERR_PYTHON;
@@ -1016,8 +1051,8 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 
 		/* Push the new sample chunk to the worker thread. */
 		g_mutex_lock(&di->data_mutex);
-		di->start_samplenum = start_samplenum;
-		di->end_samplenum = end_samplenum;
+		di->abs_start_samplenum = abs_start_samplenum;
+		di->abs_end_samplenum = abs_end_samplenum;
 		di->inbuf = inbuf;
 		di->inbuflen = inbuflen;
 		di->got_new_samples = TRUE;

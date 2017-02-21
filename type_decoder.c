@@ -419,7 +419,7 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
 			/* Value of unused channel is 0xff, instead of 0 or 1. */
 			PyTuple_SetItem(py_pinvalues, i, PyLong_FromLong(0xff));
 		} else {
-			sample_pos = di->inbuf + ((di->cur_samplenum - di->start_samplenum) * di->data_unitsize);
+			sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
 			byte_offset = di->dec_channelmap[i] / 8;
 			bit_offset = di->dec_channelmap[i] % 8;
 			sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
@@ -597,7 +597,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 	if (ret == 9999) {
 		/* Empty condition list, automatic match. */
 		PyObject_SetAttrString(di->py_inst, "matched", Py_None);
-		/* Leave self.samplenum unchanged (== di->cur_samplenum). */
+		/* Leave self.samplenum unchanged (== di->abs_cur_samplenum). */
 		return get_current_pinvalues(di);
 	}
 
@@ -614,7 +614,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		if (found_match) {
 			/* Set self.samplenum to the (absolute) sample number that matched. */
 			PyObject_SetAttrString(di->py_inst, "samplenum",
-				PyLong_FromLong(di->cur_samplenum));
+				PyLong_FromLong(di->abs_cur_samplenum));
 
 			if (di->match_array && di->match_array->len > 0) {
 				py_matched = PyTuple_New(di->match_array->len);
@@ -636,8 +636,8 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		/* No match, reset state for the next chunk. */
 		di->got_new_samples = FALSE;
 		di->handled_all_samples = TRUE;
-		di->start_samplenum = 0;
-		di->end_samplenum = 0;
+		di->abs_start_samplenum = 0;
+		di->abs_end_samplenum = 0;
 		di->inbuf = NULL;
 		di->inbuflen = 0;
 

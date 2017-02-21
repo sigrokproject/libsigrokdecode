@@ -224,9 +224,45 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
  * has been configured, it is the minimum number of bytes needed to store
  * the default channels.
  *
+ * The calls to this function must provide the samples that shall be
+ * used by the protocol decoder
+ *  - in the correct order ([...]5, 6, 4, 7, 8[...] is a bug),
+ *  - starting from sample zero (2, 3, 4, 5, 6[...] is a bug),
+ *  - consecutively, with no gaps (0, 1, 2, 4, 5[...] is a bug).
+ *
+ * The start- and end-sample numbers are absolute sample numbers (relative
+ * to the start of the whole capture/file/stream), i.e. they are not relative
+ * sample numbers within the chunk specified by 'inbuf' and 'inbuflen'.
+ *
+ * Correct example (4096 samples total, 4 chunks @ 1024 samples each):
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *   srd_session_send(s, 1024, 2047, inbuf, 1024, 1);
+ *   srd_session_send(s, 2048, 3071, inbuf, 1024, 1);
+ *   srd_session_send(s, 3072, 4095, inbuf, 1024, 1);
+ *
+ * The chunk size ('inbuflen') can be arbitrary and can differ between calls.
+ *
+ * Correct example (4096 samples total, 7 chunks @ various samples each):
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *   srd_session_send(s, 1024, 1123, inbuf,  100, 1);
+ *   srd_session_send(s, 1124, 1423, inbuf,  300, 1);
+ *   srd_session_send(s, 1424, 1642, inbuf,  219, 1);
+ *   srd_session_send(s, 1643, 2047, inbuf,  405, 1);
+ *   srd_session_send(s, 2048, 3071, inbuf, 1024, 1);
+ *   srd_session_send(s, 3072, 4095, inbuf, 1024, 1);
+ *
+ * INCORRECT example (4096 samples total, 4 chunks @ 1024 samples each, but
+ * the start- and end-samplenumbers are not absolute):
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *   srd_session_send(s, 0,    1023, inbuf, 1024, 1);
+ *
  * @param sess The session to use. Must not be NULL.
- * @param start_samplenum The sample number of the first sample in this chunk.
- * @param end_samplenum The sample number of the last sample in this chunk.
+ * @param abs_start_samplenum The absolute starting sample number for the
+ *              buffer's sample set, relative to the start of capture.
+ * @param abs_end_samplenum The absolute ending sample number for the
+ *              buffer's sample set, relative to the start of capture.
  * @param inbuf Pointer to sample data. Must not be NULL.
  * @param inbuflen Length in bytes of the buffer. Must be > 0.
  * @param unitsize The number of bytes per sample. Must be > 0.
@@ -236,7 +272,7 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
  * @since 0.4.0
  */
 SRD_API int srd_session_send(struct srd_session *sess,
-		uint64_t start_samplenum, uint64_t end_samplenum,
+		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
 	GSList *d;
@@ -248,8 +284,8 @@ SRD_API int srd_session_send(struct srd_session *sess,
 	}
 
 	for (d = sess->di_list; d; d = d->next) {
-		if ((ret = srd_inst_decode(d->data, start_samplenum,
-				end_samplenum, inbuf, inbuflen, unitsize)) != SRD_OK)
+		if ((ret = srd_inst_decode(d->data, abs_start_samplenum,
+				abs_end_samplenum, inbuf, inbuflen, unitsize)) != SRD_OK)
 			return ret;
 	}
 

@@ -61,7 +61,7 @@ static PyObject *srd_logic_iternext(PyObject *self)
 
 	/* Prepare the next samplenum/sample list in this iteration. */
 	py_samplenum =
-	    PyLong_FromUnsignedLongLong(logic->start_samplenum +
+	    PyLong_FromUnsignedLongLong(logic->abs_start_samplenum +
 					logic->itercnt);
 	PyList_SetItem(logic->sample, 0, py_samplenum);
 	py_samples = PyBytes_FromStringAndSize((const char *)logic->di->channel_samples,
