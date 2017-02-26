@@ -1010,6 +1010,12 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		return SRD_ERR_ARG;
 	}
 
+	if (abs_start_samplenum != di->abs_cur_samplenum ||
+	    abs_end_samplenum < abs_start_samplenum) {
+		srd_dbg("incorrect sample numbers");
+		return SRD_ERR_ARG;
+	}
+
 	di->data_unitsize = unitsize;
 
 	srd_dbg("Decoding: abs start sample %" PRIu64 ", abs end sample %"
@@ -1042,6 +1048,7 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 					di->inst_id);
 			return SRD_ERR_PYTHON;
 		}
+		di->abs_cur_samplenum = abs_end_samplenum;
 		Py_DecRef(py_res);
 	} else {
 		/* If this is the first call, start the worker thread. */
