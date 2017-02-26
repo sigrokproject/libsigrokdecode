@@ -1012,7 +1012,9 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 
 	if (abs_start_samplenum != di->abs_cur_samplenum ||
 	    abs_end_samplenum < abs_start_samplenum) {
-		srd_dbg("incorrect sample numbers");
+		srd_dbg("Incorrect sample numbers: start=%" PRIu64 ", cur=%"
+			PRIu64 ", end=%" PRIu64 ".", abs_start_samplenum,
+			di->abs_cur_samplenum, abs_end_samplenum);
 		return SRD_ERR_ARG;
 	}
 
