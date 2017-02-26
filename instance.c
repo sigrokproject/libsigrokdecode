@@ -622,8 +622,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	/* Set self.samplenum to 0. */
 	PyObject_SetAttrString(di->py_inst, "samplenum", PyLong_FromLong(0));
 
-	/* Set self.matches to None. */
-	PyObject_SetAttrString(di->py_inst, "matches", Py_None);
+	/* Set self.matched to None. */
+	PyObject_SetAttrString(di->py_inst, "matched", Py_None);
 
 	/* Start all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {
