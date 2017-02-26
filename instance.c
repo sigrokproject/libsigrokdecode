@@ -948,28 +948,28 @@ static gpointer di_thread(gpointer data)
  * sample numbers within the chunk specified by 'inbuf' and 'inbuflen'.
  *
  * Correct example (4096 samples total, 4 chunks @ 1024 samples each):
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
- *   srd_inst_decode(di, 1024, 2047, inbuf, 1024, 1);
- *   srd_inst_decode(di, 2048, 3071, inbuf, 1024, 1);
- *   srd_inst_decode(di, 3072, 4095, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 1024, 2048, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 2048, 3072, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 3072, 4096, inbuf, 1024, 1);
  *
  * The chunk size ('inbuflen') can be arbitrary and can differ between calls.
  *
  * Correct example (4096 samples total, 7 chunks @ various samples each):
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
- *   srd_inst_decode(di, 1024, 1123, inbuf,  100, 1);
- *   srd_inst_decode(di, 1124, 1423, inbuf,  300, 1);
- *   srd_inst_decode(di, 1424, 1642, inbuf,  219, 1);
- *   srd_inst_decode(di, 1643, 2047, inbuf,  405, 1);
- *   srd_inst_decode(di, 2048, 3071, inbuf, 1024, 1);
- *   srd_inst_decode(di, 3072, 4095, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 1024, 1124, inbuf,  100, 1);
+ *   srd_inst_decode(di, 1124, 1424, inbuf,  300, 1);
+ *   srd_inst_decode(di, 1424, 1643, inbuf,  219, 1);
+ *   srd_inst_decode(di, 1643, 2048, inbuf,  405, 1);
+ *   srd_inst_decode(di, 2048, 3072, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 3072, 4096, inbuf, 1024, 1);
  *
  * INCORRECT example (4096 samples total, 4 chunks @ 1024 samples each, but
  * the start- and end-samplenumbers are not absolute):
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
- *   srd_inst_decode(di, 0,    1023, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
+ *   srd_inst_decode(di, 0,    1024, inbuf, 1024, 1);
  *
  * @param di The decoder instance to call. Must not be NULL.
  * @param abs_start_samplenum The absolute starting sample number for the
