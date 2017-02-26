@@ -535,6 +535,7 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		num_conditions = PyList_Size(py_conditionlist);
 		if (num_conditions == 0)
 			return 9999; /* The PD invoked self.wait([]). */
+		Py_IncRef(py_conditionlist);
 	} else if (PyDict_Check(py_conds)) {
 		/* 'py_conds' is a dict. */
 		if (PyDict_Size(py_conds) == 0)
