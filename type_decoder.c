@@ -542,6 +542,7 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 			return 9999; /* The PD invoked self.wait({}). */
 		/* Make a list and put the dict in there for convenience. */
 		py_conditionlist = PyList_New(1);
+		Py_IncRef(py_conds);
 		PyList_SetItem(py_conditionlist, 0, py_conds);
 		num_conditions = 1;
 	} else {
