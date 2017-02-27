@@ -1054,9 +1054,12 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		Py_DecRef(py_res);
 	} else {
 		/* If this is the first call, start the worker thread. */
-		if (!di->thread_handle)
-			di->thread_handle = g_thread_new("di_thread",
+		if (!di->thread_handle) {
+			srd_dbg("No worker thread for this decoder stack "
+				"exists yet, creating one: %s.", di->inst_id);
+			di->thread_handle = g_thread_new(di->inst_id,
 							 di_thread, di);
+		}
 
 		/* Push the new sample chunk to the worker thread. */
 		g_mutex_lock(&di->data_mutex);
