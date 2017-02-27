@@ -427,8 +427,6 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
 		}
 	}
 
-	Py_IncRef(py_pinvalues);
-
 	return py_pinvalues;
 }
 
