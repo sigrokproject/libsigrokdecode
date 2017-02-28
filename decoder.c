@@ -767,13 +767,9 @@ SRD_API int srd_decoder_load(const char *module_name)
 	return SRD_OK;
 
 except_out:
-	if (fail_txt) {
-		srd_exception_catch("Failed to load decoder %s: %s",
-				    module_name, fail_txt);
-		fail_txt = NULL;
-	} else {
-		srd_exception_catch("Failed to load decoder %s", module_name);
-	}
+	srd_exception_catch("Failed to load decoder %s: %s",
+			    module_name, fail_txt);
+	fail_txt = NULL;
 err_out:
 	if (fail_txt)
 		srd_err("Failed to load decoder %s: %s", module_name, fail_txt);
