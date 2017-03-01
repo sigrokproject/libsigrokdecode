@@ -177,7 +177,7 @@ class Decoder(srd.Decoder):
                 if self.has_channel(i):
                     conds.append({i: 'e'})
             while True:
-                self.handle_bits(self.wait(conds[:])[1:])
+                self.handle_bits(self.wait(conds)[1:])
         else:
             # Sample on the rising or falling CLK edge (depends on config).
             while True:

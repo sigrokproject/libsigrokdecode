@@ -272,8 +272,7 @@ class Decoder(srd.Decoder):
                 #  a) Data sampling of receiver: SCL = rising, and/or
                 #  b) START condition (S): SCL = high, SDA = falling, and/or
                 #  c) STOP condition (P): SCL = high, SDA = rising
-                conds = [{0: 'r'}, {0: 'h', 1: 'f'}, {0: 'h', 1: 'r'}]
-                pins = self.wait(conds[:]) # TODO
+                pins = self.wait([{0: 'r'}, {0: 'h', 1: 'f'}, {0: 'h', 1: 'r'}])
 
                 # Check which of the condition(s) matched and handle them.
                 if self.matched[0]:
