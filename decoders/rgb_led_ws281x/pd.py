@@ -74,7 +74,7 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        for (samplenum, (pin, )) in data:
+        for (self.samplenum, (pin, )) in data:
             if self.oldpin is None:
                 self.oldpin = pin
                 continue
@@ -82,7 +82,7 @@ class Decoder(srd.Decoder):
             # Check RESET condition (manufacturer recommends 50 usec minimal,
             # but real minimum is ~10 usec).
             if not self.inreset and not pin and self.es is not None and \
-                    (samplenum - self.es) / self.samplerate > 50e-6:
+                    (self.samplenum - self.es) / self.samplerate > 50e-6:
 
                 # Decode last bit value.
                 tH = (self.es - self.ss) / self.samplerate
@@ -92,7 +92,7 @@ class Decoder(srd.Decoder):
                 self.handle_bits(self.es)
 
                 self.put(self.ss, self.es, self.out_ann, [0, ['%d' % bit_]])
-                self.put(self.es, samplenum, self.out_ann,
+                self.put(self.es, self.samplenum, self.out_ann,
                          [1, ['RESET', 'RST', 'R']])
 
                 self.inreset = True
@@ -103,25 +103,25 @@ class Decoder(srd.Decoder):
             if not self.oldpin and pin:
                 # Rising edge.
                 if self.ss and self.es:
-                    period = samplenum - self.ss
+                    period = self.samplenum - self.ss
                     duty = self.es - self.ss
                     # Ideal duty for T0H: 33%, T1H: 66%.
                     bit_ = (duty / period) > 0.5
 
-                    self.put(self.ss, samplenum, self.out_ann,
+                    self.put(self.ss, self.samplenum, self.out_ann,
                              [0, ['%d' % bit_]])
 
                     self.bits.append(bit_)
-                    self.handle_bits(samplenum)
+                    self.handle_bits(self.samplenum)
 
                 if self.ss_packet is None:
-                    self.ss_packet = samplenum
+                    self.ss_packet = self.samplenum
 
-                self.ss = samplenum
+                self.ss = self.samplenum
 
             elif self.oldpin and not pin:
                 # Falling edge.
                 self.inreset = False
-                self.es = samplenum
+                self.es = self.samplenum
 
             self.oldpin = pin
