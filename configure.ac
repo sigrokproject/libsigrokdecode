@@ -156,6 +156,7 @@ Compile configuration:
  - C compiler flags................ $CFLAGS
  - Additional C compiler flags..... $SRD_EXTRA_CFLAGS
  - C compiler warnings............. $SRD_WFLAGS
+ - Linker flags.................... $LDFLAGS
 
 Detected libraries (required):
  - glib-2.0 >= 2.28.0.............. $srd_glib_version
