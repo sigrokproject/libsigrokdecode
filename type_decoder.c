@@ -529,14 +529,22 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		return SRD_ERR;
 	}
 
-	/* Parse the argument of self.wait() into 'py_conds'. */
-	if (!PyArg_ParseTuple(args, "O", &py_conds)) {
+	/*
+	 * Parse the argument of self.wait() into 'py_conds', and check
+	 * the data type. The argument is optional, None is assumed in
+	 * its absence. None or an empty dict or an empty list mean that
+	 * there is no condition, and the next available sample shall
+	 * get returned to the caller.
+	 */
+	py_conds = Py_None;
+	if (!PyArg_ParseTuple(args, "|O", &py_conds)) {
 		/* Let Python raise this exception. */
 		return SRD_ERR;
 	}
-
-	/* Check whether 'py_conds' is a dict or a list. */
-	if (PyList_Check(py_conds)) {
+	if (py_conds == Py_None) {
+		/* 'py_conds' is None. */
+		return 9999;
+	} else if (PyList_Check(py_conds)) {
 		/* 'py_conds' is a list. */
 		py_conditionlist = py_conds;
 		num_conditions = PyList_Size(py_conditionlist);
