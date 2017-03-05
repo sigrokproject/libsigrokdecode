@@ -261,6 +261,9 @@ struct srd_decoder_inst {
 	/** Indicates whether the worker thread has handled all samples. */
 	gboolean handled_all_samples;
 
+	/** Requests termination of wait() and decode(). */
+	gboolean want_wait_terminate;
+
 	GCond got_new_samples_cond;
 	GCond handled_all_samples_cond;
 	GMutex data_mutex;

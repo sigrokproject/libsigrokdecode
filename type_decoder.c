@@ -520,6 +520,15 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		return SRD_ERR;
 	}
 
+	/*
+	 * Return an error condition from .wait() when termination is
+	 * requested, such that decode() will terminate.
+	 */
+	if (di->want_wait_terminate) {
+		srd_dbg("%s: %s: Skip (want_term).", di->inst_id, __func__);
+		return SRD_ERR;
+	}
+
 	/* Parse the argument of self.wait() into 'py_conds'. */
 	if (!PyArg_ParseTuple(args, "O", &py_conds)) {
 		/* Let Python raise this exception. */
@@ -593,7 +602,10 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 	}
 
 	ret = set_new_condition_list(self, args);
-
+	if (ret < 0) {
+		srd_dbg("%s: %s: Aborting wait().", di->inst_id, __func__);
+		return NULL;
+	}
 	if (ret == 9999) {
 		/* Empty condition list, automatic match. */
 		PyObject_SetAttrString(di->py_inst, "matched", Py_None);
@@ -602,12 +614,19 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 	}
 
 	while (1) {
-		/* Wait for new samples to process. */
+		/* Wait for new samples to process, or termination request. */
 		g_mutex_lock(&di->data_mutex);
-		while (!di->got_new_samples)
+		while (!di->got_new_samples && !di->want_wait_terminate)
 			g_cond_wait(&di->got_new_samples_cond, &di->data_mutex);
 
-		/* Check whether any of the current condition(s) match. */
+		/*
+		 * Check whether any of the current condition(s) match.
+		 * Arrange for termination requests to take a code path which
+		 * won't find new samples to process, pretends to have processed
+		 * previously stored samples, and returns to the main thread,
+		 * while the termination request still gets signalled.
+		 */
+		found_match = FALSE;
 		ret = process_samples_until_condition_match(di, &found_match);
 
 		/* If there's a match, set self.samplenum etc. and return. */
@@ -643,6 +662,17 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 
 		/* Signal the main thread that we handled all samples. */
 		g_cond_signal(&di->handled_all_samples_cond);
+
+		/*
+		 * When termination of wait() and decode() was requested,
+		 * then exit the loop after releasing the mutex.
+		 */
+		if (di->want_wait_terminate) {
+			srd_dbg("%s: %s: Will return from wait().",
+				di->inst_id, __func__);
+			g_mutex_unlock(&di->data_mutex);
+			return NULL;
+		}
 
 		g_mutex_unlock(&di->data_mutex);
 	}
