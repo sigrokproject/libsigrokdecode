@@ -199,12 +199,6 @@ class Decoder(srd.Decoder):
             return True
         return False
 
-    def reached_bit_last(self, rxtx, bitnum):
-        bitpos = self.frame_start[rxtx] + ((bitnum + 1) * self.bit_width)
-        if self.samplenum >= bitpos:
-            return True
-        return False
-
     def wait_for_start_bit(self, rxtx, old_signal, signal):
         # The start bit is always 0 (low). As the idle UART (and the stop bit)
         # level is 1 (high), the beginning of a start bit is a falling edge.
