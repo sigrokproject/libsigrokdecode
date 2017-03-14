@@ -216,10 +216,10 @@ class Decoder(srd.Decoder):
         self.datavalue[rxtx] = 0
         self.startsample[rxtx] = -1
 
-        self.state[rxtx] = 'GET DATA BITS'
-
         self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
         self.putg([rxtx + 2, ['Start bit', 'Start', 'S']])
+
+        self.state[rxtx] = 'GET DATA BITS'
 
     def get_data_bits(self, rxtx, signal):
         # Save the sample number of the middle of the first data bit.
@@ -246,12 +246,6 @@ class Decoder(srd.Decoder):
         if self.cur_data_bit[rxtx] < self.options['num_data_bits']:
             return
 
-        # Skip to either reception of the parity bit, or reception of
-        # the STOP bits if parity is not applicable.
-        self.state[rxtx] = 'GET PARITY BIT'
-        if self.options['parity_type'] == 'none':
-            self.state[rxtx] = 'GET STOP BITS'
-
         self.putpx(rxtx, ['DATA', rxtx,
             (self.datavalue[rxtx], self.databits[rxtx])])
 
@@ -265,6 +259,12 @@ class Decoder(srd.Decoder):
         self.putbin(rxtx, [2, bdata])
 
         self.databits[rxtx] = []
+
+        # Advance to either reception of the parity bit, or reception of
+        # the STOP bits if parity is not applicable.
+        self.state[rxtx] = 'GET PARITY BIT'
+        if self.options['parity_type'] == 'none':
+            self.state[rxtx] = 'GET STOP BITS'
 
     def format_value(self, v):
         # Format value 'v' according to configured options.
@@ -311,8 +311,6 @@ class Decoder(srd.Decoder):
     def get_parity_bit(self, rxtx, signal):
         self.paritybit[rxtx] = signal
 
-        self.state[rxtx] = 'GET STOP BITS'
-
         if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
                      self.datavalue[rxtx], self.options['num_data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
@@ -321,6 +319,8 @@ class Decoder(srd.Decoder):
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
             self.putg([rxtx + 6, ['Parity error', 'Parity err', 'PE']])
+
+        self.state[rxtx] = 'GET STOP BITS'
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
@@ -332,10 +332,10 @@ class Decoder(srd.Decoder):
             self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
             # TODO: Abort? Ignore the frame? Other?
 
-        self.state[rxtx] = 'WAIT FOR START BIT'
-
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
         self.putg([rxtx + 4, ['Stop bit', 'Stop', 'T']])
+
+        self.state[rxtx] = 'WAIT FOR START BIT'
 
     def get_wait_cond(self, rxtx, inv):
         """
