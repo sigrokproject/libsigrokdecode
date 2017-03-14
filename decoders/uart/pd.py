@@ -236,7 +236,7 @@ class Decoder(srd.Decoder):
 
     def get_data_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the desired data bit.
-        if not self.reached_bit(rxtx, self.cur_data_bit[rxtx] + 1):
+        if not self.reached_bit(rxtx, 1 + self.cur_data_bit[rxtx]):
             return
 
         # Save the sample number of the middle of the first data bit.
@@ -259,8 +259,8 @@ class Decoder(srd.Decoder):
         self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
 
         # Return here, unless we already received all data bits.
-        if self.cur_data_bit[rxtx] < self.options['num_data_bits'] - 1:
-            self.cur_data_bit[rxtx] += 1
+        self.cur_data_bit[rxtx] += 1
+        if self.cur_data_bit[rxtx] < self.options['num_data_bits']:
             return
 
         # Skip to either reception of the parity bit, or reception of
@@ -327,7 +327,7 @@ class Decoder(srd.Decoder):
 
     def get_parity_bit(self, rxtx, signal):
         # Skip samples until we're in the middle of the parity bit.
-        if not self.reached_bit(rxtx, self.options['num_data_bits'] + 1):
+        if not self.reached_bit(rxtx, 1 + self.options['num_data_bits']):
             return
 
         self.paritybit[rxtx] = signal
@@ -347,7 +347,7 @@ class Decoder(srd.Decoder):
     def get_stop_bits(self, rxtx, signal):
         # Skip samples until we're in the middle of the stop bit(s).
         skip_parity = 0 if self.options['parity_type'] == 'none' else 1
-        b = self.options['num_data_bits'] + 1 + skip_parity
+        b = 1 + self.options['num_data_bits'] + skip_parity
         if not self.reached_bit(rxtx, b):
             return
 
