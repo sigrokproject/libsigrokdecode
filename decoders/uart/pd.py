@@ -395,6 +395,24 @@ class Decoder(srd.Decoder):
         cond = {'skip': want_num - self.samplenum}
         return cond
 
+    def inspect_sample(self, rxtx, signal, inv):
+        """Inspect a sample returned by .wait() for the specified UART line."""
+
+        if inv:
+            signal = not signal
+
+        state = self.state[rxtx]
+        if state == 'WAIT FOR START BIT':
+            self.wait_for_start_bit(rxtx, signal)
+        elif state == 'GET START BIT':
+            self.get_start_bit(rxtx, signal)
+        elif state == 'GET DATA BITS':
+            self.get_data_bits(rxtx, signal)
+        elif state == 'GET PARITY BIT':
+            self.get_parity_bit(rxtx, signal)
+        elif state == 'GET STOP BITS':
+            self.get_stop_bits(rxtx, signal)
+
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -413,26 +431,7 @@ class Decoder(srd.Decoder):
             if has_pin[TX]:
                 conds.append(self.get_wait_cond(TX, inv[TX]))
             (rx, tx) = self.wait(conds)
-            if inv[RX]:
-                rx = not rx
-            if inv[TX]:
-                tx = not tx
-
-            # State machine.
-            for rxtx in (RX, TX):
-                # Don't try to handle RX (or TX) if not supplied.
-                if not has_pin[rxtx]:
-                    continue
-
-                signal = rx if (rxtx == RX) else tx
-
-                if self.state[rxtx] == 'WAIT FOR START BIT':
-                    self.wait_for_start_bit(rxtx, signal)
-                elif self.state[rxtx] == 'GET START BIT':
-                    self.get_start_bit(rxtx, signal)
-                elif self.state[rxtx] == 'GET DATA BITS':
-                    self.get_data_bits(rxtx, signal)
-                elif self.state[rxtx] == 'GET PARITY BIT':
-                    self.get_parity_bit(rxtx, signal)
-                elif self.state[rxtx] == 'GET STOP BITS':
-                    self.get_stop_bits(rxtx, signal)
+            if has_pin[RX]:
+                self.inspect_sample(RX, rx, inv[RX])
+            if has_pin[TX]:
+                self.inspect_sample(TX, tx, inv[TX])
