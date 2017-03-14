@@ -423,15 +423,18 @@ class Decoder(srd.Decoder):
 
         opt = self.options
         inv = [opt['invert_rx'] == 'yes', opt['invert_tx'] == 'yes']
+        cond_idx = [None] * len(has_pin)
 
         while True:
             conds = []
             if has_pin[RX]:
+                cond_idx[RX] = len(conds)
                 conds.append(self.get_wait_cond(RX, inv[RX]))
             if has_pin[TX]:
+                cond_idx[TX] = len(conds)
                 conds.append(self.get_wait_cond(TX, inv[TX]))
             (rx, tx) = self.wait(conds)
-            if has_pin[RX]:
+            if cond_idx[RX] is not None and self.matched[cond_idx[RX]]:
                 self.inspect_sample(RX, rx, inv[RX])
-            if has_pin[TX]:
+            if cond_idx[TX] is not None and self.matched[cond_idx[TX]]:
                 self.inspect_sample(TX, tx, inv[TX])
