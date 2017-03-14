@@ -263,7 +263,11 @@ class Decoder(srd.Decoder):
             self.cur_data_bit[rxtx] += 1
             return
 
+        # Skip to either reception of the parity bit, or reception of
+        # the STOP bits if parity is not applicable.
         self.state[rxtx] = 'GET PARITY BIT'
+        if self.options['parity_type'] == 'none':
+            self.state[rxtx] = 'GET STOP BITS'
 
         self.putpx(rxtx, ['DATA', rxtx,
             (self.datavalue[rxtx], self.databits[rxtx])])
@@ -322,11 +326,6 @@ class Decoder(srd.Decoder):
         return None
 
     def get_parity_bit(self, rxtx, signal):
-        # If no parity is used/configured, skip to the next state immediately.
-        if self.options['parity_type'] == 'none':
-            self.state[rxtx] = 'GET STOP BITS'
-            return
-
         # Skip samples until we're in the middle of the parity bit.
         if not self.reached_bit(rxtx, self.options['num_data_bits'] + 1):
             return
