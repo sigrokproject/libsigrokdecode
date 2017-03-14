@@ -195,30 +195,13 @@ class Decoder(srd.Decoder):
         bitpos += bitnum * self.bit_width
         return bitpos
 
-    # Return true if we reached the middle of the desired bit, false otherwise.
-    def reached_bit(self, rxtx, bitnum):
-        bitpos = self.get_sample_point(rxtx, bitnum)
-        if self.samplenum >= bitpos:
-            return True
-        return False
-
     def wait_for_start_bit(self, rxtx, signal):
-        # The caller already has detected an edge. Strictly speaking this
-        # check on the current signal level is redundant. But it does not
-        # harm either.
-        if signal != 0:
-            return
-
         # Save the sample number where the start bit begins.
         self.frame_start[rxtx] = self.samplenum
 
         self.state[rxtx] = 'GET START BIT'
 
     def get_start_bit(self, rxtx, signal):
-        # Skip samples until we're in the middle of the start bit.
-        if not self.reached_bit(rxtx, 0):
-            return
-
         self.startbit[rxtx] = signal
 
         # The startbit must be 0. If not, we report an error and wait
@@ -239,10 +222,6 @@ class Decoder(srd.Decoder):
         self.putg([rxtx + 2, ['Start bit', 'Start', 'S']])
 
     def get_data_bits(self, rxtx, signal):
-        # Skip samples until we're in the middle of the desired data bit.
-        if not self.reached_bit(rxtx, 1 + self.cur_data_bit[rxtx]):
-            return
-
         # Save the sample number of the middle of the first data bit.
         if self.startsample[rxtx] == -1:
             self.startsample[rxtx] = self.samplenum
@@ -330,10 +309,6 @@ class Decoder(srd.Decoder):
         return None
 
     def get_parity_bit(self, rxtx, signal):
-        # Skip samples until we're in the middle of the parity bit.
-        if not self.reached_bit(rxtx, 1 + self.options['num_data_bits']):
-            return
-
         self.paritybit[rxtx] = signal
 
         self.state[rxtx] = 'GET STOP BITS'
@@ -349,12 +324,6 @@ class Decoder(srd.Decoder):
 
     # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
-        # Skip samples until we're in the middle of the stop bit(s).
-        skip_parity = 0 if self.options['parity_type'] == 'none' else 1
-        b = 1 + self.options['num_data_bits'] + skip_parity
-        if not self.reached_bit(rxtx, b):
-            return
-
         self.stopbit1[rxtx] = signal
 
         # Stop bits must be 1. If not, we report an error.
