@@ -185,7 +185,7 @@ class Decoder(srd.Decoder):
             self.bit_width = float(self.samplerate) / float(self.options['baudrate'])
 
     def get_sample_point(self, rxtx, bitnum):
-        """Determine absolute sample number of a bit slot's sample point."""
+        # Determine absolute sample number of a bit slot's sample point.
         # bitpos is the samplenumber which is in the middle of the
         # specified UART bit (0 = start bit, 1..x = data, x+1 = parity bit
         # (if used) or the first stop bit, and so on).
@@ -338,14 +338,9 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'WAIT FOR START BIT'
 
     def get_wait_cond(self, rxtx, inv):
-        """
-        Determine Decoder.wait() condition for specified UART line.
-
-        Returns condititions that are suitable for Decoder.wait(). Those
-        conditions either match the falling edge of the START bit, or
-        the sample point of the next bit time.
-        """
-
+        # Return condititions that are suitable for Decoder.wait(). Those
+        # conditions either match the falling edge of the START bit, or
+        # the sample point of the next bit time.
         state = self.state[rxtx]
         if state == 'WAIT FOR START BIT':
             return {rxtx: 'r' if inv else 'f'}
@@ -358,15 +353,11 @@ class Decoder(srd.Decoder):
         elif state == 'GET STOP BITS':
             bitnum = 1 + self.options['num_data_bits']
             bitnum += 0 if self.options['parity_type'] == 'none' else 1
-        want_num = self.get_sample_point(rxtx, bitnum)
-        # want_num = int(want_num + 0.5)
-        want_num = ceil(want_num)
-        cond = {'skip': want_num - self.samplenum}
-        return cond
+        want_num = ceil(self.get_sample_point(rxtx, bitnum))
+        return {'skip': want_num - self.samplenum}
 
     def inspect_sample(self, rxtx, signal, inv):
-        """Inspect a sample returned by .wait() for the specified UART line."""
-
+        # Inspect a sample returned by .wait() for the specified UART line.
         if inv:
             signal = not signal
 
