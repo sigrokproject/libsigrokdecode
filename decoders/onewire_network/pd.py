@@ -129,7 +129,7 @@ class Decoder(srd.Decoder):
     # Data collector.
     def onewire_collect(self, length, val, ss, es):
         # Storing the sample this sequence begins with.
-        if self.bit_cnt == 1:
+        if self.bit_cnt == 0:
             self.ss_block = ss
         self.data = self.data & ~(1 << self.bit_cnt) | (val << self.bit_cnt)
         self.bit_cnt += 1
