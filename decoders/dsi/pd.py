@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     api_version = 2
     id = 'dsi'
     name = 'DSI'
-    longname = 'Digital Serial Interface Lighting'
+    longname = 'Digital Serial Interface'
     desc = 'DSI lighting control protocol.'
     license = 'gplv2+'
     inputs = ['logic']
