@@ -60,7 +60,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.old_ir = 1 if self.options['polarity'] == 'active-low' else 0
+        self.old_dsi = 1 if self.options['polarity'] == 'active-low' else 0
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -110,41 +110,41 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         bit = 0;
         for (self.samplenum, pins) in data:
-            self.ir = pins[0]
+            self.dsi = pins[0]
             # data.itercnt += 1
             if self.options['polarity'] == 'active-high':
-                self.ir ^= 1 # Invert.
+                self.dsi ^= 1 # Invert.
 
             # State machine.
             if self.state == 'IDLE':
                 # Wait for any edge (rising or falling).
-                if self.old_ir == self.ir:
+                if self.old_dsi == self.dsi:
                     continue
                 # Add in the first half of the start bit.
                 self.edges.append(self.samplenum - int(self.halfbit))
                 self.edges.append(self.samplenum)
                 # Start bit is 0->1.
-                self.phase0 = self.ir ^ 1
+                self.phase0 = self.dsi ^ 1
                 self.state = 'PHASE1'
-                self.old_ir = self.ir
+                self.old_dsi = self.dsi
                 # Get the next sample point.
                 # self.nextSamplePoint = self.samplenum + int(self.halfbit / 2)
-                self.old_ir = self.ir
-                # bit = self.ir
+                self.old_dsi = self.dsi
+                # bit = self.dsi
                 continue
 
             # if(self.samplenum == self.nextSamplePoint):
-            #    bit = self.ir
+            #    bit = self.dsi
             #    continue
 
-            if self.old_ir != self.ir:
+            if self.old_dsi != self.dsi:
                 self.edges.append(self.samplenum)
             elif self.samplenum == (self.edges[-1] + int(self.halfbit * 1.5)):
                 self.edges.append(self.samplenum - int(self.halfbit * 0.5))
             else:
                 continue
 
-            bit = self.old_ir
+            bit = self.old_dsi
             if self.state == 'PHASE0':
                 self.phase0 = bit
                 self.state = 'PHASE1'
@@ -161,4 +161,4 @@ class Decoder(srd.Decoder):
 
             # self.nextSamplePoint = self.edges[-1] + int(self.halfbit / 2)
 
-            self.old_ir = self.ir
+            self.old_dsi = self.dsi
