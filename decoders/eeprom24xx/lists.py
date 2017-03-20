@@ -167,4 +167,16 @@ chips = {
         'addr_pins': 3, # Called E0, E1, E2 on this chip.
         'max_speed': 400,
     },
+
+    # Xicor
+    'xicor_x24c02': {
+        'vendor': 'Xicor',
+        'model': 'X24C02',
+        'size': 256,
+        'page_size': 4,
+        'page_wraparound': True,
+        'addr_bytes': 1,
+        'addr_pins': 3,
+        'max_speed': 100,
+    },
 }
