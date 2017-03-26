@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Iztok Jeras <iztok.jeras@gmail.com>
+## Copyright (C) 2017 Kevin Redon <kingkevin@cuvoodoo.info>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -22,8 +22,74 @@ import sigrokdecode as srd
 class SamplerateError(Exception):
     pass
 
+# Timing values in us for the signal at regular and overdrive speed.
+timing = {
+    'RSTL': {
+        'min': {
+            False: 480.0,
+            True: 48.0,
+        },
+        'max': {
+            False: 960.0,
+            True: 80.0,
+        },
+    },
+    'RSTH': {
+        'min': {
+            False: 480.0,
+            True: 48.0,
+        },
+    },
+    'PDH': {
+        'min': {
+            False: 15.0,
+            True: 2.0,
+        },
+        'max': {
+            False: 60.0,
+            True: 6.0,
+        },
+    },
+    'PDL': {
+        'min': {
+            False: 60.0,
+            True: 8.0,
+        },
+        'max': {
+            False: 240.0,
+            True: 24.0,
+        },
+    },
+    'SLOT': {
+        'min': {
+            False: 60.0,
+            True: 6.0,
+        },
+        'max': {
+            False: 120.0,
+            True: 16.0,
+        },
+    },
+    'REC': {
+        'min': {
+            False: 1.0,
+            True: 1.0,
+        },
+    },
+    'LOWR': {
+        'min': {
+            False: 1.0,
+            True: 1.0,
+        },
+        'max': {
+            False: 15.0,
+            True: 2.0,
+        },
+    },
+}
+
 class Decoder(srd.Decoder):
-    api_version = 3
+    api_version = 2
     id = 'onewire_link'
     name = '1-Wire link layer'
     longname = '1-Wire serial communication bus (link layer)'
@@ -34,36 +100,16 @@ class Decoder(srd.Decoder):
     channels = (
         {'id': 'owr', 'name': 'OWR', 'desc': '1-Wire signal line'},
     )
-    optional_channels = (
-        {'id': 'pwr', 'name': 'PWR', 'desc': '1-Wire power supply pin'},
-    )
     options = (
-        {'id': 'overdrive',
-            'desc': 'Overdrive mode', 'default': 'no', 'values': ('yes', 'no')},
-        # Time options (specified in microseconds):
-        {'id': 'cnt_normal_bit',
-            'desc': 'Normal mode sample bit time (μs)', 'default': 15},
-        {'id': 'cnt_normal_slot',
-            'desc': 'Normal mode data slot time (μs)', 'default': 60},
-        {'id': 'cnt_normal_presence',
-            'desc': 'Normal mode sample presence time (μs)', 'default': 75},
-        {'id': 'cnt_normal_reset',
-            'desc': 'Normal mode reset time (μs)', 'default': 480},
-        {'id': 'cnt_overdrive_bit',
-            'desc': 'Overdrive mode sample bit time (μs)', 'default': 2},
-        {'id': 'cnt_overdrive_slot',
-            'desc': 'Overdrive mode data slot time (μs)', 'default': 7.3},
-        {'id': 'cnt_overdrive_presence',
-            'desc': 'Overdrive mode sample presence time (μs)', 'default': 10},
-        {'id': 'cnt_overdrive_reset',
-            'desc': 'Overdrive mode reset time (μs)', 'default': 48},
+        {'id': 'overdrive', 'desc': 'Start in overdrive speed',
+            'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
         ('bit', 'Bit'),
         ('warnings', 'Warnings'),
         ('reset', 'Reset'),
         ('presence', 'Presence'),
-        ('overdrive', 'Overdrive mode notifications'),
+        ('overdrive', 'Overdrive speed notifications'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 2, 3)),
@@ -71,43 +117,25 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (1,)),
     )
 
-    def putm(self, data):
-        self.put(0, 0, self.out_ann, data)
-
-    def putpb(self, data):
-        self.put(self.fall, self.samplenum, self.out_python, data)
-
-    def putb(self, data):
-        self.put(self.fall, self.samplenum, self.out_ann, data)
-
-    def putx(self, data):
-        self.put(self.fall, self.cnt_bit[self.overdrive], self.out_ann, data)
-
-    def putfr(self, data):
-        self.put(self.fall, self.rise, self.out_ann, data)
-
-    def putprs(self, data):
-        self.put(self.rise, self.samplenum, self.out_python, data)
-
-    def putrs(self, data):
-        self.put(self.rise, self.samplenum, self.out_ann, data)
-
     def __init__(self):
         self.samplerate = None
-        self.state = 'WAIT FOR FALLING EDGE'
+        self.samplenum = 0
+        self.state = 'INITIAL'
         self.present = 0
         self.bit = 0
-        self.bit_cnt = 0
+        self.bit_count = -1
         self.command = 0
-        self.overdrive = 0
+        self.overdrive = False
         self.fall = 0
         self.rise = 0
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-
-        self.initial_pins = [1, 1]
+        self.overdrive = (self.options['overdrive'] == 'yes')
+        self.fall = 0
+        self.rise = 0
+        self.bit_count = -1
 
     def checks(self):
         # Check if samplerate is appropriate.
@@ -126,155 +154,191 @@ class Decoder(srd.Decoder):
                 self.putm([1, ['Sampling rate is suggested to be above ' +
                                '1MHz for proper normal mode decoding.']])
 
-        # Check if sample times are in the allowed range.
-
-        time_min = float(self.cnt_normal_bit) / self.samplerate
-        time_max = float(self.cnt_normal_bit + 1) / self.samplerate
-        if (time_min < 0.000005) or (time_max > 0.000015):
-            self.putm([1, ['The normal mode data sample time interval ' +
-                 '(%2.1fus-%2.1fus) should be inside (5.0us, 15.0us).'
-                 % (time_min * 1000000, time_max * 1000000)]])
-
-        time_min = float(self.cnt_normal_presence) / self.samplerate
-        time_max = float(self.cnt_normal_presence + 1) / self.samplerate
-        if (time_min < 0.0000681) or (time_max > 0.000075):
-            self.putm([1, ['The normal mode presence sample time interval ' +
-                 '(%2.1fus-%2.1fus) should be inside (68.1us, 75.0us).'
-                 % (time_min * 1000000, time_max * 1000000)]])
-
-        time_min = float(self.cnt_overdrive_bit) / self.samplerate
-        time_max = float(self.cnt_overdrive_bit + 1) / self.samplerate
-        if (time_min < 0.000001) or (time_max > 0.000002):
-            self.putm([1, ['The overdrive mode data sample time interval ' +
-                 '(%2.1fus-%2.1fus) should be inside (1.0us, 2.0us).'
-                 % (time_min * 1000000, time_max * 1000000)]])
-
-        time_min = float(self.cnt_overdrive_presence) / self.samplerate
-        time_max = float(self.cnt_overdrive_presence + 1) / self.samplerate
-        if (time_min < 0.0000073) or (time_max > 0.000010):
-            self.putm([1, ['The overdrive mode presence sample time interval ' +
-                 '(%2.1fus-%2.1fus) should be inside (7.3us, 10.0us).'
-                 % (time_min * 1000000, time_max * 1000000)]])
-
-
     def metadata(self, key, value):
         if key != srd.SRD_CONF_SAMPLERATE:
             return
         self.samplerate = value
 
-        # The default 1-Wire time base is 30us. This is used to calculate
-        # sampling times.
-        samplerate = float(self.samplerate)
-
-        x = float(self.options['cnt_normal_bit']) / 1000000.0
-        self.cnt_normal_bit = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_slot']) / 1000000.0
-        self.cnt_normal_slot = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_presence']) / 1000000.0
-        self.cnt_normal_presence = int(samplerate * x) - 1
-        x = float(self.options['cnt_normal_reset']) / 1000000.0
-        self.cnt_normal_reset = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_bit']) / 1000000.0
-        self.cnt_overdrive_bit = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_slot']) / 1000000.0
-        self.cnt_overdrive_slot = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_presence']) / 1000000.0
-        self.cnt_overdrive_presence = int(samplerate * x) - 1
-        x = float(self.options['cnt_overdrive_reset']) / 1000000.0
-        self.cnt_overdrive_reset = int(samplerate * x) - 1
-
-        # Organize values into lists.
-        self.cnt_bit = [self.cnt_normal_bit, self.cnt_overdrive_bit]
-        self.cnt_presence = [self.cnt_normal_presence, self.cnt_overdrive_presence]
-        self.cnt_reset = [self.cnt_normal_reset, self.cnt_overdrive_reset]
-        self.cnt_slot = [self.cnt_normal_slot, self.cnt_overdrive_slot]
-
-    def decode(self):
+    def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        self.checks()
-        while True:
+        for (self.samplenum, (owr,)) in data:
+            if self.samplenum == 0:
+                self.checks()
+
             # State machine.
-            if self.state == 'WAIT FOR FALLING EDGE':
-                # The start of a cycle is a falling edge on OWR.
-                self.wait({0: 'f'})
-                # Save the sample number for the falling edge.
+            if self.state == 'INITIAL': # Unknown initial state.
+                # Wait until we reach the idle high state.
+                if owr == 0:
+                    continue
+                self.rise = self.samplenum
+                self.state = 'IDLE'
+            elif self.state == 'IDLE': # Idle high state.
+                # Wait for falling edge.
+                if owr != 0:
+                    continue
                 self.fall = self.samplenum
-                self.state = 'WAIT FOR DATA SAMPLE'
-            elif self.state == 'WAIT FOR DATA SAMPLE':
-                # Sample data bit.
-                t = self.fall + self.cnt_bit[self.overdrive]
-                self.bit, pwr = self.wait({'skip': t - self.samplenum})
-                self.state = 'WAIT FOR DATA SLOT END'
-            elif self.state == 'WAIT FOR DATA SLOT END':
-                # A data slot ends in a recovery period, otherwise, this is
-                # probably a reset.
-                t = self.fall + self.cnt_slot[self.overdrive]
-                owr, pwr = self.wait({'skip': t - self.samplenum})
-
+                # Get time since last rising edge.
+                time = ((self.fall - self.rise) / self.samplerate) * 1000000.0
+                if self.rise > 0 and \
+                    time < timing['REC']['min'][self.overdrive]:
+                    self.put(self.fall, self.rise, self.out_ann,
+                        [1, ['Recovery time not long enough'
+                        'Recovery too short',
+                        'REC < ' + str(timing['REC']['min'][self.overdrive])]])
+                # A reset pulse or slot can start on a falling edge.
+                self.state = 'LOW'
+                # TODO: Check minimum recovery time.
+            elif self.state == 'LOW': # Reset pulse or slot.
+                # Wait for rising edge.
                 if owr == 0:
-                    # This seems to be a reset slot, wait for its end.
-                    self.state = 'WAIT FOR RISING EDGE'
                     continue
-
-                self.putb([0, ['Bit: %d' % self.bit, '%d' % self.bit]])
-                self.putpb(['BIT', self.bit])
-
-                # Checking the first command to see if overdrive mode
-                # should be entered.
-                if self.bit_cnt <= 8:
-                    self.command |= (self.bit << self.bit_cnt)
-                elif self.bit_cnt == 8 and self.command in [0x3c, 0x69]:
-                    self.putx([4, ['Entering overdrive mode', 'Overdrive on']])
-                # Increment the bit counter.
-                self.bit_cnt += 1
-                # Wait for next slot.
-                self.state = 'WAIT FOR FALLING EDGE'
-            elif self.state == 'WAIT FOR RISING EDGE':
-                # The end of a cycle is a rising edge.
-                self.wait({0: 'r'})
-
-                # Check if this was a reset cycle.
-                t = self.samplenum - self.fall
-                if t > self.cnt_normal_reset:
-                    # Save the sample number for the rising edge.
-                    self.rise = self.samplenum
-                    self.putfr([2, ['Reset', 'Rst', 'R']])
-                    self.state = 'WAIT FOR PRESENCE DETECT'
-                    # Exit overdrive mode.
+                self.rise = self.samplenum
+                # Detect reset or slot base on timing.
+                time = ((self.rise - self.fall) / self.samplerate) * 1000000.0
+                if time >= timing['RSTL']['min'][False]: # Normal reset pulse.
+                    if time > timing['RSTL']['max'][False]:
+                        self.put(self.fall, self.rise, self.out_ann,
+                            [1, ['Too long reset pulse might mask interrupt ' +
+                            'signalling by other devices',
+                            'Reset pulse too long',
+                            'RST > ' + str(timing['RSTL']['max'][False])]])
+                    # Regular reset pulse clears overdrive speed.
                     if self.overdrive:
-                        self.putx([4, ['Exiting overdrive mode', 'Overdrive off']])
-                        self.overdrive = 0
-                    # Clear command bit counter and data register.
-                    self.bit_cnt = 0
-                    self.command = 0
-                elif (t > self.cnt_overdrive_reset) and self.overdrive:
-                    # Save the sample number for the rising edge.
-                    self.rise = self.samplenum
-                    self.putfr([2, ['Reset', 'Rst', 'R']])
-                    self.state = 'WAIT FOR PRESENCE DETECT'
-                # Otherwise this is assumed to be a data bit.
+                        self.put(self.fall, self.rise, self.out_ann,
+                            [4, ['Exiting overdrive mode', 'Overdrive off']])
+                    self.overdrive = False
+                    self.put(self.fall, self.rise, self.out_ann,
+                        [2, ['Reset', 'Rst', 'R']])
+                    self.state = 'PRESENCE DETECT HIGH'
+                elif self.overdrive == True and \
+                    time >= timing['RSTL']['min'][self.overdrive] and \
+                    time < timing['RSTL']['max'][self.overdrive]:
+                    # Overdrive reset pulse.
+                    self.put(self.fall, self.rise, self.out_ann,
+                        [2, ['Reset', 'Rst', 'R']])
+                    self.state = 'PRESENCE DETECT HIGH'
+                elif time < timing['SLOT']['max'][self.overdrive]:
+                    # Read/write time slot.
+                    if time < timing['LOWR']['min'][self.overdrive]:
+                        self.put(self.fall, self.rise, self.out_ann,
+                            [1, ['Low signal not long enough',
+                            'Low too short',
+                            'LOW < ' + str(timing['LOWR']['min'][self.overdrive])]])
+                    if time < timing['LOWR']['max'][self.overdrive]:
+                        self.bit = 1 # Short pulse is a 1 bit.
+                    else:
+                        self.bit = 0 # Long pulse is a 0 bit.
+                    # Wait for end of slot.
+                    self.state = 'SLOT'
                 else:
-                    self.state = 'WAIT FOR FALLING EDGE'
-            elif self.state == 'WAIT FOR PRESENCE DETECT':
-                # Sample presence status.
-                t = self.rise + self.cnt_presence[self.overdrive]
-                owr, pwr = self.wait({'skip': t - self.samplenum})
-                self.present = owr
-                self.state = 'WAIT FOR RESET SLOT END'
-            elif self.state == 'WAIT FOR RESET SLOT END':
-                # A reset slot ends in a long recovery period.
-                t = self.rise + self.cnt_reset[self.overdrive]
-                owr, pwr = self.wait({'skip': t - self.samplenum})
-
-                if owr == 0:
-                    # This seems to be a reset slot, wait for its end.
-                    self.state = 'WAIT FOR RISING EDGE'
+                    # Timing outside of known states.
+                    self.put(self.fall, self.rise, self.out_ann,
+                        [1, ['Erroneous signal', 'Error', 'Err', 'E']])
+                    self.state = 'IDLE'
+            elif self.state == 'PRESENCE DETECT HIGH': # Wait for slave presence signal.
+                # Calculate time since rising edge.
+                time = ((self.samplenum - self.rise) / self.samplerate) * 1000000.0
+                if owr != 0 and time < timing['PDH']['max'][self.overdrive]:
                     continue
+                elif owr == 0: # Presence detected.
+                    if time < timing['PDH']['min'][self.overdrive]:
+                        self.put(self.rise, self.samplenum, self.out_ann,
+                            [1, ['Presence detect signal is too early',
+                            'Presence detect too early',
+                            'PDH < ' + str(timing['PDH']['min'][self.overdrive])]])
+                    self.fall = self.samplenum
+                    self.state = 'PRESENCE DETECT LOW'
+                else: # No presence detected.
+                    self.put(self.rise, self.samplenum, self.out_ann,
+                        [3, ['Presence: false', 'Presence', 'Pres', 'P']])
+                    self.put(self.rise, self.samplenum, self.out_python,
+                        ['RESET/PRESENCE', False])
+                    self.state = 'IDLE'
+            elif self.state == 'PRESENCE DETECT LOW': # Slave presence signalled.
+                # Wait for end of presence signal (on rising edge).
+                if owr == 0:
+                    continue
+                # Calculate time since start of presence signal.
+                time = ((self.samplenum - self.fall) / self.samplerate) * 1000000.0
+                if time < timing['PDL']['min'][self.overdrive]:
+                    self.put(self.fall, self.samplenum, self.out_ann,
+                        [1, ['Presence detect signal is too short',
+                        'Presence detect too short',
+                        'PDL < ' + str(timing['PDL']['min'][self.overdrive])]])
+                elif time > timing['PDL']['max'][self.overdrive]:
+                    self.put(self.fall, self.samplenum, self.out_ann,
+                        [1, ['Presence detect signal is too long',
+                        'Presence detect too long',
+                        'PDL > ' + str(timing['PDL']['max'][self.overdrive])]])
+                if time > timing['RSTH']['min'][self.overdrive]:
+                    self.rise = self.samplenum
+                # Wait for end of presence detect.
+                self.state = 'PRESENCE DETECT'
 
-                p = 'false' if self.present else 'true'
-                self.putrs([3, ['Presence: %s' % p, 'Presence', 'Pres', 'P']])
-                self.putprs(['RESET/PRESENCE', not self.present])
+            # End states (for additional checks).
+            if self.state == 'SLOT': # Wait for end of time slot.
+                # Calculate time since falling edge.
+                time = ((self.samplenum - self.fall) / self.samplerate) * 1000000.0
+                if owr != 0 and time < timing['SLOT']['min'][self.overdrive]:
+                    continue
+                elif owr == 0: # Low detected before end of slot.
+                    # Warn about irregularity.
+                    self.put(self.fall, self.samplenum, self.out_ann,
+                        [1, ['Time slot not long enough',
+                        'Slot too short',
+                        'SLOT < ' + str(timing['SLOT']['min'][self.overdrive])]])
+                    # Don't output invalid bit.
+                    self.fall = self.samplenum
+                    self.state = 'LOW'
+                else: # End of time slot.
+                    # Output bit.
+                    self.put(self.fall, self.samplenum, self.out_ann,
+                        [0, ['Bit: %d' % self.bit, '%d' % self.bit]])
+                    self.put(self.fall, self.samplenum, self.out_python,
+                        ['BIT', self.bit])
+                    # Save command bits.
+                    if self.bit_count >= 0:
+                        self.command += (self.bit << self.bit_count)
+                        self.bit_count += 1
+                    # Check for overdrive ROM command.
+                    if self.bit_count >= 8:
+                        if self.command == 0x3c or self.command == 0x69:
+                            self.overdrive = True
+                            self.put(self.samplenum, self.samplenum,
+                                self.out_ann,
+                                [4, ['Entering overdrive mode', 'Overdrive on']])
+                        self.bit_count = -1
+                    self.state = 'IDLE'
 
-                # Wait for next slot.
-                self.state = 'WAIT FOR FALLING EDGE'
+            if self.state == 'PRESENCE DETECT':
+                # Wait for end of presence detect.
+                # Calculate time since falling edge.
+                time = ((self.samplenum - self.rise) / self.samplerate) * 1000000.0
+                if owr != 0 and time < timing['RSTH']['min'][self.overdrive]:
+                    continue
+                elif owr == 0: # Low detected before end of presence detect.
+                    # Warn about irregularity.
+                    self.put(self.fall, self.samplenum, self.out_ann,
+                        [1, ['Presence detect not long enough',
+                        'Presence detect too short',
+                        'RTSH < ' + str(timing['RSTH']['min'][self.overdrive])]])
+                    # Inform about presence detected.
+                    self.put(self.rise, self.samplenum, self.out_ann,
+                        [3, ['Slave presence detected', 'Slave present',
+                        'Present', 'P']])
+                    self.put(self.rise, self.samplenum, self.out_python,
+                        ['RESET/PRESENCE', True])
+                    self.fall = self.samplenum
+                    self.state = 'LOW'
+                else: # End of time slot.
+                    # Inform about presence detected.
+                    self.put(self.rise, self.samplenum, self.out_ann,
+                        [3, ['Presence: true', 'Presence', 'Pres', 'P']])
+                    self.put(self.rise, self.samplenum, self.out_python,
+                        ['RESET/PRESENCE', True])
+                    self.rise = self.samplenum
+                    # Start counting the first 8 bits to get the ROM command.
+                    self.bit_count = 0
+                    self.command = 0
+                    self.state = 'IDLE'
