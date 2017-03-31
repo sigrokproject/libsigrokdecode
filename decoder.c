@@ -767,8 +767,11 @@ SRD_API int srd_decoder_load(const char *module_name)
 	return SRD_OK;
 
 except_out:
-	srd_exception_catch("Failed to load decoder %s: %s",
-			    module_name, fail_txt);
+	/* Don't show a message for the "common" directory, it's not a PD. */
+	if (strcmp(module_name, "common")) {
+		srd_exception_catch("Failed to load decoder %s: %s",
+				    module_name, fail_txt);
+	}
 	fail_txt = NULL;
 err_out:
 	if (fail_txt)
