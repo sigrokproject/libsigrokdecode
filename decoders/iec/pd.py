@@ -19,8 +19,15 @@
 
 import sigrokdecode as srd
 
+step_wait_conds = (
+    [{2: 'f'}, {0: 'l', 1: 'h'}],
+    [{2: 'f'}, {0: 'h', 1: 'h'}, {1: 'l'}],
+    [{2: 'f'}, {0: 'f'}, {1: 'l'}],
+    [{2: 'f'}, {1: 'e'}],
+)
+
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'iec'
     name = 'IEC'
     longname = 'Commodore bus'
@@ -50,7 +57,6 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.saved_ATN = False
         self.saved_EOI = False
-        self.oldpins = None
         self.ss_item = self.es_item = None
         self.step = 0
         self.bits = 0
@@ -111,48 +117,47 @@ class Decoder(srd.Decoder):
             self.strEOI = 'EOI'
         self.putb([2, [self.strEOI]])
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
+    def decode(self):
+        while True:
 
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
+            data, clk, atn, srq = self.wait(step_wait_conds[self.step])
 
-            if pins[2] == 0 and self.oldpins[2] == 1:
+            if self.matched[0]:
                 # Falling edge on ATN, reset step.
                 self.step = 0
 
             if self.step == 0:
-                if pins[0] == 0 and pins[1] == 1:
+                # Don't use self.matched[1] here since we might come from
+                # a step with different conds due to the code above.
+                if data == 0 and clk == 1:
                     # Rising edge on CLK while DATA is low: Ready to send.
                     self.step = 1
             elif self.step == 1:
-                if pins[0] == 1 and pins[1] == 1:
+                if data == 1 and clk == 1:
                     # Rising edge on DATA while CLK is high: Ready for data.
                     self.ss_item = self.samplenum
-                    self.saved_ATN = not pins[2]
+                    self.saved_ATN = not atn
                     self.saved_EOI = False
                     self.bits = 0
                     self.numbits = 0
                     self.step = 2
-                elif pins[1] == 0:
+                elif clk == 0:
                     # CLK low again, transfer aborted.
                     self.step = 0
             elif self.step == 2:
-                if pins[0] == 0 and pins[1] == 1:
+                if data == 0 and clk == 1:
                     # DATA goes low while CLK is still high, EOI confirmed.
                     self.saved_EOI = True
-                elif pins[1] == 0:
+                elif clk == 0:
                     self.step = 3
             elif self.step == 3:
-                if pins[1] == 1 and self.oldpins[1] == 0:
-                    # Rising edge on CLK; latch DATA.
-                    self.bits |= pins[0] << self.numbits
-                elif pins[1] == 0 and self.oldpins[1] == 1:
-                    # Falling edge on CLK; end of bit.
-                    self.numbits += 1
-                    if self.numbits == 8:
-                        self.handle_bits()
-                        self.step = 0
-
-            self.oldpins = pins
+                if self.matched[1]:
+                    if clk == 1:
+                        # Rising edge on CLK; latch DATA.
+                        self.bits |= data << self.numbits
+                    elif clk == 0:
+                        # Falling edge on CLK; end of bit.
+                        self.numbits += 1
+                        if self.numbits == 8:
+                            self.handle_bits()
+                            self.step = 0
