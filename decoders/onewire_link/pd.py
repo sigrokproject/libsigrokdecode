@@ -137,6 +137,24 @@ class Decoder(srd.Decoder):
         self.rise = 0
         self.bit_count = -1
 
+    def putm(self, data):
+        self.put(0, 0, self.out_ann, data)
+
+    def putpfs(self, data):
+        self.put(self.fall, self.samplenum, self.out_python, data)
+
+    def putfs(self, data):
+        self.put(self.fall, self.samplenum, self.out_ann, data)
+
+    def putfr(self, data):
+        self.put(self.fall, self.rise, self.out_ann, data)
+
+    def putprs(self, data):
+        self.put(self.rise, self.samplenum, self.out_python, data)
+
+    def putrs(self, data):
+        self.put(self.rise, self.samplenum, self.out_ann, data)
+
     def checks(self):
         # Check if samplerate is appropriate.
         if self.options['overdrive'] == 'yes':
@@ -182,8 +200,7 @@ class Decoder(srd.Decoder):
                 time = ((self.fall - self.rise) / self.samplerate) * 1000000.0
                 if self.rise > 0 and \
                     time < timing['REC']['min'][self.overdrive]:
-                    self.put(self.fall, self.rise, self.out_ann,
-                        [1, ['Recovery time not long enough'
+                    self.putfr([1, ['Recovery time not long enough'
                         'Recovery too short',
                         'REC < ' + str(timing['REC']['min'][self.overdrive])]])
                 # A reset pulse or slot can start on a falling edge.
@@ -198,31 +215,26 @@ class Decoder(srd.Decoder):
                 time = ((self.rise - self.fall) / self.samplerate) * 1000000.0
                 if time >= timing['RSTL']['min'][False]: # Normal reset pulse.
                     if time > timing['RSTL']['max'][False]:
-                        self.put(self.fall, self.rise, self.out_ann,
-                            [1, ['Too long reset pulse might mask interrupt ' +
+                        self.putfr([1, ['Too long reset pulse might mask interrupt ' +
                             'signalling by other devices',
                             'Reset pulse too long',
                             'RST > ' + str(timing['RSTL']['max'][False])]])
                     # Regular reset pulse clears overdrive speed.
                     if self.overdrive:
-                        self.put(self.fall, self.rise, self.out_ann,
-                            [4, ['Exiting overdrive mode', 'Overdrive off']])
+                        self.putfr([4, ['Exiting overdrive mode', 'Overdrive off']])
                     self.overdrive = False
-                    self.put(self.fall, self.rise, self.out_ann,
-                        [2, ['Reset', 'Rst', 'R']])
+                    self.putfr([2, ['Reset', 'Rst', 'R']])
                     self.state = 'PRESENCE DETECT HIGH'
                 elif self.overdrive == True and \
                     time >= timing['RSTL']['min'][self.overdrive] and \
                     time < timing['RSTL']['max'][self.overdrive]:
                     # Overdrive reset pulse.
-                    self.put(self.fall, self.rise, self.out_ann,
-                        [2, ['Reset', 'Rst', 'R']])
+                    self.putfr([2, ['Reset', 'Rst', 'R']])
                     self.state = 'PRESENCE DETECT HIGH'
                 elif time < timing['SLOT']['max'][self.overdrive]:
                     # Read/write time slot.
                     if time < timing['LOWR']['min'][self.overdrive]:
-                        self.put(self.fall, self.rise, self.out_ann,
-                            [1, ['Low signal not long enough',
+                        self.putfr([1, ['Low signal not long enough',
                             'Low too short',
                             'LOW < ' + str(timing['LOWR']['min'][self.overdrive])]])
                     if time < timing['LOWR']['max'][self.overdrive]:
@@ -233,8 +245,7 @@ class Decoder(srd.Decoder):
                     self.state = 'SLOT'
                 else:
                     # Timing outside of known states.
-                    self.put(self.fall, self.rise, self.out_ann,
-                        [1, ['Erroneous signal', 'Error', 'Err', 'E']])
+                    self.putfr([1, ['Erroneous signal', 'Error', 'Err', 'E']])
                     self.state = 'IDLE'
             elif self.state == 'PRESENCE DETECT HIGH': # Wait for slave presence signal.
                 # Calculate time since rising edge.
@@ -243,17 +254,14 @@ class Decoder(srd.Decoder):
                     continue
                 elif owr == 0: # Presence detected.
                     if time < timing['PDH']['min'][self.overdrive]:
-                        self.put(self.rise, self.samplenum, self.out_ann,
-                            [1, ['Presence detect signal is too early',
+                        self.putrs([1, ['Presence detect signal is too early',
                             'Presence detect too early',
                             'PDH < ' + str(timing['PDH']['min'][self.overdrive])]])
                     self.fall = self.samplenum
                     self.state = 'PRESENCE DETECT LOW'
                 else: # No presence detected.
-                    self.put(self.rise, self.samplenum, self.out_ann,
-                        [3, ['Presence: false', 'Presence', 'Pres', 'P']])
-                    self.put(self.rise, self.samplenum, self.out_python,
-                        ['RESET/PRESENCE', False])
+                    self.putrs([3, ['Presence: false', 'Presence', 'Pres', 'P']])
+                    self.putprs(['RESET/PRESENCE', False])
                     self.state = 'IDLE'
             elif self.state == 'PRESENCE DETECT LOW': # Slave presence signalled.
                 # Wait for end of presence signal (on rising edge).
@@ -262,13 +270,11 @@ class Decoder(srd.Decoder):
                 # Calculate time since start of presence signal.
                 time = ((self.samplenum - self.fall) / self.samplerate) * 1000000.0
                 if time < timing['PDL']['min'][self.overdrive]:
-                    self.put(self.fall, self.samplenum, self.out_ann,
-                        [1, ['Presence detect signal is too short',
+                    self.putfs([1, ['Presence detect signal is too short',
                         'Presence detect too short',
                         'PDL < ' + str(timing['PDL']['min'][self.overdrive])]])
                 elif time > timing['PDL']['max'][self.overdrive]:
-                    self.put(self.fall, self.samplenum, self.out_ann,
-                        [1, ['Presence detect signal is too long',
+                    self.putfs([1, ['Presence detect signal is too long',
                         'Presence detect too long',
                         'PDL > ' + str(timing['PDL']['max'][self.overdrive])]])
                 if time > timing['RSTH']['min'][self.overdrive]:
@@ -284,8 +290,7 @@ class Decoder(srd.Decoder):
                     continue
                 elif owr == 0: # Low detected before end of slot.
                     # Warn about irregularity.
-                    self.put(self.fall, self.samplenum, self.out_ann,
-                        [1, ['Time slot not long enough',
+                    self.putfs([1, ['Time slot not long enough',
                         'Slot too short',
                         'SLOT < ' + str(timing['SLOT']['min'][self.overdrive])]])
                     # Don't output invalid bit.
@@ -293,10 +298,8 @@ class Decoder(srd.Decoder):
                     self.state = 'LOW'
                 else: # End of time slot.
                     # Output bit.
-                    self.put(self.fall, self.samplenum, self.out_ann,
-                        [0, ['Bit: %d' % self.bit, '%d' % self.bit]])
-                    self.put(self.fall, self.samplenum, self.out_python,
-                        ['BIT', self.bit])
+                    self.putfs([0, ['Bit: %d' % self.bit, '%d' % self.bit]])
+                    self.putpfs(['BIT', self.bit])
                     # Save command bits.
                     if self.bit_count >= 0:
                         self.command += (self.bit << self.bit_count)
@@ -319,24 +322,19 @@ class Decoder(srd.Decoder):
                     continue
                 elif owr == 0: # Low detected before end of presence detect.
                     # Warn about irregularity.
-                    self.put(self.fall, self.samplenum, self.out_ann,
-                        [1, ['Presence detect not long enough',
+                    self.putfs([1, ['Presence detect not long enough',
                         'Presence detect too short',
                         'RTSH < ' + str(timing['RSTH']['min'][self.overdrive])]])
                     # Inform about presence detected.
-                    self.put(self.rise, self.samplenum, self.out_ann,
-                        [3, ['Slave presence detected', 'Slave present',
+                    self.putrs([3, ['Slave presence detected', 'Slave present',
                         'Present', 'P']])
-                    self.put(self.rise, self.samplenum, self.out_python,
-                        ['RESET/PRESENCE', True])
+                    self.putprs(['RESET/PRESENCE', True])
                     self.fall = self.samplenum
                     self.state = 'LOW'
                 else: # End of time slot.
                     # Inform about presence detected.
-                    self.put(self.rise, self.samplenum, self.out_ann,
-                        [3, ['Presence: true', 'Presence', 'Pres', 'P']])
-                    self.put(self.rise, self.samplenum, self.out_python,
-                        ['RESET/PRESENCE', True])
+                    self.putrs([3, ['Presence: true', 'Presence', 'Pres', 'P']])
+                    self.putprs(['RESET/PRESENCE', True])
                     self.rise = self.samplenum
                     # Start counting the first 8 bits to get the ROM command.
                     self.bit_count = 0
