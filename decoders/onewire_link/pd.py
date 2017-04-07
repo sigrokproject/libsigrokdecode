@@ -89,7 +89,7 @@ timing = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'onewire_link'
     name = '1-Wire link layer'
     longname = '1-Wire serial communication bus (link layer)'
@@ -119,7 +119,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.samplenum = 0
         self.state = 'INITIAL'
         self.present = 0
         self.bit = 0
@@ -177,24 +176,28 @@ class Decoder(srd.Decoder):
             return
         self.samplerate = value
 
-    def decode(self, ss, es, data):
+    def wait_falling_timeout(self, start, t):
+        # Wait until either a falling edge is seen, and/or the specified
+        # number of samples have been skipped (i.e. time has passed).
+        cnt = int((t[self.overdrive] / 1000000.0) * self.samplerate)
+        samples_to_skip = (start + cnt) - self.samplenum
+        samples_to_skip = samples_to_skip if (samples_to_skip > 0) else 0
+        return self.wait([{0: 'f'}, {'skip': samples_to_skip}])
+
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, (owr,)) in data:
-            if self.samplenum == 0:
-                self.checks()
-
+        self.checks()
+        while True:
             # State machine.
             if self.state == 'INITIAL': # Unknown initial state.
                 # Wait until we reach the idle high state.
-                if owr == 0:
-                    continue
+                self.wait({0: 'h'})
                 self.rise = self.samplenum
                 self.state = 'IDLE'
             elif self.state == 'IDLE': # Idle high state.
                 # Wait for falling edge.
-                if owr != 0:
-                    continue
+                self.wait({0: 'f'})
                 self.fall = self.samplenum
                 # Get time since last rising edge.
                 time = ((self.fall - self.rise) / self.samplerate) * 1000000.0
@@ -208,8 +211,7 @@ class Decoder(srd.Decoder):
                 # TODO: Check minimum recovery time.
             elif self.state == 'LOW': # Reset pulse or slot.
                 # Wait for rising edge.
-                if owr == 0:
-                    continue
+                self.wait({0: 'r'})
                 self.rise = self.samplenum
                 # Detect reset or slot base on timing.
                 time = ((self.rise - self.fall) / self.samplerate) * 1000000.0
@@ -248,11 +250,14 @@ class Decoder(srd.Decoder):
                     self.putfr([1, ['Erroneous signal', 'Error', 'Err', 'E']])
                     self.state = 'IDLE'
             elif self.state == 'PRESENCE DETECT HIGH': # Wait for slave presence signal.
+                # Wait for a falling edge and/or presence detect signal.
+                self.wait_falling_timeout(self.rise, timing['PDH']['max'])
+
                 # Calculate time since rising edge.
                 time = ((self.samplenum - self.rise) / self.samplerate) * 1000000.0
-                if owr != 0 and time < timing['PDH']['max'][self.overdrive]:
-                    continue
-                elif owr == 0: # Presence detected.
+
+                if self.matched[0] and not self.matched[1]:
+                    # Presence detected.
                     if time < timing['PDH']['min'][self.overdrive]:
                         self.putrs([1, ['Presence detect signal is too early',
                             'Presence detect too early',
@@ -265,8 +270,7 @@ class Decoder(srd.Decoder):
                     self.state = 'IDLE'
             elif self.state == 'PRESENCE DETECT LOW': # Slave presence signalled.
                 # Wait for end of presence signal (on rising edge).
-                if owr == 0:
-                    continue
+                self.wait({0: 'r'})
                 # Calculate time since start of presence signal.
                 time = ((self.samplenum - self.fall) / self.samplerate) * 1000000.0
                 if time < timing['PDL']['min'][self.overdrive]:
@@ -284,12 +288,11 @@ class Decoder(srd.Decoder):
 
             # End states (for additional checks).
             if self.state == 'SLOT': # Wait for end of time slot.
-                # Calculate time since falling edge.
-                time = ((self.samplenum - self.fall) / self.samplerate) * 1000000.0
-                if owr != 0 and time < timing['SLOT']['min'][self.overdrive]:
-                    continue
-                elif owr == 0: # Low detected before end of slot.
-                    # Warn about irregularity.
+                # Wait for a falling edge and/or end of timeslot.
+                self.wait_falling_timeout(self.fall, timing['SLOT']['min'])
+
+                if self.matched[0] and not self.matched[1]:
+                    # Low detected before end of slot.
                     self.putfs([1, ['Time slot not long enough',
                         'Slot too short',
                         'SLOT < ' + str(timing['SLOT']['min'][self.overdrive])]])
@@ -315,13 +318,11 @@ class Decoder(srd.Decoder):
                     self.state = 'IDLE'
 
             if self.state == 'PRESENCE DETECT':
-                # Wait for end of presence detect.
-                # Calculate time since falling edge.
-                time = ((self.samplenum - self.rise) / self.samplerate) * 1000000.0
-                if owr != 0 and time < timing['RSTH']['min'][self.overdrive]:
-                    continue
-                elif owr == 0: # Low detected before end of presence detect.
-                    # Warn about irregularity.
+                # Wait for a falling edge and/or end of presence detect.
+                self.wait_falling_timeout(self.rise, timing['RSTH']['min'])
+
+                if self.matched[0] and not self.matched[1]:
+                    # Low detected before end of presence detect.
                     self.putfs([1, ['Presence detect not long enough',
                         'Presence detect too short',
                         'RTSH < ' + str(timing['RSTH']['min'][self.overdrive])]])
