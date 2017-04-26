@@ -135,7 +135,8 @@ class Decoder(srd.Decoder):
                                'CMD%d' % self.cmd, 'Cmd', 'C']])
 
         # CMD[39:08]: Argument
-        self.putf(8, 39, [132, ['Argument', 'Arg', 'A']])
+        self.arg = int('0b' + ''.join([str(s[i][2]) for i in range(8, 40)]), 2)
+        self.putf(8, 39, [132, ['Argument: 0x%08x' % self.arg, 'Arg', 'A']])
 
         # CMD[07:01]: CRC7
         self.crc = int('0b' + ''.join([str(s[i][2]) for i in range(40, 47)]), 2)
