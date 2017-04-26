@@ -231,9 +231,8 @@ class Decoder(srd.Decoder):
 
     def handle_cmd16(self):
         # CMD16 (SET_BLOCKLEN) -> R1
-        self.blocklen = self.arg
         self.puta(0, 31, [136, ['Block length', 'Blocklen', 'BL', 'B']])
-        self.putc(16, 'Set the block length to %d bytes' % self.blocklen)
+        self.putc(16, 'Set the block length to %d bytes' % self.arg)
         self.token, self.state = [], 'GET RESPONSE R1'
 
     def handle_cmd55(self):
