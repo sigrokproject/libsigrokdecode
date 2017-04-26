@@ -164,7 +164,7 @@ class Decoder(srd.Decoder):
         # Handle command.
         s = 'ACMD' if self.is_acmd else 'CMD'
         self.cmd_str = '%s%d (%s)' % (s, self.cmd, self.cmd_name(self.cmd))
-        if self.cmd in (0, 2, 3, 4, 6, 7, 8, 9, 10, 13, 41, 51, 55):
+        if self.cmd in (0, 2, 3, 6, 7, 8, 9, 10, 13, 41, 51, 55):
             self.state = 'HANDLE CMD%d' % self.cmd
         else:
             self.state = 'HANDLE CMD999'
