@@ -47,8 +47,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.expected = 0
-        self.mosi_bytes = []
-        self.miso_bytes = []
+        self.mosi_bytes, self.miso_bytes = [], []
 
     def __init__(self):
         self.ss_cmd, self.es_cmd = 0, 0
@@ -73,14 +72,10 @@ class Decoder(srd.Decoder):
                 if len(self.mosi_bytes) > 0 and len(self.mosi_bytes[1:]) < self.expected:
                     # Mark short read/write for reg at least!
                     self.es_cmd = es
-                    write = self.cmd & 0x80
-                    reg = self.cmd & 0x7f
+                    write, reg = self.cmd & 0x80, self.cmd & 0x7f
                     rblob = regs.get(reg)
-                    if write:
-                        self.putx([1, ['%s: %s' % (rblob[0], "SHORT")]])
-                    else:
-                        self.putx([0, ['%s: %s' % (rblob[0], "SHORT")]])
-
+                    idx = 1 if write else 0
+                    self.putx([idx, ['%s: %s' % (rblob[0], "SHORT")]])
                     self.put_warn([self.ss_cmd, es], "Short transfer!")
                 self.reset()
             return
@@ -100,8 +95,7 @@ class Decoder(srd.Decoder):
             return
 
         self.cmd = self.mosi_bytes[0]
-        write = self.cmd & 0x80
-        reg = self.cmd & 0x7f
+        write, reg = self.cmd & 0x80, self.cmd & 0x7f
         rblob = regs.get(reg)
         if not rblob:
             # If you don't have CS, this will _destroy_ comms!
@@ -111,8 +105,7 @@ class Decoder(srd.Decoder):
         self.expected = math.ceil(rblob[3] / 8)
         if len(self.mosi_bytes[1:]) != self.expected:
             return
-        valo = None
-        vali = None
+        valo, vali = None, None
         self.es_cmd = es
         if self.expected == 3:
             valo = self.mosi_bytes[1] << 16 | self.mosi_bytes[2] << 8 | \
@@ -130,4 +123,5 @@ class Decoder(srd.Decoder):
             self.putx([1, ['%s: %#x' % (rblob[0], valo)]])
         else:
             self.putx([0, ['%s: %#x' % (rblob[0], vali)]])
+
         self.reset()
