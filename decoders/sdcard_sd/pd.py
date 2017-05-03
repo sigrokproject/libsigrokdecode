@@ -76,9 +76,6 @@ class Decoder(srd.Decoder):
     def putt(self, data):
         self.put(self.token[0][0], self.token[47][1], self.out_ann, data)
 
-    def putt2(self, data):
-        self.put(self.token[47][0], self.token[0][1], self.out_ann, data)
-
     def putf(self, s, e, data):
         self.put(self.token[s][0], self.token[e][1], self.out_ann, data)
 
@@ -92,9 +89,6 @@ class Decoder(srd.Decoder):
 
     def putr(self, cmd, desc):
         self.putt([cmd, ['Reply: %s' % desc]])
-
-    def putr2(self, cmd, desc):
-        self.putt2([cmd, ['Reply: %s' % desc]])
 
     def reset(self):
         self.cmd, self.arg = None, None
