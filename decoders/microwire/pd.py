@@ -56,14 +56,15 @@ class Decoder(srd.Decoder):
         ('start-bit', 'Start bit'),
         ('si-bit', 'SI bit'),
         ('so-bit', 'SO bit'),
-        ('status-check', 'Status check'),
+        ('status-check-ready', 'Status check ready'),
+        ('status-check-busy', 'Status check busy'),
         ('warning', 'Warning'),
     )
     annotation_rows = (
         ('si-bits', 'SI bits', (0, 1)),
         ('so-bits', 'SO bits', (2,)),
-        ('status', 'Status', (3,)),
-        ('warnings', 'Warnings', (4,)),
+        ('status', 'Status', (3, 4)),
+        ('warnings', 'Warnings', (5,)),
     )
 
     def start(self):
@@ -76,7 +77,7 @@ class Decoder(srd.Decoder):
             cs, sk, si, so = self.wait({0: 'r'})
             if sk:
                 self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [4, ['Clock should be low on start',
+                     [5, ['Clock should be low on start',
                      'Clock high on start', 'Clock high', 'SK high']])
                 sk = 0 # Enforce correct state for correct clock handling.
                 # Because we don't know if this is bit communication or a
@@ -121,13 +122,13 @@ class Decoder(srd.Decoder):
                         if bit_so == 0 and change['so']:
                             # Rising edge Busy -> Ready.
                             self.put(start_samplenum, change['samplenum'], 
-                                     self.out_ann, [3, ['Busy', 'B']])
+                                     self.out_ann, [4, ['Busy', 'B']])
                         start_samplenum = change['samplenum']
                         bit_so = change['so']
                 # Put last state.
                 if bit_so == 0:
                     self.put(start_samplenum, packet[-1]['samplenum'], 
-                             self.out_ann, [3, ['Busy', 'B']])
+                             self.out_ann, [4, ['Busy', 'B']])
                 else:
                     self.put(start_samplenum, packet[-1]['samplenum'], 
                              self.out_ann, [3, ['Ready', 'R']])
@@ -150,7 +151,7 @@ class Decoder(srd.Decoder):
                                     if bit_si == 0: # Start bit missing.
                                         self.put(bit_start, change['samplenum'],
                                                  self.out_ann,
-                                                 [4, ['Start bit not high',
+                                                 [5, ['Start bit not high',
                                                  'Start bit low']])
                                     else:
                                         self.put(bit_start, change['samplenum'],
