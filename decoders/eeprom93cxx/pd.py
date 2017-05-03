@@ -62,16 +62,11 @@ class Decoder(srd.Decoder):
         # Decode word (MSb first).
         word = 0
         for b in range(len(data)):
-            if si:
-                word += (data[b]['si'] << (len(data) - b - 1))
-            else:
-                word += (data[b]['so'] << (len(data) - b - 1))
-        if si:
-            self.put(data[0]['ss'], data[-1]['se'],
-                     self.out_ann, [0, ['Data: 0x%x' % word, '0x%x' % word]])
-        else:
-            self.put(data[0]['ss'], data[-1]['se'],
-                     self.out_ann, [1, ['Data: 0x%x' % word, '0x%x' % word]])
+            idx = 'si' if si else 'so'
+            word += (data[b][idx] << (len(data) - b - 1))
+        idx = 0 if si else 1
+        self.put(data[0]['ss'], data[-1]['se'],
+                 self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
 
     def decode(self, ss, es, data):
         if len(data) < (2 + self.addresssize):
