@@ -53,16 +53,17 @@ class Decoder(srd.Decoder):
         {'id': 'so', 'name': 'SO', 'desc': 'Slave out'},
     )
     annotations = (
+        ('start-bit', 'Start bit'),
         ('si-bit', 'SI bit'),
         ('so-bit', 'SO bit'),
         ('status-check', 'Status check'),
         ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('si-bits', 'SI bits', (0,)),
-        ('so-bits', 'SO bits', (1,)),
-        ('status', 'Status', (2,)),
-        ('warnings', 'Warnings', (3,)),
+        ('si-bits', 'SI bits', (0, 1)),
+        ('so-bits', 'SO bits', (2,)),
+        ('status', 'Status', (3,)),
+        ('warnings', 'Warnings', (4,)),
     )
 
     def start(self):
@@ -75,7 +76,7 @@ class Decoder(srd.Decoder):
             cs, sk, si, so = self.wait({0: 'r'})
             if sk:
                 self.put(self.samplenum, self.samplenum, self.out_ann,
-                     [3, ['Clock should be low on start',
+                     [4, ['Clock should be low on start',
                      'Clock high on start', 'Clock high', 'SK high']])
                 sk = 0 # Enforce correct state for correct clock handling.
                 # Because we don't know if this is bit communication or a
@@ -120,16 +121,16 @@ class Decoder(srd.Decoder):
                         if bit_so == 0 and change['so']:
                             # Rising edge Busy -> Ready.
                             self.put(start_samplenum, change['samplenum'], 
-                                     self.out_ann, [2, ['Busy', 'B']])
+                                     self.out_ann, [3, ['Busy', 'B']])
                         start_samplenum = change['samplenum']
                         bit_so = change['so']
                 # Put last state.
                 if bit_so == 0:
                     self.put(start_samplenum, packet[-1]['samplenum'], 
-                             self.out_ann, [2, ['Busy', 'B']])
+                             self.out_ann, [3, ['Busy', 'B']])
                 else:
                     self.put(start_samplenum, packet[-1]['samplenum'], 
-                             self.out_ann, [2, ['Ready', 'R']])
+                             self.out_ann, [3, ['Ready', 'R']])
             else:
                 # Bit communication.
                 # Since the slave samples SI on clock rising edge we do the
@@ -149,7 +150,7 @@ class Decoder(srd.Decoder):
                                     if bit_si == 0: # Start bit missing.
                                         self.put(bit_start, change['samplenum'],
                                                  self.out_ann,
-                                                 [3, ['Start bit not high',
+                                                 [4, ['Start bit not high',
                                                  'Start bit low']])
                                     else:
                                         self.put(bit_start, change['samplenum'],
@@ -159,12 +160,12 @@ class Decoder(srd.Decoder):
                                 else:
                                     self.put(bit_start, change['samplenum'],
                                              self.out_ann,
-                                             [0, ['SI bit: %d' % bit_si,
+                                             [1, ['SI bit: %d' % bit_si,
                                                   'SI: %d' % bit_si,
                                                   '%d' % bit_si]])
                                     self.put(bit_start, change['samplenum'],
                                              self.out_ann,
-                                             [1, ['SO bit: %d' % bit_so,
+                                             [2, ['SO bit: %d' % bit_so,
                                                   'SO: %d' % bit_so,
                                                   '%d' % bit_so]])
                                     python_output.append({'ss': bit_start,
@@ -178,10 +179,10 @@ class Decoder(srd.Decoder):
                                     change['cs'] == 0 and change['sk'] == 0:
                         # End of packet.
                         self.put(bit_start, change['samplenum'], self.out_ann,
-                                 [0, ['SI bit: %d' % bit_si,
+                                 [1, ['SI bit: %d' % bit_si,
                                       'SI: %d' % bit_si, '%d' % bit_si]])
                         self.put(bit_start, change['samplenum'], self.out_ann,
-                                 [1, ['SO bit: %d' % bit_so,
+                                 [2, ['SO bit: %d' % bit_so,
                                       'SO: %d' % bit_so, '%d' % bit_so]])
                         python_output.append({'ss': bit_start,
                                               'se': change['samplenum'],
