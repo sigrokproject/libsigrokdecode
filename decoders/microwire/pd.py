@@ -18,16 +18,17 @@
 ##
 
 import sigrokdecode as srd
+from collections import namedtuple
 
 '''
 OUTPUT_PYTHON format:
 
 Packet:
-[{'ss': bit start sample number,
+[namedtuple('ss': bit start sample number,
   'se': bit end sample number,
   'si': SI bit,
   'so': SO bit,
- }, ...]
+ ), ...]
 
 Since address and word size are variable, a list of all bits in each packet
 need to be output. Since Microwire is a synchronous protocol with separate
@@ -36,6 +37,8 @@ Microwire is half-duplex only the SI or SO bits will be considered at once.
 To be able to annotate correctly the instructions formed by the bit, the start
 and end sample number of each bit (pair of SI/SO bit) are provided.
 '''
+
+PyPacket = namedtuple('PyPacket', 'ss se si so')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -139,7 +142,7 @@ class Decoder(srd.Decoder):
                 bit_si = 0 # SI value at rising clock edge.
                 bit_so = 0 # SO value at falling clock edge.
                 start_bit = True # Start bit incoming (first bit).
-                python_output = [] # Python output data.
+                pydata = [] # Python output data.
                 for change in packet:
                     if len(change['matched']) > 1 and change['matched'][1]:
                         # Clock edge.
@@ -167,9 +170,8 @@ class Decoder(srd.Decoder):
                                              [2, ['SO bit: %d' % bit_so,
                                                   'SO: %d' % bit_so,
                                                   '%d' % bit_so]])
-                                    python_output.append({'ss': bit_start,
-                                                 'se': change['samplenum'],
-                                                 'si': bit_si, 'so': bit_so})
+                                    pydata.append(PyPacket(bit_start,
+                                        change['samplenum'], bit_si, bit_so))
                             bit_start = change['samplenum']
                             bit_si = change['si']
                         else: # Falling clock edge.
@@ -183,9 +185,8 @@ class Decoder(srd.Decoder):
                         self.put(bit_start, change['samplenum'], self.out_ann,
                                  [2, ['SO bit: %d' % bit_so,
                                       'SO: %d' % bit_so, '%d' % bit_so]])
-                        python_output.append({'ss': bit_start,
-                                              'se': change['samplenum'],
-                                              'si': bit_si, 'so': bit_so})
+                        pydata.append(PyPacket(bit_start, change['samplenum'],
+                                      bit_si, bit_so))
                 self.put(packet[0]['samplenum'],
                          packet[len(packet) - 1]['samplenum'],
-                         self.out_python, python_output)
+                         self.out_python, pydata)
