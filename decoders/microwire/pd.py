@@ -39,6 +39,7 @@ and end sample number of each bit (pair of SI/SO bit) are provided.
 '''
 
 PyPacket = namedtuple('PyPacket', 'ss se si so')
+Packet = namedtuple('Packet', 'samplenum matched cs sk si so')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -89,24 +90,19 @@ class Decoder(srd.Decoder):
             packet = []
             while cs:
                 # Save change.
-                packet.append({'samplenum': self.samplenum,
-                              'matched': self.matched,
-                              'cs': cs, 'sk': sk, 'si': si, 'so': so})
+                packet.append(Packet(self.samplenum, self.matched, cs, sk, si, so))
                 edge = 'r' if sk == 0 else 'f'
                 cs, sk, si, so = self.wait([{0: 'l'}, {1: edge}, {3: 'e'}])
             # Save last change.
-            packet.append({'samplenum': self.samplenum,
-                          'matched': self.matched,
-                          'cs': cs, 'sk': sk, 'si': si, 'so': so})
+            packet.append(Packet(self.samplenum, self.matched, cs, sk, si, so))
 
             # Figure out if this is a status check.
             # Either there is no clock or no start bit (on first rising edge).
             status_check = True
             for change in packet:
                 # Get first clock rising edge.
-                if len(change['matched']) > 1 and change['matched'][1] \
-                                              and change['sk']:
-                    if change['si']:
+                if len(change.matched) > 1 and change.matched[1] and change.sk:
+                    if change.si:
                         status_check = False
                     break
 
@@ -115,23 +111,23 @@ class Decoder(srd.Decoder):
             # The SO signal might be noisy in the beginning because it starts
             # in high impedance.
             if status_check:
-                start_samplenum = packet[0]['samplenum']
-                bit_so = packet[0]['so']
+                start_samplenum = packet[0].samplenum
+                bit_so = packet[0].so
                 # Check for SO edges.
                 for change in packet:
-                    if len(change['matched']) > 2 and change['matched'][2]:
-                        if bit_so == 0 and change['so']:
+                    if len(change.matched) > 2 and change.matched[2]:
+                        if bit_so == 0 and change.so:
                             # Rising edge Busy -> Ready.
-                            self.put(start_samplenum, change['samplenum'],
+                            self.put(start_samplenum, change.samplenum,
                                      self.out_ann, [4, ['Busy', 'B']])
-                        start_samplenum = change['samplenum']
-                        bit_so = change['so']
+                        start_samplenum = change.samplenum
+                        bit_so = change.so
                 # Put last state.
                 if bit_so == 0:
-                    self.put(start_samplenum, packet[-1]['samplenum'],
+                    self.put(start_samplenum, packet[-1].samplenum,
                              self.out_ann, [4, ['Busy', 'B']])
                 else:
-                    self.put(start_samplenum, packet[-1]['samplenum'],
+                    self.put(start_samplenum, packet[-1].samplenum,
                              self.out_ann, [3, ['Ready', 'R']])
             else:
                 # Bit communication.
@@ -144,49 +140,48 @@ class Decoder(srd.Decoder):
                 start_bit = True # Start bit incoming (first bit).
                 pydata = [] # Python output data.
                 for change in packet:
-                    if len(change['matched']) > 1 and change['matched'][1]:
+                    if len(change.matched) > 1 and change.matched[1]:
                         # Clock edge.
-                        if change['sk']: # Rising clock edge.
+                        if change.sk: # Rising clock edge.
                             if bit_start > 0: # Bit completed.
                                 if start_bit:
                                     if bit_si == 0: # Start bit missing.
-                                        self.put(bit_start, change['samplenum'],
+                                        self.put(bit_start, change.samplenum,
                                                  self.out_ann,
                                                  [5, ['Start bit not high',
                                                  'Start bit low']])
                                     else:
-                                        self.put(bit_start, change['samplenum'],
+                                        self.put(bit_start, change.samplenum,
                                                  self.out_ann,
                                                  [0, ['Start bit', 'S']])
                                     start_bit = False
                                 else:
-                                    self.put(bit_start, change['samplenum'],
+                                    self.put(bit_start, change.samplenum,
                                              self.out_ann,
                                              [1, ['SI bit: %d' % bit_si,
                                                   'SI: %d' % bit_si,
                                                   '%d' % bit_si]])
-                                    self.put(bit_start, change['samplenum'],
+                                    self.put(bit_start, change.samplenum,
                                              self.out_ann,
                                              [2, ['SO bit: %d' % bit_so,
                                                   'SO: %d' % bit_so,
                                                   '%d' % bit_so]])
                                     pydata.append(PyPacket(bit_start,
-                                        change['samplenum'], bit_si, bit_so))
-                            bit_start = change['samplenum']
-                            bit_si = change['si']
+                                        change.samplenum, bit_si, bit_so))
+                            bit_start = change.samplenum
+                            bit_si = change.si
                         else: # Falling clock edge.
-                            bit_so = change['so']
-                    elif change['matched'][0] and \
-                                    change['cs'] == 0 and change['sk'] == 0:
+                            bit_so = change.so
+                    elif change.matched[0] and \
+                                    change.cs == 0 and change.sk == 0:
                         # End of packet.
-                        self.put(bit_start, change['samplenum'], self.out_ann,
+                        self.put(bit_start, change.samplenum, self.out_ann,
                                  [1, ['SI bit: %d' % bit_si,
                                       'SI: %d' % bit_si, '%d' % bit_si]])
-                        self.put(bit_start, change['samplenum'], self.out_ann,
+                        self.put(bit_start, change.samplenum, self.out_ann,
                                  [2, ['SO bit: %d' % bit_so,
                                       'SO: %d' % bit_so, '%d' % bit_so]])
-                        pydata.append(PyPacket(bit_start, change['samplenum'],
+                        pydata.append(PyPacket(bit_start, change.samplenum,
                                       bit_si, bit_so))
-                self.put(packet[0]['samplenum'],
-                         packet[len(packet) - 1]['samplenum'],
+                self.put(packet[0].samplenum, packet[len(packet) - 1].samplenum,
                          self.out_python, pydata)
