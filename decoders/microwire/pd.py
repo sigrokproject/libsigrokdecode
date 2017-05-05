@@ -25,7 +25,7 @@ OUTPUT_PYTHON format:
 
 Packet:
 [namedtuple('ss': bit start sample number,
-  'se': bit end sample number,
+  'es': bit end sample number,
   'si': SI bit,
   'so': SO bit,
  ), ...]
@@ -38,7 +38,7 @@ To be able to annotate correctly the instructions formed by the bit, the start
 and end sample number of each bit (pair of SI/SO bit) are provided.
 '''
 
-PyPacket = namedtuple('PyPacket', 'ss se si so')
+PyPacket = namedtuple('PyPacket', 'ss es si so')
 Packet = namedtuple('Packet', 'samplenum matched cs sk si so')
 
 class Decoder(srd.Decoder):

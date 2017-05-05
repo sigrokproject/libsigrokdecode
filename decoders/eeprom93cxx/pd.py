@@ -55,7 +55,7 @@ class Decoder(srd.Decoder):
         a = 0
         for b in range(len(data)):
             a += (data[b].si << (len(data) - b - 1))
-        self.put(data[0].ss, data[-1].se, self.out_ann,
+        self.put(data[0].ss, data[-1].es, self.out_ann,
                  [0, ['Address: 0x%x' % a, 'Addr: 0x%x' % a, '0x%x' % a]])
 
     def put_word(self, si, data):
@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
             d = data[b].si if si else data[b].so
             word += (d << (len(data) - b - 1))
         idx = 0 if si else 1
-        self.put(data[0].ss, data[-1].se,
+        self.put(data[0].ss, data[-1].es,
                  self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
 
     def decode(self, ss, es, data):
@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
 
         if opcode == 2:
             # READ instruction.
-            self.put(data[0].ss, data[1].se,
+            self.put(data[0].ss, data[1].es,
                      self.out_ann, [0, ['Read word', 'READ']])
             self.put_address(data[2:2 + self.addresssize])
 
@@ -86,7 +86,7 @@ class Decoder(srd.Decoder):
             while len(data) - word_start > 0:
                 # Check if there are enough bits for a word.
                 if len(data) - word_start < self.wordsize:
-                    self.put(data[word_start].ss, data[len(data) - 1].se,
+                    self.put(data[word_start].ss, data[len(data) - 1].es,
                              self.out_ann, [2, ['Not enough word bits']])
                     break
                 self.put_word(False, data[word_start:word_start + self.wordsize])
@@ -94,7 +94,7 @@ class Decoder(srd.Decoder):
                 word_start += self.wordsize
         elif opcode == 1:
             # WRITE instruction.
-            self.put(data[0].ss, data[1].se,
+            self.put(data[0].ss, data[1].es,
                      self.out_ann, [0, ['Write word', 'WRITE']])
             self.put_address(data[2:2 + self.addresssize])
             # Get word.
@@ -106,26 +106,26 @@ class Decoder(srd.Decoder):
                 self.put_word(True, data[2 + self.addresssize:2 + self.addresssize + self.wordsize])
         elif opcode == 3:
             # ERASE instruction.
-            self.put(data[0].ss, data[1].se,
+            self.put(data[0].ss, data[1].es,
                      self.out_ann, [0, ['Erase word', 'ERASE']])
             self.put_address(data[2:2 + self.addresssize])
         elif opcode == 0:
             if data[2].si == 1 and data[3].si == 1:
                 # WEN instruction.
-                self.put(data[0].ss, data[2 + self.addresssize - 1].se,
+                self.put(data[0].ss, data[2 + self.addresssize - 1].es,
                          self.out_ann, [0, ['Write enable', 'WEN']])
             elif data[2].si == 0 and data[3].si == 0:
                 # WDS instruction.
-                self.put(data[0].ss, data[2 + self.addresssize - 1].se,
+                self.put(data[0].ss, data[2 + self.addresssize - 1].es,
                          self.out_ann, [0, ['Write disable', 'WDS']])
             elif data[2].si == 1 and data[3].si == 0:
                 # ERAL instruction.
-                self.put(data[0].ss, data[2 + self.addresssize - 1].se,
+                self.put(data[0].ss, data[2 + self.addresssize - 1].es,
                          self.out_ann, [0, ['Erase all memory',
                                             'Erase all', 'ERAL']])
             elif data[2].si == 0 and data[3].si == 1:
                 # WRAL instruction.
-                self.put(data[0].ss, data[2 + self.addresssize - 1].se,
+                self.put(data[0].ss, data[2 + self.addresssize - 1].es,
                          self.out_ann, [0, ['Write all memory',
                                             'Write all', 'WRAL']])
                 # Get word.
