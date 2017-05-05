@@ -29,7 +29,7 @@ Packet:
   'so': SO bit,
  }, ...]
 
-Since address and word size are variable, a list of all bits in each packet 
+Since address and word size are variable, a list of all bits in each packet
 need to be output. Since Microwire is a synchronous protocol with separate
 input and output lines (SI and SO) they are provided together, but because
 Microwire is half-duplex only the SI or SO bits will be considered at once.
@@ -119,16 +119,16 @@ class Decoder(srd.Decoder):
                     if len(change['matched']) > 2 and change['matched'][2]:
                         if bit_so == 0 and change['so']:
                             # Rising edge Busy -> Ready.
-                            self.put(start_samplenum, change['samplenum'], 
+                            self.put(start_samplenum, change['samplenum'],
                                      self.out_ann, [4, ['Busy', 'B']])
                         start_samplenum = change['samplenum']
                         bit_so = change['so']
                 # Put last state.
                 if bit_so == 0:
-                    self.put(start_samplenum, packet[-1]['samplenum'], 
+                    self.put(start_samplenum, packet[-1]['samplenum'],
                              self.out_ann, [4, ['Busy', 'B']])
                 else:
-                    self.put(start_samplenum, packet[-1]['samplenum'], 
+                    self.put(start_samplenum, packet[-1]['samplenum'],
                              self.out_ann, [3, ['Ready', 'R']])
             else:
                 # Bit communication.
