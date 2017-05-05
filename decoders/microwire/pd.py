@@ -89,10 +89,8 @@ class Decoder(srd.Decoder):
                 packet.append({'samplenum': self.samplenum,
                               'matched': self.matched,
                               'cs': cs, 'sk': sk, 'si': si, 'so': so})
-                if sk == 0:
-                    cs, sk, si, so = self.wait([{0: 'l'}, {1: 'r'}, {3: 'e'}])
-                else:
-                    cs, sk, si, so = self.wait([{0: 'l'}, {1: 'f'}, {3: 'e'}])
+                edge = 'r' if sk == 0 else 'f'
+                cs, sk, si, so = self.wait([{0: 'l'}, {1: edge}, {3: 'e'}])
             # Save last change.
             packet.append({'samplenum': self.samplenum,
                           'matched': self.matched,
