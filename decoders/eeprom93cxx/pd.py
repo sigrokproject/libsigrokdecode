@@ -23,7 +23,7 @@ class Decoder(srd.Decoder):
     api_version = 2
     id = 'eeprom93cxx'
     name = '93Cxx EEPROM'
-    longname = '93Cxx EEPROM'
+    longname = '93Cxx Microwire EEPROM'
     desc = '93Cxx series Microwire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['microwire']
