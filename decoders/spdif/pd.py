@@ -79,9 +79,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-        # Assume that the initial pin state is logic 0.
-        self.initial_pins = [0]
-
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value

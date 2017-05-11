@@ -99,9 +99,6 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-        # Assume that the initial pin state of all pins is logic 1.
-        self.initial_pins = [1] * (NUM_CHANNELS + 1)
-
     def putpb(self, data):
         self.put(self.ss_item, self.es_item, self.out_python, data)
 

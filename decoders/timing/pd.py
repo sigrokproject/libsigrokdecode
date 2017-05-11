@@ -88,7 +88,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.edge = self.options['edge']
-        self.initial_pins = [0]
 
     def decode(self):
         if not self.samplerate:

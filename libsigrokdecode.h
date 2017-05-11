@@ -194,6 +194,12 @@ struct srd_decoder {
 	void *py_dec;
 };
 
+enum srd_initial_pin {
+	SRD_INITIAL_PIN_LOW,
+	SRD_INITIAL_PIN_HIGH,
+	SRD_INITIAL_PIN_SAME_AS_SAMPLE0,
+};
+
 /**
  * Structure which contains information about one protocol decoder channel.
  * For example, I2C has two channels, SDA and SCL.
@@ -347,6 +353,8 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 		struct srd_decoder_inst *di_from, struct srd_decoder_inst *di_to);
 SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 		const char *inst_id);
+SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di,
+		GArray *initial_pins);
 
 /* log.c */
 typedef int (*srd_log_callback)(void *cb_data, int loglevel,

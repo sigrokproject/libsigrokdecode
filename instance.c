@@ -353,6 +353,13 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 		di->channel_samples = g_malloc(di->dec_num_channels);
 	}
 
+	/* Default to the initial pins being the same as in sample 0. */
+	di->old_pins_array = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t),
+						di->dec_num_channels);
+	g_array_set_size(di->old_pins_array, di->dec_num_channels);
+	memset(di->old_pins_array->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0,
+		di->dec_num_channels);
+
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
@@ -376,7 +383,6 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	di->inbuf = NULL;
 	di->inbuflen = 0;
 	di->abs_cur_samplenum = 0;
-	di->old_pins_array = NULL;
 	di->thread_handle = NULL;
 	di->got_new_samples = FALSE;
 	di->handled_all_samples = FALSE;
@@ -625,51 +631,49 @@ SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
 /**
  * Set the list of initial (assumed) pin values.
  *
- * If the list already exists, do nothing.
- *
  * @param di Decoder instance to use. Must not be NULL.
+ * @param initial_pins A GArray of uint8_t values. Must not be NULL.
  *
- * @private
+ * @since 0.5.0
  */
-static void set_initial_pin_values(struct srd_decoder_inst *di)
+SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *initial_pins)
 {
 	int i;
 	GString *s;
-	PyObject *py_initial_pins;
 
-	if (!di || !di->py_inst) {
+	if (!di) {
 		srd_err("Invalid decoder instance.");
-		return;
+		return SRD_ERR_ARG;
 	}
 
-	/* Nothing to do if di->old_pins_array is already != NULL. */
-	if (di->old_pins_array) {
-		srd_dbg("Initial pins already set, nothing to do.");
-		return;
+	if (!initial_pins)
+		return SRD_ERR_ARG;
+
+	if (initial_pins->len != (guint)di->dec_num_channels) {
+		srd_err("Incorrect number of channels (need %d, got %d).",
+			di->dec_num_channels, initial_pins->len);
+		return SRD_ERR_ARG;
 	}
 
-	/* Create an array of old (previous sample) pins, init to 0. */
-	di->old_pins_array = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), di->dec_num_channels);
-	g_array_set_size(di->old_pins_array, di->dec_num_channels);
-
-	/* Check if the decoder has set self.initial_pins. */
-	if (!PyObject_HasAttrString(di->py_inst, "initial_pins")) {
-		srd_dbg("Initial pins: all 0 (self.initial_pins not set).");
-		return;
+	/* Sanity-check initial pin state values. */
+	for (i = 0; i < di->dec_num_channels; i++) {
+		if (initial_pins->data[i] <= 2)
+			continue;
+		srd_err("Invalid initial channel %d pin state: %d.",
+			i, initial_pins->data[i]);
+		return SRD_ERR_ARG;
 	}
 
-	/* Get self.initial_pins. */
-	py_initial_pins = PyObject_GetAttrString(di->py_inst, "initial_pins");
-
-	/* Fill di->old_pins_array based on self.initial_pins. */
 	s = g_string_sized_new(100);
 	for (i = 0; i < di->dec_num_channels; i++) {
-		di->old_pins_array->data[i] = PyLong_AsLong(PyList_GetItem(py_initial_pins, i));
+		di->old_pins_array->data[i] = initial_pins->data[i];
 		g_string_append_printf(s, "%d, ", di->old_pins_array->data[i]);
 	}
 	s = g_string_truncate(s, s->len - 2);
 	srd_dbg("Initial pins: %s.", s->str);
 	g_string_free(s, TRUE);
+
+	return SRD_OK;
 }
 
 SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di)
@@ -703,9 +707,6 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
-
-	/* Set the initial pins based on self.initial_pins. */
-	set_initial_pin_values(di);
 
 	/* Set self.samplenum to 0. */
 	PyObject_SetAttrString(di->py_inst, "samplenum", PyLong_FromLong(0));
@@ -840,6 +841,27 @@ static void update_old_pins_array(struct srd_decoder_inst *di,
 	}
 }
 
+static void update_old_pins_array_initial_pins(struct srd_decoder_inst *di)
+{
+	uint8_t sample;
+	int i, byte_offset, bit_offset;
+	const uint8_t *sample_pos;
+
+	if (!di || !di->dec_channelmap)
+		return;
+
+	sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
+
+	for (i = 0; i < di->dec_num_channels; i++) {
+		if (di->old_pins_array->data[i] != SRD_INITIAL_PIN_SAME_AS_SAMPLE0)
+			continue;
+		byte_offset = di->dec_channelmap[i] / 8;
+		bit_offset = di->dec_channelmap[i] % 8;
+		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+		di->old_pins_array->data[i] = sample;
+	}
+}
+
 static gboolean term_matches(const struct srd_decoder_inst *di,
 		struct srd_term *term, const uint8_t *sample_pos)
 {
@@ -923,6 +945,10 @@ static gboolean find_match(struct srd_decoder_inst *di)
 	/* di->match_array is NULL here. Create a new GArray. */
 	di->match_array = g_array_sized_new(FALSE, TRUE, sizeof(gboolean), num_conditions);
 	g_array_set_size(di->match_array, num_conditions);
+
+	/* Sample 0: Set di->old_pins_array for SRD_INITIAL_PIN_SAME_AS_SAMPLE0 pins. */
+	if (di->abs_cur_samplenum == 0)
+		update_old_pins_array_initial_pins(di);
 
 	for (i = 0, s = 0; i < num_samples_to_process; i++, s++, (di->abs_cur_samplenum)++) {
 

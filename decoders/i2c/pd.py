@@ -130,10 +130,6 @@ class Decoder(srd.Decoder):
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
-        # Assume that the initial SCL/SDA pin state is high (logic 1).
-        # This is a good default, since both pins have pullups as per spec.
-        self.initial_pins = [1, 1]
-
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 

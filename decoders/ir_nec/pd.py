@@ -108,9 +108,6 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.active = 0 if self.options['polarity'] == 'active-low' else 1
 
-        # Set the initial (assumed) value of the pin as per user-config.
-        self.initial_pins = [1 if self.active == 0 else 0]
-
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
