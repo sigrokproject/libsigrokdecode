@@ -27,13 +27,13 @@ from .lists import *
 
 class Decoder(srd.Decoder):
     api_version = 2
-    id = 'ade7758'
-    name = 'ADE7758'
-    longname = 'Analog Devices ADE7758'
+    id = 'ade77xx'
+    name = 'ADE77xx'
+    longname = 'Analog Devices ADE77xx'
     desc = 'Poly phase multifunction energy metering IC protocol.'
     license = 'mit'
     inputs = ['spi']
-    outputs = ['ade7758']
+    outputs = ['ade77xx']
     annotations = (
         ('read', 'Register read commands'),
         ('write', 'Register write commands'),

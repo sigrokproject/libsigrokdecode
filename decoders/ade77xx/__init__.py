@@ -20,10 +20,13 @@
 
 '''
 This decoder stacks on top of the 'spi' PD and decodes Analog Devices
-ADE7758 command/responses.
+ADE77xx command/responses.
 
-The ADE7758 is a "Poly Phase Multifunction Energy Metering IC with Per Phase
+The ADE77xx is a "Poly Phase Multifunction Energy Metering IC with Per Phase
 Information".
+
+This PD has been tested with an ADE7758 so far, support for other devices
+from the ADE77xx series can be added in the future.
 '''
 
 from .pd import Decoder
