@@ -198,7 +198,7 @@ class Decoder(srd.Decoder):
         self.puta(12, 31, [136, ['Reserved', 'Res', 'R']])
         self.puta(8, 11, [136, ['Supply voltage', 'Voltage', 'VHS', 'V']])
         self.puta(0, 7, [136, ['Check pattern', 'Check pat', 'Check', 'C']])
-        self.putc(0, 'Send interface condition to card')
+        self.putc(8, 'Send interface condition to card')
         self.token, self.state = [], 'GET RESPONSE R7'
         # TODO: Handle case when card doesn't reply with R7 (no reply at all).
 
