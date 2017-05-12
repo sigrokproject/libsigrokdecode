@@ -65,6 +65,7 @@ class Decoder(srd.Decoder):
         self.token = []
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.cmd = None
+        self.last_cmd = None
         self.arg = None
 
     def start(self):
@@ -84,11 +85,12 @@ class Decoder(srd.Decoder):
                  self.out_ann, data)
 
     def putc(self, cmd, desc):
+        self.last_cmd = cmd
         self.putt([cmd, ['%s: %s' % (self.cmd_str, desc), self.cmd_str,
                          self.cmd_str.split(' ')[0]]])
 
-    def putr(self, cmd, desc):
-        self.putt([cmd, ['Reply: %s' % desc]])
+    def putr(self, desc):
+        self.putt([self.last_cmd, ['Reply: %s' % desc]])
 
     def reset(self):
         self.cmd, self.arg = None, None
@@ -288,7 +290,7 @@ class Decoder(srd.Decoder):
         if not self.get_token_bits(cmd, 48):
             return
         self.handle_common_token_fields()
-        self.putr(55, 'R1')
+        self.putr('R1')
         self.puta(0, 31, [136, ['Card status', 'Status', 'S']])
         for i in range(32):
             self.putbit(8 + i, [card_status[31 - i]])
@@ -300,7 +302,7 @@ class Decoder(srd.Decoder):
             return
         self.handle_common_token_fields()
         self.puta(0, 31, [136, ['Card status', 'Status', 'S']])
-        self.putr(55, 'R1b')
+        self.putr('R1b')
         self.token, self.state = [], 'GET COMMAND TOKEN'
 
     def handle_response_r2(self, cmd):
@@ -335,7 +337,7 @@ class Decoder(srd.Decoder):
         #  - Bits[00:00]: End bit (always 1)
         if not self.get_token_bits(cmd, 48):
             return
-        self.putr(55, 'R3')
+        self.putr('R3')
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
             self.putf(bit, bit, [128, ['%d' % self.token[bit][2]]])
@@ -363,7 +365,7 @@ class Decoder(srd.Decoder):
         self.handle_common_token_fields()
         self.puta(0, 15, [136, ['Card status bits', 'Status', 'S']])
         self.puta(16, 31, [136, ['Relative card address', 'RCA', 'R']])
-        self.putr(55, 'R6')
+        self.putr('R6')
         self.token, self.state = [], 'GET COMMAND TOKEN'
 
     def handle_response_r7(self, cmd):
@@ -380,7 +382,7 @@ class Decoder(srd.Decoder):
             return
         self.handle_common_token_fields()
 
-        self.putr(55, 'R7')
+        self.putr('R7')
 
         # Arg[31:12]: Reserved bits (all-zero)
         self.puta(12, 31, [136, ['Reserved', 'Res', 'R']])
