@@ -75,7 +75,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.oldpin = None
         self.last_samplenum = None
         self.last_n = deque()
         self.chunks = 0
