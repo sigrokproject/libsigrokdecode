@@ -23,7 +23,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'can'
     name = 'CAN'
     longname = 'Controller Area Network'
@@ -105,12 +105,10 @@ class Decoder(srd.Decoder):
         self.ss_bit12 = None
         self.ss_databytebits = []
 
-    # Return True if we reached the desired bit position, False otherwise.
-    def reached_bit(self, bitnum):
+    # Determine the position of the next desired bit's sample point.
+    def get_sample_point(self, bitnum):
         bitpos = int(self.sof + (self.bit_width * bitnum) + self.bitpos)
-        if self.samplenum >= bitpos:
-            return True
-        return False
+        return bitpos
 
     def is_stuff_bit(self):
         # CAN uses NRZ encoding and bit stuffing.
@@ -371,22 +369,19 @@ class Decoder(srd.Decoder):
 
         self.curbit += 1
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
 
-            (can_rx,) = pins
-
+        while True:
             # State machine.
             if self.state == 'IDLE':
                 # Wait for a dominant state (logic 0) on the bus.
-                if can_rx == 1:
-                    continue
+                (can_rx,) = self.wait({0: 'l'})
                 self.sof = self.samplenum
                 self.state = 'GET BITS'
             elif self.state == 'GET BITS':
                 # Wait until we're in the correct bit/sampling position.
-                if not self.reached_bit(self.curbit):
-                    continue
+                pos = self.get_sample_point(self.curbit)
+                (can_rx,) = self.wait({'skip': pos - self.samplenum})
                 self.handle_bit(can_rx)
