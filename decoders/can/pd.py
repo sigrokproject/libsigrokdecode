@@ -60,7 +60,8 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', (15, 17)),
-        ('fields', 'Fields', tuple(range(15)) + (16,)),
+        ('fields', 'Fields', tuple(range(15))),
+        ('warnings', 'Warnings', (16,)),
     )
 
     def __init__(self):
@@ -154,6 +155,8 @@ class Decoder(srd.Decoder):
         elif bitnum == (self.last_databit + 16):
             self.putx([12, ['CRC delimiter: %d' % can_rx,
                             'CRC d: %d' % can_rx, 'CRC d']])
+            if can_rx != 1:
+                self.putx([16, ['CRC delimiter must be a recessive bit']])
 
         # ACK slot bit (dominant: ACK, recessive: NACK)
         elif bitnum == (self.last_databit + 17):
@@ -164,6 +167,8 @@ class Decoder(srd.Decoder):
         elif bitnum == (self.last_databit + 18):
             self.putx([14, ['ACK delimiter: %d' % can_rx,
                             'ACK d: %d' % can_rx, 'ACK d']])
+            if can_rx != 1:
+                self.putx([16, ['ACK delimiter must be a recessive bit']])
 
         # Remember start of EOF (see below).
         elif bitnum == (self.last_databit + 19):
@@ -172,6 +177,8 @@ class Decoder(srd.Decoder):
         # End of frame (EOF), 7 recessive bits
         elif bitnum == (self.last_databit + 25):
             self.putb([2, ['End of frame', 'EOF', 'E']])
+            if self.rawbits[-7:] != [1, 1, 1, 1, 1, 1, 1]:
+                self.putb([16, ['End of frame (EOF) must be 7 recessive bits']])
             self.reset_variables()
             return True
 
@@ -203,6 +210,8 @@ class Decoder(srd.Decoder):
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
             self.last_databit = 18 + (self.dlc * 8)
+            if self.dlc > 8:
+                self.putb([16, ['Data length code (DLC) > 8 is not allowed']])
 
         # Remember all databyte bits, except the very last one.
         elif bitnum in range(19, self.last_databit):
@@ -317,9 +326,8 @@ class Decoder(srd.Decoder):
 
         # Bit 0: Start of frame (SOF) bit
         if bitnum == 0:
-            if can_rx == 0:
-                self.putx([1, ['Start of frame', 'SOF', 'S']])
-            else:
+            self.putx([1, ['Start of frame', 'SOF', 'S']])
+            if can_rx != 0:
                 self.putx([16, ['Start of frame (SOF) must be a dominant bit']])
 
         # Remember start of ID (see below).
@@ -332,6 +340,8 @@ class Decoder(srd.Decoder):
             self.id = int(''.join(str(d) for d in self.bits[1:]), 2)
             s = '%d (0x%x)' % (self.id, self.id),
             self.putb([3, ['Identifier: %s' % s, 'ID: %s' % s, 'ID']])
+            if (self.id & 0x7f0) == 0x7f0:
+                self.putb([16, ['Identifier bits 10..4 must not be all recessive']])
 
         # RTR or SRR bit, depending on frame type (gets handled later).
         elif bitnum == 12:
