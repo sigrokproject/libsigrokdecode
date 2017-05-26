@@ -136,6 +136,9 @@ PKG_CHECK_MODULES([TESTS], [$SRD_PKGLIBS_TESTS glib-2.0 $SRD_PKGLIBS])
 
 srd_glib_version=`$PKG_CONFIG --modversion glib-2.0 2>&AS_MESSAGE_LOG_FD`
 
+AC_DEFINE_UNQUOTED([CONF_HOST], ["$host"],
+        [The canonical host libsigrokdecode will run on.])
+
 AC_CONFIG_FILES([Makefile libsigrokdecode.pc])
 
 AC_OUTPUT

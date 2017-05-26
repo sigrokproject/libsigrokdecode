@@ -363,6 +363,8 @@ SRD_API int srd_lib_version_current_get(void);
 SRD_API int srd_lib_version_revision_get(void);
 SRD_API int srd_lib_version_age_get(void);
 SRD_API const char *srd_lib_version_string_get(void);
+SRD_API GSList *srd_buildinfo_libs_get(void);
+SRD_API char *srd_buildinfo_host_get(void);
 
 #include "version.h"
 

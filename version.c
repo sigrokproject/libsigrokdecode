@@ -18,6 +18,7 @@
  */
 
 #include <config.h>
+#include "libsigrokdecode-internal.h" /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "libsigrokdecode.h"
 
 /**
@@ -143,6 +144,36 @@ SRD_API int srd_lib_version_age_get(void)
 SRD_API const char *srd_lib_version_string_get(void)
 {
 	return SRD_LIB_VERSION_STRING;
+}
+
+SRD_API GSList *srd_buildinfo_libs_get(void)
+{
+	GSList *l = NULL, *m = NULL;
+
+	m = g_slist_append(NULL, g_strdup("glib"));
+	m = g_slist_append(m, g_strdup_printf("%d.%d.%d (rt: %d.%d.%d/%d:%d)",
+		GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION,
+		glib_major_version, glib_minor_version, glib_micro_version,
+		glib_binary_age, glib_interface_age));
+	l = g_slist_append(l, m);
+
+	m = g_slist_append(NULL, g_strdup("Python"));
+	m = g_slist_append(m, g_strdup_printf("%s / 0x%x (API %s, ABI %s)",
+		PY_VERSION, PY_VERSION_HEX, PYTHON_API_STRING, PYTHON_ABI_STRING));
+	l = g_slist_append(l, m);
+
+	return l;
+}
+
+SRD_API char *srd_buildinfo_host_get(void)
+{
+	return g_strdup_printf("%s, %s-endian", CONF_HOST,
+#ifdef WORDS_BIGENDIAN
+	"big"
+#else
+	"little"
+#endif
+	);
 }
 
 /** @} */

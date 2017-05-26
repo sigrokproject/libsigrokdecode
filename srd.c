@@ -112,6 +112,38 @@ static int searchpath_add_xdg_dir(const char *datadir)
 	return ret;
 }
 
+static void print_versions(void)
+{
+	GString *s;
+	GSList *l, *l_orig, *m;
+	char *str;
+	const char *lib, *version;
+
+	srd_dbg("libsigrokdecode %s/%s (rt: %s/%s).",
+		SRD_PACKAGE_VERSION_STRING, SRD_LIB_VERSION_STRING,
+		srd_package_version_string_get(), srd_lib_version_string_get());
+
+	s = g_string_sized_new(200);
+	g_string_append(s, "Libs: ");
+	l_orig = srd_buildinfo_libs_get();
+	for (l = l_orig; l; l = l->next) {
+		m = l->data;
+		lib = m->data;
+		version = m->next->data;
+		g_string_append_printf(s, "%s %s, ", lib, version);
+		g_slist_free_full(m, g_free);
+	}
+	g_slist_free(l_orig);
+	s->str[s->len - 2] = '.';
+	s->str[s->len - 1] = '\0';
+	srd_dbg("%s", s->str);
+	g_string_free(s, TRUE);
+
+	str = srd_buildinfo_host_get();
+	srd_dbg("Host: %s.", str);
+	g_free(str);
+}
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -150,6 +182,8 @@ SRD_API int srd_init(const char *path)
 		srd_err("libsigrokdecode is already initialized.");
 		return SRD_ERR;
 	}
+
+	print_versions();
 
 	srd_dbg("Initializing libsigrokdecode.");
 
