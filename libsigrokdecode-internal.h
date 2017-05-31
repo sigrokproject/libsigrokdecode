@@ -120,7 +120,9 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void);
 /* util.c */
 SRD_PRIV PyObject *py_import_by_name(const char *name);
 SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr);
+SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **outstrlist);
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
+SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx, char **outstr);
 SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key, char **outstr);
 SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);

@@ -165,6 +165,8 @@ static void decoder_free(struct srd_decoder *dec)
 	g_slist_free_full(dec->opt_channels, &channel_free);
 	g_slist_free_full(dec->channels, &channel_free);
 
+	g_slist_free_full(dec->outputs, g_free);
+	g_slist_free_full(dec->inputs, g_free);
 	g_free(dec->license);
 	g_free(dec->desc);
 	g_free(dec->longname);
@@ -724,6 +726,16 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	if (py_attr_as_str(d->py_dec, "license", &(d->license)) != SRD_OK) {
 		fail_txt = "no 'license' attribute";
+		goto err_out;
+	}
+
+	if (py_attr_as_strlist(d->py_dec, "inputs", &(d->inputs)) != SRD_OK) {
+		fail_txt = "missing or malformed 'inputs' attribute";
+		goto err_out;
+	}
+
+	if (py_attr_as_strlist(d->py_dec, "outputs", &(d->outputs)) != SRD_OK) {
+		fail_txt = "missing or malformed 'outputs' attribute";
 		goto err_out;
 	}
 

@@ -82,6 +82,58 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 }
 
 /**
+ * Get the value of a Python object's attribute, returned as a newly
+ * allocated GSList of char *.
+ *
+ * @param[in] py_obj The object to probe.
+ * @param[in] attr Name of the attribute to retrieve.
+ * @param[out] outstrlist ptr to GSList of char * storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstrlist' argument points to a GSList of g_malloc()ed strings
+ *         upon success.
+ *
+ * @private
+ */
+SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **outstrlist)
+{
+	PyObject *py_list;
+	Py_ssize_t i;
+	int ret;
+	char *outstr;
+
+	if (!PyObject_HasAttrString(py_obj, attr)) {
+		srd_dbg("Object has no attribute '%s'.", attr);
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_list = PyObject_GetAttrString(py_obj, attr))) {
+		srd_exception_catch("Failed to get attribute '%s'", attr);
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!PyList_Check(py_list)) {
+		srd_dbg("Object is not a list.");
+		return SRD_ERR_PYTHON;
+	}
+
+	*outstrlist = NULL;
+
+	for (i = 0; i < PyList_Size(py_list); i++) {
+		ret = py_listitem_as_str(py_list, i, &outstr);
+		if (ret < 0) {
+			srd_dbg("Couldn't get item %" PY_FORMAT_SIZE_T "d.", i);
+			return SRD_ERR_PYTHON;
+		}
+		*outstrlist = g_slist_append(*outstrlist, outstr);
+	}
+
+	Py_DECREF(py_list);
+
+	return SRD_OK;
+}
+
+/**
  * Get the value of a Python dictionary item, returned as a newly
  * allocated char *.
  *
@@ -106,6 +158,37 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
 
 	if (!(py_value = PyDict_GetItemString(py_obj, key))) {
 		srd_dbg("Dictionary has no attribute '%s'.", key);
+		return SRD_ERR_PYTHON;
+	}
+
+	return py_str_as_str(py_value, outstr);
+}
+
+/**
+ * Get the value of a Python list item, returned as a newly
+ * allocated char *.
+ *
+ * @param[in] py_obj The list to probe.
+ * @param[in] idx Index of the list item to retrieve.
+ * @param[out] outstr Pointer to char * storage to be filled in.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *         The 'outstr' argument points to a g_malloc()ed string upon success.
+ *
+ * @private
+ */
+SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx,
+				char **outstr)
+{
+	PyObject *py_value;
+
+	if (!PyList_Check(py_obj)) {
+		srd_dbg("Object is not a list.");
+		return SRD_ERR_PYTHON;
+	}
+
+	if (!(py_value = PyList_GetItem(py_obj, idx))) {
+		srd_dbg("Couldn't get list item %" PY_FORMAT_SIZE_T "d.", idx);
 		return SRD_ERR_PYTHON;
 	}
 

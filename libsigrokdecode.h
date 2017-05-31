@@ -154,6 +154,12 @@ struct srd_decoder {
 	 */
 	char *license;
 
+	/** List of possible decoder input IDs. */
+	GSList *inputs;
+
+	/** List of possible decoder output IDs. */
+	GSList *outputs;
+
 	/** List of channels required by this decoder. */
 	GSList *channels;
 
