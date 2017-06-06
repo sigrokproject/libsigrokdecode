@@ -5,15 +5,17 @@ HACKING
 Coding style
 ------------
 
-This project is programmed using the Linux kernel coding style, see
-http://lxr.linux.no/linux/Documentation/CodingStyle for details.
+This project is programmed using the Linux kernel coding style:
+
+  https://www.kernel.org/doc/html/latest/process/coding-style.html
 
 Please use the same style for any code contributions, thanks!
 
 The Python decoders should follow the usual Python conventions and use
 Python idioms as far as it makes sense. The coding style should mostly follow
-the Python PEP-8, which includes the convention of 4 spaces for indentation.
-See http://www.python.org/dev/peps/pep-0008/ for details.
+the Python PEP-8, which includes the convention of 4 spaces for indentation:
+
+  http://www.python.org/dev/peps/pep-0008/
 
 
 Contributions
