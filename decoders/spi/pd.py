@@ -125,7 +125,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.samplerate = None
-        self.oldclk = 1
         self.bitcount = 0
         self.misodata = self.mosidata = 0
         self.misobits = []
@@ -136,7 +135,6 @@ class Decoder(srd.Decoder):
         self.samplenum = -1
         self.ss_transfer = -1
         self.cs_was_deasserted = False
-        self.oldcs = None
         self.have_cs = self.have_miso = self.have_mosi = None
 
     def metadata(self, key, value):
@@ -263,12 +261,12 @@ class Decoder(srd.Decoder):
 
         self.reset_decoder_state()
 
-    def find_clk_edge(self, miso, mosi, clk, cs):
-        if self.have_cs and self.oldcs != cs:
+    def find_clk_edge(self, miso, mosi, clk, cs, first):
+        if self.have_cs and (first or self.matched[self.have_cs]):
             # Send all CS# pin value changes.
+            oldcs = None if first else 1 - cs
             self.put(self.samplenum, self.samplenum, self.out_python,
-                     ['CS-CHANGE', self.oldcs, cs])
-            self.oldcs = cs
+                     ['CS-CHANGE', oldcs, cs])
 
             if self.cs_asserted(cs):
                 self.ss_transfer = self.samplenum
@@ -286,10 +284,8 @@ class Decoder(srd.Decoder):
             return
 
         # Ignore sample if the clock pin hasn't changed.
-        if clk == self.oldclk:
+        if first or not self.matched[0]:
             return
-
-        self.oldclk = clk
 
         # Sample data on rising/falling clock edge (depends on mode).
         mode = spi_mode[self.options['cpol'], self.options['cpha']]
@@ -309,27 +305,37 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        # Either MISO or MOSI can be omitted (but not both). CS# is optional.
+        # The CLK input is mandatory. Other signals are (individually)
+        # optional. Yet either MISO or MOSI (or both) must be provided.
+        # Tell stacked decoders when we don't have a CS# signal.
+        if not self.has_channel(0):
+            raise ChannelError('Either MISO or MOSI (or both) pins required.')
         self.have_miso = self.has_channel(1)
         self.have_mosi = self.has_channel(2)
-        self.have_cs = self.has_channel(3)
         if not self.have_miso and not self.have_mosi:
             raise ChannelError('Either MISO or MOSI (or both) pins required.')
-
-        # Tell stacked decoders that we don't have a CS# signal.
+        self.have_cs = self.has_channel(3)
         if not self.have_cs:
             self.put(0, 0, self.out_python, ['CS-CHANGE', None, None])
 
+        # We want all CLK changes. We want all CS changes if CS is used.
+        # Map 'have_cs' from boolean to an integer index. This simplifies
+        # evaluation in other locations.
+        wait_cond = [{0: 'e'}]
+        if self.have_cs:
+            self.have_cs = len(wait_cond)
+            wait_cond.append({3: 'e'})
+
         # "Pixel compatibility" with the v2 implementation. Grab and
         # process the very first sample before checking for edges. The
-        # previous implementation did this by seeding old values with None,
-        # which led to an immediate "change" in comparison.
+        # previous implementation did this by seeding old values with
+        # None, which led to an immediate "change" in comparison.
         pins = self.wait({})
         (clk, miso, mosi, cs) = pins
-        self.find_clk_edge(miso, mosi, clk, cs)
+        self.find_clk_edge(miso, mosi, clk, cs, True)
 
         while True:
             # Ignore identical samples early on (for performance reasons).
-            pins = self.wait([{0: 'e'}, {1: 'e'}, {2: 'e'}, {3: 'e'}])
+            pins = self.wait(wait_cond)
             (clk, miso, mosi, cs) = pins
-            self.find_clk_edge(miso, mosi, clk, cs)
+            self.find_clk_edge(miso, mosi, clk, cs, False)
