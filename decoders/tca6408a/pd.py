@@ -91,7 +91,7 @@ class Decoder(srd.Decoder):
                 return
             self.state = 'GET SLAVE ADDR'
         elif self.state == 'GET SLAVE ADDR':
-            self.chip = databyte  
+            self.chip = databyte
             self.state = 'GET REG ADDR'
         elif self.state == 'GET REG ADDR':
             # Wait for a data write (master selects the slave register).

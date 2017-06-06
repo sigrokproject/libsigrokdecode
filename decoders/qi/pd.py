@@ -146,7 +146,7 @@ class Decoder(srd.Decoder):
                        'C: PC = %d MP = %d P = %d C = %d WS = %d WO = %d' %
                        (powerclass, maxpower, prop, count, winsize, winoff),
                        'Configuration', 'C'])
-        elif self.packet[0] == 0x71: # Identification 
+        elif self.packet[0] == 0x71: # Identification
             version = '%d.%d' % ((self.packet[1] & 0xf0) >> 4, self.packet[1] & 0x0f)
             mancode = '%02x%02x' % (self.packet[2], self.packet[3])
             devid = '%02x%02x%02x%02x' % (self.packet[4] & ~0x80,
