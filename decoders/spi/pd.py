@@ -70,9 +70,6 @@ spi_mode = {
     (1, 1): 3, # Mode 3
 }
 
-class SamplerateError(Exception):
-    pass
-
 class ChannelError(Exception):
     pass
 
@@ -145,8 +142,9 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
-        self.out_bitrate = self.register(srd.OUTPUT_META,
-                meta=(int, 'Bitrate', 'Bitrate during transfers'))
+        if self.samplerate is not None:
+            self.out_bitrate = self.register(srd.OUTPUT_META,
+                    meta=(int, 'Bitrate', 'Bitrate during transfers'))
         self.bw = (self.options['wordsize'] + 7) // 8
 
     def putw(self, data):
@@ -251,10 +249,11 @@ class Decoder(srd.Decoder):
         self.putdata()
 
         # Meta bitrate.
-        elapsed = 1 / float(self.samplerate)
-        elapsed *= (self.samplenum - self.ss_block + 1)
-        bitrate = int(1 / elapsed * self.options['wordsize'])
-        self.put(self.ss_block, self.samplenum, self.out_bitrate, bitrate)
+        if self.samplerate is not None:
+            elapsed = 1 / float(self.samplerate)
+            elapsed *= (self.samplenum - self.ss_block + 1)
+            bitrate = int(1 / elapsed * self.options['wordsize'])
+            self.put(self.ss_block, self.samplenum, self.out_bitrate, bitrate)
 
         if self.have_cs and self.cs_was_deasserted:
             self.putw([4, ['CS# was deasserted during this data word!']])
@@ -302,9 +301,6 @@ class Decoder(srd.Decoder):
         self.handle_bit(miso, mosi, clk, cs)
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
-
         # The CLK input is mandatory. Other signals are (individually)
         # optional. Yet either MISO or MOSI (or both) must be provided.
         # Tell stacked decoders when we don't have a CS# signal.
