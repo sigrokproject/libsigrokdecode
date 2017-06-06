@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'gpib'
     name = 'GPIB'
     longname = 'General Purpose Interface Bus'
@@ -61,14 +61,12 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
-        self.olddav = None
         self.items = []
         self.itemcount = 0
         self.saved_item = None
         self.saved_ATN = False
         self.saved_EOI = False
         self.samplenum = 0
-        self.oldpins = None
         self.ss_item = self.es_item = None
         self.first = True
 
@@ -160,29 +158,19 @@ class Decoder(srd.Decoder):
 
         self.itemcount, self.items = 0, []
 
-    def find_falling_dav_edge(self, dav, datapins):
-        # Ignore sample if the DAV pin hasn't changed.
-        if dav == self.olddav:
-            return
-        self.olddav = dav
-        # Sample on falling DAV edge.
-        if dav == 1:
-            return
+    def decode(self):
 
-        # Found the correct DAV edge, now get the bits.
-        self.handle_bits(datapins)
-
-    def decode(self, ss, es, data):
+        # Inspect samples at falling edge of DAV. But make sure to also
+        # start inspection when the capture happens to start with low
+        # DAV level. Optionally enforce processing when a user specified
+        # sample number was reached.
+        waitcond = [{9: 'l'}]
         lsn = self.options['sample_total']
-
-        for (self.samplenum, pins) in data:
-            if lsn > 0:
-                if (lsn - self.samplenum) == 1: # Show the last data word.
-                    self.handle_bits(pins)
-
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-            self.oldpins = pins
-
-            self.find_falling_dav_edge(pins[9], pins)
+        if lsn:
+            waitcond.append({'skip': lsn})
+        while True:
+            if lsn:
+                waitcond[1]['skip'] = lsn - self.samplenum - 1
+            pins = self.wait(waitcond)
+            self.handle_bits(pins)
+            waitcond[0][9] = 'f'
