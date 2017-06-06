@@ -21,13 +21,13 @@ import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
     api_version = 2
-    id = 'eeprom93cxx'
-    name = '93Cxx EEPROM'
-    longname = '93Cxx Microwire EEPROM'
-    desc = '93Cxx series Microwire EEPROM protocol.'
+    id = 'eeprom93xx'
+    name = '93xx EEPROM'
+    longname = '93xx Microwire EEPROM'
+    desc = '93xx series Microwire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['microwire']
-    outputs = ['eeprom93cxx']
+    outputs = ['eeprom93xx']
     options = (
         {'id': 'addresssize', 'desc': 'Address size', 'default': 8},
         {'id': 'wordsize', 'desc': 'Word size', 'default': 16},

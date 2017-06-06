@@ -18,7 +18,7 @@
 ##
 
 '''
-This decoder stacks on top of the 'microwire' PD and decodes the 93Cxx EEPROM
+This decoder stacks on top of the 'microwire' PD and decodes the 93xx EEPROM
 specific instructions.
 
 The implemented instructions come from the STMicroelectronics M93Cx6 EEPROM
