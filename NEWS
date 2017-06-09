@@ -1,3 +1,130 @@
+0.5.0 (2017-06-12)
+------------------
+
+Note: This release DOES change the libsigrokdecode public C API. This
+means it is NOT backwards-compatible and frontends will need updates.
+
+ * New supported protocol decoders:
+   - ade77xx          Poly phase multifunction energy metering IC protocol
+   - adf435x          Wideband synthesizer with integrated VCO
+   - aud              Renesas/Hitachi Advanced User Debugger (AUD) protocol
+   - avr_pdi          Atmel proprietary interface for the ATxmega MCU
+   - dali             DALI lighting control protocol
+   - dsi              DSI lighting control protocol
+   - dmx512           Professional lighting control protocol
+   - eeprom93xx       93xx series Microwire EEPROM protocol (bug #931)
+   - em4305           EM4205/EM4305 100-150kHz RFID protocol
+   - gpib             IEEE-488 GPIB / HPIB protocol
+   - iec              Commodore serial IEEE-488 (IEC) bus protocol
+   - microwire        3-wire, half-duplex, synchronous serial bus (bug #931)
+   - ps2              PS/2 keyboard/mouse interface
+   - rgb_led_ws281x   RGB LED string protocol (WS281x)
+   - ssi32            Synchronous Serial Interface (32bit) protocol
+   - t55xx            T55xx 100-150kHz RFID protocol
+   - wiegand          Wiegand interface for electronic entry systems
+ * Add support for the new query-based PD v3 decoder API.
+   - Decoders using PD v3 API can benefit from both readability improvements
+     as well as performance improvements. Up to 10x speedup has been measured
+     in some situations (depends a lot on the decoder, the amount of data,
+     the amount of edges in the signals, and the amount of oversampling).
+   - The majority of all decoders have been converted to PD API v3.
+   - For the time being, both APIs (2 and 3) will remain supported until all
+     decoders have been converted to API version 3. Then, support for API
+     version 2 will be dropped.
+ * Add support for specifying the (assumed) initial pin states before the
+   first sample that is being decoded. This can be set to 0/low, 1/high, or
+   to "use the same value as in the first sample".
+ * Add support for adding multiple instances of a decoder (bug #868).
+ * Introduce a decoders/common facility for code shared between PDs (bug #804).
+ * Supply metadata to all stacked decoders, not just low-level ones (bug #664).
+ * Various Doxygen/documentation improvements.
+ * Factor out a srd_decoder_apiver() internal helper function.
+ * srd_inst_decode(): Return SRD_ERR_ARG if unitsize is 0.
+ * Print error messages when decoders fail load time checks (bug #704).
+ * Fix multiple valgrind warnings (memory leaks and such).
+ * Build system: Sort PD list alphabetically in "make install".
+ * mdio:
+   - Replace PD with a new implementation that also supports Clause 22 and 45.
+   - Improve annotations slightly.
+ * xfp:
+   - Move various constants to common/plugtrx for reusability purposes.
+ * sdcard_{sd,spi}:
+   - Move various constants to common/sdcard for reusability purposes.
+ * usb_request:
+   - Drop hardcoded samplerate (workaround for the fixed bug #664).
+ * spiflash:
+   - Handle CS# transitions, allow variable-length transfers.
+   - Handle "Fast Read Dual I/O" commands.
+   - Add a "format" decoder option.
+   - Implement Release Power-down / Device ID (0xAB) command (bug #845).
+   - Remove hardcoded Macronix references.
+   - Add initial FIDELIX FM25Q32 metadata/support.
+   - Implement WRSR, RDSR2 commands.
+   - Various annotation improvements.
+ * timing:
+   - Add frequency and averaging support.
+   - Disable averaging feature if it's set to zero.
+   - Add edge-edge mode and delta calculation.
+ * midi:
+   - Decode note names and percussion names (e.g. 'G2', 'Tambourine').
+   - Decode instrument names and drum_kit names (e.g. 'GS Orchestra Kit').
+   - Handle Polyphonic Pressure / Aftertouch (message 0xAn).
+   - Handle Program Change (message 0xCn).
+   - Handle Channel Pressure / Aftertouch (message 0xDn).
+   - Handle Channel Mode (message 0xBn mm where mm is 120 through 127).
+   - Handle System Common messages (message 0xF1 through 0xF6), including
+     full time code decoding.
+   - SysEx decoding now decodes the 1-3 byte manufacturer field, payload
+     is now displayed as hex.
+   - 'undefined' fields now display the value (e.g. 'undefined 0xf4').
+   - Add 'MSB' and 'LSB' to many control_functions entries.
+   - Fix "trapped in state X" bug with handle_channel_msg_generic(),
+     though this might be dead code.
+   - Fix bug in sysex_manufacturer_ids; 1-byte manufacturers were not
+     tuples due to missing comma.
+   - Fix bug in SysEx state machine; 0xF7 now sent to handle_sysex_msg().
+   - Annotations: Provide multiple string versions (shorter and longer ones).
+   - chromatic_notes in list.py was off by 1 octave.
+   - Handle "Running Status" where status byte can be omitted.
+   - SysEx message can be terminated by status byte, not just EOX.
+   - Handle SysReal messages that interrupt in-progress message transmission.
+   - Identify and print garbage / truncated data.
+   - Add 2 new annotations: text-sysreal-verbose and text-error.
+ * usb_power_delivery:
+   - Drop problematic exception in us2samples() function (bug #758).
+ * uart:
+   - Fix a bug in the output for stacked PDs (when there's RX/TX overlap).
+   - Various output formatting improvements (e.g. for ASCII and octal).
+   - Skip frames with invalid start bits.
+   - Emit 2 bytes for 9-bit UART binary output (bug #708).
+   - Default to hex format datavalue annotations.
+ * spi:
+   - Fix binary output for wordsizes > 8 (bug #686).
+ * sdcard_sd:
+   - Don't try to decode commands that are not yet supported.
+   - Always show CMD argument in hex.
+   - Fix incorrect CMD8 annotations.
+ * can:
+   - Add warnings for various invalid bits and fields.
+   - Skip stuff bit inspection where not applicable (bug #656).
+ * eeprom24xx:
+   - Add Xicor X24C02 support.
+ * onewire_link:
+   - Replace PD with a new, improved implementation (bugs #666, #926).
+   - Overdrive speed is now detected automatically.
+   - Some no longer needed decoder options have been dropped.
+ * Various decoders:
+   - Fix some incorrect PD license metadata fields.
+   - Fix typos, whitespace issues and random other cosmetics in some PDs.
+   - Use consistent __init__() format across all PDs.
+   - Move some duplicated code snippets/lists to decoders/common.
+ * Rename the maxim_ds28ea00 decoder to ds28ea00.
+ * Show library versions in the debug output.
+ * configure: Also check for Python 3.6.
+ * configure summary: Show build type (static/shared) and linker flags.
+ * Remove FSF postal address from boiler plate license text.
+ * HACKING: Update URL to Linux kernel coding style.
+
 0.4.0 (2016-01-29)
 ------------------
 
