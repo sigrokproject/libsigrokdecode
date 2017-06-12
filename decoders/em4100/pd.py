@@ -62,6 +62,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.oldpin = None
         self.last_samplenum = None
@@ -212,7 +215,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
 
         # Initialize internal state from the very first sample.
-        (pin,) = self.wait({'skip': 1})
+        (pin,) = self.wait()
         self.oldpin = pin
         self.last_samplenum = self.samplenum
         self.lastlast_samplenum = self.samplenum

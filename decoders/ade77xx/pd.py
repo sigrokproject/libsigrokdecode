@@ -26,7 +26,7 @@ import sigrokdecode as srd
 from .lists import *
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ade77xx'
     name = 'ADE77xx'
     longname = 'Analog Devices ADE77xx'
@@ -45,13 +45,16 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (2,)),
     )
 
-    def reset(self):
+    def reset_data(self):
         self.expected = 0
         self.mosi_bytes, self.miso_bytes = [], []
 
     def __init__(self):
-        self.ss_cmd, self.es_cmd = 0, 0
         self.reset()
+
+    def reset(self):
+        self.ss_cmd, self.es_cmd = 0, 0
+        self.reset_data()
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -77,7 +80,7 @@ class Decoder(srd.Decoder):
                     idx = 1 if write else 0
                     self.putx([idx, ['%s: %s' % (rblob[0], "SHORT")]])
                     self.put_warn([self.ss_cmd, es], "Short transfer!")
-                self.reset()
+                self.reset_data()
             return
 
         # Don't care about anything else.
@@ -124,4 +127,4 @@ class Decoder(srd.Decoder):
         else:
             self.putx([0, ['%s: %#x' % (rblob[0], vali)]])
 
-        self.reset()
+        self.reset_data()

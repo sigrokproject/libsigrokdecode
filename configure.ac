@@ -67,6 +67,10 @@ SR_LIB_VERSION_SET([SRD_LIB_VERSION], [4:0:0])
 
 AM_CONDITIONAL([WIN32], [test -z "${host_os##mingw*}" || test -z "${host_os##cygwin*}"])
 
+# Initialize pkg-config.
+# We require at least 0.22, as "Requires.private" behaviour changed there.
+PKG_PROG_PKG_CONFIG
+
 ############################
 ##  Package dependencies  ##
 ############################
@@ -123,6 +127,8 @@ SR_SEARCH_LIBS([SRD_EXTRA_LIBS], [pow], [m])
 
 AC_SYS_LARGEFILE
 
+AC_C_BIGENDIAN
+
 ##############################
 ##  Finalize configuration  ##
 ##############################
@@ -131,7 +137,7 @@ AC_SUBST([SRD_PKGLIBS])
 
 # Retrieve the compile and link flags for all modules combined.
 # Also, bail out at this point if any module dependency is not met.
-PKG_CHECK_MODULES([LIBSIGROKDECODE], [glib-2.0 >= 2.28.0 $SRD_PKGLIBS])
+PKG_CHECK_MODULES([LIBSIGROKDECODE], [glib-2.0 >= 2.34 $SRD_PKGLIBS])
 PKG_CHECK_MODULES([TESTS], [$SRD_PKGLIBS_TESTS glib-2.0 $SRD_PKGLIBS])
 
 srd_glib_version=`$PKG_CONFIG --modversion glib-2.0 2>&AS_MESSAGE_LOG_FD`
@@ -162,7 +168,7 @@ Compile configuration:
  - Linker flags.................... $LDFLAGS
 
 Detected libraries (required):
- - glib-2.0 >= 2.28.0.............. $srd_glib_version
+ - glib-2.0 >= 2.34................ $srd_glib_version
 $srd_pkglibs_summary
 Detected libraries (optional):
 $srd_pkglibs_opt_summary

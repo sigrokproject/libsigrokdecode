@@ -44,7 +44,6 @@ libsigrokdecode_la_SOURCES = \
 	exception.c \
 	module_sigrokdecode.c \
 	type_decoder.c \
-	type_logic.c \
 	error.c \
 	version.c
 

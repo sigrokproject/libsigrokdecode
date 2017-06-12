@@ -59,7 +59,7 @@ status = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'mxc6225xu'
     name = 'MXC6225XU'
     longname = 'MEMSIC MXC6225XU'
@@ -72,6 +72,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
 
     def start(self):

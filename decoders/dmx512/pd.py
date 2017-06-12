@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'dmx512'
     name = 'DMX512'
     longname = 'Digital MultipleX 512'
@@ -52,9 +52,11 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.sample_usec = None
-        self.samplenum = -1
         self.run_start = -1
         self.run_bit = 0
         self.state = 'FIND BREAK'
@@ -71,15 +73,14 @@ class Decoder(srd.Decoder):
     def putr(self, data):
         self.put(self.run_start, self.samplenum, self.out_ann, data)
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
+        while True:
             # Seek for an interval with no state change with a length between
             # 88 and 1000000 us (BREAK).
             if self.state == 'FIND BREAK':
-                if self.run_bit == pins[0]:
-                    continue
+                (dmx,) = self.wait({0: 'h' if self.run_bit == 0 else 'l'})
                 runlen = (self.samplenum - self.run_start) * self.sample_usec
                 if runlen > 88 and runlen < 1000000:
                     self.putr([1, ['Break']])
@@ -89,23 +90,23 @@ class Decoder(srd.Decoder):
                 elif runlen >= 1000000:
                     # Error condition.
                     self.putr([10, ['Invalid break length']])
-                self.run_bit = pins[0]
+                self.run_bit = dmx
                 self.run_start = self.samplenum
             # Directly following the BREAK is the MARK AFTER BREAK.
             elif self.state == 'MARK MAB':
-                if self.run_bit == pins[0]:
-                    continue
+                (dmx,) = self.wait({0: 'h' if self.run_bit == 0 else 'l'})
                 self.putr([2, ['MAB']])
                 self.state = 'READ BYTE'
                 self.channel = 0
                 self.bit = 0
-                self.aggreg = pins[0]
+                self.aggreg = dmx
                 self.run_start = self.samplenum
             # Mark and read a single transmitted byte
             # (start bit, 8 data bits, 2 stop bits).
             elif self.state == 'READ BYTE':
+                (dmx,) = self.wait()
                 self.next_sample = self.run_start + (self.bit + 1) * self.skip_per_bit
-                self.aggreg += pins[0]
+                self.aggreg += dmx
                 if self.samplenum != self.next_sample:
                     continue
                 bit_value = 0 if round(self.aggreg/self.skip_per_bit) == self.bit_break else 1
@@ -126,7 +127,7 @@ class Decoder(srd.Decoder):
                             self.out_ann, [10, ['Invalid stop bit']])
                         if self.bit == 10:
                             # On invalid 2nd stop bit, search for new break.
-                            self.run_bit = pins[0]
+                            self.run_bit = dmx
                             self.state = 'FIND BREAK'
                 else:
                     # Label and process one bit.
@@ -148,19 +149,18 @@ class Decoder(srd.Decoder):
                     # Continue by scanning the IFT.
                     self.channel += 1
                     self.run_start = self.samplenum
-                    self.run_bit = pins[0]
+                    self.run_bit = dmx
                     self.state = 'MARK IFT'
 
-                self.aggreg = pins[0]
+                self.aggreg = dmx
                 self.bit += 1
             # Mark the INTERFRAME-TIME between bytes / INTERPACKET-TIME between packets.
             elif self.state == 'MARK IFT':
-                if self.run_bit == pins[0]:
-                    continue
+                (dmx,) = self.wait({0: 'h' if self.run_bit == 0 else 'l'})
                 if self.channel > 512:
                     self.putr([8, ['Interpacket']])
                     self.state = 'FIND BREAK'
-                    self.run_bit = pins[0]
+                    self.run_bit = dmx
                     self.run_start = self.samplenum
                 else:
                     self.putr([7, ['Interframe']])

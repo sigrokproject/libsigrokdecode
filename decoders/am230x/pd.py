@@ -74,7 +74,7 @@ class Decoder(srd.Decoder):
     def putv(self, data):
         self.put(self.bytepos[-2], self.samplenum, self.out_ann, data)
 
-    def reset(self):
+    def reset_variables(self):
         self.state = 'WAIT FOR START LOW'
         self.fall = 0
         self.rise = 0
@@ -122,8 +122,11 @@ class Decoder(srd.Decoder):
         return checksum % 256
 
     def __init__(self):
-        self.samplerate = None
         self.reset()
+
+    def reset(self):
+        self.samplerate = None
+        self.reset_variables()
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -177,7 +180,7 @@ class Decoder(srd.Decoder):
                     self.rise = self.samplenum
                     self.state = 'WAIT FOR RESPONSE LOW'
                 else:
-                    self.reset()
+                    self.reset_variables()
             elif self.state == 'WAIT FOR RESPONSE LOW':
                 self.wait({0: 'f'})
                 if self.is_valid('START HIGH'):
@@ -185,14 +188,14 @@ class Decoder(srd.Decoder):
                     self.fall = self.samplenum
                     self.state = 'WAIT FOR RESPONSE HIGH'
                 else:
-                    self.reset()
+                    self.reset_variables()
             elif self.state == 'WAIT FOR RESPONSE HIGH':
                 self.wait({0: 'r'})
                 if self.is_valid('RESPONSE LOW'):
                     self.rise = self.samplenum
                     self.state = 'WAIT FOR FIRST BIT'
                 else:
-                    self.reset()
+                    self.reset_variables()
             elif self.state == 'WAIT FOR FIRST BIT':
                 self.wait({0: 'f'})
                 if self.is_valid('RESPONSE HIGH'):
@@ -201,14 +204,14 @@ class Decoder(srd.Decoder):
                     self.bytepos.append(self.samplenum)
                     self.state = 'WAIT FOR BIT HIGH'
                 else:
-                    self.reset()
+                    self.reset_variables()
             elif self.state == 'WAIT FOR BIT HIGH':
                 self.wait({0: 'r'})
                 if self.is_valid('BIT LOW'):
                     self.rise = self.samplenum
                     self.state = 'WAIT FOR BIT LOW'
                 else:
-                    self.reset()
+                    self.reset_variables()
             elif self.state == 'WAIT FOR BIT LOW':
                 self.wait({0: 'f'})
                 if self.is_valid('BIT 0 HIGH'):
@@ -216,10 +219,10 @@ class Decoder(srd.Decoder):
                 elif self.is_valid('BIT 1 HIGH'):
                     bit = 1
                 else:
-                    self.reset()
+                    self.reset_variables()
                     continue
                 self.handle_byte(bit)
             elif self.state == 'WAIT FOR END':
                 self.wait({0: 'r'})
                 self.putfs([3, ['End', 'E']])
-                self.reset()
+                self.reset_variables()

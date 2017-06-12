@@ -52,7 +52,7 @@ def regs_and_bits():
     return tuple(l)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ds1307'
     name = 'DS1307'
     longname = 'Dallas DS1307'
@@ -75,6 +75,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.hours = -1
         self.minutes = -1

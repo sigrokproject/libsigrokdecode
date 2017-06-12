@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'i2cdemux'
     name = 'I²C demux'
     longname = 'I²C demultiplexer'
@@ -30,6 +30,9 @@ class Decoder(srd.Decoder):
     outputs = [] # TODO: Only known at run-time.
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.packets = [] # Local cache of I²C packets
         self.slaves = [] # List of known slave addresses
         self.stream = -1 # Current output stream

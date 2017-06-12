@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'arm_tpiu'
     name = 'ARM TPIU'
     longname = 'ARM Trace Port Interface Unit'
@@ -42,6 +42,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.buf = []
         self.syncbuf = []
         self.prevsample = 0

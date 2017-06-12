@@ -39,7 +39,7 @@ ft = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'lm75'
     name = 'LM75'
     longname = 'National LM75'
@@ -62,6 +62,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.reg = 0x00 # Currently selected register
         self.databytes = []

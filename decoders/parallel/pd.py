@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import bitpack
 
 '''
 OUTPUT_PYTHON format:
@@ -78,7 +79,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},
-        {'id': 'wordsize', 'desc': 'Data wordsize', 'default': 1},
+        {'id': 'wordsize', 'desc': 'Data wordsize (# bus cycles)',
+            'default': 0},
         {'id': 'endianness', 'desc': 'Data endianness',
             'default': 'little', 'values': ('little', 'big')},
     )
@@ -86,14 +88,21 @@ class Decoder(srd.Decoder):
         ('items', 'Items'),
         ('words', 'Words'),
     )
+    annotation_rows = (
+        ('items', 'Items', (0,)),
+        ('words', 'Words', (1,)),
+    )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.items = []
-        self.itemcount = 0
         self.saved_item = None
         self.ss_item = self.es_item = None
+        self.saved_word = None
+        self.ss_word = self.es_word = None
         self.first = True
-        self.num_channels = 0
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -111,19 +120,20 @@ class Decoder(srd.Decoder):
     def putw(self, data):
         self.put(self.ss_word, self.es_word, self.out_ann, data)
 
-    def handle_bits(self, datapins):
-        # If this is the first item in a word, save its sample number.
-        if self.itemcount == 0:
-            self.ss_word = self.samplenum
+    def handle_bits(self, item, used_pins):
 
-        # Get the bits for this item.
-        item, used_pins = 0, datapins.count(1) + datapins.count(0)
-        for i in range(used_pins):
-            item |= datapins[i] << i
+        # If a word was previously accumulated, then emit its annotation
+        # now after its end samplenumber became available.
+        if self.saved_word is not None:
+            if self.options['wordsize'] > 0:
+                self.es_word = self.samplenum
+                self.putw([1, [self.fmt_word.format(self.saved_word)]])
+                self.putpw(['WORD', self.saved_word])
+            self.saved_word = None
 
-        self.items.append(item)
-        self.itemcount += 1
-
+        # Defer annotations for individual items until the next sample
+        # is taken, and the previous sample's end samplenumber has
+        # become available.
         if self.first:
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
@@ -133,50 +143,69 @@ class Decoder(srd.Decoder):
             # Output the saved item (from the last CLK edge to the current).
             self.es_item = self.samplenum
             self.putpb(['ITEM', self.saved_item])
-            self.putb([0, ['%X' % self.saved_item]])
+            self.putb([0, [self.fmt_item.format(self.saved_item)]])
             self.ss_item = self.samplenum
             self.saved_item = item
 
-        endian, ws = self.options['endianness'], self.options['wordsize']
-
-        # Get as many items as the configured wordsize says.
-        if self.itemcount < ws:
+        # Get as many items as the configured wordsize specifies.
+        if not self.items:
+            self.ss_word = self.samplenum
+        self.items.append(item)
+        ws = self.options['wordsize']
+        if len(self.items) < ws:
             return
 
-        # Output annotations/python for a word (a collection of items).
-        word = 0
-        for i in range(ws):
-            if endian == 'little':
-                word |= self.items[i] << ((ws - 1 - i) * used_pins)
-            elif endian == 'big':
-                word |= self.items[i] << (i * used_pins)
-
-        self.es_word = self.samplenum
-        # self.putpw(['WORD', word])
-        # self.putw([1, ['%X' % word]])
-        self.ss_word = self.samplenum
-
-        self.itemcount, self.items = 0, []
+        # Collect words and prepare annotation details, but defer emission
+        # until the end samplenumber becomes available.
+        endian = self.options['endianness']
+        if endian == 'big':
+            self.items.reverse()
+        word = sum([self.items[i] << (i * used_pins) for i in range(ws)])
+        self.saved_word = word
+        self.items = []
 
     def decode(self):
-        for i in range(len(self.optional_channels)):
-            if self.has_channel(i):
-                self.num_channels += 1
-
-        if self.num_channels == 0:
+        # Determine which (optional) channels have input data. Insist in
+        # a non-empty input data set. Cope with sparse connection maps.
+        # Store enough state to later "compress" sampled input data.
+        max_possible = len(self.optional_channels)
+        idx_channels = [
+            idx if self.has_channel(idx) else None
+            for idx in range(max_possible)
+        ]
+        has_channels = [idx for idx in idx_channels if idx is not None]
+        if not has_channels:
             raise ChannelError('At least one channel has to be supplied.')
+        max_connected = max(has_channels)
 
-        if not self.has_channel(0):
-            # CLK was not supplied, sample on ANY edge of ANY of the pins
-            # (but only of those pins that were actually supplied).
-            conds = []
-            for i in range(1, len(self.optional_channels)):
-                if self.has_channel(i):
-                    conds.append({i: 'e'})
-            while True:
-                self.handle_bits(self.wait(conds)[1:])
+        # Determine .wait() conditions, depending on the presence of a
+        # clock signal. Either inspect samples on the configured edge of
+        # the clock, or inspect samples upon ANY edge of ANY of the pins
+        # which provide input data.
+        if self.has_channel(0):
+            edge = self.options['clock_edge'][0]
+            conds = {0: edge}
         else:
-            # Sample on the rising or falling CLK edge (depends on config).
-            while True:
-                pins = self.wait({0: self.options['clock_edge'][0]})
-                self.handle_bits(pins[1:])
+            conds = [{idx: 'e'} for idx in has_channels]
+
+        # Pre-determine which input data to strip off, the width of
+        # individual items and multiplexed words, as well as format
+        # strings here. This simplifies call sites which run in tight
+        # loops later.
+        idx_strip = max_connected + 1
+        num_item_bits = idx_strip - 1
+        num_word_items = self.options['wordsize']
+        num_word_bits = num_item_bits * num_word_items
+        num_digits = (num_item_bits + 3) // 4
+        self.fmt_item = "{{:0{}x}}".format(num_digits)
+        num_digits = (num_word_bits + 3) // 4
+        self.fmt_word = "{{:0{}x}}".format(num_digits)
+
+        # Keep processing the input stream. Assume "always zero" for
+        # not-connected input lines. Pass data bits (all inputs except
+        # clock) to the handle_bits() method.
+        while True:
+            pins = self.wait(conds)
+            bits = [0 if idx is None else pins[idx] for idx in idx_channels]
+            item = bitpack(bits[1:idx_strip])
+            self.handle_bits(item, num_item_bits)

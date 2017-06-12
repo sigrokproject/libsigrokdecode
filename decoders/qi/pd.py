@@ -49,7 +49,7 @@ class Decoder(srd.Decoder):
     id = 'qi'
     name = 'Qi'
     longname = 'Qi charger protocol'
-    desc = 'Protocol used by Qi receiver'
+    desc = 'Protocol used by Qi receiver.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['qi']
@@ -73,6 +73,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.reset_variables()
 
@@ -232,7 +235,7 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        (qi,) = self.wait({'skip': 1})
+        (qi,) = self.wait()
         self.handle_transition(self.samplenum, qi == 0)
         while True:
             prev = self.samplenum

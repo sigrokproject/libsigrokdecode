@@ -127,7 +127,7 @@ def parse_branch_addr(bytes, ref_addr, cpu_state, branch_enc):
     return addr, addrlen, cpu_state, exc_info
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'arm_etmv3'
     name = 'ARM ETMv3'
     longname = 'ARM Embedded Trace Macroblock'
@@ -170,6 +170,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.buf = []
         self.syncbuf = []
         self.prevsample = 0

@@ -101,14 +101,23 @@ EOP = 0x16
 SYNC_CODES = [SYNC1, SYNC2, SYNC3]
 HRST_CODES = [RST1, RST1, RST1, RST2]
 
+SOP_SEQUENCES = [
+    (SYNC1, SYNC1, SYNC1, SYNC2),
+    (SYNC1, SYNC1, SYNC3, SYNC3),
+    (SYNC1, SYNC3, SYNC1, SYNC3),
+    (SYNC1, RST2,  RST2,  SYNC3),
+    (SYNC1, RST2,  SYNC3, SYNC2),
+    (RST1,  SYNC1, RST1,  SYNC3),
+    (RST1,  RST1,  RST1,   RST2),
+]
 START_OF_PACKETS = {
-    (SYNC1, SYNC1, SYNC1, SYNC2): 'SOP',
-    (SYNC1, SYNC1, SYNC3, SYNC3): "SOP'",
-    (SYNC1, SYNC3, SYNC1, SYNC3): 'SOP"',
-    (SYNC1, RST2,  RST2,  SYNC3): "SOP' Debug",
-    (SYNC1, RST2,  SYNC3, SYNC2): 'SOP" Debug',
-    (RST1,  SYNC1, RST1,  SYNC3): 'Cable Reset',
-    (RST1,  RST1,  RST1,   RST2): 'Hard Reset',
+    SOP_SEQUENCES[0]: 'SOP',
+    SOP_SEQUENCES[1]: "SOP'",
+    SOP_SEQUENCES[2]: 'SOP"',
+    SOP_SEQUENCES[3]: "SOP' Debug",
+    SOP_SEQUENCES[4]: 'SOP" Debug',
+    SOP_SEQUENCES[5]: 'Cable Reset',
+    SOP_SEQUENCES[6]: 'Hard Reset',
 }
 
 SYM_NAME = [
@@ -228,7 +237,7 @@ class Decoder(srd.Decoder):
         op_ma = ((rdo >> 10) & 0x3ff) * 10
         max_ma = (rdo & 0x3ff) * 10
         flags = ''
-        for f in RDO_FLAGS.keys():
+        for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
                 flags += ' ' + RDO_FLAGS[f]
         return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
@@ -252,7 +261,7 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in PDO_FLAGS.keys():
+        for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
                 flags += ' ' + PDO_FLAGS[f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
@@ -276,7 +285,7 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in PDO_FLAGS.keys():
+        for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
                 flags += ' ' + PDO_FLAGS[f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
@@ -403,7 +412,7 @@ class Decoder(srd.Decoder):
     def find_corrupted_sop(self, k):
         # Start of packet are valid even if they have only 3 correct symbols
         # out of 4.
-        for seq in START_OF_PACKETS.keys():
+        for seq in SOP_SEQUENCES:
             if [k[i] == seq[i] for i in range(len(k))].count(True) >= 3:
                 return START_OF_PACKETS[seq]
         return None
@@ -412,7 +421,7 @@ class Decoder(srd.Decoder):
         for i in range(len(self.bits) - 19):
             k = (self.get_sym(i, rec=False), self.get_sym(i+5, rec=False),
                  self.get_sym(i+10, rec=False), self.get_sym(i+15, rec=False))
-            sym = START_OF_PACKETS[k] if k in START_OF_PACKETS else None
+            sym = START_OF_PACKETS.get(k, None)
             if not sym:
                 sym = self.find_corrupted_sop(k)
             # We have an interesting symbol sequence
@@ -439,6 +448,9 @@ class Decoder(srd.Decoder):
         return -1   # No Start Of Packet
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.idx = 0
         self.packet_seq = 0

@@ -36,13 +36,20 @@
 SRD_PRIV PyObject *py_import_by_name(const char *name)
 {
 	PyObject *py_mod, *py_modname;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	py_modname = PyUnicode_FromString(name);
-	if (!py_modname)
+	if (!py_modname) {
+		PyGILState_Release(gstate);
 		return NULL;
+	}
 
 	py_mod = PyImport_Import(py_modname);
 	Py_DECREF(py_modname);
+
+	PyGILState_Release(gstate);
 
 	return py_mod;
 }
@@ -64,21 +71,31 @@ SRD_PRIV int py_attr_as_str(PyObject *py_obj, const char *attr, char **outstr)
 {
 	PyObject *py_str;
 	int ret;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PyObject_HasAttrString(py_obj, attr)) {
 		srd_dbg("Object has no attribute '%s'.", attr);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_str = PyObject_GetAttrString(py_obj, attr))) {
 		srd_exception_catch("Failed to get attribute '%s'", attr);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	ret = py_str_as_str(py_str, outstr);
 	Py_DECREF(py_str);
 
+	PyGILState_Release(gstate);
+
 	return ret;
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -101,20 +118,23 @@ SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **out
 	Py_ssize_t i;
 	int ret;
 	char *outstr;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PyObject_HasAttrString(py_obj, attr)) {
 		srd_dbg("Object has no attribute '%s'.", attr);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_list = PyObject_GetAttrString(py_obj, attr))) {
 		srd_exception_catch("Failed to get attribute '%s'", attr);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!PyList_Check(py_list)) {
 		srd_dbg("Object is not a list.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	*outstrlist = NULL;
@@ -123,14 +143,21 @@ SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **out
 		ret = py_listitem_as_str(py_list, i, &outstr);
 		if (ret < 0) {
 			srd_dbg("Couldn't get item %" PY_FORMAT_SIZE_T "d.", i);
-			return SRD_ERR_PYTHON;
+			goto err;
 		}
 		*outstrlist = g_slist_append(*outstrlist, outstr);
 	}
 
 	Py_DECREF(py_list);
 
+	PyGILState_Release(gstate);
+
 	return SRD_OK;
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -150,18 +177,28 @@ SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key,
 				char **outstr)
 {
 	PyObject *py_value;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PyDict_Check(py_obj)) {
 		srd_dbg("Object is not a dictionary.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_value = PyDict_GetItemString(py_obj, key))) {
 		srd_dbg("Dictionary has no attribute '%s'.", key);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
+	PyGILState_Release(gstate);
+
 	return py_str_as_str(py_value, outstr);
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -181,18 +218,28 @@ SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx,
 				char **outstr)
 {
 	PyObject *py_value;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PyList_Check(py_obj)) {
 		srd_dbg("Object is not a list.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_value = PyList_GetItem(py_obj, idx))) {
 		srd_dbg("Couldn't get list item %" PY_FORMAT_SIZE_T "d.", idx);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
+	PyGILState_Release(gstate);
+
 	return py_str_as_str(py_value, outstr);
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -212,26 +259,34 @@ SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key,
 				char **outstr)
 {
 	PyObject *py_value;
+	PyGILState_STATE gstate;
 
 	if (!py_obj || !py_key || !outstr)
 		return SRD_ERR_ARG;
 
+	gstate = PyGILState_Ensure();
+
 	if (!PyDict_Check(py_obj)) {
 		srd_dbg("Object is not a dictionary.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_value = PyDict_GetItem(py_obj, py_key))) {
 		srd_dbg("Dictionary has no such key.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!PyUnicode_Check(py_value)) {
 		srd_dbg("Dictionary value should be a string.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	return py_str_as_str(py_value, outstr);
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -249,28 +304,38 @@ SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key,
 SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out)
 {
 	PyObject *py_value;
+	PyGILState_STATE gstate;
 
 	if (!py_obj || !py_key || !out)
 		return SRD_ERR_ARG;
 
+	gstate = PyGILState_Ensure();
+
 	if (!PyDict_Check(py_obj)) {
 		srd_dbg("Object is not a dictionary.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!(py_value = PyDict_GetItem(py_obj, py_key))) {
 		srd_dbg("Dictionary has no such key.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	if (!PyLong_Check(py_value)) {
 		srd_dbg("Dictionary value should be a long.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	*out = PyLong_AsUnsignedLongLong(py_value);
 
+	PyGILState_Release(gstate);
+
 	return SRD_OK;
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /**
@@ -289,9 +354,13 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 {
 	PyObject *py_bytes;
 	char *str;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PyUnicode_Check(py_str)) {
 		srd_dbg("Object is not a string object.");
+		PyGILState_Release(gstate);
 		return SRD_ERR_PYTHON;
 	}
 
@@ -301,10 +370,13 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 		Py_DECREF(py_bytes);
 		if (str) {
 			*outstr = str;
+			PyGILState_Release(gstate);
 			return SRD_OK;
 		}
 	}
 	srd_exception_catch("Failed to extract string");
+
+	PyGILState_Release(gstate);
 
 	return SRD_ERR_PYTHON;
 }
@@ -327,22 +399,27 @@ SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv)
 	PyObject *py_item, *py_bytes;
 	char **strv, *str;
 	ssize_t seq_len, i;
+	PyGILState_STATE gstate;
+	int ret = SRD_ERR_PYTHON;
+
+	gstate = PyGILState_Ensure();
 
 	if (!PySequence_Check(py_strseq)) {
 		srd_err("Object does not provide sequence protocol.");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	seq_len = PySequence_Size(py_strseq);
 	if (seq_len < 0) {
 		srd_exception_catch("Failed to obtain sequence size");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 
 	strv = g_try_new0(char *, seq_len + 1);
 	if (!strv) {
 		srd_err("Failed to allocate result string vector.");
-		return SRD_ERR_MALLOC;
+		ret = SRD_ERR_MALLOC;
+		goto err;
 	}
 
 	for (i = 0; i < seq_len; i++) {
@@ -374,7 +451,10 @@ err_out:
 	g_strfreev(strv);
 	srd_exception_catch("Failed to obtain string item");
 
-	return SRD_ERR_PYTHON;
+err:
+	PyGILState_Release(gstate);
+
+	return ret;
 }
 
 /**
@@ -389,6 +469,9 @@ err_out:
 SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 {
 	GVariant *var = NULL;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	if (PyUnicode_Check(py_obj)) { /* string */
 		PyObject *py_bytes;
@@ -425,6 +508,8 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 	} else {
 		srd_err("Failed to extract value of unsupported type.");
 	}
+
+	PyGILState_Release(gstate);
 
 	return var;
 }

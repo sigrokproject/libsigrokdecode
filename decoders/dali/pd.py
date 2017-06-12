@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'dali'
     name = 'DALI'
     longname = 'Digital Addressable Lighting Interface'
@@ -52,17 +52,18 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (0,)),
         ('raw', 'Raw data', (7,)),
-        ('fields', 'Fields', (1, 2, 3, 4, 5, 6,)),
+        ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        self.nextSamplePoint = None
-        self.nextSample = None
-        self.devType = None
+        self.dev_type = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -132,8 +133,8 @@ class Decoder(srd.Decoder):
             self.putb(1, 7, [5, s])
         elif f >= 160: # Extended command 0b10100000
             if f == 0xC1: # DALI_ENABLE_DEVICE_TYPE_X
-                self.devType = -1
-            x = extendedCommands.get(f, ['Unknown', 'Unk'])
+                self.dev_type = -1
+            x = extended_commands.get(f, ['Unknown', 'Unk'])
             s = ['Extended Command: %02X (%s)' % (f, x[0]),
                  'XC: %02X (%s)' % (f, x[1]),
                  'XC: %02X' % f, 'X: %02X' % f, 'X']
@@ -151,19 +152,18 @@ class Decoder(srd.Decoder):
             s = ['YBit: %d' % b[1][1], 'YB: %d' % b[1][1], 'YB', 'Y', 'Y']
             self.putb(1, 1, [3, s])
             a = f >> 1
-            # x = system.get(a, ['Unknown', 'Unk'])
             s = ['Short address: %d' % a, 'Addr: %d' % a,
                 'Addr: %d' % a, 'A: %d' % a, 'A']
             self.putb(2, 7, [4, s])
 
         # Bits[9:16]: Command/data (MSB-first)
         if f >= 160 and f < 254:
-            if self.devType == -1:
-                self.devType = c
+            if self.dev_type == -1:
+                self.dev_type = c
                 s = ['Type: %d' % c, 'Typ: %d' % c,
                      'Typ: %d' % c, 'T: %d' % c, 'D']
             else:
-                self.devType = None
+                self.dev_type = None
                 s = ['Data: %d' % c, 'Dat: %d' % c,
                      'Dat: %d' % c, 'D: %d' % c, 'D']
         elif b[8][1] == 1:
@@ -182,12 +182,12 @@ class Decoder(srd.Decoder):
             elif un == 0xB0:
                 x = ['Query Scene %d Level' % ln, 'Sc %d Level' % ln]
             elif c >= 224: # Application specific commands
-                if self.devType == 8:
-                    x = DALIDeviceType8.get(c, ['Unknown App', 'Unk'])
+                if self.dev_type == 8:
+                    x = dali_device_type8.get(c, ['Unknown App', 'Unk'])
                 else:
                     x = ['Application Specific Command %d' % c, 'App Cmd %d' % c]
             else:
-                x = DALICommands.get(c, ['Unknown', 'Unk'])
+                x = dali_commands.get(c, ['Unknown', 'Unk'])
             s = ['Command: %d (%s)' % (c, x[0]), 'Com: %d (%s)' % (c, x[1]),
                  'Com: %d' % c, 'C: %d' % c, 'C']
         else:
@@ -198,46 +198,30 @@ class Decoder(srd.Decoder):
     def reset_decoder_state(self):
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        # self.devType = None
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        bit = 0;
-        for (self.samplenum, pins) in data:
-            self.dali = pins[0]
-            # data.itercnt += 1
-            # data.logic_mask = 1
-            # data.cur_pos = self.samplenum
-            # data.edge_index = -1
+        bit = 0
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            (dali,) = self.wait()
             if self.options['polarity'] == 'active-high':
-                self.dali ^= 1 # Invert.
+                dali ^= 1 # Invert.
 
             # State machine.
             if self.state == 'IDLE':
                 # Wait for any edge (rising or falling).
-                if self.old_dali == self.dali:
-                    # data.exp_logic = self.exp_logic
-                    # data.logic_mask = 1
-                    # logic.cur_pos = self.samplenum
+                if self.old_dali == dali:
                     continue
                 self.edges.append(self.samplenum)
                 self.state = 'PHASE0'
-                self.old_dali = self.dali
-                # Get the next sample point.
-                # self.nextSamplePoint = self.samplenum + int(self.halfbit / 2)
-                self.old_dali = self.dali
-                # bit = self.dali
-                # data.itercnt += int((self.halfbit - 1) * 0.5)
+                self.old_dali = dali
                 continue
 
-            # if(self.samplenum == self.nextSamplePoint):
-            #    bit = self.dali
-            #    continue
-
-            if (self.old_dali != self.dali):
+            if self.old_dali != dali:
                 self.edges.append(self.samplenum)
-            elif (self.samplenum == (self.edges[-1] + int(self.halfbit * 1.5))):
+            elif self.samplenum == (self.edges[-1] + int(self.halfbit * 1.5)):
                 self.edges.append(self.samplenum - int(self.halfbit * 0.5))
             else:
                 continue
@@ -247,9 +231,9 @@ class Decoder(srd.Decoder):
                 self.phase0 = bit
                 self.state = 'PHASE1'
             elif self.state == 'PHASE1':
-                if (bit == 1) and (self.phase0 == 1): # Stop bit
+                if (bit == 1) and (self.phase0 == 1): # Stop bit.
                     if len(self.bits) == 17 or len(self.bits) == 9:
-                        # Forward or Backward
+                        # Forward or Backward.
                         self.handle_bits(len(self.bits))
                     self.reset_decoder_state() # Reset upon errors.
                     continue
@@ -257,6 +241,4 @@ class Decoder(srd.Decoder):
                     self.bits.append([self.edges[-3], bit])
                     self.state = 'PHASE0'
 
-            # self.nextSamplePoint = self.edges[-1] + int(self.halfbit / 2)
-
-            self.old_dali = self.dali
+            self.old_dali = dali

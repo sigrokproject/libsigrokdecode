@@ -134,7 +134,7 @@ def data_out(bits):
            % (data_hex, ack_meaning)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'jtag_stm32'
     name = 'JTAG / STM32'
     longname = 'Joint Test Action Group / ST STM32'
@@ -156,6 +156,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.samplenums = None
 

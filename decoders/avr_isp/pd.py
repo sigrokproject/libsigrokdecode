@@ -23,7 +23,7 @@ from .parts import *
 VENDOR_CODE_ATMEL = 0x1e
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'avr_isp'
     name = 'AVR ISP'
     longname = 'AVR In-System Programming'
@@ -51,6 +51,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.mosi_bytes, self.miso_bytes = [], []
         self.ss_cmd, self.es_cmd = 0, 0

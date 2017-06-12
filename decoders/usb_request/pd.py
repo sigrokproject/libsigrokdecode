@@ -112,7 +112,7 @@ class pcap_usb_pkt():
         return 64 + len(self.data)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'usb_request'
     name = 'USB request'
     longname = 'Universal Serial Bus (LS/FS) transaction/request'
@@ -136,6 +136,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.request = {}
         self.request_id = 0
@@ -168,7 +171,8 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-            self.secs_per_sample = float(1) / float(self.samplerate)
+            if self.samplerate:
+                self.secs_per_sample = float(1) / float(self.samplerate)
 
     def start(self):
         self.out_binary = self.register(srd.OUTPUT_BINARY)
@@ -179,6 +183,14 @@ class Decoder(srd.Decoder):
         request_end = self.handshake in ('ACK', 'STALL', 'timeout')
         ep = self.transaction_ep
         addr = self.transaction_addr
+
+        # Handle protocol STALLs, condition lasts until next SETUP transfer (8.5.3.4)
+        if self.transaction_type == 'SETUP' and (addr, ep) in self.request:
+            request = self.request[(addr,ep)]
+            if request['type'] in ('SETUP IN', 'SETUP OUT'):
+                request['es'] = self.ss_transaction
+                self.handle_request(0, 1)
+
         if not (addr, ep) in self.request:
             self.request[(addr, ep)] = {'setup_data': [], 'data': [],
                 'type': None, 'ss': self.ss_transaction, 'es': None,
@@ -187,16 +199,18 @@ class Decoder(srd.Decoder):
             request_started = 1
         request = self.request[(addr,ep)]
 
+        if request_end:
+            request['es'] = self.es_transaction
+            request['handshake'] = self.handshake
+
         # BULK or INTERRUPT transfer
         if request['type'] in (None, 'BULK IN') and self.transaction_type == 'IN':
             request['type'] = 'BULK IN'
             request['data'] += self.transaction_data
-            request['es'] = self.es_transaction
             self.handle_request(request_started, request_end)
         elif request['type'] in (None, 'BULK OUT') and self.transaction_type == 'OUT':
             request['type'] = 'BULK OUT'
             request['data'] += self.transaction_data
-            request['es'] = self.es_transaction
             self.handle_request(request_started, request_end)
 
         # CONTROL, SETUP stage
@@ -222,11 +236,9 @@ class Decoder(srd.Decoder):
 
         # CONTROL, STATUS stage
         elif request['type'] == 'SETUP IN' and self.transaction_type == 'OUT':
-            request['es'] = self.es_transaction
             self.handle_request(0, request_end)
 
         elif request['type'] == 'SETUP OUT' and self.transaction_type == 'IN':
-            request['es'] = self.es_transaction
             self.handle_request(0, request_end)
 
         else:
@@ -251,7 +263,7 @@ class Decoder(srd.Decoder):
             s += ' ]['
         for b in request['data']:
             s += ' %02X' % b
-        s += ' ] : %s' % self.handshake
+        s += ' ] : %s' % request['handshake']
         return s
 
     def handle_request(self, request_start, request_end):

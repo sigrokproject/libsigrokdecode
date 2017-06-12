@@ -131,10 +131,13 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 	GSList *l;
 	struct srd_decoder_inst *next_di;
 	int ret;
+	PyGILState_STATE gstate;
 
 	if (key != SRD_CONF_SAMPLERATE)
 		/* This is the only key we pass on to the decoder for now. */
 		return SRD_OK;
+
+	gstate = PyGILState_Ensure();
 
 	if (PyObject_HasAttrString(di->py_inst, "metadata")) {
 		py_ret = PyObject_CallMethod(di->py_inst, "metadata", "lK",
@@ -142,6 +145,8 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 				(unsigned long long)g_variant_get_uint64(data));
 		Py_XDECREF(py_ret);
 	}
+
+	PyGILState_Release(gstate);
 
 	/* Push metadata to all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {
@@ -199,7 +204,7 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		return SRD_ERR_ARG;
 	}
 
-	srd_dbg("Setting session %d samplerate to %"PRIu64".",
+	srd_dbg("Setting session %d samplerate to %"G_GUINT64_FORMAT".",
 			sess->session_id, g_variant_get_uint64(data));
 
 	ret = SRD_OK;
@@ -289,6 +294,45 @@ SRD_API int srd_session_send(struct srd_session *sess,
 			return ret;
 	}
 
+	return SRD_OK;
+}
+
+/**
+ * Terminate currently executing decoders in a session, reset internal state.
+ *
+ * All decoder instances have their .wait() method terminated, which
+ * shall terminate .decode() as well. Afterwards the decoders' optional
+ * .reset() method gets executed.
+ *
+ * This routine allows callers to abort pending expensive operations,
+ * when they are no longer interested in the decoders' results. Note
+ * that the decoder state is lost and aborted work cannot resume.
+ *
+ * This routine also allows callers to re-use previously created decoder
+ * stacks to process new input data which is not related to previously
+ * processed input data. This avoids the necessity to re-construct the
+ * decoder stack.
+ *
+ * @param sess The session in which to terminate decoders.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.6.0
+ */
+SRD_API int srd_session_terminate_reset(struct srd_session *sess)
+{
+	GSList *d;
+	int ret;
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
+
+	for (d = sess->di_list; d; d = d->next) {
+		ret = srd_inst_terminate_reset(d->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
 	return SRD_OK;
 }
 

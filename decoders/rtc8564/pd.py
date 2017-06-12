@@ -28,7 +28,7 @@ def reg_list():
     return tuple(l)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'rtc8564'
     name = 'RTC-8564'
     longname = 'Epson RTC-8564 JE/NB'
@@ -52,6 +52,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.hours = -1
         self.minutes = -1

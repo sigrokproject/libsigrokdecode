@@ -73,7 +73,7 @@ ANN_FIELDS = 0
 ANN_SECTIONS = 1
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'edid'
     name = 'EDID'
     longname = 'Extended Display Identification Data'
@@ -91,6 +91,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = None
         # Received data items, used as an index into samplenum/data
         self.cnt = 0

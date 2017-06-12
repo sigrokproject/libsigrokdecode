@@ -71,6 +71,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.bits = []
         self.ss_dac_first = None
         self.ss_dac = self.es_dac = 0

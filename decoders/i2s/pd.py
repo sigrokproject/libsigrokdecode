@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+import struct
 
 '''
 OUTPUT_PYTHON format:
@@ -31,9 +32,6 @@ Packet:
 <channel>: 'L' or 'R'
 <value>: integer
 '''
-
-class SamplerateError(Exception):
-    pass
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -59,6 +57,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.oldws = 1
         self.bitcount = 0
@@ -88,12 +89,12 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def report(self):
-
         # Calculate the sample rate.
         samplerate = '?'
         if self.ss_block is not None and \
             self.first_sample is not None and \
-            self.ss_block > self.first_sample:
+            self.ss_block > self.first_sample and \
+            self.samplerate:
             samplerate = '%d' % (self.samplesreceived *
                 self.samplerate / (self.ss_block -
                 self.first_sample))
@@ -112,25 +113,18 @@ class Decoder(srd.Decoder):
         h += b'\x01\x00'         # Audio format (0x0001 == PCM)
         h += b'\x02\x00'         # Number of channels (2)
         h += b'\x80\x3e\x00\x00' # Samplerate (16000)
-        h += b'\x00\x7d\x00\x00' # Byterate (32000)
+        h += b'\x00\xfa\x00\x00' # Byterate (64000)
         h += b'\x04\x00'         # Blockalign (4)
-        h += b'\x10\x00'         # Bits per sample (16)
+        h += b'\x20\x00'         # Bits per sample (32)
         # Data subchunk
         h += b'data'
-        h += b'\xff\xff\x00\x00' # Subchunk size (65535 bytes) TODO
+        h += b'\xff\xff\xff\xff' # Subchunk size (4G bytes) TODO
         return h
 
     def wav_sample(self, sample):
-        # TODO: This currently assumes U32 samples, and converts to S16.
-        s = sample >> 16
-        if s >= 0x8000:
-            s -= 0x10000
-        lo, hi = s & 0xff, (s >> 8) & 0xff
-        return bytes([lo, hi])
+        return struct.pack('<I', self.data)
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
         while True:
             # Wait for a rising edge on the SCK pin.
             sck, ws, sd = self.wait({0: 'r'})

@@ -35,7 +35,7 @@ command = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ds28ea00'
     name = 'DS28EA00'
     longname = 'Maxim DS28EA00 1-Wire digital thermometer'
@@ -48,6 +48,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.trn_beg = 0
         self.trn_end = 0
         self.state = 'ROM'

@@ -144,6 +144,55 @@ static void print_versions(void)
 	g_free(str);
 }
 
+static int print_searchpaths(void)
+{
+	PyObject *py_paths, *py_path, *py_bytes;
+	PyGILState_STATE gstate;
+	GString *s;
+	GSList *l;
+	int i;
+
+	s = g_string_sized_new(500);
+	g_string_append(s, "Protocol decoder search paths:\n");
+	for (l = searchpaths; l; l = l->next)
+		g_string_append_printf(s, " - %s\n", (const char *)l->data);
+	s->str[s->len - 1] = '\0';
+	srd_dbg("%s", s->str);
+	g_string_free(s, TRUE);
+
+	gstate = PyGILState_Ensure();
+
+	py_paths = PySys_GetObject("path");
+	if (!py_paths)
+		goto err;
+
+	s = g_string_sized_new(500);
+	g_string_append(s, "Python system search paths:\n");
+	for (i = 0; i < PyList_Size(py_paths); i++) {
+		py_path = PyList_GetItem(py_paths, i);
+		py_bytes = PyUnicode_AsUTF8String(py_path);
+		g_string_append_printf(s, " - %s\n", PyBytes_AsString(py_bytes));
+	}
+	s->str[s->len - 1] = '\0';
+	srd_dbg("%s", s->str);
+	g_string_free(s, TRUE);
+
+	PyGILState_Release(gstate);
+
+	return SRD_OK;
+
+err:
+	srd_err("Unable to query Python system search paths.");
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
+}
+
+SRD_API GSList *srd_searchpaths_get(void)
+{
+	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
+}
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -232,7 +281,15 @@ SRD_API int srd_init(const char *path)
 		}
 	}
 
+	/* Initialize the Python GIL (this also happens to acquire it). */
+	PyEval_InitThreads();
+
+	/* Release the GIL (ignore return value, we don't need it here). */
+	(void)PyEval_SaveThread();
+
 	max_session_id = 0;
+
+	print_searchpaths();
 
 	return SRD_OK;
 }
@@ -261,8 +318,17 @@ SRD_API int srd_exit(void)
 	g_slist_free_full(searchpaths, g_free);
 	searchpaths = NULL;
 
+	/*
+	 * Acquire the GIL, otherwise Py_Finalize() might have issues.
+	 * Ignore the return value, we don't need it here.
+	 */
+	if (Py_IsInitialized())
+		(void)PyGILState_Ensure();
+
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
+
+	/* Note: No need to release the GIL since Python is shut down now. */
 
 	max_session_id = -1;
 
@@ -291,28 +357,38 @@ SRD_API int srd_exit(void)
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
 	PyObject *py_cur_path, *py_item;
+	PyGILState_STATE gstate;
 
 	srd_dbg("Adding '%s' to module path.", path);
 
+	gstate = PyGILState_Ensure();
+
 	py_cur_path = PySys_GetObject("path");
 	if (!py_cur_path)
-		return SRD_ERR_PYTHON;
+		goto err;
 
 	py_item = PyUnicode_FromString(path);
 	if (!py_item) {
 		srd_exception_catch("Failed to create Unicode object");
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 	if (PyList_Insert(py_cur_path, 0, py_item) < 0) {
 		srd_exception_catch("Failed to insert path element");
 		Py_DECREF(py_item);
-		return SRD_ERR_PYTHON;
+		goto err;
 	}
 	Py_DECREF(py_item);
+
+	PyGILState_Release(gstate);
 
 	searchpaths = g_slist_prepend(searchpaths, g_strdup(path));
 
 	return SRD_OK;
+
+err:
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
 }
 
 /** @} */

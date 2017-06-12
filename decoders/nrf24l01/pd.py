@@ -59,7 +59,7 @@ xn297_regs = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'nrf24l01'
     name = 'nRF24L01(+)'
     longname = 'Nordic Semiconductor nRF24L01/nRF24L01+'
@@ -94,6 +94,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.next()
         self.requirements_met = True
         self.cs_was_released = False

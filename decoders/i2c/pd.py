@@ -18,7 +18,6 @@
 ##
 
 # TODO: Look into arbitration, collision detection, clock synchronisation, etc.
-# TODO: Implement support for 10bit slave addresses.
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
 
@@ -61,9 +60,6 @@ proto = {
     'DATA READ':       [8, 'Data read',     'DR'],
     'DATA WRITE':      [9, 'Data write',    'DW'],
 }
-
-class SamplerateError(Exception):
-    pass
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -108,6 +104,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.ss = self.es = self.ss_byte = -1
         self.bitcount = 0
@@ -236,9 +235,10 @@ class Decoder(srd.Decoder):
 
     def handle_stop(self, pins):
         # Meta bitrate
-        elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
-        bitrate = int(1 / elapsed * self.pdu_bits)
-        self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
+        if self.samplerate:
+            elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
+            bitrate = int(1 / elapsed * self.pdu_bits)
+            self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
 
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum
@@ -250,11 +250,6 @@ class Decoder(srd.Decoder):
         self.bits = []
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
-
-        self.wait({})
-
         while True:
             # State machine.
             if self.state == 'FIND START':

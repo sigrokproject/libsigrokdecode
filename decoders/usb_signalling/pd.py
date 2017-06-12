@@ -100,7 +100,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'usb_signalling'
     name = 'USB signalling'
     longname = 'Universal Serial Bus (LS/FS) signalling'
@@ -135,6 +135,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_block = None
@@ -145,11 +148,10 @@ class Decoder(srd.Decoder):
         self.samplenum_target = None
         self.samplenum_edge = None
         self.samplenum_lastedge = 0
-        self.oldpins = None
         self.edgepins = None
         self.consecutive_ones = 0
         self.bits = None
-        self.state = 'INIT'
+        self.state = 'IDLE'
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -298,17 +300,21 @@ class Decoder(srd.Decoder):
         self.oldsym = 'J'
         self.state = 'IDLE'
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
+
+        # Seed internal state from the very first sample.
+        pins = self.wait()
+        sym = symbols[self.options['signalling']][pins]
+        self.handle_idle(sym)
+
+        while True:
             # State machine.
             if self.state == 'IDLE':
-                # Ignore identical samples early on (for performance reasons).
-                if self.oldpins == pins:
-                    continue
-                self.oldpins = pins
-                sym = symbols[self.signalling][tuple(pins)]
+                # Wait for any edge on either DP and/or DM.
+                pins = self.wait([{0: 'e'}, {1: 'e'}])
+                sym = symbols[self.signalling][pins]
                 if sym == 'SE0':
                     self.samplenum_lastedge = self.samplenum
                     self.state = 'WAIT IDLE'
@@ -317,28 +323,23 @@ class Decoder(srd.Decoder):
                 self.edgepins = pins
             elif self.state in ('GET BIT', 'GET EOP'):
                 # Wait until we're in the middle of the desired bit.
-                if self.samplenum == self.samplenum_edge:
-                    self.edgepins = pins
-                if self.samplenum < self.samplenum_target:
-                    continue
-                sym = symbols[self.signalling][tuple(pins)]
+                self.edgepins = self.wait([{'skip': self.samplenum_edge - self.samplenum}])
+                pins = self.wait([{'skip': self.samplenum_target - self.samplenum}])
+
+                sym = symbols[self.signalling][pins]
                 if self.state == 'GET BIT':
                     self.get_bit(sym)
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
-                self.oldpins = pins
             elif self.state == 'WAIT IDLE':
-                if tuple(pins) == (0, 0):
-                    continue
+                # Skip "all-low" input. Wait for high level on either DP or DM.
+                pins = self.wait()
+                while not pins[0] and not pins[1]:
+                    pins = self.wait([{0: 'h'}, {1: 'h'}])
                 if self.samplenum - self.samplenum_lastedge > 1:
-                    sym = symbols[self.options['signalling']][tuple(pins)]
+                    sym = symbols[self.options['signalling']][pins]
                     self.handle_idle(sym)
                 else:
-                    sym = symbols[self.signalling][tuple(pins)]
+                    sym = symbols[self.signalling][pins]
                     self.wait_for_sop(sym)
-                self.oldpins = pins
                 self.edgepins = pins
-            elif self.state == 'INIT':
-                sym = symbols[self.options['signalling']][tuple(pins)]
-                self.handle_idle(sym)
-                self.oldpins = pins

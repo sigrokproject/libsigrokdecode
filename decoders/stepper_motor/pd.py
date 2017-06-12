@@ -19,9 +19,6 @@
 
 import sigrokdecode as srd
 
-class SamplerateError(Exception):
-    pass
-
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'stepper_motor'
@@ -50,6 +47,10 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.samplerate = None
         self.oldstep = None
         self.ss_prev_step = None
         self.pos = 0
@@ -70,12 +71,13 @@ class Decoder(srd.Decoder):
 
     def step(self, ss, direction):
         if self.ss_prev_step is not None:
-            delta = ss - self.ss_prev_step
-            speed = self.samplerate / delta / self.scale
-            speed_txt = self.format % speed
+            if self.samplerate:
+                delta = ss - self.ss_prev_step
+                speed = self.samplerate / delta / self.scale
+                speed_txt = self.format % speed
+                self.put(self.ss_prev_step, ss, self.out_ann,
+                    [0, [speed_txt + ' ' + self.unit + '/s', speed_txt]])
             pos_txt = self.format % (self.pos / self.scale)
-            self.put(self.ss_prev_step, ss, self.out_ann,
-                [0, [speed_txt + ' ' + self.unit + '/s', speed_txt]])
             self.put(self.ss_prev_step, ss, self.out_ann,
                 [1, [pos_txt + ' ' + self.unit, pos_txt]])
 
@@ -87,8 +89,6 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
         while True:
             step, direction = self.wait({0: 'r'})
             self.step(self.samplenum, direction)

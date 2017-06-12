@@ -37,7 +37,7 @@ ARM_EXCEPTIONS = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'arm_itm'
     name = 'ARM ITM'
     longname = 'ARM Instrumentation Trace Macroblock'
@@ -80,6 +80,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.buf = []
         self.syncbuf = []
         self.swpackets = {}

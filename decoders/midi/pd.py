@@ -25,7 +25,7 @@ RX = 0
 TX = 1
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'midi'
     name = 'MIDI'
     longname = 'Musical Instrument Digital Interface'
@@ -44,6 +44,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.status_byte = 0
         self.explicit_status_byte = False

@@ -95,7 +95,7 @@ fields = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'lpc'
     name = 'LPC'
     longname = 'Low-Pin-Count'
@@ -136,10 +136,12 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IDLE'
         self.oldlclk = -1
         self.samplenum = 0
-        self.clocknum = 0
         self.lad = -1
         self.addr = 0
         self.cur_nibble = 0
@@ -183,10 +185,10 @@ class Decoder(srd.Decoder):
     def handle_get_ct_dr(self, lad, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
 
-        self.cycle_type = fields['CT_DR'][lad]
+        self.cycle_type = fields['CT_DR'].get(lad, 'Reserved / unknown')
 
         # TODO: Warning/error on invalid cycle types.
-        if self.cycle_type == 'Reserved':
+        if 'Reserved' in self.cycle_type:
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
 
         self.es_block = self.samplenum
@@ -252,10 +254,10 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
         self.sync_val = lad_bits
-        self.cycle_type = fields['SYNC'][lad]
+        self.cycle_type = fields['SYNC'].get(lad, 'Reserved / unknown')
 
         # TODO: Warnings if reserved value are seen?
-        if self.cycle_type == 'Reserved':
+        if 'Reserved' in self.cycle_type:
             self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
@@ -312,8 +314,10 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.state = 'IDLE'
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
+    def decode(self):
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            pins = self.wait()
 
             # If none of the pins changed, there's nothing to do.
             if self.oldpins == pins:
@@ -349,7 +353,6 @@ class Decoder(srd.Decoder):
                 self.ss_block = self.samplenum
                 self.state = 'GET START'
                 self.lad = -1
-                # self.clocknum = 0
             elif self.state == 'GET START':
                 self.handle_get_start(lad, lad_bits, lframe)
             elif self.state == 'GET CT/DR':

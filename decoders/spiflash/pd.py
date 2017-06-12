@@ -71,7 +71,7 @@ def decode_status_reg(data):
     return ret
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'spiflash'
     name = 'SPI flash'
     longname = 'SPI flash chips'
@@ -98,6 +98,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.device_id = -1
         self.on_end_transaction = None
         self.end_current_transaction()

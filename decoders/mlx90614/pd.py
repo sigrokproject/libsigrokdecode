@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'mlx90614'
     name = 'MLX90614'
     longname = 'Melexis MLX90614'
@@ -34,6 +34,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = 'IGNORE START REPEAT'
         self.data = []
 

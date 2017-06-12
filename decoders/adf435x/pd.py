@@ -88,7 +88,7 @@ regs = {
 ANN_REG = 0
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'adf435x'
     name = 'ADF435x'
     longname = 'Analog Devices ADF4350/1'
@@ -105,6 +105,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.bits = []
 
     def start(self):

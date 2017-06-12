@@ -42,9 +42,10 @@ class Decoder(srd.Decoder):
         self.put(self.ss_edge, self.samplenum, self.out_ann, data)
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ss_edge = None
-        self.first_transition = True
-        self.bitwidth = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -57,19 +58,21 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
+        # Get the first edge on the data line.
+        self.wait({0: 'e'})
+        self.ss_edge = self.samplenum
+
+        # Get any subsequent edge on the data line. Get the smallest
+        # distance between any two transitions, assuming it corresponds
+        # to one bit time of the respective bitrate of the input stream.
+        # This heuristics keeps getting better for longer captures.
+        bitwidth = None
         while True:
-            # Wait for any transition/edge on the data line.
             self.wait({0: 'e'})
 
-            # Get the smallest distance between two transitions
-            # and use that to calculate the bitrate/baudrate.
-            if self.first_transition:
-                self.ss_edge = self.samplenum
-                self.first_transition = False
-            else:
-                b = self.samplenum - self.ss_edge
-                if self.bitwidth is None or b < self.bitwidth:
-                    self.bitwidth = b
-                    bitrate = int(float(self.samplerate) / float(b))
-                    self.putx([0, ['%d' % bitrate]])
-                self.ss_edge = self.samplenum
+            b = self.samplenum - self.ss_edge
+            if bitwidth is None or b < bitwidth:
+                bitwidth = b
+                bitrate = int(float(self.samplerate) / float(b))
+                self.putx([0, ['%d' % bitrate]])
+            self.ss_edge = self.samplenum

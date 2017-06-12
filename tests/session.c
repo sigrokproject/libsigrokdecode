@@ -224,6 +224,36 @@ START_TEST(test_session_metadata_set_bogus)
 }
 END_TEST
 
+/*
+ * Check whether srd_session_terminate_reset() succeeds on newly created
+ * sessions, as well as after calling start() and meta(). No data is fed
+ * to decoders here.
+ */
+START_TEST(test_session_reset_nodata)
+{
+	struct srd_session *sess;
+	int ret;
+	GVariant *data;
+
+	srd_init(NULL);
+	srd_session_new(&sess);
+	ret = srd_session_terminate_reset(sess);
+	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	ret = srd_session_start(sess);
+	fail_unless(ret == SRD_OK, "srd_session_start() failed: %d.", ret);
+	ret = srd_session_terminate_reset(sess);
+	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	data = g_variant_new_uint64(1000000);
+	ret = srd_session_metadata_set(sess, SRD_CONF_SAMPLERATE, data);
+	fail_unless(ret == SRD_OK, "srd_session_metadata_set() failed: %d.", ret);
+	ret = srd_session_terminate_reset(sess);
+	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	ret = srd_session_destroy(sess);
+	fail_unless(ret == SRD_OK, "srd_session_destroy() failed: %d.", ret);
+	srd_exit();
+}
+END_TEST
+
 Suite *suite_session(void)
 {
 	Suite *s;
@@ -244,6 +274,10 @@ Suite *suite_session(void)
 	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
 	tcase_add_test(tc, test_session_metadata_set);
 	tcase_add_test(tc, test_session_metadata_set_bogus);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("reset");
+	tcase_add_test(tc, test_session_reset_nodata);
 	suite_add_tcase(s, tc);
 
 	return s;

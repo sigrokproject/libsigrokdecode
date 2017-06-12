@@ -24,7 +24,7 @@ RX = 0
 TX = 1
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'pan1321'
     name = 'PAN1321'
     longname = 'Panasonic PAN1321'
@@ -39,6 +39,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.cmd = ['', '']
         self.ss_block = None
 

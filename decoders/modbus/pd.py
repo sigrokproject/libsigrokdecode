@@ -811,7 +811,7 @@ class Modbus_ADU_CS(Modbus_ADU):
         self.check_crc(bytecount + 12)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'modbus'
     name = 'Modbus'
     longname = 'Modbus RTU over RS232/RS485'
@@ -847,6 +847,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.ADUSc = None # Start off with empty slave -> client ADU.
         self.ADUCs = None # Start off with empty client -> slave ADU.
 

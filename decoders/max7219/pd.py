@@ -41,7 +41,7 @@ registers = {
 ann_reg, ann_digit, ann_warning = range(3)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'max7219'
     name = 'MAX7219'
     longname = 'Maxim MAX7219/MAX7221'
@@ -58,6 +58,12 @@ class Decoder(srd.Decoder):
         ('commands', 'Commands', (ann_reg, ann_digit)),
         ('warnings', 'Warnings', (ann_warning,)),
     )
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        pass
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)

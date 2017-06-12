@@ -92,6 +92,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         # SWD data/clock state
         self.state = 'UNKNOWN'
         self.sample_edge = RISING

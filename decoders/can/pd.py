@@ -65,6 +65,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
         self.reset_variables()
 
@@ -75,11 +78,11 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
             self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
-            self.bitpos = (self.bit_width / 100.0) * self.options['sample_point']
+            self.sample_point = (self.bit_width / 100.0) * self.options['sample_point']
 
     # Generic helper for CAN bit annotations.
     def putg(self, ss, es, data):
-        left, right = int(self.bitpos), int(self.bit_width - self.bitpos)
+        left, right = int(self.sample_point), int(self.bit_width - self.sample_point)
         self.put(ss - left, es + right, self.out_ann, data)
 
     # Single-CAN-bit annotation using the current samplenum.
@@ -105,16 +108,31 @@ class Decoder(srd.Decoder):
         self.ss_bit12 = None
         self.ss_databytebits = []
 
+    # Poor man's clock synchronization. Use signal edges which change to
+    # dominant state in rather simple ways. This naive approach is neither
+    # aware of the SYNC phase's width nor the specific location of the edge,
+    # but improves the decoder's reliability when the input signal's bitrate
+    # does not exactly match the nominal rate.
+    def dom_edge_seen(self, force = False):
+        self.dom_edge_snum = self.samplenum
+        self.dom_edge_bcount = self.curbit
+
+    def bit_sampled(self):
+        # EMPTY
+        pass
+
     # Determine the position of the next desired bit's sample point.
     def get_sample_point(self, bitnum):
-        bitpos = int(self.sof + (self.bit_width * bitnum) + self.bitpos)
-        return bitpos
+        samplenum = self.dom_edge_snum
+        samplenum += int(self.bit_width * (bitnum - self.dom_edge_bcount))
+        samplenum += int(self.sample_point)
+        return samplenum
 
     def is_stuff_bit(self):
         # CAN uses NRZ encoding and bit stuffing.
         # After 5 identical bits, a stuff bit of opposite value is added.
         # But not in the CRC delimiter, ACK, and end of frame fields.
-        if len(self.bits) > self.last_databit + 16:
+        if len(self.bits) > self.last_databit + 17:
             return False
         last_6_bits = self.rawbits[-6:]
         if last_6_bits not in ([0, 0, 0, 0, 0, 1], [1, 1, 1, 1, 1, 0]):
@@ -382,9 +400,14 @@ class Decoder(srd.Decoder):
                 # Wait for a dominant state (logic 0) on the bus.
                 (can_rx,) = self.wait({0: 'l'})
                 self.sof = self.samplenum
+                self.dom_edge_seen(force = True)
                 self.state = 'GET BITS'
             elif self.state == 'GET BITS':
                 # Wait until we're in the correct bit/sampling position.
                 pos = self.get_sample_point(self.curbit)
-                (can_rx,) = self.wait({'skip': pos - self.samplenum})
-                self.handle_bit(can_rx)
+                (can_rx,) = self.wait([{'skip': pos - self.samplenum}, {0: 'f'}])
+                if self.matched[1]:
+                    self.dom_edge_seen()
+                if self.matched[0]:
+                    self.handle_bit(can_rx)
+                    self.bit_sampled()
