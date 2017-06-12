@@ -676,6 +676,7 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 	return SRD_OK;
 }
 
+/** @private */
 SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di)
 {
 	if (!di)
@@ -783,6 +784,7 @@ static gboolean sample_matches(uint8_t old_sample, uint8_t sample, struct srd_te
 	return FALSE;
 }
 
+/** @private */
 SRD_PRIV void match_array_free(struct srd_decoder_inst *di)
 {
 	if (!di || !di->match_array)
@@ -792,6 +794,7 @@ SRD_PRIV void match_array_free(struct srd_decoder_inst *di)
 	di->match_array = NULL;
 }
 
+/** @private */
 SRD_PRIV void condition_list_free(struct srd_decoder_inst *di)
 {
 	GSList *l, *ll;

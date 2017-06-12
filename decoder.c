@@ -594,6 +594,8 @@ static int check_method(PyObject *py_dec, const char *mod_name,
  * @param d The decoder to use. Must not be NULL.
  *
  * @return The API version of the decoder, or 0 upon errors.
+ *
+ * @private
  */
 SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d)
 {
