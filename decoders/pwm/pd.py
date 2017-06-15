@@ -93,10 +93,8 @@ class Decoder(srd.Decoder):
 
     def decode(self):
 
-        # Get the first rising edge.
-        pin, = self.wait({0: 'e'})
-        if pin != self.startedge:
-            pin, = self.wait({0: 'e'})
+        # Wait for an "active" edge (depends on config).
+        self.wait({0: 'f' if self.startedge == 0 else 'r'})
         self.first_samplenum = self.samplenum
         self.start_samplenum = self.samplenum
 
@@ -105,7 +103,7 @@ class Decoder(srd.Decoder):
             pin, = self.wait({0: 'e'})
 
             if pin == self.startedge:
-                # Rising edge
+                # Active edge
                 # We are on a full cycle we can calculate
                 # the period, the duty cycle and its ratio.
                 period = self.samplenum - self.start_samplenum
@@ -135,5 +133,5 @@ class Decoder(srd.Decoder):
                 self.put(self.first_samplenum, self.es_block, self.out_average,
                          float(self.average / self.num_cycles))
             else:
-                # Falling edge
+                # Non-active edge
                 self.end_samplenum = self.ss_block = self.samplenum
