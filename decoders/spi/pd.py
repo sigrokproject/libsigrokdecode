@@ -207,17 +207,18 @@ class Decoder(srd.Decoder):
                 not self.cs_asserted(cs) if self.have_cs else False
 
         ws = self.options['wordsize']
+        bo = self.options['bitorder']
 
         # Receive MISO bit into our shift register.
         if self.have_miso:
-            if self.options['bitorder'] == 'msb-first':
+            if bo == 'msb-first':
                 self.misodata |= miso << (ws - 1 - self.bitcount)
             else:
                 self.misodata |= miso << self.bitcount
 
         # Receive MOSI bit into our shift register.
         if self.have_mosi:
-            if self.options['bitorder'] == 'msb-first':
+            if bo == 'msb-first':
                 self.mosidata |= mosi << (ws - 1 - self.bitcount)
             else:
                 self.mosidata |= mosi << self.bitcount
@@ -252,7 +253,7 @@ class Decoder(srd.Decoder):
         if self.samplerate is not None:
             elapsed = 1 / float(self.samplerate)
             elapsed *= (self.samplenum - self.ss_block + 1)
-            bitrate = int(1 / elapsed * self.options['wordsize'])
+            bitrate = int(1 / elapsed * ws)
             self.put(self.ss_block, self.samplenum, self.out_bitrate, bitrate)
 
         if self.have_cs and self.cs_was_deasserted:
@@ -326,12 +327,9 @@ class Decoder(srd.Decoder):
         # process the very first sample before checking for edges. The
         # previous implementation did this by seeding old values with
         # None, which led to an immediate "change" in comparison.
-        pins = self.wait({})
-        (clk, miso, mosi, cs) = pins
+        (clk, miso, mosi, cs) = self.wait({})
         self.find_clk_edge(miso, mosi, clk, cs, True)
 
         while True:
-            # Ignore identical samples early on (for performance reasons).
-            pins = self.wait(wait_cond)
-            (clk, miso, mosi, cs) = pins
+            (clk, miso, mosi, cs) = self.wait(wait_cond)
             self.find_clk_edge(miso, mosi, clk, cs, False)
