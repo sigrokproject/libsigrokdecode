@@ -743,8 +743,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
  */
 static gboolean sample_matches(uint8_t old_sample, uint8_t sample, struct srd_term *term)
 {
-	if (!term)
-		return FALSE;
+	/* Caller ensures term != NULL. */
 
 	switch (term->type) {
 	case SRD_TERM_HIGH:
@@ -871,19 +870,16 @@ static gboolean term_matches(const struct srd_decoder_inst *di,
 	uint8_t old_sample, sample;
 	int byte_offset, bit_offset, ch;
 
-	if (!di || !di->dec_channelmap || !term || !sample_pos)
-		return FALSE;
+	/* Caller ensures di, di->dec_channelmap, term, sample_pos != NULL. */
 
-	/* Overwritten below (or ignored for SRD_TERM_SKIP). */
-	old_sample = sample = 0;
+	if (term->type == SRD_TERM_SKIP)
+		return sample_matches(0, 0, term);
 
-	if (term->type != SRD_TERM_SKIP) {
-		ch = term->channel;
-		byte_offset = di->dec_channelmap[ch] / 8;
-		bit_offset = di->dec_channelmap[ch] % 8;
-		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
-		old_sample = di->old_pins_array->data[ch];
-	}
+	ch = term->channel;
+	byte_offset = di->dec_channelmap[ch] / 8;
+	bit_offset = di->dec_channelmap[ch] % 8;
+	sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
+	old_sample = di->old_pins_array->data[ch];
 
 	return sample_matches(old_sample, sample, term);
 }
@@ -894,8 +890,7 @@ static gboolean all_terms_match(const struct srd_decoder_inst *di,
 	const GSList *l;
 	struct srd_term *term;
 
-	if (!di || !cond || !sample_pos)
-		return FALSE;
+	/* Caller ensures di, cond, sample_pos != NULL. */
 
 	for (l = cond; l; l = l->next) {
 		term = l->data;
@@ -911,8 +906,7 @@ static gboolean at_least_one_condition_matched(
 {
 	unsigned int i;
 
-	if (!di)
-		return FALSE;
+	/* Caller ensures di != NULL. */
 
 	for (i = 0; i < num_conditions; i++) {
 		if (di->match_array->data[i])
@@ -929,6 +923,8 @@ static gboolean find_match(struct srd_decoder_inst *di)
 	GSList *l, *cond;
 	const uint8_t *sample_pos;
 	unsigned int num_conditions;
+
+	/* Caller ensures di != NULL. */
 
 	/* Check whether the condition list is NULL/empty. */
 	if (!di->condition_list) {
