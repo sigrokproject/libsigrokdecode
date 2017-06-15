@@ -199,7 +199,7 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 		return SRD_ERR_ARG;
 	}
 
-	srd_dbg("Setting session %d samplerate to %"PRIu64".",
+	srd_dbg("Setting session %d samplerate to %"G_GUINT64_FORMAT".",
 			sess->session_id, g_variant_get_uint64(data));
 
 	ret = SRD_OK;
