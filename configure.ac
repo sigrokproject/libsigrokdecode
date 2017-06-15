@@ -21,7 +21,7 @@
 AC_PREREQ([2.63])
 
 # libsigrokdecode package version number (NOT the same as shared lib version!).
-AC_INIT([libsigrokdecode], [0.5.0],
+AC_INIT([libsigrokdecode], [0.6.0],
 	[sigrok-devel@lists.sourceforge.net], [libsigrokdecode],
 	[http://www.sigrok.org])
 AC_CONFIG_MACRO_DIR([m4])
