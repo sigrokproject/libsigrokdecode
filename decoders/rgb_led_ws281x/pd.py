@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'rgb_led_ws281x'
     name = 'RGB LED (WS281x)'
     longname = 'RGB LED string decoder (WS281x)'
@@ -70,11 +70,14 @@ class Decoder(srd.Decoder):
             self.bits = []
             self.ss_packet = None
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        for (self.samplenum, (pin, )) in data:
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            (pin,) = self.wait({'skip': 1})
+
             if self.oldpin is None:
                 self.oldpin = pin
                 continue
