@@ -40,14 +40,14 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('bit', 'Bit'),
-        ('startbit', 'Startbit'),
-        ('Level', 'Dimmer level'),
+        ('startbit', 'Start bit'),
+        ('level', 'Dimmer level'),
         ('raw', 'Raw data'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0,)),
-        ('raw', 'Raw Data',(3,)),
-        ('fields', 'Fields', (1, 2,)),
+        ('raw', 'Raw data', (3,)),
+        ('fields', 'Fields', (1, 2)),
     )
 
     def __init__(self):
@@ -55,8 +55,6 @@ class Decoder(srd.Decoder):
         self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        self.nextSamplePoint = None
-        self.nextSample = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -108,10 +106,9 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        bit = 0;
+        bit = 0
         for (self.samplenum, pins) in data:
             self.dsi = pins[0]
-            # data.itercnt += 1
             if self.options['polarity'] == 'active-high':
                 self.dsi ^= 1 # Invert.
 
@@ -128,14 +125,8 @@ class Decoder(srd.Decoder):
                 self.state = 'PHASE1'
                 self.old_dsi = self.dsi
                 # Get the next sample point.
-                # self.nextSamplePoint = self.samplenum + int(self.halfbit / 2)
                 self.old_dsi = self.dsi
-                # bit = self.dsi
                 continue
-
-            # if(self.samplenum == self.nextSamplePoint):
-            #    bit = self.dsi
-            #    continue
 
             if self.old_dsi != self.dsi:
                 self.edges.append(self.samplenum)
@@ -149,16 +140,14 @@ class Decoder(srd.Decoder):
                 self.phase0 = bit
                 self.state = 'PHASE1'
             elif self.state == 'PHASE1':
-                if (bit == 1) and (self.phase0 == 1): # Stop bit
+                if (bit == 1) and (self.phase0 == 1): # Stop bit.
                     if len(self.bits) == 17 or len(self.bits) == 9:
-                        # Forward or Backward
+                        # Forward or Backward.
                         self.handle_bits(len(self.bits))
                     self.reset_decoder_state() # Reset upon errors.
                     continue
                 else:
                     self.bits.append([self.edges[-3], bit])
                     self.state = 'PHASE0'
-
-            # self.nextSamplePoint = self.edges[-1] + int(self.halfbit / 2)
 
             self.old_dsi = self.dsi
