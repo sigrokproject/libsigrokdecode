@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (0,)),
         ('raw', 'Raw data', (7,)),
-        ('fields', 'Fields', (1, 2, 3, 4, 5, 6,)),
+        ('fields', 'Fields', (1, 2, 3, 4, 5, 6)),
     )
 
     def __init__(self):
@@ -60,8 +60,6 @@ class Decoder(srd.Decoder):
         self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        self.nextSamplePoint = None
-        self.nextSample = None
         self.devType = None
 
     def start(self):
@@ -151,7 +149,6 @@ class Decoder(srd.Decoder):
             s = ['YBit: %d' % b[1][1], 'YB: %d' % b[1][1], 'YB', 'Y', 'Y']
             self.putb(1, 1, [3, s])
             a = f >> 1
-            # x = system.get(a, ['Unknown', 'Unk'])
             s = ['Short address: %d' % a, 'Addr: %d' % a,
                 'Addr: %d' % a, 'A: %d' % a, 'A']
             self.putb(2, 7, [4, s])
@@ -198,18 +195,13 @@ class Decoder(srd.Decoder):
     def reset_decoder_state(self):
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        # self.devType = None
 
     def decode(self, ss, es, data):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        bit = 0;
+        bit = 0
         for (self.samplenum, pins) in data:
             self.dali = pins[0]
-            # data.itercnt += 1
-            # data.logic_mask = 1
-            # data.cur_pos = self.samplenum
-            # data.edge_index = -1
             if self.options['polarity'] == 'active-high':
                 self.dali ^= 1 # Invert.
 
@@ -217,23 +209,11 @@ class Decoder(srd.Decoder):
             if self.state == 'IDLE':
                 # Wait for any edge (rising or falling).
                 if self.old_dali == self.dali:
-                    # data.exp_logic = self.exp_logic
-                    # data.logic_mask = 1
-                    # logic.cur_pos = self.samplenum
                     continue
                 self.edges.append(self.samplenum)
                 self.state = 'PHASE0'
                 self.old_dali = self.dali
-                # Get the next sample point.
-                # self.nextSamplePoint = self.samplenum + int(self.halfbit / 2)
-                self.old_dali = self.dali
-                # bit = self.dali
-                # data.itercnt += int((self.halfbit - 1) * 0.5)
                 continue
-
-            # if(self.samplenum == self.nextSamplePoint):
-            #    bit = self.dali
-            #    continue
 
             if (self.old_dali != self.dali):
                 self.edges.append(self.samplenum)
@@ -247,16 +227,14 @@ class Decoder(srd.Decoder):
                 self.phase0 = bit
                 self.state = 'PHASE1'
             elif self.state == 'PHASE1':
-                if (bit == 1) and (self.phase0 == 1): # Stop bit
+                if (bit == 1) and (self.phase0 == 1): # Stop bit.
                     if len(self.bits) == 17 or len(self.bits) == 9:
-                        # Forward or Backward
+                        # Forward or Backward.
                         self.handle_bits(len(self.bits))
                     self.reset_decoder_state() # Reset upon errors.
                     continue
                 else:
                     self.bits.append([self.edges[-3], bit])
                     self.state = 'PHASE0'
-
-            # self.nextSamplePoint = self.edges[-1] + int(self.halfbit / 2)
 
             self.old_dali = self.dali
