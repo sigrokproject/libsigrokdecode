@@ -202,23 +202,23 @@ class Decoder(srd.Decoder):
         bit = 0
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            (self.dali,) = self.wait({'skip': 1})
+            (dali,) = self.wait({'skip': 1})
             if self.options['polarity'] == 'active-high':
-                self.dali ^= 1 # Invert.
+                dali ^= 1 # Invert.
 
             # State machine.
             if self.state == 'IDLE':
                 # Wait for any edge (rising or falling).
-                if self.old_dali == self.dali:
+                if self.old_dali == dali:
                     continue
                 self.edges.append(self.samplenum)
                 self.state = 'PHASE0'
-                self.old_dali = self.dali
+                self.old_dali = dali
                 continue
 
-            if (self.old_dali != self.dali):
+            if self.old_dali != dali:
                 self.edges.append(self.samplenum)
-            elif (self.samplenum == (self.edges[-1] + int(self.halfbit * 1.5))):
+            elif self.samplenum == (self.edges[-1] + int(self.halfbit * 1.5)):
                 self.edges.append(self.samplenum - int(self.halfbit * 0.5))
             else:
                 continue
@@ -238,4 +238,4 @@ class Decoder(srd.Decoder):
                     self.bits.append([self.edges[-3], bit])
                     self.state = 'PHASE0'
 
-            self.old_dali = self.dali
+            self.old_dali = dali
