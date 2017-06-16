@@ -95,7 +95,7 @@ fields = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'lpc'
     name = 'LPC'
     longname = 'Low-Pin-Count'
@@ -312,8 +312,10 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.state = 'IDLE'
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
+    def decode(self):
+        while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
+            pins = self.wait({'skip': 1})
 
             # If none of the pins changed, there's nothing to do.
             if self.oldpins == pins:
