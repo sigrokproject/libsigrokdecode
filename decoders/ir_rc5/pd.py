@@ -24,7 +24,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ir_rc5'
     name = 'IR RC-5'
     longname = 'IR RC-5'
@@ -134,12 +134,12 @@ class Decoder(srd.Decoder):
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        for (self.samplenum, pins) in data:
+        while True:
 
-            self.ir = pins[0]
+            (self.ir,) = self.wait({'skip': 1})
 
             # Wait for any edge (rising or falling).
             if self.old_ir == self.ir:
