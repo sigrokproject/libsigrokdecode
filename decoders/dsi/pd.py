@@ -23,7 +23,7 @@ class SamplerateError(Exception):
     pass
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'dsi'
     name = 'DSI'
     longname = 'Digital Serial Interface'
@@ -103,12 +103,12 @@ class Decoder(srd.Decoder):
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
-    def decode(self, ss, es, data):
+    def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         bit = 0
-        for (self.samplenum, pins) in data:
-            self.dsi = pins[0]
+        while True:
+            (self.dsi,) = self.wait({'skip': 1})
             if self.options['polarity'] == 'active-high':
                 self.dsi ^= 1 # Invert.
 
