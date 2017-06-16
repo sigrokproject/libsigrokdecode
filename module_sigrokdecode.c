@@ -23,8 +23,6 @@
 
 /** @cond PRIVATE */
 
-SRD_PRIV PyObject *srd_logic_type = NULL;
-
 /*
  * When initialized, a reference to this module inside the Python interpreter
  * lives here.
@@ -43,7 +41,7 @@ static struct PyModuleDef sigrokdecode_module = {
 /** @cond PRIVATE */
 PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
-	PyObject *mod, *Decoder_type, *logic_type;
+	PyObject *mod, *Decoder_type;
 
 	mod = PyModule_Create(&sigrokdecode_module);
 	if (!mod)
@@ -53,12 +51,6 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 	if (!Decoder_type)
 		goto err_out;
 	if (PyModule_AddObject(mod, "Decoder", Decoder_type) < 0)
-		goto err_out;
-
-	logic_type = srd_logic_type_new();
-	if (!logic_type)
-		goto err_out;
-	if (PyModule_AddObject(mod, "srd_logic", logic_type) < 0)
 		goto err_out;
 
 	/* Expose output types as symbols in the sigrokdecode module */
@@ -74,7 +66,6 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 	if (PyModule_AddIntConstant(mod, "SRD_CONF_SAMPLERATE", SRD_CONF_SAMPLERATE) < 0)
 		goto err_out;
 
-	srd_logic_type = logic_type;
 	mod_sigrokdecode = mod;
 
 	return mod;

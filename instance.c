@@ -30,9 +30,6 @@
 
 extern SRD_PRIV GSList *sessions;
 
-/* module_sigrokdecode.c */
-extern SRD_PRIV PyObject *srd_logic_type;
-
 static void srd_inst_join_decode_thread(struct srd_decoder_inst *di);
 static void srd_inst_reset_state(struct srd_decoder_inst *di);
 SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di);
@@ -1161,10 +1158,6 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
-	PyObject *py_res;
-	srd_logic *logic;
-	long apiver;
-
 	/* Return an error upon unusable input. */
 	if (!di) {
 		srd_dbg("empty decoder instance");
@@ -1199,61 +1192,33 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		abs_end_samplenum - abs_start_samplenum, inbuflen, di->data_unitsize,
 		di->inst_id);
 
-	apiver = srd_decoder_apiver(di->decoder);
-
-	if (apiver == 2) {
-		/*
-		 * Create new srd_logic object. Each iteration around the PD's
-		 * loop will fill one sample into this object.
-		 */
-		logic = PyObject_New(srd_logic, (PyTypeObject *)srd_logic_type);
-		Py_INCREF(logic);
-		logic->di = (struct srd_decoder_inst *)di;
-		logic->abs_start_samplenum = abs_start_samplenum;
-		logic->itercnt = 0;
-		logic->inbuf = (uint8_t *)inbuf;
-		logic->inbuflen = inbuflen;
-		logic->sample = PyList_New(2);
-		Py_INCREF(logic->sample);
-
-		Py_IncRef(di->py_inst);
-		if (!(py_res = PyObject_CallMethod(di->py_inst, "decode",
-			"KKO", abs_start_samplenum, abs_end_samplenum, logic))) {
-			srd_exception_catch("Protocol decoder instance %s",
-					di->inst_id);
-			return SRD_ERR_PYTHON;
-		}
-		di->abs_cur_samplenum = abs_end_samplenum;
-		Py_DecRef(py_res);
-	} else {
-		/* If this is the first call, start the worker thread. */
-		if (!di->thread_handle) {
-			srd_dbg("No worker thread for this decoder stack "
-				"exists yet, creating one: %s.", di->inst_id);
-			di->thread_handle = g_thread_new(di->inst_id,
-							 di_thread, di);
-		}
-
-		/* Push the new sample chunk to the worker thread. */
-		g_mutex_lock(&di->data_mutex);
-		di->abs_start_samplenum = abs_start_samplenum;
-		di->abs_end_samplenum = abs_end_samplenum;
-		di->inbuf = inbuf;
-		di->inbuflen = inbuflen;
-		di->got_new_samples = TRUE;
-		di->handled_all_samples = FALSE;
-		di->want_wait_terminate = FALSE;
-
-		/* Signal the thread that we have new data. */
-		g_cond_signal(&di->got_new_samples_cond);
-		g_mutex_unlock(&di->data_mutex);
-
-		/* When all samples in this chunk were handled, return. */
-		g_mutex_lock(&di->data_mutex);
-		while (!di->handled_all_samples && !di->want_wait_terminate)
-			g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
-		g_mutex_unlock(&di->data_mutex);
+	/* If this is the first call, start the worker thread. */
+	if (!di->thread_handle) {
+		srd_dbg("No worker thread for this decoder stack "
+			"exists yet, creating one: %s.", di->inst_id);
+		di->thread_handle = g_thread_new(di->inst_id,
+						 di_thread, di);
 	}
+
+	/* Push the new sample chunk to the worker thread. */
+	g_mutex_lock(&di->data_mutex);
+	di->abs_start_samplenum = abs_start_samplenum;
+	di->abs_end_samplenum = abs_end_samplenum;
+	di->inbuf = inbuf;
+	di->inbuflen = inbuflen;
+	di->got_new_samples = TRUE;
+	di->handled_all_samples = FALSE;
+	di->want_wait_terminate = FALSE;
+
+	/* Signal the thread that we have new data. */
+	g_cond_signal(&di->got_new_samples_cond);
+	g_mutex_unlock(&di->data_mutex);
+
+	/* When all samples in this chunk were handled, return. */
+	g_mutex_lock(&di->data_mutex);
+	while (!di->handled_all_samples && !di->want_wait_terminate)
+		g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
+	g_mutex_unlock(&di->data_mutex);
 
 	return SRD_OK;
 }
