@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'eeprom93xx'
     name = '93xx EEPROM'
     longname = '93xx Microwire EEPROM'

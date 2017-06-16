@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'rgb_led_spi'
     name = 'RGB LED (SPI)'
     longname = 'RGB LED string decoder (SPI)'

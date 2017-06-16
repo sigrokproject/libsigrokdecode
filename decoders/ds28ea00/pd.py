@@ -35,7 +35,7 @@ command = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ds28ea00'
     name = 'DS28EA00'
     longname = 'Maxim DS28EA00 1-Wire digital thermometer'

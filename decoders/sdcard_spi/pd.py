@@ -21,7 +21,7 @@ import sigrokdecode as srd
 from common.sdcard import (cmd_names, acmd_names)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'sdcard_spi'
     name = 'SD card (SPI mode)'
     longname = 'Secure Digital card (SPI mode)'

@@ -39,7 +39,7 @@ ft = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'lm75'
     name = 'LM75'
     longname = 'National LM75'

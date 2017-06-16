@@ -22,7 +22,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'tca6408a'
     name = 'TI TCA6408A'
     longname = 'Texas Instruments TCA6408A'

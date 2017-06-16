@@ -23,7 +23,7 @@ from common.plugtrx import (MODULE_ID, ALARM_THRESHOLDS, AD_READOUTS, GCS_BITS,
         ENHANCED_OPTS, AUX_TYPES)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'xfp'
     name = 'XFP'
     longname = '10 Gigabit Small Form Factor Pluggable Module (XFP)'

@@ -39,7 +39,7 @@ regs = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'adns5020'
     name = 'ADNS-5020'
     longname = 'Avago ADNS-5020 optical mouse sensor'

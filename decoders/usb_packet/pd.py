@@ -173,7 +173,7 @@ def calc_crc16(bitstr):
     return reverse_number(crc16, 16)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'usb_packet'
     name = 'USB packet'
     longname = 'Universal Serial Bus (LS/FS) packet'

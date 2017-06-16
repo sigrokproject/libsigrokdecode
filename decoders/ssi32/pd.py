@@ -23,7 +23,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'ssi32'
     name = 'SSI32'
     longname = 'Synchronous Serial Interface (32bit)'

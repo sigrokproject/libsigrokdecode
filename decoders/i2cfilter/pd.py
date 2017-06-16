@@ -23,7 +23,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'i2cfilter'
     name = 'I²C filter'
     longname = 'I²C filter'

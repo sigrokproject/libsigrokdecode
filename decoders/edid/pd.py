@@ -73,7 +73,7 @@ ANN_FIELDS = 0
 ANN_SECTIONS = 1
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'edid'
     name = 'EDID'
     longname = 'Extended Display Identification Data'

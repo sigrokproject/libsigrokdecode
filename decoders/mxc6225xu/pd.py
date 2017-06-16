@@ -59,7 +59,7 @@ status = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'mxc6225xu'
     name = 'MXC6225XU'
     longname = 'MEMSIC MXC6225XU'

@@ -32,7 +32,7 @@ command = {
 }
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'onewire_network'
     name = '1-Wire network layer'
     longname = '1-Wire serial communication bus (network layer)'

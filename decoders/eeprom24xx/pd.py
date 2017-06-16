@@ -21,7 +21,7 @@ import sigrokdecode as srd
 from .lists import *
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'eeprom24xx'
     name = '24xx EEPROM'
     longname = '24xx I²C EEPROM'

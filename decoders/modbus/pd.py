@@ -811,7 +811,7 @@ class Modbus_ADU_CS(Modbus_ADU):
         self.check_crc(bytecount + 12)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'modbus'
     name = 'Modbus'
     longname = 'Modbus RTU over RS232/RS485'

@@ -20,7 +20,7 @@
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'rfm12'
     name = 'RFM12'
     longname = 'RFM12 control protocol'

@@ -21,7 +21,7 @@ import sigrokdecode as srd
 from .lists import *
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'mrf24j40'
     name = 'MRF24J40'
     longname = 'Microchip MRF24J40'

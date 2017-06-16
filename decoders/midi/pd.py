@@ -25,7 +25,7 @@ RX = 0
 TX = 1
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'midi'
     name = 'MIDI'
     longname = 'Musical Instrument Digital Interface'

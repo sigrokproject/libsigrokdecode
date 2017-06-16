@@ -112,7 +112,7 @@ class pcap_usb_pkt():
         return 64 + len(self.data)
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'usb_request'
     name = 'USB request'
     longname = 'Universal Serial Bus (LS/FS) transaction/request'
