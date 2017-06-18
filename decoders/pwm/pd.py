@@ -61,7 +61,6 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def start(self):
-        self.startedge = 0 if self.options['polarity'] == 'active-low' else 1
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_average = \
@@ -93,32 +92,28 @@ class Decoder(srd.Decoder):
 
     def decode(self):
 
-        # Wait for an "active" edge (depends on config).
-        self.wait({0: 'f' if self.startedge == 0 else 'r'})
+        # Wait for an "active" edge (depends on config). This starts
+        # the first full period of the inspected signal waveform.
+        self.wait({0: 'f' if self.options['polarity'] == 'active-low' else 'r'})
         self.first_samplenum = self.samplenum
-        self.start_samplenum = self.samplenum
 
-        # Handle all next edges.
+        # Keep getting samples for the period's middle and terminal edges.
+        # At the same time that last sample starts the next period.
         while True:
-            pin, = self.wait({0: 'e'})
 
-            if pin != self.startedge:
-                # Non-active edge
-                self.end_samplenum = self.ss_block = self.samplenum
-                continue
+            # Get the next two edges. Setup some variables that get
+            # referenced in the calculation and in put() routines.
+            self.start_samplenum = self.samplenum
+            pins = self.wait({0: 'e'})
+            self.end_samplenum = self.samplenum
+            pins = self.wait({0: 'e'})
+            self.ss_block = self.start_samplenum
+            self.es_block = self.samplenum
 
-            # Active edge
-            # We are on a full cycle we can calculate
-            # the period, the duty cycle and its ratio.
+            # Calculate the period, the duty cycle, and its ratio.
             period = self.samplenum - self.start_samplenum
             duty = self.end_samplenum - self.start_samplenum
             ratio = float(duty / period)
-
-            # This interval starts at this edge.
-            self.ss_block = self.start_samplenum
-            # Store the new rising edge position and the ending
-            # edge interval.
-            self.start_samplenum = self.es_block = self.samplenum
 
             # Report the duty cycle in percent.
             percent = float(ratio * 100)
