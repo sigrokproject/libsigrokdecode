@@ -585,9 +585,45 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 	return ret;
 }
 
+/**
+ * Create a SKIP condition list for condition-less .wait() calls.
+ *
+ * @param di Decoder instance.
+ * @param count Number of samples to skip.
+ *
+ * @retval SRD_OK The new condition list was set successfully.
+ * @retval SRD_ERR There was an error setting the new condition list.
+ *                 The contents of di->condition_list are undefined.
+ *
+ * This routine is a reduced and specialized version of the @ref
+ * set_new_condition_list() and @ref create_term_list() routines which
+ * gets invoked when .wait() was called without specifications for
+ * conditions. This minor duplication of the SKIP term list creation
+ * simplifies the logic and avoids the creation of expensive Python
+ * objects with "constant" values which the caller did not pass in the
+ * first place. It results in maximum sharing of match handling code
+ * paths.
+ */
+static int set_skip_condition(struct srd_decoder_inst *di, uint64_t count)
+{
+	struct srd_term *term;
+	GSList *term_list;
+
+	condition_list_free(di);
+	term = g_malloc0(sizeof(*term));
+	term->type = SRD_TERM_SKIP;
+	term->num_samples_to_skip = count;
+	term->num_samples_already_skipped = 0;
+	term_list = g_slist_append(NULL, term);
+	di->condition_list = g_slist_append(di->condition_list, term_list);
+
+	return SRD_OK;
+}
+
 static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 {
 	int ret;
+	uint64_t skip_count;
 	unsigned int i;
 	gboolean found_match;
 	struct srd_decoder_inst *di;
@@ -607,10 +643,25 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	if (ret == 9999) {
-		/* Empty condition list, automatic match. */
-		PyObject_SetAttrString(di->py_inst, "matched", Py_None);
-		/* Leave self.samplenum unchanged (== di->abs_cur_samplenum). */
-		return get_current_pinvalues(di);
+		/*
+		 * Empty condition list, automatic match. Arrange for the
+		 * execution of regular match handling code paths such that
+		 * the next available sample is returned to the caller.
+		 * Make sure to skip one sample when "anywhere within the
+		 * stream", yet make sure to not skip sample number 0.
+		 */
+		if (di->abs_cur_samplenum)
+			skip_count = 1;
+		else if (!di->condition_list)
+			skip_count = 0;
+		else
+			skip_count = 1;
+		ret = set_skip_condition(di, skip_count);
+		if (ret < 0) {
+			srd_dbg("%s: %s: Cannot setup condition-less wait().",
+				di->inst_id, __func__);
+			return NULL;
+		}
 	}
 
 	while (1) {
