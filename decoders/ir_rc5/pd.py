@@ -147,8 +147,9 @@ class Decoder(srd.Decoder):
 
             # State machine.
             if self.state == 'IDLE':
+                bit = 1
                 self.edges.append(self.samplenum)
-                self.bits.append([self.samplenum, 1])
+                self.bits.append([self.samplenum, bit])
                 self.state = 'MID1'
                 self.old_ir = self.ir
                 continue
