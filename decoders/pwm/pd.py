@@ -50,7 +50,6 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.ss_block = self.es_block = None
-        self.num_cycles = 0
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -84,13 +83,10 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_ann, [1, [period_s]])
 
     def putb(self, data):
-        # TODO Are these ss/es specs appropriate? It's the same value,
-        # which represents a mere period counter, not sample numbers.
-        # Probably should be:
-        # self.put(self.ss_block, self.es_block, self.out_binary, data)
-        self.put(self.num_cycles, self.num_cycles, self.out_binary, data)
+        self.put(self.ss_block, self.es_block, self.out_binary, data)
 
     def decode(self):
+        num_cycles = 0
         average = 0
 
         # Wait for an "active" edge (depends on config). This starts
@@ -128,7 +124,7 @@ class Decoder(srd.Decoder):
             self.putp(period_t)
 
             # Update and report the new duty cycle average.
-            self.num_cycles += 1
+            num_cycles += 1
             average += percent
             self.put(self.first_samplenum, self.es_block, self.out_average,
-                     float(average / self.num_cycles))
+                     float(average / num_cycles))
