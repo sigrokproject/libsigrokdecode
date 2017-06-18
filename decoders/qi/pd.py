@@ -232,7 +232,7 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        (qi,) = self.wait({'skip': 1})
+        (qi,) = self.wait()
         self.handle_transition(self.samplenum, qi == 0)
         while True:
             prev = self.samplenum

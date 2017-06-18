@@ -76,7 +76,7 @@ class Decoder(srd.Decoder):
 
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            (pin,) = self.wait({'skip': 1})
+            (pin,) = self.wait()
 
             if self.oldpin is None:
                 self.oldpin = pin

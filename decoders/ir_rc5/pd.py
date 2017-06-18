@@ -139,7 +139,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         while True:
 
-            (self.ir,) = self.wait({'skip': 1})
+            (self.ir,) = self.wait()
 
             # Wait for any edge (rising or falling).
             if self.old_ir == self.ir:

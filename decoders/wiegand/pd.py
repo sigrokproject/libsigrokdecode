@@ -105,7 +105,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            (d0, d1) = self.wait({'skip': 1})
+            (d0, d1) = self.wait()
 
             if d0 == self._d0_prev and d1 == self._d1_prev:
                 if self.es_bit and self.samplenum >= self.es_bit:

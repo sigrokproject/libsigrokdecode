@@ -202,7 +202,7 @@ class Decoder(srd.Decoder):
         bit = 0
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            (dali,) = self.wait({'skip': 1})
+            (dali,) = self.wait()
             if self.options['polarity'] == 'active-high':
                 dali ^= 1 # Invert.
 

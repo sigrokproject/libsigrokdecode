@@ -302,7 +302,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
 
         # Seed internal state from the very first sample.
-        pins = self.wait({'skip': 1})
+        pins = self.wait()
         sym = symbols[self.options['signalling']][pins]
         self.handle_idle(sym)
 
@@ -330,7 +330,7 @@ class Decoder(srd.Decoder):
                     self.get_eop(sym)
             elif self.state == 'WAIT IDLE':
                 # Skip "all-low" input. Wait for high level on either DP or DM.
-                pins = self.wait({'skip': 1})
+                pins = self.wait()
                 while not pins[0] and not pins[1]:
                     pins = self.wait([{0: 'h'}, {1: 'h'}])
                 if self.samplenum - self.samplenum_lastedge > 1:

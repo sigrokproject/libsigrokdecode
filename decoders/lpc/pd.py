@@ -315,7 +315,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            pins = self.wait({'skip': 1})
+            pins = self.wait()
 
             # If none of the pins changed, there's nothing to do.
             if self.oldpins == pins:

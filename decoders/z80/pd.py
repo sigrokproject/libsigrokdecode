@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
-            pins = self.wait({'skip': 1})
+            pins = self.wait()
             cycle = Cycle.NONE
             if pins[Pin.MREQ] != 1: # default to asserted
                 if pins[Pin.RD] == 0:

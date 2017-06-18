@@ -101,7 +101,7 @@ class Decoder(srd.Decoder):
             # Mark and read a single transmitted byte
             # (start bit, 8 data bits, 2 stop bits).
             elif self.state == 'READ BYTE':
-                (dmx,) = self.wait({'skip': 1})
+                (dmx,) = self.wait()
                 self.next_sample = self.run_start + (self.bit + 1) * self.skip_per_bit
                 self.aggreg += dmx
                 if self.samplenum != self.next_sample:
