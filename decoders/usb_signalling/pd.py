@@ -329,9 +329,10 @@ class Decoder(srd.Decoder):
                 elif self.state == 'GET EOP':
                     self.get_eop(sym)
             elif self.state == 'WAIT IDLE':
+                # Skip "all-low" input. Wait for high level on either DP or DM.
                 pins = self.wait({'skip': 1})
-                if pins == (0, 0):
-                    continue
+                while not pins[0] and not pins[1]:
+                    pins = self.wait([{0: 'h'}, {1: 'h'}])
                 if self.samplenum - self.samplenum_lastedge > 1:
                     sym = symbols[self.options['signalling']][pins]
                     self.handle_idle(sym)
