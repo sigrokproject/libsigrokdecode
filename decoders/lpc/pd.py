@@ -182,10 +182,10 @@ class Decoder(srd.Decoder):
     def handle_get_ct_dr(self, lad, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
 
-        self.cycle_type = fields['CT_DR'][lad]
+        self.cycle_type = fields['CT_DR'].get(lad, 'Reserved / unknown')
 
         # TODO: Warning/error on invalid cycle types.
-        if self.cycle_type == 'Reserved':
+        if 'Reserved' in self.cycle_type:
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
 
         self.es_block = self.samplenum
@@ -251,10 +251,10 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
         self.sync_val = lad_bits
-        self.cycle_type = fields['SYNC'][lad]
+        self.cycle_type = fields['SYNC'].get(lad, 'Reserved / unknown')
 
         # TODO: Warnings if reserved value are seen?
-        if self.cycle_type == 'Reserved':
+        if 'Reserved' in self.cycle_type:
             self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
