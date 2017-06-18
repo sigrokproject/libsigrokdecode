@@ -253,8 +253,6 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
-        self.wait({})
-
         while True:
             # State machine.
             if self.state == 'FIND START':
