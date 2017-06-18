@@ -139,7 +139,6 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         self.oldlclk = -1
         self.samplenum = 0
-        self.clocknum = 0
         self.lad = -1
         self.addr = 0
         self.cur_nibble = 0
@@ -351,7 +350,6 @@ class Decoder(srd.Decoder):
                 self.ss_block = self.samplenum
                 self.state = 'GET START'
                 self.lad = -1
-                # self.clocknum = 0
             elif self.state == 'GET START':
                 self.handle_get_start(lad, lad_bits, lframe)
             elif self.state == 'GET CT/DR':
