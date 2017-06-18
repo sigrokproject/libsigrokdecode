@@ -50,11 +50,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.ss_block = self.es_block = None
-        self.first_samplenum = None
-        self.start_samplenum = None
-        self.end_samplenum = None
         self.num_cycles = 0
-        self.average = 0
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -88,9 +84,14 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_ann, [1, [period_s]])
 
     def putb(self, data):
+        # TODO Are these ss/es specs appropriate? It's the same value,
+        # which represents a mere period counter, not sample numbers.
+        # Probably should be:
+        # self.put(self.ss_block, self.es_block, self.out_binary, data)
         self.put(self.num_cycles, self.num_cycles, self.out_binary, data)
 
     def decode(self):
+        average = 0
 
         # Wait for an "active" edge (depends on config). This starts
         # the first full period of the inspected signal waveform.
@@ -103,16 +104,16 @@ class Decoder(srd.Decoder):
 
             # Get the next two edges. Setup some variables that get
             # referenced in the calculation and in put() routines.
-            self.start_samplenum = self.samplenum
+            start_samplenum = self.samplenum
             pins = self.wait({0: 'e'})
-            self.end_samplenum = self.samplenum
+            end_samplenum = self.samplenum
             pins = self.wait({0: 'e'})
-            self.ss_block = self.start_samplenum
+            self.ss_block = start_samplenum
             self.es_block = self.samplenum
 
             # Calculate the period, the duty cycle, and its ratio.
-            period = self.samplenum - self.start_samplenum
-            duty = self.end_samplenum - self.start_samplenum
+            period = self.samplenum - start_samplenum
+            duty = end_samplenum - start_samplenum
             ratio = float(duty / period)
 
             # Report the duty cycle in percent.
@@ -128,6 +129,6 @@ class Decoder(srd.Decoder):
 
             # Update and report the new duty cycle average.
             self.num_cycles += 1
-            self.average += percent
+            average += percent
             self.put(self.first_samplenum, self.es_block, self.out_average,
-                     float(self.average / self.num_cycles))
+                     float(average / self.num_cycles))
