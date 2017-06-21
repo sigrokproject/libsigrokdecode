@@ -101,9 +101,9 @@ class Decoder(srd.Decoder):
             # Get the next two edges. Setup some variables that get
             # referenced in the calculation and in put() routines.
             start_samplenum = self.samplenum
-            pins = self.wait({0: 'e'})
+            self.wait({0: 'e'})
             end_samplenum = self.samplenum
-            pins = self.wait({0: 'e'})
+            self.wait({0: 'e'})
             self.ss_block = start_samplenum
             self.es_block = self.samplenum
 
