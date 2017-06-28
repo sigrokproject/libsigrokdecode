@@ -42,6 +42,9 @@ static struct PyModuleDef sigrokdecode_module = {
 PyMODINIT_FUNC PyInit_sigrokdecode(void)
 {
 	PyObject *mod, *Decoder_type;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
 
 	mod = PyModule_Create(&sigrokdecode_module);
 	if (!mod)
@@ -68,10 +71,13 @@ PyMODINIT_FUNC PyInit_sigrokdecode(void)
 
 	mod_sigrokdecode = mod;
 
+	PyGILState_Release(gstate);
+
 	return mod;
 err_out:
 	Py_XDECREF(mod);
 	srd_exception_catch("Failed to initialize module");
+	PyGILState_Release(gstate);
 
 	return NULL;
 }

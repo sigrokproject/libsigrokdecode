@@ -28,6 +28,8 @@ static char *py_stringify(PyObject *py_obj)
 	PyObject *py_str, *py_bytes;
 	char *str = NULL;
 
+	/* Note: Caller already ran PyGILState_Ensure(). */
+
 	if (!py_obj)
 		return NULL;
 
@@ -55,6 +57,8 @@ static char *py_get_string_attr(PyObject *py_obj, const char *attr)
 {
 	PyObject *py_str, *py_bytes;
 	char *str = NULL;
+
+	/* Note: Caller already ran PyGILState_Ensure(). */
 
 	if (!py_obj)
 		return NULL;
@@ -87,12 +91,15 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 	PyObject *py_mod, *py_func, *py_tracefmt;
 	char *msg, *etype_name, *evalue_str, *tracefmt_str;
 	const char *etype_name_fallback;
+	PyGILState_STATE gstate;
 
 	py_etype = py_evalue = py_etraceback = py_mod = py_func = NULL;
 
 	va_start(args, format);
 	msg = g_strdup_vprintf(format, args);
 	va_end(args);
+
+	gstate = PyGILState_Ensure();
 
 	PyErr_Fetch(&py_etype, &py_evalue, &py_etraceback);
 	if (!py_etype) {
@@ -150,6 +157,8 @@ cleanup:
 
 	/* Just in case. */
 	PyErr_Clear();
+
+	PyGILState_Release(gstate);
 
 	g_free(msg);
 }

@@ -131,10 +131,13 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 	GSList *l;
 	struct srd_decoder_inst *next_di;
 	int ret;
+	PyGILState_STATE gstate;
 
 	if (key != SRD_CONF_SAMPLERATE)
 		/* This is the only key we pass on to the decoder for now. */
 		return SRD_OK;
+
+	gstate = PyGILState_Ensure();
 
 	if (PyObject_HasAttrString(di->py_inst, "metadata")) {
 		py_ret = PyObject_CallMethod(di->py_inst, "metadata", "lK",
@@ -142,6 +145,8 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 				(unsigned long long)g_variant_get_uint64(data));
 		Py_XDECREF(py_ret);
 	}
+
+	PyGILState_Release(gstate);
 
 	/* Push metadata to all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {

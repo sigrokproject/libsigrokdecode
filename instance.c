@@ -73,6 +73,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	gint64 val_int;
 	int ret;
 	const char *val_str;
+	PyGILState_STATE gstate;
 
 	if (!di) {
 		srd_err("Invalid decoder instance.");
@@ -84,8 +85,11 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 		return SRD_ERR_ARG;
 	}
 
+	gstate = PyGILState_Ensure();
+
 	if (!PyObject_HasAttrString(di->decoder->py_dec, "options")) {
 		/* Decoder has no options. */
+		PyGILState_Release(gstate);
 		if (g_hash_table_size(options) == 0) {
 			/* No options provided. */
 			return SRD_OK;
@@ -167,6 +171,7 @@ err_out:
 		srd_exception_catch("Stray exception in srd_inst_option_set()");
 		ret = SRD_ERR_PYTHON;
 	}
+	PyGILState_Release(gstate);
 
 	return ret;
 }
@@ -297,6 +302,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	struct srd_decoder *dec;
 	struct srd_decoder_inst *di;
 	char *inst_id;
+	PyGILState_STATE gstate;
 
 	i = 1;
 	srd_dbg("Creating new %s instance.", decoder_id);
@@ -357,15 +363,20 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	memset(di->old_pins_array->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0,
 		di->dec_num_channels);
 
+	gstate = PyGILState_Ensure();
+
 	/* Create a new instance of this decoder class. */
 	if (!(di->py_inst = PyObject_CallObject(dec->py_dec, NULL))) {
 		if (PyErr_Occurred())
 			srd_exception_catch("Failed to create %s instance",
 					decoder_id);
+		PyGILState_Release(gstate);
 		g_free(di->dec_channelmap);
 		g_free(di);
 		return NULL;
 	}
+
+	PyGILState_Release(gstate);
 
 	if (options && srd_inst_option_set(di, options) != SRD_OK) {
 		g_free(di->dec_channelmap);
@@ -477,7 +488,6 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 		struct srd_decoder_inst *di_bottom,
 		struct srd_decoder_inst *di_top)
 {
-
 	if (session_is_valid(sess) != SRD_OK) {
 		srd_err("Invalid session.");
 		return SRD_ERR_ARG;
@@ -694,14 +704,18 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	GSList *l;
 	struct srd_decoder_inst *next_di;
 	int ret;
+	PyGILState_STATE gstate;
 
 	srd_dbg("Calling start() method on protocol decoder instance %s.",
 			di->inst_id);
+
+	gstate = PyGILState_Ensure();
 
 	/* Run self.start(). */
 	if (!(py_res = PyObject_CallMethod(di->py_inst, "start", NULL))) {
 		srd_exception_catch("Protocol decoder instance %s",
 				di->inst_id);
+		PyGILState_Release(gstate);
 		return SRD_ERR_PYTHON;
 	}
 	Py_DecRef(py_res);
@@ -711,6 +725,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 
 	/* Set self.matched to None. */
 	PyObject_SetAttrString(di->py_inst, "matched", Py_None);
+
+	PyGILState_Release(gstate);
 
 	/* Start all the PDs stacked on top of this one. */
 	for (l = di->next_di; l; l = l->next) {
@@ -1033,6 +1049,7 @@ static gpointer di_thread(gpointer data)
 	PyObject *py_res;
 	struct srd_decoder_inst *di;
 	int wanted_term;
+	PyGILState_STATE gstate;
 
 	if (!data)
 		return NULL;
@@ -1040,6 +1057,8 @@ static gpointer di_thread(gpointer data)
 	di = data;
 
 	srd_dbg("%s: Starting thread routine for decoder.", di->inst_id);
+
+	gstate = PyGILState_Ensure();
 
 	/*
 	 * Call self.decode(). Only returns if the PD throws an exception.
@@ -1076,6 +1095,7 @@ static gpointer di_thread(gpointer data)
 		 */
 		srd_dbg("%s: Thread done (!res, want_term).", di->inst_id);
 		PyErr_Clear();
+		PyGILState_Release(gstate);
 		return NULL;
 	}
 	if (!py_res) {
@@ -1087,6 +1107,7 @@ static gpointer di_thread(gpointer data)
 		srd_dbg("%s: decode() terminated unrequested.", di->inst_id);
 		srd_exception_catch("Protocol decoder instance %s: ", di->inst_id);
 		srd_dbg("%s: Thread done (!res, !want_term).", di->inst_id);
+		PyGILState_Release(gstate);
 		return NULL;
 	}
 
@@ -1098,6 +1119,8 @@ static gpointer di_thread(gpointer data)
 	srd_dbg("%s: decode() terminated (req %d).", di->inst_id, wanted_term);
 	Py_DecRef(py_res);
 	PyErr_Clear();
+
+	PyGILState_Release(gstate);
 
 	srd_dbg("%s: Thread done (with res).", di->inst_id);
 
@@ -1228,13 +1251,18 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 {
 	GSList *l;
 	struct srd_pd_output *pdo;
+	PyGILState_STATE gstate;
 
 	srd_dbg("Freeing instance %s", di->inst_id);
 
 	srd_inst_join_decode_thread(di);
+
 	srd_inst_reset_state(di);
 
+	gstate = PyGILState_Ensure();
 	Py_DecRef(di->py_inst);
+	PyGILState_Release(gstate);
+
 	g_free(di->inst_id);
 	g_free(di->dec_channelmap);
 	g_free(di->channel_samples);
