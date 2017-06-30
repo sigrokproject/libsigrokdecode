@@ -235,7 +235,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	PyObject *py_data, *py_res;
 	struct srd_decoder_inst *di, *next_di;
 	struct srd_pd_output *pdo;
-	struct srd_proto_data *pdata;
+	struct srd_proto_data pdata;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	struct srd_pd_callback *cb;
@@ -270,22 +270,22 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		 di->inst_id, start_sample, end_sample,
 		 output_type_name(pdo->output_type), output_id);
 
-	pdata = g_malloc0(sizeof(struct srd_proto_data));
-	pdata->start_sample = start_sample;
-	pdata->end_sample = end_sample;
-	pdata->pdo = pdo;
+	pdata.start_sample = start_sample;
+	pdata.end_sample = end_sample;
+	pdata.pdo = pdo;
+	pdata.data = NULL;
 
 	switch (pdo->output_type) {
 	case SRD_OUTPUT_ANN:
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Convert from PyDict to srd_proto_data_annotation. */
-			if (convert_annotation(di, py_data, pdata) != SRD_OK) {
+			if (convert_annotation(di, py_data, &pdata) != SRD_OK) {
 				/* An error was already logged. */
 				break;
 			}
 			Py_BEGIN_ALLOW_THREADS
-			cb->cb(pdata, cb->cb_data);
+			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
 		}
 		break;
@@ -305,31 +305,31 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Frontends aren't really supposed to get Python
 			 * callbacks, but it's useful for testing. */
-			pdata->data = py_data;
-			cb->cb(pdata, cb->cb_data);
+			pdata.data = py_data;
+			cb->cb(&pdata, cb->cb_data);
 		}
 		break;
 	case SRD_OUTPUT_BINARY:
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Convert from PyDict to srd_proto_data_binary. */
-			if (convert_binary(di, py_data, pdata) != SRD_OK) {
+			if (convert_binary(di, py_data, &pdata) != SRD_OK) {
 				/* An error was already logged. */
 				break;
 			}
 			Py_BEGIN_ALLOW_THREADS
-			cb->cb(pdata, cb->cb_data);
+			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
 		}
 		break;
 	case SRD_OUTPUT_META:
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
 			/* Annotations need converting from PyObject. */
-			if (convert_meta(pdata, py_data) != SRD_OK) {
+			if (convert_meta(&pdata, py_data) != SRD_OK) {
 				/* An exception was already set up. */
 				break;
 			}
 			Py_BEGIN_ALLOW_THREADS
-			cb->cb(pdata, cb->cb_data);
+			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
 		}
 		break;
@@ -340,8 +340,6 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 
 	PyGILState_Release(gstate);
-
-	g_free(pdata);
 
 	Py_RETURN_NONE;
 
