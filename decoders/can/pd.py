@@ -105,9 +105,24 @@ class Decoder(srd.Decoder):
         self.ss_bit12 = None
         self.ss_databytebits = []
 
+    # Poor man's clock synchronization. Use signal edges which change to
+    # dominant state in rather simple ways. This naive approach is neither
+    # aware of the SYNC phase's width nor the specific location of the edge,
+    # but improves the decoder's reliability when the input signal's bitrate
+    # does not exactly match the nominal rate.
+    def dom_edge_seen(self, force = False):
+        self.dom_edge_snum = self.samplenum
+        self.dom_edge_bcount = self.curbit
+
+    def bit_sampled(self):
+        # EMPTY
+        pass
+
     # Determine the position of the next desired bit's sample point.
     def get_sample_point(self, bitnum):
-        samplenum = int(self.sof + (self.bit_width * bitnum) + self.sample_point)
+        samplenum = self.dom_edge_snum
+        samplenum += int(self.bit_width * (bitnum - self.dom_edge_bcount))
+        samplenum += int(self.sample_point)
         return samplenum
 
     def is_stuff_bit(self):
@@ -382,9 +397,14 @@ class Decoder(srd.Decoder):
                 # Wait for a dominant state (logic 0) on the bus.
                 (can_rx,) = self.wait({0: 'l'})
                 self.sof = self.samplenum
+                self.dom_edge_seen(force = True)
                 self.state = 'GET BITS'
             elif self.state == 'GET BITS':
                 # Wait until we're in the correct bit/sampling position.
                 pos = self.get_sample_point(self.curbit)
-                (can_rx,) = self.wait({'skip': pos - self.samplenum})
-                self.handle_bit(can_rx)
+                (can_rx,) = self.wait([{'skip': pos - self.samplenum}, {0: 'f'}])
+                if self.matched[1]:
+                    self.dom_edge_seen()
+                if self.matched[0]:
+                    self.handle_bit(can_rx)
+                    self.bit_sampled()
