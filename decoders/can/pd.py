@@ -75,11 +75,11 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
             self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
-            self.bitpos = (self.bit_width / 100.0) * self.options['sample_point']
+            self.sample_point = (self.bit_width / 100.0) * self.options['sample_point']
 
     # Generic helper for CAN bit annotations.
     def putg(self, ss, es, data):
-        left, right = int(self.bitpos), int(self.bit_width - self.bitpos)
+        left, right = int(self.sample_point), int(self.bit_width - self.sample_point)
         self.put(ss - left, es + right, self.out_ann, data)
 
     # Single-CAN-bit annotation using the current samplenum.
@@ -107,8 +107,8 @@ class Decoder(srd.Decoder):
 
     # Determine the position of the next desired bit's sample point.
     def get_sample_point(self, bitnum):
-        bitpos = int(self.sof + (self.bit_width * bitnum) + self.bitpos)
-        return bitpos
+        samplenum = int(self.sof + (self.bit_width * bitnum) + self.sample_point)
+        return samplenum
 
     def is_stuff_bit(self):
         # CAN uses NRZ encoding and bit stuffing.
