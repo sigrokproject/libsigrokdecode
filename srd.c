@@ -271,7 +271,8 @@ SRD_API int srd_exit(void)
 	 * Acquire the GIL, otherwise Py_Finalize() might have issues.
 	 * Ignore the return value, we don't need it here.
 	 */
-	(void)PyGILState_Ensure();
+	if (Py_IsInitialized())
+		(void)PyGILState_Ensure();
 
 	/* Py_Finalize() returns void, any finalization errors are ignored. */
 	Py_Finalize();
