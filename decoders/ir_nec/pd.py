@@ -38,6 +38,7 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
+        {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
     )
     annotations = (
         ('bit', 'Bit'),
@@ -158,9 +159,36 @@ class Decoder(srd.Decoder):
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+
+        cd_count = None
+        if self.options['cd_freq']:
+            cd_count = int(self.samplerate / self.options['cd_freq']) + 1
+            prev_ir = None
+
         while True:
-            # Wait for any edge (rising or falling).
-            (self.ir,) = self.wait({0: 'e'})
+            # Detect changes in the presence of an active input signal.
+            # The decoder can either be fed an already filtered RX signal
+            # or optionally can detect the presence of a carrier. Periods
+            # of inactivity (signal changes slower than the carrier freq,
+            # if specified) pass on the most recently sampled level. This
+            # approach works for filtered and unfiltered input alike, and
+            # only slightly extends the active phase of input signals with
+            # carriers included by one period of the carrier frequency.
+            # IR based communication protocols can cope with this slight
+            # inaccuracy just fine by design. Enabling carrier detection
+            # on already filtered signals will keep the length of their
+            # active period, but will shift their signal changes by one
+            # carrier period before they get passed to decoding logic.
+            if cd_count:
+                (cur_ir,) = self.wait([{0: 'e'}, {'skip': cd_count}])
+                if self.matched[0]:
+                    cur_ir = self.active
+                if cur_ir == prev_ir:
+                    continue
+                prev_ir = cur_ir
+                self.ir = cur_ir
+            else:
+                (self.ir,) = self.wait({0: 'e'})
 
             if self.ir != self.active:
                 # Save the non-active edge, then wait for the next edge.
