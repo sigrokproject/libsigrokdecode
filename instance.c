@@ -255,14 +255,20 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		}
 		pdch = sl->data;
 		new_channelmap[pdch->order] = new_channelnum;
-		srd_dbg("Setting channel mapping: %s (index %d) = channel %d.",
+		srd_dbg("Setting channel mapping: %s (PD ch idx %d) = input data ch idx %d.",
 			pdch->id, pdch->order, new_channelnum);
 	}
 
 	srd_dbg("Final channel map:");
 	num_required_channels = g_slist_length(di->decoder->channels);
 	for (i = 0; i < di->dec_num_channels; i++) {
-		srd_dbg(" - index %d = channel %d (%s)", i, new_channelmap[i],
+		GSList *l = g_slist_nth(di->decoder->channels, i);
+		if (!l)
+			l = g_slist_nth(di->decoder->opt_channels,
+				i - num_required_channels);
+		pdch = l->data;
+		srd_dbg(" - PD ch idx %d (%s) = input data ch idx %d (%s)", i,
+			pdch->id, new_channelmap[i],
 			(i < num_required_channels) ? "required" : "optional");
 	}
 
