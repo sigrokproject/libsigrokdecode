@@ -144,6 +144,41 @@ static void print_versions(void)
 	g_free(str);
 }
 
+static int print_searchpaths(void)
+{
+	PyObject *py_paths, *py_path, *py_bytes;
+	PyGILState_STATE gstate;
+	GString *s;
+	int i;
+
+	gstate = PyGILState_Ensure();
+
+	py_paths = PySys_GetObject("path");
+	if (!py_paths)
+		goto err;
+
+	s = g_string_sized_new(500);
+	g_string_append(s, "Decoder search paths:\n");
+	for (i = 0; i < PyList_Size(py_paths); i++) {
+		py_path = PyList_GetItem(py_paths, i);
+		py_bytes = PyUnicode_AsUTF8String(py_path);
+		g_string_append_printf(s, " - %s\n", PyBytes_AsString(py_bytes));
+	}
+	s->str[s->len - 1] = '\0';
+	srd_dbg("%s", s->str);
+	g_string_free(s, TRUE);
+
+	PyGILState_Release(gstate);
+
+	return SRD_OK;
+
+err:
+	srd_err("Unable to query decoder search paths.");
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
+}
+
 /**
  * Initialize libsigrokdecode.
  *
@@ -239,6 +274,8 @@ SRD_API int srd_init(const char *path)
 	(void)PyEval_SaveThread();
 
 	max_session_id = 0;
+
+	print_searchpaths();
 
 	return SRD_OK;
 }
