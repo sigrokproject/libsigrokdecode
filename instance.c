@@ -937,7 +937,6 @@ static gboolean at_least_one_condition_matched(
 
 static gboolean find_match(struct srd_decoder_inst *di)
 {
-	static uint64_t s = 0;
 	uint64_t i, j, num_samples_to_process;
 	GSList *l, *cond;
 	const uint8_t *sample_pos;
@@ -968,7 +967,7 @@ static gboolean find_match(struct srd_decoder_inst *di)
 	if (di->abs_cur_samplenum == 0)
 		update_old_pins_array_initial_pins(di);
 
-	for (i = 0, s = 0; i < num_samples_to_process; i++, s++, (di->abs_cur_samplenum)++) {
+	for (i = 0; i < num_samples_to_process; i++, (di->abs_cur_samplenum)++) {
 
 		sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
 
