@@ -123,6 +123,8 @@ SR_SEARCH_LIBS([SRD_EXTRA_LIBS], [pow], [m])
 
 AC_SYS_LARGEFILE
 
+AC_C_BIGENDIAN
+
 ##############################
 ##  Finalize configuration  ##
 ##############################
