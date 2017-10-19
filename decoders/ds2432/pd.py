@@ -177,13 +177,9 @@ class Decoder(srd.Decoder):
                     self.ss = ss
                 elif 24 == len(self.bytes):
                     self.es = es
-                    self.putx([0, ['Message authentication code: '
-                                   + (','.join(format(n, '#04x')
-                                       for n in self.bytes[4:24])),
-                                   'MAC: '
-                                   + (','.join(format(n, '#04x')
-                                       for n in self.bytes[4:24])),
-                                   ]])
+                    mac = ','.join(format(n, '#04x') for n in self.bytes[4:24])
+                    self.putx([0, ['Message authentication code: ' + mac,
+                                   'MAC: ' + mac]])
                 elif 24 < len(self.bytes):
                     self.ss, self.es = ss, es
                     if (0xaa == self.bytes[-1] or 0x55 == self.bytes[-1]):
@@ -218,13 +214,9 @@ class Decoder(srd.Decoder):
                     self.ss = ss
                 elif 58 == len(self.bytes):
                     self.es = es
-                    self.putx([0, ['Message authentication code: '
-                                   + (','.join(format(n, '#04x')
-                                       for n in self.bytes[38:58])),
-                                   'MAC: '
-                                   + (','.join(format(n, '#04x')
-                                       for n in self.bytes[38:58])),
-                                   ]])
+                    mac = ','.join(format(n, '#04x') for n in self.bytes[38:58])
+                    self.putx([0, ['Message authentication code: ' + mac,
+                                   'MAC: ' + mac]])
                 elif 59 == len(self.bytes):
                     self.ss = ss
                 elif 60 == len(self.bytes):
