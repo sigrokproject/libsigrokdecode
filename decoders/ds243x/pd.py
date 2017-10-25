@@ -72,6 +72,9 @@ class Decoder(srd.Decoder):
     annotations = (
         ('text', 'Human-readable text'),
     )
+    binary = (
+        ('mem_read', 'Data read from memory'),
+    )
 
     def __init__(self):
         # Bytes for function command.
@@ -82,6 +85,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
@@ -257,3 +261,6 @@ class Decoder(srd.Decoder):
                 elif 3 < len(self.bytes):
                     self.ss, self.es = ss, es
                     self.putx([0, ['Data: 0x%02x' % (self.bytes[-1])]])
+
+                    bdata = self.bytes[-1].to_bytes(1, byteorder='big')
+                    self.put(ss, es, self.out_binary, [0, bdata])
