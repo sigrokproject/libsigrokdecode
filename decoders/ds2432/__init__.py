@@ -19,7 +19,7 @@
 
 '''
 This decoder stacks on top of the 'onewire_network' PD and decodes the
-Maxim DS2432 (1-Wire 1Kbit protected EEPROM with SHA-1 engine) protocol.
+Maxim DS243x (1-Wire EEPROM) protocol.
 '''
 
 from .pd import Decoder

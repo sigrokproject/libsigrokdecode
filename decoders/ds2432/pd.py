@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2017 Kevin Redon <kingkevin@cuvoodoo.info>
+## Copyright (C) 2017 Soeren Apel <soeren@apelpie.net>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -20,7 +21,7 @@
 import sigrokdecode as srd
 
 # Dictionary of FUNCTION commands and their names.
-commands = {
+commands_2432 = {
     0x0f: 'Write scratchpad',
     0xaa: 'Read scratchpad',
     0x55: 'Copy scratchpad',
@@ -30,8 +31,18 @@ commands = {
     0xa5: 'Read authenticated page',
 }
 
-# Maxim DS2432 family code, present at the end of the ROM code.
-family_code = 0x33
+commands_2433 = {
+    0x0f: 'Write scratchpad',
+    0xaa: 'Read scratchpad',
+    0x55: 'Copy scratchpad',
+    0xf0: 'Read memory',
+}
+
+# Maxim DS243x family code, present at the end of the ROM code.
+family_codes = {
+    0x33: ('DS2432', commands_2432),
+    0x23: ('DS2433', commands_2433),
+}
 
 # Calculate the CRC-16 checksum.
 # Initial value: 0x0000, xor-in: 0x0000, polynom 0x8005, xor-out: 0xffff.
@@ -51,13 +62,13 @@ def crc16(byte_array):
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'ds2432'
-    name = 'DS2432'
-    longname = 'Maxim DS2432 1-Wire 1k-Bit Protected EEPROM with SHA-1 Engine'
-    desc = '1-Wire 1k-Bit Protected EEPROM with SHA-1 Engine.'
+    id = 'ds243x'
+    name = 'DS243x'
+    longname = 'Maxim DS2432/2433'
+    desc = 'Maxim DS243x series 1-Wire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['onewire_network']
-    outputs = ['ds2432']
+    outputs = ['ds243x']
     annotations = (
         ('text', 'Human-readable text'),
     )
@@ -65,6 +76,9 @@ class Decoder(srd.Decoder):
     def __init__(self):
         # Bytes for function command.
         self.bytes = []
+        self.family_code = None
+        self.family = ''
+        self.commands = commands_2432 # Use max command set until we know better.
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -82,22 +96,27 @@ class Decoder(srd.Decoder):
             self.bytes = []
         elif code == 'ROM':
             self.ss, self.es = ss, es
-            self.putx([0, ['ROM: 0x%016x (family code %s to 0x%02x)'
-                           % (val, 'matches' if family_code == (val & 0xff)
-                               else 'does not match', family_code),
-                           'ROM: 0x%016x (family code %s)'
-                           % (val, 'match' if family_code == (val & 0xff)
-                               else 'mismatch')]])
+            self.family_code = val & 0xff
+
+            s = None
+            if self.family_code in family_codes:
+                self.family, self.commands = family_codes[val & 0xff]
+                s = 'is 0x%02x, %s detected' % (self.family_code, self.family)
+            else:
+                s = '%x%02x unknown' % (self.family_code)
+
+            self.putx([0, ['ROM: 0x%016x (%s)' % (val, 'family code ' + s),
+                           'ROM: 0x%016x (%s)' % (val, self.family)]])
             self.bytes = []
         elif code == 'DATA':
             self.bytes.append(val)
             if 1 == len(self.bytes):
                 self.ss, self.es = ss, es
-                if val not in commands:
+                if val not in self.commands:
                     self.putx([0, ['Unrecognized command: 0x%02x' % val]])
                 else:
                     self.putx([0, ['Function command: %s (0x%02x)'
-                                   % (commands[val], val)]])
+                                   % (self.commands[val], val)]])
             elif 0x0f == self.bytes[0]: # Write scratchpad
                 if 2 == len(self.bytes):
                     self.ss = ss
