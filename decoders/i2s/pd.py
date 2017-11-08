@@ -118,7 +118,7 @@ class Decoder(srd.Decoder):
         h += b'\x20\x00'         # Bits per sample (32)
         # Data subchunk
         h += b'data'
-        h += b'\xff\xff\x00\x00' # Subchunk size (65535 bytes) TODO
+        h += b'\xff\xff\xff\xff' # Subchunk size (4G bytes) TODO
         return h
 
     def wav_sample(self, sample):
