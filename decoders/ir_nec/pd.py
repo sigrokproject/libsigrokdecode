@@ -111,18 +111,22 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-        self.margin = int(self.samplerate * 0.0001) - 1 # 0.1ms
+        self.tolerance = 0.05 # +/-5%
         self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
         self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
         self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
         self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
         self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
 
+    def compare_with_tolerance(self, measured, base):
+        return (measured >= base * (1 - self.tolerance)
+                and measured <= base * (1 + self.tolerance))
+
     def handle_bit(self, tick):
         ret = None
-        if tick in range(self.dazero - self.margin, self.dazero + self.margin):
+        if self.compare_with_tolerance(tick, self.dazero):
             ret = 0
-        elif tick in range(self.daone - self.margin, self.daone + self.margin):
+        elif self.compare_with_tolerance(tick, self.daone):
             ret = 1
         if ret in (0, 1):
             self.putb([0, ['%d' % ret]])
@@ -164,13 +168,13 @@ class Decoder(srd.Decoder):
 
             # State machine.
             if self.state == 'IDLE':
-                if b in range(self.lc - self.margin, self.lc + self.margin):
+                if self.compare_with_tolerance(b, self.lc):
                     self.putpause('Long')
                     self.putx([5, ['Leader code', 'Leader', 'LC', 'L']])
                     self.ss_remote = self.ss_start
                     self.data = self.count = 0
                     self.state = 'ADDRESS'
-                elif b in range(self.rc - self.margin, self.rc + self.margin):
+                elif self.compare_with_tolerance(b, self.rc):
                     self.putpause('Short')
                     self.putstop(self.samplenum)
                     self.samplenum += self.stop
