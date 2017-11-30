@@ -232,11 +232,7 @@ class Decoder(srd.Decoder):
             val, self.samplenums = val
             self.samplenums.reverse()
 
-        # State machine
-        if self.state == 'IDLE':
-            # Wait until a new instruction is shifted into the IR register.
-            if cmd != 'IR TDI':
-                return
+        if cmd == 'IR TDI':
             # Switch to the state named after the instruction, or 'UNKNOWN'.
             # The STM32F10xxx has two serially connected JTAG TAPs, the
             # boundary scan tap (5 bits) and the Cortex-M3 TAP (4 bits).
@@ -246,7 +242,9 @@ class Decoder(srd.Decoder):
             self.putf(4, 8, [1, ['IR (BS TAP): ' + bstap_ir]])
             self.putf(0, 3, [1, ['IR (M3 TAP): ' + self.state]])
             self.putx([2, ['IR: %s' % self.state]])
-        elif self.state == 'BYPASS':
+
+        # State machine
+        if self.state == 'BYPASS':
             # Here we're interested in incoming bits (TDI).
             if cmd != 'DR TDI':
                 return
