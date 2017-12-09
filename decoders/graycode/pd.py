@@ -20,20 +20,7 @@
 import math
 import sigrokdecode as srd
 from collections import deque
-
-def bitpack(bits):
-    res = 0
-    for i, b in enumerate(bits):
-        res |= b << i
-    return res
-
-def bitunpack(num, minbits=0):
-    res = []
-    while num or minbits > 0:
-        res.append(num & 1)
-        num >>= 1
-        minbits -= 1
-    return tuple(res)
+from common.srdhelper import bitpack, bitunpack
 
 def gray_encode(plain):
     return plain & (plain >> 1)

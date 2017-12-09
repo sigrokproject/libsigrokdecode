@@ -20,3 +20,17 @@
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
+
+def bitpack(bits):
+    res = 0
+    for i, b in enumerate(bits):
+        res |= b << i
+    return res
+
+def bitunpack(num, minbits=0):
+    res = []
+    while num or minbits > 0:
+        res.append(num & 1)
+        num >>= 1
+        minbits -= 1
+    return tuple(res)
