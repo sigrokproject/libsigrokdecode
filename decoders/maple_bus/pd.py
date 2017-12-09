@@ -80,26 +80,32 @@ class Decoder(srd.Decoder):
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.pending_bit_pos = None
 
+    def putx(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
+    def putb(self, data):
+        self.put(self.ss, self.es, self.out_binary, data)
+
     def byte_annotation(self, bintype, d):
         return [bintype + 6,
             ['%s: %02X' % (name, d) for name in ann[bintype]] + ['%02X' % d]]
 
     def got_start(self):
-        self.put(self.ss, self.es, self.out_ann, [0, ['Start pattern', 'Start', 'S']])
+        self.putx([0, ['Start pattern', 'Start', 'S']])
 
     def got_end(self):
-        self.put(self.ss, self.es, self.out_ann, [1, ['End pattern', 'End', 'E']])
+        self.putx([1, ['End pattern', 'End', 'E']])
         if self.length != self.expected_length + 1:
-            self.put(self.ss, self.es, self.out_ann, [14, ['Size error', 'L error', 'LE']])
+            self.putx([14, ['Size error', 'L error', 'LE']])
 
     def got_start_with_crc(self):
-        self.put(self.ss, self.es, self.out_ann, [2, ['Start pattern with CRC', 'Start CRC', 'SC']])
+        self.putx([2, ['Start pattern with CRC', 'Start CRC', 'SC']])
 
     def got_occupancy(self):
-        self.put(self.ss, self.es, self.out_ann, [3, ['SDCKB occupancy pattern', 'Occupancy', 'O']])
+        self.putx([3, ['SDCKB occupancy pattern', 'Occupancy', 'O']])
 
     def got_reset(self):
-        self.put(self.ss, self.es, self.out_ann, [4, ['RESET pattern', 'RESET', 'R']])
+        self.putx([4, ['RESET pattern', 'RESET', 'R']])
 
     def output_pending_bit(self):
         if self.pending_bit_pos:
@@ -121,15 +127,15 @@ class Decoder(srd.Decoder):
         elif self.length == self.expected_length:
             bintype = 5
             if self.data != self.checksum:
-                self.put(self.ss, self.es, self.out_ann, [13, ['Cksum error', 'K error', 'KE']])
+                self.putx([13, ['Cksum error', 'K error', 'KE']])
         self.length = self.length + 1
         self.checksum = self.checksum ^ self.data
-        self.put(self.ss, self.es, self.out_ann, self.byte_annotation(bintype, self.data))
-        self.put(self.ss, self.es, self.out_binary, [bintype, bytes([self.data])])
+        self.putx(self.byte_annotation(bintype, self.data))
+        self.putb([bintype, bytes([self.data])])
         self.pending_bit_pos = None
 
     def frame_error(self):
-        self.put(self.ss, self.es, self.out_ann, [7, ['Frame error', 'F error', 'FE']])
+        self.putx([7, ['Frame error', 'F error', 'FE']])
 
     def handle_start(self):
         self.wait({0: 'l', 1: 'h'})
