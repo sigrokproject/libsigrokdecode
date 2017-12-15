@@ -61,9 +61,6 @@ proto = {
     'DATA WRITE':      [9, 'Data write',    'DW'],
 }
 
-class SamplerateError(Exception):
-    pass
-
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'i2c'
@@ -238,9 +235,10 @@ class Decoder(srd.Decoder):
 
     def handle_stop(self, pins):
         # Meta bitrate
-        elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
-        bitrate = int(1 / elapsed * self.pdu_bits)
-        self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
+        if self.samplerate:
+            elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
+            bitrate = int(1 / elapsed * self.pdu_bits)
+            self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
 
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum
@@ -252,9 +250,6 @@ class Decoder(srd.Decoder):
         self.bits = []
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
-
         while True:
             # State machine.
             if self.state == 'FIND START':
