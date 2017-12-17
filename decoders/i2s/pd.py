@@ -33,9 +33,6 @@ Packet:
 <value>: integer
 '''
 
-class SamplerateError(Exception):
-    pass
-
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'i2s'
@@ -92,12 +89,12 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def report(self):
-
         # Calculate the sample rate.
         samplerate = '?'
         if self.ss_block is not None and \
             self.first_sample is not None and \
-            self.ss_block > self.first_sample:
+            self.ss_block > self.first_sample and \
+            self.samplerate:
             samplerate = '%d' % (self.samplesreceived *
                 self.samplerate / (self.ss_block -
                 self.first_sample))
@@ -128,8 +125,6 @@ class Decoder(srd.Decoder):
         return struct.pack('<I', self.data)
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
         while True:
             # Wait for a rising edge on the SCK pin.
             sck, ws, sd = self.wait({0: 'r'})
