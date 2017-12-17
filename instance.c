@@ -1270,6 +1270,70 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 	return SRD_OK;
 }
 
+/**
+ * Terminate current decoder work, prepare for re-use on new input data.
+ *
+ * Terminates all decoder operations in the specified decoder instance
+ * and the instances stacked on top of it. Resets internal state such
+ * that the previously constructed stack can process new input data that
+ * is not related to previously processed input data. This avoids the
+ * expensive and complex re-construction of decoder stacks.
+ *
+ * Callers are expected to follow up with start, metadata, and decode
+ * calls like they would for newly constructed decoder stacks.
+ *
+ * @param di The decoder instance to call. Must not be NULL.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ * @private
+ */
+SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di)
+{
+	PyGILState_STATE gstate;
+	PyObject *py_ret;
+	GSList *l;
+	int ret;
+
+	if (!di)
+		return SRD_ERR_ARG;
+
+	/*
+	 * Request termination and wait for previously initiated
+	 * background operation to finish. Reset internal state, but
+	 * do not start releasing resources yet. This shall result in
+	 * decoders' state just like after creation. This block handles
+	 * the C language library side.
+	 */
+	srd_dbg("Terminating instance %s", di->inst_id);
+	srd_inst_join_decode_thread(di);
+	srd_inst_reset_state(di);
+
+	/*
+	 * Have the Python side's .reset() method executed (if the PD
+	 * implements it). It's assumed that .reset() assigns variables
+	 * very much like __init__() used to do in the past. Thus memory
+	 * that was allocated in previous calls gets released by Python
+	 * as it's not referenced any longer.
+	 */
+	gstate = PyGILState_Ensure();
+	if (PyObject_HasAttrString(di->py_inst, "reset")) {
+		srd_dbg("Calling .reset() of instance %s", di->inst_id);
+		py_ret = PyObject_CallMethod(di->py_inst, "reset", NULL);
+		Py_XDECREF(py_ret);
+	}
+	PyGILState_Release(gstate);
+
+	/*
+	 * Pass the "restart" request to all stacked decoders.
+	 */
+	for (l = di->next_di; l; l = l->next) {
+		ret = srd_inst_terminate_reset(l->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
+
+	return SRD_OK;
+}
+
 /** @private */
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 {

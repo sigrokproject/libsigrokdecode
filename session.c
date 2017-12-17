@@ -298,6 +298,45 @@ SRD_API int srd_session_send(struct srd_session *sess,
 }
 
 /**
+ * Terminate currently executing decoders in a session, reset internal state.
+ *
+ * All decoder instances have their .wait() method terminated, which
+ * shall terminate .decode() as well. Afterwards the decoders' optional
+ * .reset() method gets executed.
+ *
+ * This routine allows callers to abort pending expensive operations,
+ * when they are no longer interested in the decoders' results. Note
+ * that the decoder state is lost and aborted work cannot resume.
+ *
+ * This routine also allows callers to re-use previously created decoder
+ * stacks to process new input data which is not related to previously
+ * processed input data. This avoids the necessity to re-construct the
+ * decoder stack.
+ *
+ * @param sess The session in which to terminate decoders.
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @since 0.6.0
+ */
+SRD_API int srd_session_terminate_reset(struct srd_session *sess)
+{
+	GSList *d;
+	int ret;
+
+	if (session_is_valid(sess) != SRD_OK) {
+		srd_err("Invalid session.");
+		return SRD_ERR_ARG;
+	}
+
+	for (d = sess->di_list; d; d = d->next) {
+		ret = srd_inst_terminate_reset(d->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
+	return SRD_OK;
+}
+
+/**
  * Destroy a decoding session.
  *
  * All decoder instances and output callbacks are properly released.
