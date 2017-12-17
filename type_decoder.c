@@ -855,9 +855,8 @@ err:
  */
 static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
 {
-	int idx, max_idx;
+	int idx, count;
 	struct srd_decoder_inst *di;
-	PyObject *py_channel;
 	PyGILState_STATE gstate;
 
 	if (!self || !args)
@@ -870,24 +869,20 @@ static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
 		goto err;
 	}
 
-	/* Parse the argument of self.has_channel() into 'py_channel'. */
-	if (!PyArg_ParseTuple(args, "O", &py_channel)) {
+	/*
+	 * Get the integer argument of self.has_channel(). Check for
+	 * the range of supported PD input channel numbers.
+	 */
+	if (!PyArg_ParseTuple(args, "i", &idx)) {
 		/* Let Python raise this exception. */
 		goto err;
 	}
 
-	if (!PyLong_Check(py_channel)) {
-		PyErr_SetString(PyExc_Exception, "channel index not a number");
-		goto err;
-	}
-
-	idx = PyLong_AsLong(py_channel);
-	max_idx = g_slist_length(di->decoder->channels)
-		+ g_slist_length(di->decoder->opt_channels) - 1;
-
-	if (idx < 0 || idx > max_idx) {
-		srd_err("Invalid channel index %d/%d.", idx, max_idx);
-		PyErr_SetString(PyExc_Exception, "invalid channel");
+	count = g_slist_length(di->decoder->channels) +
+	        g_slist_length(di->decoder->opt_channels);
+	if (idx < 0 || idx >= count) {
+		srd_err("Invalid index %d, PD channel count %d.", idx, count);
+		PyErr_SetString(PyExc_IndexError, "invalid channel index");
 		goto err;
 	}
 
