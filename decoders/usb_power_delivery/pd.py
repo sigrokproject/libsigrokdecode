@@ -228,7 +228,7 @@ class Decoder(srd.Decoder):
         op_ma = ((rdo >> 10) & 0x3ff) * 10
         max_ma = (rdo & 0x3ff) * 10
         flags = ''
-        for f in RDO_FLAGS.keys():
+        for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
                 flags += ' ' + RDO_FLAGS[f]
         return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
@@ -252,7 +252,7 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in PDO_FLAGS.keys():
+        for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
                 flags += ' ' + PDO_FLAGS[f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
@@ -276,7 +276,7 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in PDO_FLAGS.keys():
+        for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
                 flags += ' ' + PDO_FLAGS[f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
