@@ -126,7 +126,7 @@ class Decoder(srd.Decoder):
         if self.saved_word is not None:
             if self.options['wordsize'] > 0:
                 self.es_word = self.samplenum
-                self.putw([1, ['%X' % self.saved_word]])
+                self.putw([1, [self.fmt_word.format(self.saved_word)]])
                 self.putpw(['WORD', self.saved_word])
             self.saved_word = None
 
@@ -142,7 +142,7 @@ class Decoder(srd.Decoder):
             # Output the saved item (from the last CLK edge to the current).
             self.es_item = self.samplenum
             self.putpb(['ITEM', self.saved_item])
-            self.putb([0, ['%X' % self.saved_item]])
+            self.putb([0, [self.fmt_item.format(self.saved_item)]])
             self.ss_item = self.samplenum
             self.saved_item = item
 
@@ -176,7 +176,6 @@ class Decoder(srd.Decoder):
         if not has_channels:
             raise ChannelError('At least one channel has to be supplied.')
         max_connected = max(has_channels)
-        idx_strip = max_connected + 1
 
         # Determine .wait() conditions, depending on the presence of a
         # clock signal. Either inspect samples on the configured edge of
@@ -188,11 +187,24 @@ class Decoder(srd.Decoder):
         else:
             conds = [{idx: 'e'} for idx in has_channels]
 
+        # Pre-determine which input data to strip off, the width of
+        # individual items and multiplexed words, as well as format
+        # strings here. This simplifies call sites which run in tight
+        # loops later.
+        idx_strip = max_connected + 1
+        num_item_bits = idx_strip - 1
+        num_word_items = self.options['wordsize']
+        num_word_bits = num_item_bits * num_word_items
+        num_digits = (num_item_bits + 3) // 4
+        self.fmt_item = "{{:0{}x}}".format(num_digits)
+        num_digits = (num_word_bits + 3) // 4
+        self.fmt_word = "{{:0{}x}}".format(num_digits)
+
         # Keep processing the input stream. Assume "always zero" for
         # not-connected input lines. Pass data bits (all inputs except
         # clock) to the handle_bits() method.
         while True:
             pins = self.wait(conds)
             bits = [0 if idx is None else pins[idx] for idx in idx_channels]
-            bits = bits[1:idx_strip]
-            self.handle_bits(bitpack(bits), len(bits))
+            item = bitpack(bits[1:idx_strip])
+            self.handle_bits(item, num_item_bits)
