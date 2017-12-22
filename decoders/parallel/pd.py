@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import bitpack
 
 '''
 OUTPUT_PYTHON format:
@@ -95,7 +96,6 @@ class Decoder(srd.Decoder):
         self.saved_item = None
         self.ss_item = self.es_item = None
         self.first = True
-        self.num_channels = 0
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -113,12 +113,7 @@ class Decoder(srd.Decoder):
     def putw(self, data):
         self.put(self.ss_word, self.es_word, self.out_ann, data)
 
-    def handle_bits(self, datapins):
-        # Get the bits for this item.
-        item, used_pins = 0, datapins.count(1) + datapins.count(0)
-        for i in range(used_pins):
-            item |= datapins[i] << i
-
+    def handle_bits(self, item, used_pins):
         # Save the item, and its sample number if it's the first part of a word.
         if not self.items:
             self.ss_word = self.samplenum
@@ -160,25 +155,35 @@ class Decoder(srd.Decoder):
         self.items = []
 
     def decode(self):
-        for i in range(len(self.optional_channels)):
-            if self.has_channel(i):
-                self.num_channels += 1
-
-        if self.num_channels == 0:
+        # Determine which (optional) channels have input data. Insist in
+        # a non-empty input data set. Cope with sparse connection maps.
+        # Store enough state to later "compress" sampled input data.
+        max_possible = len(self.optional_channels)
+        idx_channels = [
+            idx if self.has_channel(idx) else None
+            for idx in range(max_possible)
+        ]
+        has_channels = [idx for idx in idx_channels if idx is not None]
+        if not has_channels:
             raise ChannelError('At least one channel has to be supplied.')
+        max_connected = max(has_channels)
+        idx_strip = max_connected + 1
 
-        if not self.has_channel(0):
-            # CLK was not supplied, sample on ANY edge of ANY of the pins
-            # (but only of those pins that were actually supplied).
-            conds = []
-            for i in range(1, len(self.optional_channels)):
-                if self.has_channel(i):
-                    conds.append({i: 'e'})
-        else:
-            # Sample on the rising or falling CLK edge (depends on config).
+        # Determine .wait() conditions, depending on the presence of a
+        # clock signal. Either inspect samples on the configured edge of
+        # the clock, or inspect samples upon ANY edge of ANY of the pins
+        # which provide input data.
+        if self.has_channel(0):
             edge = self.options['clock_edge'][0]
-            conds = [{0: edge}]
+            conds = {0: edge}
+        else:
+            conds = [{idx: 'e'} for idx in has_channels]
 
+        # Keep processing the input stream. Assume "always zero" for
+        # not-connected input lines. Pass data bits (all inputs except
+        # clock) to the handle_bits() method.
         while True:
             pins = self.wait(conds)
-            self.handle_bits(pins[1:])
+            bits = [0 if idx is None else pins[idx] for idx in idx_channels]
+            bits = bits[1:idx_strip]
+            self.handle_bits(bitpack(bits), len(bits))
