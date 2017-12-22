@@ -79,13 +79,17 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},
-        {'id': 'wordsize', 'desc': 'Data wordsize', 'default': 1},
+        {'id': 'wordsize', 'desc': 'Data wordsize', 'default': 0},
         {'id': 'endianness', 'desc': 'Data endianness',
             'default': 'little', 'values': ('little', 'big')},
     )
     annotations = (
         ('items', 'Items'),
         ('words', 'Words'),
+    )
+    annotation_rows = (
+        ('items', 'Items', (0,)),
+        ('words', 'Words', (1,)),
     )
 
     def __init__(self):
@@ -95,6 +99,8 @@ class Decoder(srd.Decoder):
         self.items = []
         self.saved_item = None
         self.ss_item = self.es_item = None
+        self.saved_word = None
+        self.ss_word = self.es_word = None
         self.first = True
 
     def start(self):
@@ -114,11 +120,19 @@ class Decoder(srd.Decoder):
         self.put(self.ss_word, self.es_word, self.out_ann, data)
 
     def handle_bits(self, item, used_pins):
-        # Save the item, and its sample number if it's the first part of a word.
-        if not self.items:
-            self.ss_word = self.samplenum
-        self.items.append(item)
 
+        # If a word was previously accumulated, then emit its annotation
+        # now after its end samplenumber became available.
+        if self.saved_word is not None:
+            if self.options['wordsize'] > 0:
+                self.es_word = self.samplenum
+                self.putw([1, ['%X' % self.saved_word]])
+                self.putpw(['WORD', self.saved_word])
+            self.saved_word = None
+
+        # Defer annotations for individual items until the next sample
+        # is taken, and the previous sample's end samplenumber has
+        # become available.
         if self.first:
             # Save the start sample and item for later (no output yet).
             self.ss_item = self.samplenum
@@ -132,26 +146,21 @@ class Decoder(srd.Decoder):
             self.ss_item = self.samplenum
             self.saved_item = item
 
-        # Get as many items as the configured wordsize says.
+        # Get as many items as the configured wordsize specifies.
+        if not self.items:
+            self.ss_word = self.samplenum
+        self.items.append(item)
         ws = self.options['wordsize']
         if len(self.items) < ws:
             return
 
-        # Output annotations/python for a word (a collection of items).
-        # NOTE that this feature is currently not effective. The emission
-        # of Python annotations is commented out.
+        # Collect words and prepare annotation details, but defer emission
+        # until the end samplenumber becomes available.
         endian = self.options['endianness']
-        if endian == 'little':
+        if endian == 'big':
             self.items.reverse()
-        word = 0
-        for i in range(ws):
-            word |= self.items[i] << (i * used_pins)
-
-        self.es_word = self.samplenum
-        # self.putpw(['WORD', word])
-        # self.putw([1, ['%X' % word]])
-        self.ss_word = self.samplenum
-
+        word = sum([self.items[i] << (i * used_pins) for i in range(ws)])
+        self.saved_word = word
         self.items = []
 
     def decode(self):
