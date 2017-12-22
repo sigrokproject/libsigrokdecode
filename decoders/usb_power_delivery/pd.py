@@ -412,7 +412,7 @@ class Decoder(srd.Decoder):
         for i in range(len(self.bits) - 19):
             k = (self.get_sym(i, rec=False), self.get_sym(i+5, rec=False),
                  self.get_sym(i+10, rec=False), self.get_sym(i+15, rec=False))
-            sym = START_OF_PACKETS[k] if k in START_OF_PACKETS else None
+            sym = START_OF_PACKETS.get(k, None)
             if not sym:
                 sym = self.find_corrupted_sop(k)
             # We have an interesting symbol sequence
