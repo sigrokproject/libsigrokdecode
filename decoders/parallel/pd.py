@@ -92,7 +92,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.items = []
-        self.itemcount = 0
         self.saved_item = None
         self.ss_item = self.es_item = None
         self.first = True
@@ -115,17 +114,15 @@ class Decoder(srd.Decoder):
         self.put(self.ss_word, self.es_word, self.out_ann, data)
 
     def handle_bits(self, datapins):
-        # If this is the first item in a word, save its sample number.
-        if self.itemcount == 0:
-            self.ss_word = self.samplenum
-
         # Get the bits for this item.
         item, used_pins = 0, datapins.count(1) + datapins.count(0)
         for i in range(used_pins):
             item |= datapins[i] << i
 
+        # Save the item, and its sample number if it's the first part of a word.
+        if not self.items:
+            self.ss_word = self.samplenum
         self.items.append(item)
-        self.itemcount += 1
 
         if self.first:
             # Save the start sample and item for later (no output yet).
@@ -140,26 +137,27 @@ class Decoder(srd.Decoder):
             self.ss_item = self.samplenum
             self.saved_item = item
 
-        endian, ws = self.options['endianness'], self.options['wordsize']
-
         # Get as many items as the configured wordsize says.
-        if self.itemcount < ws:
+        ws = self.options['wordsize']
+        if len(self.items) < ws:
             return
 
         # Output annotations/python for a word (a collection of items).
+        # NOTE that this feature is currently not effective. The emission
+        # of Python annotations is commented out.
+        endian = self.options['endianness']
+        if endian == 'little':
+            self.items.reverse()
         word = 0
         for i in range(ws):
-            if endian == 'little':
-                word |= self.items[i] << ((ws - 1 - i) * used_pins)
-            elif endian == 'big':
-                word |= self.items[i] << (i * used_pins)
+            word |= self.items[i] << (i * used_pins)
 
         self.es_word = self.samplenum
         # self.putpw(['WORD', word])
         # self.putw([1, ['%X' % word]])
         self.ss_word = self.samplenum
 
-        self.itemcount, self.items = 0, []
+        self.items = []
 
     def decode(self):
         for i in range(len(self.optional_channels)):
