@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_cmd, self.es_cmd, self.out_ann, data)
 
-    def reset(self):
+    def reset_data(self):
         self.mosi_bytes = []
         self.miso_bytes = []
         self.es_array = []
@@ -93,7 +93,7 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         ptype = data[0]
         if ptype == 'CS-CHANGE':
-            self.reset()
+            self.reset_data()
             return
 
         # Don't care about anything else.
@@ -114,10 +114,10 @@ class Decoder(srd.Decoder):
                 return
 
             self.handle_ack()
-            self.reset()
+            self.reset_data()
         else:
             if len(self.mosi_bytes) < self.options['msgsize']:
                 return
 
             self.handle_ctrl()
-            self.reset()
+            self.reset_data()
