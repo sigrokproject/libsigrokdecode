@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
     def putw(self, pos, msg):
         self.put(pos[0], pos[1], self.out_ann, [4, [msg]])
 
-    def reset(self):
+    def reset_data(self):
         self.mosi_bytes = []
         self.miso_bytes = []
 
@@ -103,7 +103,7 @@ class Decoder(srd.Decoder):
             if cs_old is not None and cs_old == 0 and cs_new == 1:
                 if len(self.mosi_bytes) not in (0, 2, 3):
                     self.putw([self.ss_cmd, es], 'Misplaced CS!')
-                    self.reset()
+                    self.reset_data()
             return
 
         # Don't care about anything else.
@@ -126,8 +126,8 @@ class Decoder(srd.Decoder):
             if len(self.mosi_bytes) == 3:
                 self.es_cmd = es
                 self.handle_long()
-                self.reset()
+                self.reset_data()
         else:
             self.es_cmd = es
             self.handle_short()
-            self.reset()
+            self.reset_data()
