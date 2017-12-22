@@ -176,10 +176,11 @@ class Decoder(srd.Decoder):
             for i in range(1, len(self.optional_channels)):
                 if self.has_channel(i):
                     conds.append({i: 'e'})
-            while True:
-                self.handle_bits(self.wait(conds)[1:])
         else:
             # Sample on the rising or falling CLK edge (depends on config).
-            while True:
-                pins = self.wait({0: self.options['clock_edge'][0]})
-                self.handle_bits(pins[1:])
+            edge = self.options['clock_edge'][0]
+            conds = [{0: edge}]
+
+        while True:
+            pins = self.wait(conds)
+            self.handle_bits(pins[1:])
