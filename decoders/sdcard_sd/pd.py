@@ -92,10 +92,6 @@ class Decoder(srd.Decoder):
     def putr(self, desc):
         self.putt([self.last_cmd, ['Reply: %s' % desc]])
 
-    def reset(self):
-        self.cmd, self.arg = None, None
-        self.token, self.state = [], 'GET COMMAND TOKEN'
-
     def cmd_name(self, cmd):
         c = acmd_names if self.is_acmd else cmd_names
         return c.get(cmd, 'Unknown')
