@@ -45,8 +45,11 @@ class Decoder(srd.Decoder):
         ('word_resets', 'Word resets', (2,)),
     )
     options = (
-        {'id': 'edge', 'desc': 'Edges to check', 'default': 'any', 'values': ('any', 'rising', 'falling')},
+        {'id': 'data_edge', 'desc': 'Edges to count (data)', 'default': 'any',
+            'values': ('any', 'rising', 'falling')},
         {'id': 'divider', 'desc': 'Count divider (word width)', 'default': 0},
+        {'id': 'reset_edge', 'desc': 'Edge which clears counters (reset)',
+            'default': 'falling', 'values': ('rising', 'falling')},
     )
 
     def __init__(self):
@@ -63,7 +66,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.edge = self.options['edge']
+        self.edge = self.options['data_edge']
         self.divider = self.options['divider']
         if self.divider < 0:
             self.divider = 0
@@ -78,7 +81,7 @@ class Decoder(srd.Decoder):
 
         if self.has_channel(1):
             self.have_reset = True
-            condition.append({1: 'f'})
+            condition.append({1: self.options['reset_edge'][0]})
 
         while True:
             self.wait(condition)
