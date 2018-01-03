@@ -37,10 +37,12 @@ class Decoder(srd.Decoder):
     annotations = (
         ('edge_count', 'Edge count'),
         ('word_count', 'Word count'),
+        ('word_reset', 'Word reset'),
     )
     annotation_rows = (
         ('edge_counts', 'Edges', (0,)),
         ('word_counts', 'Words', (1,)),
+        ('word_resets', 'Word resets', (2,)),
     )
     options = (
         {'id': 'edge', 'desc': 'Edges to check', 'default': 'any', 'values': ('any', 'rising', 'falling')},
@@ -66,9 +68,8 @@ class Decoder(srd.Decoder):
         if self.divider < 0:
             self.divider = 0
 
-    def put_count(self, ann_class, count):
-        self.put(self.samplenum, self.samplenum, self.out_ann,
-            [ann_class, [str(count)]])
+    def putc(self, cls, annlist):
+        self.put(self.samplenum, self.samplenum, self.out_ann, [cls, annlist])
 
     def decode(self):
         condition = [{'rising':  {0: 'r'},
@@ -84,12 +85,12 @@ class Decoder(srd.Decoder):
             if self.have_reset and self.matched[1]:
                 self.edge_count = 0
                 self.word_count = 0
-                self.put_count(1, 'R')
+                self.putc(2, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
 
             self.edge_count += 1
 
-            self.put_count(0, self.edge_count)
+            self.putc(0, [str(self.edge_count)])
             if self.divider > 0 and (self.edge_count % self.divider) == 0:
                 self.word_count += 1
-                self.put_count(1, self.word_count)
+                self.putc(1, [str(self.word_count)])
