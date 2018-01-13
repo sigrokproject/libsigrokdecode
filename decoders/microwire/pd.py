@@ -71,6 +71,12 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (5,)),
     )
 
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        pass
+
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
