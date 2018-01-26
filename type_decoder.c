@@ -361,6 +361,9 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	char *proto_id, *meta_name, *meta_descr;
 	char *keywords[] = {"output_type", "proto_id", "meta", NULL};
 	PyGILState_STATE gstate;
+	gboolean is_meta;
+	GSList *l;
+	struct srd_pd_output *cmp;
 
 	gstate = PyGILState_Ensure();
 
@@ -383,7 +386,8 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	}
 
 	/* Check if the meta value's type is supported. */
-	if (output_type == SRD_OUTPUT_META) {
+	is_meta = output_type == SRD_OUTPUT_META;
+	if (is_meta) {
 		if (meta_type_py == &PyLong_Type)
 			meta_type_gv = G_VARIANT_TYPE_INT64;
 		else if (meta_type_py == &PyFloat_Type)
@@ -392,6 +396,30 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 			PyErr_Format(PyExc_TypeError, "Unsupported type.");
 			goto err;
 		}
+	}
+
+	srd_dbg("Instance %s checking registration type %d for %s.",
+		di->inst_id, output_type, proto_id);
+	pdo = NULL;
+	for (l = di->pd_output; l; l = l->next) {
+		cmp = l->data;
+		if (cmp->output_type != output_type)
+			continue;
+		if (strcmp(cmp->proto_id, proto_id) != 0)
+			continue;
+		if (is_meta && cmp->meta_type != meta_type_gv)
+			continue;
+		if (is_meta && strcmp(cmp->meta_name, meta_name) != 0)
+			continue;
+		if (is_meta && strcmp(cmp->meta_descr, meta_descr) != 0)
+			continue;
+		pdo = cmp;
+		break;
+	}
+	if (pdo) {
+		py_new_output_id = Py_BuildValue("i", pdo->pdo_id);
+		PyGILState_Release(gstate);
+		return py_new_output_id;
 	}
 
 	srd_dbg("Instance %s creating new output type %d for %s.",
