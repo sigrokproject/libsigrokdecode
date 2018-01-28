@@ -19,6 +19,9 @@
 
 import sigrokdecode as srd
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'wiegand'
@@ -51,6 +54,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
+        self.samplerate = None
         self._samples_per_bit = 10
 
         self._d0_prev = None
@@ -73,9 +77,11 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         'Receive decoder metadata about the data stream.'
         if key == srd.SRD_CONF_SAMPLERATE:
-            ms_per_sample = 1000 * (1.0 / value)
-            ms_per_bit = float(self.options['bitwidth_ms'])
-            self._samples_per_bit = int(max(1, int(ms_per_bit / ms_per_sample)))
+            self.samplerate = value
+            if self.samplerate:
+                ms_per_sample = 1000 * (1.0 / self.samplerate)
+                ms_per_bit = float(self.options['bitwidth_ms'])
+                self._samples_per_bit = int(max(1, int(ms_per_bit / ms_per_sample)))
 
     def _update_state(self, state, bit=None):
         'Update state and bit values when they change.'
@@ -106,6 +112,8 @@ class Decoder(srd.Decoder):
             self._bits = []
 
     def decode(self):
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
             (d0, d1) = self.wait()

@@ -171,7 +171,8 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-            self.secs_per_sample = float(1) / float(self.samplerate)
+            if self.samplerate:
+                self.secs_per_sample = float(1) / float(self.samplerate)
 
     def start(self):
         self.out_binary = self.register(srd.OUTPUT_BINARY)

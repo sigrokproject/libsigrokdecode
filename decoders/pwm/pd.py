@@ -20,6 +20,9 @@
 
 import sigrokdecode as srd
 
+class SamplerateError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'pwm'
@@ -52,6 +55,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
+        self.samplerate = None
         self.ss_block = self.es_block = None
 
     def metadata(self, key, value):
@@ -89,6 +93,9 @@ class Decoder(srd.Decoder):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 
     def decode(self):
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
+
         num_cycles = 0
         average = 0
 

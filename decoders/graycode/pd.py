@@ -175,7 +175,7 @@ class Decoder(srd.Decoder):
             if self.options['edges']:
                 self.turns.set(self.samplenum, self.count.get() // self.options['edges'])
 
-            if self.samplerate is not None:
+            if self.samplerate:
                 period = (curtime - prevtime) / self.samplerate
                 freq = abs(phasedelta_raw) / period
 

@@ -154,8 +154,6 @@ class Decoder(srd.Decoder):
         # Annotate symbols, emit symbols, handle timeout via token.
 
         timeunit = self.options['timeunit']
-        if self.samplerate is None:
-            self.samplerate = 1.0
 
         self.wait({0: 'r'})
         prevtime = self.samplenum # Time of an actual edge.
@@ -217,6 +215,15 @@ class Decoder(srd.Decoder):
                 yield None # Pass through flush of 5+ space.
 
     def decode(self):
+
+        # Strictly speaking there is no point in running this decoder
+        # when the sample rate is unknown or zero. But the previous
+        # implementation already fell back to a rate of 1 in that case.
+        # We stick with this approach, to not introduce new constraints
+        # for existing use scenarios.
+        if not self.samplerate:
+            self.samplerate = 1.0
+
         # Annotate letters, group into words.
         s0 = s1 = None
         word = ''
