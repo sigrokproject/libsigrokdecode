@@ -145,7 +145,7 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
-        if self.samplerate is not None:
+        if self.samplerate:
             self.out_bitrate = self.register(srd.OUTPUT_META,
                     meta=(int, 'Bitrate', 'Bitrate during transfers'))
         self.bw = (self.options['wordsize'] + 7) // 8
@@ -253,7 +253,7 @@ class Decoder(srd.Decoder):
         self.putdata()
 
         # Meta bitrate.
-        if self.samplerate is not None:
+        if self.samplerate:
             elapsed = 1 / float(self.samplerate)
             elapsed *= (self.samplenum - self.ss_block + 1)
             bitrate = int(1 / elapsed * ws)
