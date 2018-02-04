@@ -32,6 +32,7 @@ extern SRD_PRIV GSList *sessions;
 
 static void srd_inst_join_decode_thread(struct srd_decoder_inst *di);
 static void srd_inst_reset_state(struct srd_decoder_inst *di);
+SRD_PRIV void oldpins_array_seed(struct srd_decoder_inst *di);
 SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di);
 
 /** @endcond */
@@ -363,11 +364,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	}
 
 	/* Default to the initial pins being the same as in sample 0. */
-	di->old_pins_array = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t),
-						di->dec_num_channels);
-	g_array_set_size(di->old_pins_array, di->dec_num_channels);
-	memset(di->old_pins_array->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0,
-		di->dec_num_channels);
+	oldpins_array_seed(di);
 
 	gstate = PyGILState_Ensure();
 
@@ -678,6 +675,7 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 	}
 
 	s = g_string_sized_new(100);
+	oldpins_array_seed(di);
 	for (i = 0; i < di->dec_num_channels; i++) {
 		di->old_pins_array->data[i] = initial_pins->data[i];
 		g_string_append_printf(s, "%d, ", di->old_pins_array->data[i]);
@@ -687,6 +685,25 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 	g_string_free(s, TRUE);
 
 	return SRD_OK;
+}
+
+/** @private */
+SRD_PRIV void oldpins_array_seed(struct srd_decoder_inst *di)
+{
+	size_t count;
+	GArray *arr;
+
+	if (!di)
+		return;
+	if (di->old_pins_array)
+		return;
+
+	srd_dbg("%s: Seeding old pins, %s().", di->inst_id, __func__);
+	count = di->dec_num_channels;
+	arr = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), count);
+	g_array_set_size(arr, count);
+	memset(arr->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0, count);
+	di->old_pins_array = arr;
 }
 
 /** @private */
@@ -854,6 +871,7 @@ static void update_old_pins_array(struct srd_decoder_inst *di,
 	if (!di || !di->dec_channelmap || !sample_pos)
 		return;
 
+	oldpins_array_seed(di);
 	for (i = 0; i < di->dec_num_channels; i++) {
 		byte_offset = di->dec_channelmap[i] / 8;
 		bit_offset = di->dec_channelmap[i] % 8;
@@ -873,6 +891,7 @@ static void update_old_pins_array_initial_pins(struct srd_decoder_inst *di)
 
 	sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
 
+	oldpins_array_seed(di);
 	for (i = 0; i < di->dec_num_channels; i++) {
 		if (di->old_pins_array->data[i] != SRD_INITIAL_PIN_SAME_AS_SAMPLE0)
 			continue;
