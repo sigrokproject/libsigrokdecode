@@ -67,6 +67,10 @@ SR_LIB_VERSION_SET([SRD_LIB_VERSION], [4:0:0])
 
 AM_CONDITIONAL([WIN32], [test -z "${host_os##mingw*}" || test -z "${host_os##cygwin*}"])
 
+# Initialize pkg-config.
+# We require at least 0.22, as "Requires.private" behaviour changed there.
+PKG_PROG_PKG_CONFIG
+
 ############################
 ##  Package dependencies  ##
 ############################
