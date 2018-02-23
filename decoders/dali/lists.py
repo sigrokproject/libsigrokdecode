@@ -17,8 +17,8 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-# DALI Extended commands
-extendedCommands = {
+# DALI extended commands
+extended_commands = {
     0xA1: ['Terminate special processes', 'Terminate'],
     0xA3: ['DTR = DATA', 'DTR'],
     0xA5: ['INITIALISE', 'INIT'],
@@ -39,7 +39,7 @@ extendedCommands = {
 }
 
 # List of commands
-DALICommands = {
+dali_commands = {
     0x00: ['Immediate Off', 'IOFF'],
     0x01: ['Up 200ms', 'Up'],
     0x02: ['Down 200ms', 'Down'],
@@ -89,7 +89,7 @@ DALICommands = {
 }
 
 # DALI device type 8
-DALIDeviceType8 = {
+dali_device_type8 = {
     0xE0: ['Set Temp X-Y Coordinate', 'Set X-Y'],
     0xE2: ['Activate Colour Set point', 'Activate SetPoint'],
     0xE7: ['Set Colour Temperature Tc', 'DTRs->ColTemp'],

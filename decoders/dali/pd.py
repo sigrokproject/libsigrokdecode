@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
         self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
-        self.devType = None
+        self.dev_type = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -133,8 +133,8 @@ class Decoder(srd.Decoder):
             self.putb(1, 7, [5, s])
         elif f >= 160: # Extended command 0b10100000
             if f == 0xC1: # DALI_ENABLE_DEVICE_TYPE_X
-                self.devType = -1
-            x = extendedCommands.get(f, ['Unknown', 'Unk'])
+                self.dev_type = -1
+            x = extended_commands.get(f, ['Unknown', 'Unk'])
             s = ['Extended Command: %02X (%s)' % (f, x[0]),
                  'XC: %02X (%s)' % (f, x[1]),
                  'XC: %02X' % f, 'X: %02X' % f, 'X']
@@ -158,12 +158,12 @@ class Decoder(srd.Decoder):
 
         # Bits[9:16]: Command/data (MSB-first)
         if f >= 160 and f < 254:
-            if self.devType == -1:
-                self.devType = c
+            if self.dev_type == -1:
+                self.dev_type = c
                 s = ['Type: %d' % c, 'Typ: %d' % c,
                      'Typ: %d' % c, 'T: %d' % c, 'D']
             else:
-                self.devType = None
+                self.dev_type = None
                 s = ['Data: %d' % c, 'Dat: %d' % c,
                      'Dat: %d' % c, 'D: %d' % c, 'D']
         elif b[8][1] == 1:
@@ -182,12 +182,12 @@ class Decoder(srd.Decoder):
             elif un == 0xB0:
                 x = ['Query Scene %d Level' % ln, 'Sc %d Level' % ln]
             elif c >= 224: # Application specific commands
-                if self.devType == 8:
-                    x = DALIDeviceType8.get(c, ['Unknown App', 'Unk'])
+                if self.dev_type == 8:
+                    x = dali_device_type8.get(c, ['Unknown App', 'Unk'])
                 else:
                     x = ['Application Specific Command %d' % c, 'App Cmd %d' % c]
             else:
-                x = DALICommands.get(c, ['Unknown', 'Unk'])
+                x = dali_commands.get(c, ['Unknown', 'Unk'])
             s = ['Command: %d (%s)' % (c, x[0]), 'Com: %d (%s)' % (c, x[1]),
                  'Com: %d' % c, 'C: %d' % c, 'C']
         else:
