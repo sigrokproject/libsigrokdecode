@@ -798,7 +798,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 			} else {
 				PyObject_SetAttrString(di->py_inst, "matched", Py_None);
 			}
-	
+
 			py_pinvalues = get_current_pinvalues(di);
 
 			g_mutex_unlock(&di->data_mutex);

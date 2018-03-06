@@ -298,7 +298,7 @@ static int get_options(struct srd_decoder *d)
 
 		py_str = PyDict_GetItemString(py_opt, "id");
 		if (!py_str) {
-			srd_err("Protocol decoder %s option %zd has no id.",
+			srd_err("Protocol decoder %s option %zd has no ID.",
 				d->name, opt);
 			goto err_out;
 		}
