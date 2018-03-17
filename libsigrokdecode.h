@@ -320,6 +320,7 @@ struct srd_pd_callback {
 /* srd.c */
 SRD_API int srd_init(const char *path);
 SRD_API int srd_exit(void);
+SRD_API GSList *srd_searchpaths_get(void);
 
 /* session.c */
 SRD_API int srd_session_new(struct srd_session **sess);

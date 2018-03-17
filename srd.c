@@ -179,6 +179,11 @@ err:
 	return SRD_ERR_PYTHON;
 }
 
+SRD_API GSList *srd_searchpaths_get(void)
+{
+	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
+}
+
 /**
  * Initialize libsigrokdecode.
  *
