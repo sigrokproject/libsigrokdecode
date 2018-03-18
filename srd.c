@@ -149,7 +149,16 @@ static int print_searchpaths(void)
 	PyObject *py_paths, *py_path, *py_bytes;
 	PyGILState_STATE gstate;
 	GString *s;
+	GSList *l;
 	int i;
+
+	s = g_string_sized_new(500);
+	g_string_append(s, "Protocol decoder search paths:\n");
+	for (l = searchpaths; l; l = l->next)
+		g_string_append_printf(s, " - %s\n", (const char *)l->data);
+	s->str[s->len - 1] = '\0';
+	srd_dbg("%s", s->str);
+	g_string_free(s, TRUE);
 
 	gstate = PyGILState_Ensure();
 
@@ -158,7 +167,7 @@ static int print_searchpaths(void)
 		goto err;
 
 	s = g_string_sized_new(500);
-	g_string_append(s, "Decoder search paths:\n");
+	g_string_append(s, "Python system search paths:\n");
 	for (i = 0; i < PyList_Size(py_paths); i++) {
 		py_path = PyList_GetItem(py_paths, i);
 		py_bytes = PyUnicode_AsUTF8String(py_path);
@@ -173,7 +182,7 @@ static int print_searchpaths(void)
 	return SRD_OK;
 
 err:
-	srd_err("Unable to query decoder search paths.");
+	srd_err("Unable to query Python system search paths.");
 	PyGILState_Release(gstate);
 
 	return SRD_ERR_PYTHON;
