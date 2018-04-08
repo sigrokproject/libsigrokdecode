@@ -19,6 +19,8 @@
 
 import sigrokdecode as srd
 
+bitvals = ('0', '1', 'f', 'U')
+
 def decode_bit(edges):
     # Datasheet says long pulse is 3 times short pulse.
     lmin = 2 # long min multiplier
@@ -82,14 +84,18 @@ class Decoder(srd.Decoder):
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
     annotations = (
-        ('bits', 'Bits'),
-        ('pins', 'Pins'),
+        ('bit-0', 'Bit 0'),
+        ('bit-1', 'Bit 1'),
+        ('bit-f', 'Bit f'),
+        ('bit-U', 'Bit U'),
+        ('bit-sync', 'Bit sync'),
+        ('pin', 'Pin'),
         ('remote', 'Remote'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (0,)),
-        ('pins', 'Pins', (1,)),
-        ('remote', 'Remote', (2,)),
+        ('bits', 'Bits', (0, 1, 2, 3, 4)),
+        ('pins', 'Pins', (5,)),
+        ('remote', 'Remote', (6,)),
     )
     options = (
         {'id': 'remote', 'desc': 'Remote', 'default': 'none', 
@@ -137,21 +143,22 @@ class Decoder(srd.Decoder):
                 self.es = self.samplenum
                 self.bits.append([decode_bit(self.pulses), self.ss,
                                   self.es]) # Save states and times.
-                self.putx([0, [decode_bit(self.pulses)]]) # Write decoded bit.
-                self.putx([1, [pinlabels(self.bit_count)]]) # Write pin labels.
+                idx = bitvals.index(decode_bit(self.pulses))
+                self.putx([idx, [decode_bit(self.pulses)]]) # Write decoded bit.
+                self.putx([5, [pinlabels(self.bit_count)]]) # Write pin labels.
                 self.pulses = []
                 self.ss = self.samplenum
             else:
                 if self.model != 'none':
                     self.labels = decode_model(self.model, self.bits)
                     self.put(self.labels[1], self.labels[2], self.out_ann,
-                             [2, [self.labels[0]]]) # Write model decode.
+                             [6, [self.labels[0]]]) # Write model decode.
                     self.put(self.labels[4], self.labels[5], self.out_ann,
-                             [2, [self.labels[3]]]) # Write model decode.
+                             [6, [self.labels[3]]]) # Write model decode.
                 samples = self.samplenum - self.samplenumber_last
                 pin = self.wait({'skip': 8 * samples}) # Wait for end of sync bit.
                 self.es = self.samplenum
-                self.putx([0, ['Sync']]) # Write sync label.
+                self.putx([4, ['Sync']]) # Write sync label.
                 self.reset() # Reset and wait for next set of pulses.
                 self.state = 'DECODE_TIMEOUT'
             if not self.state == 'DECODE_TIMEOUT':
