@@ -26,19 +26,19 @@ def decode_bit(edges):
     eqmin = 0.5 # equal min multiplier
     eqmax = 1.5 # equal max multiplier
     if ( # 0 -___-___
-        (int(edges[1]) >= int(edges[0]) * lmin and int(edges[1]) <= int(edges[0]) * lmax) and
-        (int(edges[2]) >= int(edges[0]) * eqmin and int(edges[2]) <= int(edges[0]) * eqmax) and
-        (int(edges[3]) >= int(edges[0]) * lmin and int(edges[3]) <= int(edges[0]) * lmax)):
+        (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
+        (edges[2] >= edges[0] * eqmin and edges[2] <= edges[0] * eqmax) and
+        (edges[3] >= edges[0] * lmin and edges[3] <= edges[0] * lmax)):
         return '0'
     elif ( # 1 ---_---_
-        (int(edges[0]) >= int(edges[1]) * lmin and int(edges[0]) <= int(edges[1]) * lmax) and
-        (int(edges[0]) >= int(edges[2]) * eqmin and int(edges[0]) <= int(edges[2]) * eqmax) and
-        (int(edges[0]) >= int(edges[3]) * lmin and int(edges[0]) <= int(edges[3]) * lmax)):
+        (edges[0] >= edges[1] * lmin and edges[0] <= edges[1] * lmax) and
+        (edges[0] >= edges[2] * eqmin and edges[0] <= edges[2] * eqmax) and
+        (edges[0] >= edges[3] * lmin and edges[0] <= edges[3] * lmax)):
         return '1'
     elif ( # float ---_-___
-        (int(edges[1]) >= int(edges[0]) * lmin and int(edges[1]) <= int(edges[0]) * lmax) and
-        (int(edges[2]) >= int(edges[0]) * lmin and int(edges[2]) <= int(edges[0]) * lmax) and
-        (int(edges[3]) >= int(edges[0]) * eqmin and int(edges[3]) <= int(edges[0]) * eqmax)):
+        (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
+        (edges[2] >= edges[0] * lmin and edges[2] <= edges[0]* lmax) and
+        (edges[3] >= edges[0] * eqmin and edges[3] <= edges[0] * eqmax)):
         return 'f'
     else:
         return 'U'
