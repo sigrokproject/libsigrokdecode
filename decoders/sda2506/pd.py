@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     id = 'sda2506'
     name = 'SDA2506'
     longname = 'Siemens SDA 2506-5'
-    desc = 'Serial nonvolatile 1-Kbit EEPROM'
+    desc = 'Serial nonvolatile 1-Kbit EEPROM.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['sda2506']
