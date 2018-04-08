@@ -105,8 +105,8 @@ class Decoder(srd.Decoder):
         self.bits = []
         self.labels = []
         self.bit_count = 0
-        self.bit_first = None
-        self.bit_last = None
+        self.ss = None
+        self.es = None
         self.state = 'IDLE'
 
     def start(self):
@@ -120,7 +120,7 @@ class Decoder(srd.Decoder):
 
             if not self.samplenumber_last: # Set counters to start of signal.
                 self.samplenumber_last = self.samplenum
-                self.bit_first = self.samplenum
+                self.ss = self.samplenum
                 continue
 
             if self.bit_count < 12: # Decode A0 to A11.
@@ -131,15 +131,15 @@ class Decoder(srd.Decoder):
                     samples = self.samplenum - self.samplenumber_last
                     self.pulses.append(samples) # Save the pulse width.
                     self.samplenumber_last = self.samplenum
-                self.bit_last = self.samplenum
-                self.bits.append([decode_bit(self.pulses), self.bit_first,
-                                  self.bit_last]) # Save states and times.
-                self.put(self.bit_first, self.bit_last, self.out_ann,
+                self.es = self.samplenum
+                self.bits.append([decode_bit(self.pulses), self.ss,
+                                  self.es]) # Save states and times.
+                self.put(self.ss, self.es, self.out_ann,
                          [0, [decode_bit(self.pulses)]]) # Write decoded bit.
-                self.put(self.bit_first, self.bit_last, self.out_ann,
+                self.put(self.ss, self.es, self.out_ann,
                          [1, [pinlabels(self.bit_count)]]) # Write pin labels.
                 self.pulses = []
-                self.bit_first = self.samplenum
+                self.ss = self.samplenum
             else:
                 if self.model != 'none':
                     self.labels = decode_model(self.model, self.bits)
@@ -149,8 +149,8 @@ class Decoder(srd.Decoder):
                              [2, [self.labels[3]]]) # Write model decode.
                 samples = self.samplenum - self.samplenumber_last
                 pin = self.wait({'skip': 8 * samples}) # Wait for end of sync bit.
-                self.bit_last = self.samplenum
-                self.put(self.bit_first, self.bit_last, self.out_ann,
+                self.es = self.samplenum
+                self.put(self.ss, self.es, self.out_ann,
                          [0, ['Sync']]) # Write sync label.
                 self.reset() # Reset and wait for next set of pulses.
                 self.state = 'DECODE_TIMEOUT'
