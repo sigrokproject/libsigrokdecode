@@ -53,20 +53,19 @@ def decode_model(model, bits):
     if model == 'maplin_l95ar':
         address = 'Addr' # Address pins A0 to A5
         for i in range(0, 6):
-            address = address + ' %i:' % (i + 1) + \
-                      ('on' if bits[i][0] == '0' else 'off')
+            address += ' %i:' % (i + 1) + ('on' if bits[i][0] == '0' else 'off')
         button = 'Button'
         # Button pins A6/D5 to A11/D0
         if bits[6][0] == '0' and bits[11][0] == '0':
-            button = button + ' A ON/OFF'
+            button += ' A ON/OFF'
         elif bits[7][0] == '0' and bits[11][0] == '0':
-            button = button + ' B ON/OFF'
+            button += ' B ON/OFF'
         elif bits[9][0] == '0' and bits[11][0] == '0':
-            button = button + ' C ON/OFF'
+            button += ' C ON/OFF'
         elif bits[8][0] == '0' and bits[11][0] == '0':
-            button = button + ' D ON/OFF'
+            button += ' D ON/OFF'
         else:
-            button = button + ' Unknown'
+            button += ' Unknown'
         return ['%s' % address, bits[0][1], bits[5][2], \
                 '%s' % button, bits[6][1], bits[11][2]]
 
