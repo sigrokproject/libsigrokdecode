@@ -90,12 +90,13 @@ class Decoder(srd.Decoder):
         ('bit-U', 'Bit U'),
         ('bit-sync', 'Bit sync'),
         ('pin', 'Pin'),
-        ('remote', 'Remote'),
+        ('code-word-addr', 'Code word address'),
+        ('code-word-data', 'Code word data'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3, 4)),
         ('pins', 'Pins', (5,)),
-        ('remote', 'Remote', (6,)),
+        ('code-words', 'Code words', (6, 7)),
     )
     options = (
         {'id': 'remote', 'desc': 'Remote', 'default': 'none', 
@@ -154,7 +155,7 @@ class Decoder(srd.Decoder):
                     self.put(self.labels[1], self.labels[2], self.out_ann,
                              [6, [self.labels[0]]]) # Write model decode.
                     self.put(self.labels[4], self.labels[5], self.out_ann,
-                             [6, [self.labels[3]]]) # Write model decode.
+                             [7, [self.labels[3]]]) # Write model decode.
                 samples = self.samplenum - self.samplenumber_last
                 pin = self.wait({'skip': 8 * samples}) # Wait for end of sync bit.
                 self.es = self.samplenum
