@@ -696,8 +696,6 @@ SRD_API int srd_decoder_load(const char *module_name)
 		return SRD_OK;
 	}
 
-	srd_dbg("Loading protocol decoder '%s'.", module_name);
-
 	d = g_malloc0(sizeof(struct srd_decoder));
 	fail_txt = NULL;
 
@@ -919,8 +917,6 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 
 	if (!dec)
 		return SRD_ERR_ARG;
-
-	srd_dbg("Unloading protocol decoder '%s'.", dec->name);
 
 	/*
 	 * Since any instances of this decoder need to be released as well,
