@@ -113,6 +113,9 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.model = self.options['remote']
 
+    def putx(self, data):
+        self.put(self.ss, self.es, self.out_ann, data)
+
     def decode(self):
         while True:
             pin = self.wait({0: 'e'})
@@ -134,10 +137,8 @@ class Decoder(srd.Decoder):
                 self.es = self.samplenum
                 self.bits.append([decode_bit(self.pulses), self.ss,
                                   self.es]) # Save states and times.
-                self.put(self.ss, self.es, self.out_ann,
-                         [0, [decode_bit(self.pulses)]]) # Write decoded bit.
-                self.put(self.ss, self.es, self.out_ann,
-                         [1, [pinlabels(self.bit_count)]]) # Write pin labels.
+                self.putx([0, [decode_bit(self.pulses)]]) # Write decoded bit.
+                self.putx([1, [pinlabels(self.bit_count)]]) # Write pin labels.
                 self.pulses = []
                 self.ss = self.samplenum
             else:
@@ -150,8 +151,7 @@ class Decoder(srd.Decoder):
                 samples = self.samplenum - self.samplenumber_last
                 pin = self.wait({'skip': 8 * samples}) # Wait for end of sync bit.
                 self.es = self.samplenum
-                self.put(self.ss, self.es, self.out_ann,
-                         [0, ['Sync']]) # Write sync label.
+                self.putx([0, ['Sync']]) # Write sync label.
                 self.reset() # Reset and wait for next set of pulses.
                 self.state = 'DECODE_TIMEOUT'
             if not self.state == 'DECODE_TIMEOUT':
