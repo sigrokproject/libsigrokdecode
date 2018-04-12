@@ -1,3 +1,74 @@
+0.5.1 (2018-04-12)
+------------------
+
+Note: This release does NOT change the libsigrokdecode public C API in
+incompatible ways. This means existing frontends should not require any
+changes. However, individual PDs and their output changed, which may
+require some adaptations on the user's side in some cases.
+
+ * New supported protocol decoders:
+   - ac97             Audio and modem control for PC systems
+   - ds243x           Maxim DS243x series 1-Wire EEPROM protocol
+   - maple_bus        Maple bus peripheral protocol for SEGA Dreamcast
+   - morse            Demodulated morse code protocol
+   - graycode         Accumulate rotary encoder increments, timing statistics
+   - counter          Count number of edges
+   - sda2506          Serial nonvolatile 1-Kbit EEPROM
+   - rc_encode        PT2262/HX2262/SC5262 remote control encoder protocol
+ * Updated build requirements:
+   - libglib >= 2.34
+ * New API calls:
+   - srd_searchpaths_get(): Retrieve PD search paths.
+   - srd_session_terminate_reset(): Terminate currently executing decoders
+     in a session, reset internal state. Allows re-using a session.
+ * can:
+   - Introduce clock synchronization (bug #990).
+   - Fix incorrect stuff bit handling (bug #1085).
+ * i2c:
+   - Don't drop the first sample of input data.
+   - Make input samplerate optional (bug #1076).
+ * i2s:
+   - Binary output: Make 32-bit WAV files, set file size to 4GB.
+   - Fix unportable use of struct.pack().
+   - Make samplerate meta data optional.
+ * stepper_motor:
+   - Make samplerate meta data optional.
+ * pwm:
+   - Fixup sample numbers for binary output.
+ * onewire_network:
+   - Fixup start samplenumber for annotations.
+ * lpc:
+   - Improve robustness when decoding unexpected input data.
+ * ir_nec:
+   - Make timing margin relative.
+   - Optionally accept input signals that include the carrier.
+ * usb_request:
+   - Handle CONTROL transfer protocol stalls.
+ * usb_power_delivery:
+   - Enforce numerical order of RDO/PDO flag annotations, enforce check
+     order for start-of-packet sequences (bug #1090).
+ * parallel:
+   - Cope with sparse input maps, assume zero for unconnected pins (bug #1088).
+   - Unbreak and improve "word" de-multiplexing.
+   - Implement consistent number formatting.
+   - Expand 'wordsize' description (bits vs cycles).
+ * spi:
+   - Cope when a sample rate of 0 was configured (bug #1118).
+ * Acquire/release the Python GIL where needed to avoid threading issues.
+   This allows frontends to call libsigrokdecode API functions from different
+   threads without running into issues.
+ * Convert all protocol decoders to PD API version 3.
+ * Support for the old PD API version 2 has been removed.
+ * Unbreak the execution of Decoder.wait() with empty condition.
+ * self.wait(): Accept more forms of "unconditional wait" (None, no args).
+ * Fix a compiler warning on Mac OS X.
+ * configure.ac: Add missing PKG_PROG_PKG_CONFIG and AC_C_BIGENDIAN.
+ * Add a reset() method to all PDs which resets internal variable state.
+ * Clarify and improve channel mapping debug output.
+ * Print decoder and system search paths in debug output.
+ * Drop overly verbose log messages about (un)loading PDs.
+ * HACKING: Prefer git pull requests over mailing list patches.
+
 0.5.0 (2017-06-12)
 ------------------
 
