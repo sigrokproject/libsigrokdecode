@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
         # CAN uses NRZ encoding and bit stuffing.
         # After 5 identical bits, a stuff bit of opposite value is added.
         # But not in the CRC delimiter, ACK, and end of frame fields.
-        if len(self.bits) > self.last_databit + 16:
+        if len(self.bits) > self.last_databit + 17:
             return False
         last_6_bits = self.rawbits[-6:]
         if last_6_bits not in ([0, 0, 0, 0, 0, 1], [1, 1, 1, 1, 1, 0]):
