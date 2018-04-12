@@ -316,7 +316,7 @@ SRD_API int srd_session_send(struct srd_session *sess,
  * @param sess The session in which to terminate decoders.
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
- * @since 0.6.0
+ * @since 0.5.1
  */
 SRD_API int srd_session_terminate_reset(struct srd_session *sess)
 {
