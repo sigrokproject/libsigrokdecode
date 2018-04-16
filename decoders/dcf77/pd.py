@@ -249,7 +249,8 @@ class Decoder(srd.Decoder):
             self.putx([16, ['Date parity: %s' % s, 'DP: %s' % s]])
             self.datebits = []
         else:
-            raise Exception('Invalid DCF77 bit: %d' % c)
+            self.putx([19, ['Invalid DCF77 bit: %d' % c,
+                            'Invalid bit: %d' % c, 'Inv: %d' % c]])
 
     def decode(self):
         if not self.samplerate:
@@ -298,11 +299,12 @@ class Decoder(srd.Decoder):
                 elif len_high_ms in range(161, 260 + 1):
                     bit = 1
                 else:
-                    bit = -1 # TODO: Error?
+                    bit = -1
 
-                # There's no bit 59, make sure none is decoded.
-                if bit in (0, 1) and self.bitcount in range(0, 58 + 1):
+                if bit in (0, 1):
                     self.handle_dcf77_bit(bit)
                     self.bitcount += 1
+                else:
+                    self.putx([19, ['Invalid bit timing', 'Inv timing', 'Inv']])
 
                 self.state = 'WAIT FOR RISING EDGE'
