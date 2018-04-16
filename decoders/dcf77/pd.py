@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 1))
             if c == 14:
-                s = bin(self.tmp)[2:].zfill(14)
+                s = '{:014b}'.format(self.tmp)
                 self.putb([1, ['Special bits: %s' % s, 'SB: %s' % s]])
         elif c == 15:
             s = '' if (bit == 1) else 'not '

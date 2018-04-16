@@ -340,7 +340,7 @@ class Decoder(srd.Decoder):
             # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
-                lad_bits = bin(lad)[2:].zfill(4)
+                lad_bits = '{:04b}'.format(lad)
                 # self.putb([0, ['LAD: %s' % lad_bits]])
 
             # TODO: Only memory read/write is currently supported/tested.
