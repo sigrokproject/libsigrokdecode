@@ -398,8 +398,6 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 		}
 	}
 
-	srd_dbg("Instance %s checking registration type %d for %s.",
-		di->inst_id, output_type, proto_id);
 	pdo = NULL;
 	for (l = di->pd_output; l; l = l->next) {
 		cmp = l->data;
