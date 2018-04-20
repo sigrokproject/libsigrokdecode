@@ -144,7 +144,7 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 
 	/* Log the detailed stack trace. */
 	if (tracefmt_str) {
-		srd_dbg("%s", tracefmt_str);
+		srd_err("%s", tracefmt_str);
 		g_free(tracefmt_str);
 	}
 
