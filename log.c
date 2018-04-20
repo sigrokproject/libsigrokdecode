@@ -165,6 +165,8 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 			|| putc('\n', stderr) < 0)
 		return SRD_ERR;
 
+	fflush(stderr);
+
 	return SRD_OK;
 }
 
