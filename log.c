@@ -156,9 +156,7 @@ static int srd_logv(void *cb_data, int loglevel, const char *format,
 	/* This specific log callback doesn't need the void pointer data. */
 	(void)cb_data;
 
-	/* Only output messages of at least the selected loglevel(s). */
-	if (loglevel > cur_loglevel)
-		return SRD_OK;
+	(void)loglevel;
 
 	if (fputs("srd: ", stderr) < 0
 			|| g_vfprintf(stderr, format, args) < 0
@@ -175,6 +173,10 @@ SRD_PRIV int srd_log(int loglevel, const char *format, ...)
 {
 	int ret;
 	va_list args;
+
+	/* Only output messages of at least the selected loglevel(s). */
+	if (loglevel > cur_loglevel)
+		return SRD_OK;
 
 	va_start(args, format);
 	ret = srd_log_cb(srd_log_cb_data, loglevel, format, args);
