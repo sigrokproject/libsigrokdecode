@@ -210,9 +210,13 @@ class Decoder(srd.Decoder):
                 self.tmp |= (bit << (c - 42))
             if c == 44:
                 d = bcd2int(self.tmp)
-                dn = calendar.day_name[d - 1] # day_name[0] == Monday
-                self.putb([13, ['Day of week: %d (%s)' % (d, dn),
-                                'DoW: %d (%s)' % (d, dn)]])
+                try:
+                    dn = calendar.day_name[d - 1] # day_name[0] == Monday
+                    self.putb([13, ['Day of week: %d (%s)' % (d, dn),
+                                    'DoW: %d (%s)' % (d, dn)]])
+                except IndexError:
+                    self.putb([19, ['Day of week: %d (%s)' % (d, 'invalid'),
+                                    'DoW: %d (%s)' % (d, 'inv')]])
         elif c in range(45, 49 + 1):
             # Month (1-12): DCF77 bits 45-49 (BCD format).
             if c == 45:
@@ -222,9 +226,13 @@ class Decoder(srd.Decoder):
                 self.tmp |= (bit << (c - 45))
             if c == 49:
                 m = bcd2int(self.tmp)
-                mn = calendar.month_name[m] # month_name[1] == January
-                self.putb([14, ['Month: %d (%s)' % (m, mn),
-                                'Mon: %d (%s)' % (m, mn)]])
+                try:
+                    mn = calendar.month_name[m] # month_name[1] == January
+                    self.putb([14, ['Month: %d (%s)' % (m, mn),
+                                    'Mon: %d (%s)' % (m, mn)]])
+                except IndexError:
+                    self.putb([19, ['Month: %d (%s)' % (m, 'invalid'),
+                                    'Mon: %d (%s)' % (m, 'inv')]])
         elif c in range(50, 57 + 1):
             # Year (0-99): DCF77 bits 50-57 (BCD format).
             if c == 50:
