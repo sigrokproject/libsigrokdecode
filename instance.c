@@ -1255,7 +1255,6 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 	di->inbuflen = inbuflen;
 	di->got_new_samples = TRUE;
 	di->handled_all_samples = FALSE;
-	di->want_wait_terminate = FALSE;
 
 	/* Signal the thread that we have new data. */
 	g_cond_signal(&di->got_new_samples_cond);
