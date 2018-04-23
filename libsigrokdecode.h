@@ -71,6 +71,7 @@ enum srd_error_code {
 	SRD_ERR_BUG          = -4, /**< Errors hinting at internal bugs */
 	SRD_ERR_PYTHON       = -5, /**< Python C API error */
 	SRD_ERR_DECODERS_DIR = -6, /**< Protocol decoder path invalid */
+	SRD_ERR_TERM_REQ     = -7, /**< Termination requested */
 
 	/*
 	 * Note: When adding entries here, don't forget to also update the

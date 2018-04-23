@@ -1266,6 +1266,8 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
 	g_mutex_unlock(&di->data_mutex);
 
+	if (di->want_wait_terminate)
+		return SRD_ERR_TERM_REQ;
 	return SRD_OK;
 }
 
