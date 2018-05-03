@@ -37,6 +37,8 @@ cmds = OrderedDict([
     (0x60, ('CE', 'Chip erase')),
     (0x70, ('ESRY', 'Enable SO to output RY/BY#')),
     (0x80, ('DSRY', 'Disable SO to output RY/BY#')),
+    (0x82, ('WRITE1', 'Main memory page program through buffer 1 with built-in erase')),
+    (0x85, ('WRITE2', 'Main memory page program through buffer 2 with built-in erase')),
     (0x90, ('REMS', 'Read electronic manufacturer & device ID')),
     (0x9f, ('RDID', 'Read identification')),
     (0xab, ('RDP/RES', 'Release from deep powerdown / Read electronic ID')),
@@ -46,6 +48,7 @@ cmds = OrderedDict([
     (0xbb, ('2READ', '2x I/O read')), # a.k.a. "Fast read dual I/O".
     (0xc1, ('EXSO', 'Exit secured OTP')),
     (0xc7, ('CE2', 'Chip erase')), # Alternative command ID
+    (0xd7, ('STATUS', 'Status register read')),
     (0xd8, ('BE', 'Block erase')),
     (0xef, ('REMS2', 'Read ID for 2x I/O mode')),
 ])
