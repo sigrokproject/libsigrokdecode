@@ -54,6 +54,9 @@ cmds = OrderedDict([
 ])
 
 device_name = {
+    'adesto': {
+        0x00: 'AT45Dxxx family, standard series',
+    },
     'fidelix': {
         0x15: 'FM25Q32',
     },
@@ -65,6 +68,18 @@ device_name = {
 }
 
 chips = {
+    # Adesto
+    'adesto_at45db161e': {
+        'vendor': 'Adesto',
+        'model': 'AT45DB161E',
+        'res_id': 0xff, # The chip doesn't emit an ID here.
+        'rems_id': 0xffff, # Not supported by the chip.
+        'rems2_id': 0xffff, # Not supported by the chip.
+        'rdid_id': 0x1f26000100, # RDID and 2 extra "EDI" bytes.
+        'page_size': 528, # Configurable, could also be 512 bytes.
+        'sector_size': 128 * 1024,
+        'block_size': 4 * 1024,
+    },
     # FIDELIX
     'fidelix_fm25q32': {
         'vendor': 'FIDELIX',
