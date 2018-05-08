@@ -40,6 +40,15 @@ static const char *output_type_name(unsigned int idx)
 	return names[MIN(idx, G_N_ELEMENTS(names) - 1)];
 }
 
+static void release_annotation(struct srd_proto_data_annotation *pda)
+{
+	if (!pda)
+		return;
+	if (pda->ann_text)
+		g_strfreev(pda->ann_text);
+	g_free(pda);
+}
+
 static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 		struct srd_proto_data *pdata)
 {
@@ -110,6 +119,15 @@ err:
 	PyGILState_Release(gstate);
 
 	return SRD_ERR_PYTHON;
+}
+
+static void release_binary(struct srd_proto_data_binary *pdb)
+{
+	if (!pdb)
+		return;
+	if (pdb->data)
+		g_free((void *)pdb->data);
+	g_free(pdb);
 }
 
 static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
@@ -287,6 +305,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			Py_BEGIN_ALLOW_THREADS
 			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
+			release_annotation(pdata.data);
 		}
 		break;
 	case SRD_OUTPUT_PYTHON:
@@ -319,6 +338,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			Py_BEGIN_ALLOW_THREADS
 			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
+			release_binary(pdata.data);
 		}
 		break;
 	case SRD_OUTPUT_META:
