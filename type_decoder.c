@@ -247,6 +247,13 @@ err:
 	return SRD_ERR_PYTHON;
 }
 
+static void release_meta(GVariant *gvar)
+{
+	if (!gvar)
+		return;
+	g_variant_unref(gvar);
+}
+
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
@@ -258,6 +265,8 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	int output_id;
 	struct srd_pd_callback *cb;
 	PyGILState_STATE gstate;
+
+	py_data = NULL;
 
 	gstate = PyGILState_Ensure();
 
@@ -351,6 +360,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			Py_BEGIN_ALLOW_THREADS
 			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS
+			release_meta(pdata.data);
 		}
 		break;
 	default:
@@ -359,11 +369,17 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		break;
 	}
 
+	if (py_data)
+		Py_DECREF(py_data);
+
 	PyGILState_Release(gstate);
 
 	Py_RETURN_NONE;
 
 err:
+	if (py_data)
+		Py_DECREF(py_data);
+
 	PyGILState_Release(gstate);
 
 	return NULL;
