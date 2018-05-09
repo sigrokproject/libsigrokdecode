@@ -369,17 +369,11 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		break;
 	}
 
-	if (py_data)
-		Py_DECREF(py_data);
-
 	PyGILState_Release(gstate);
 
 	Py_RETURN_NONE;
 
 err:
-	if (py_data)
-		Py_DECREF(py_data);
-
 	PyGILState_Release(gstate);
 
 	return NULL;
