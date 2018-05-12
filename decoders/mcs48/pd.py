@@ -17,10 +17,6 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-# TODO: Make A12 optional; it's here because of an instrument (HP3478A) that
-# drives a generic I/O pin to access 8kB of ROM; the MCS-48 only has a 4kB
-# address space.
-
 import sigrokdecode as srd
 
 class ChannelError(Exception):
@@ -35,20 +31,25 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['mcs48']
-    channels = \
-    tuple({
+    channels = (
+        {'id': 'ale', 'name': 'ALE', 'desc': 'Address latch enable'},
+        {'id': 'psen', 'name': '/PSEN', 'desc': 'Program store enable'},
+    ) + tuple({
         'id': 'd%d' % i,
         'name': 'D%d' % i,
         'desc': 'CPU data line %d' % i
-        } for i in range(8)
+        } for i in range(0, 8)
     ) + tuple({
         'id': 'a%d' % i,
         'name': 'A%d' % i,
         'desc': 'CPU address line %d' % i
-        } for i in range(8, 13)
-    ) + (
-        {'id': 'ale', 'name': 'ALE', 'desc': 'Address latch enable'},
-        {'id': 'psen', 'name': '/PSEN', 'desc': 'Program store enable'},
+        } for i in range(8, 12)
+    )
+    optional_channels = tuple({
+        'id': 'a%d' % i,
+        'name': 'A%d' % i,
+        'desc': 'CPU address line %d' % i
+        } for i in range(12, 13)
     )
     annotations = (
         ('romdata', 'Address:Data'),
@@ -56,8 +57,15 @@ class Decoder(srd.Decoder):
     binary = (
         ('romdata', 'AAAA:DD'),
     )
+    OFF_ALE, OFF_PSEN = 0, 1
+    OFF_DATA_BOT, OFF_DATA_TOP = 2, 10
+    OFF_ADDR_BOT, OFF_ADDR_TOP = 10, 14
+    OFF_BANK_BOT, OFF_BANK_TOP = 14, 15
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.addr = 0
         self.addr_s = 0
         self.data = 0
@@ -70,35 +78,44 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_bin = self.register(srd.OUTPUT_BINARY)
 
-    def newaddr(self, pins):
+    def newaddr(self, addr, data):
         # Falling edge on ALE: reconstruct address.
         self.started = 1
-        tempaddr = 0
-        for i in range(13):
-            tempaddr |= pins[i] << i
-        self.addr = tempaddr
+        addr = sum([bit << i for i, bit in enumerate(addr)])
+        addr <<= len(data)
+        addr |= sum([bit << i for i, bit in enumerate(data)])
+        self.addr = addr
         self.addr_s = self.samplenum
 
-    def newdata(self, pins):
+    def newdata(self, data):
         # Edge on PSEN: get data.
-        tempdata = 0
-        for i in range(8):
-            tempdata |= pins[i] << i
-        self.data = tempdata
+        data = sum([bit << i for i, bit in enumerate(data)])
+        self.data = data
         self.data_s = self.samplenum
         if self.started:
-            self.put(self.addr_s, self.samplenum, self.out_ann,
-                [0, ['%04X:' % self.addr + '%02X' % self.data]])
-            self.put(self.addr_s, self.samplenum, self.out_bin,
-                [0, bytes([(self.addr >> 8) & 0xFF, self.addr & 0xFF, self.data])])
+            anntext = '{:04X}:{:02X}'.format(self.addr, self.data)
+            self.put(self.addr_s, self.data_s, self.out_ann, [0, [anntext]])
+            bindata = self.addr.to_bytes(2, byteorder='big')
+            bindata += self.data.to_bytes(1, byteorder='big')
+            self.put(self.addr_s, self.data_s, self.out_bin, [0, bindata])
 
     def decode(self):
+        # Address bits above A11 are optional, and are considered to be A12+.
+        # This logic needs more adjustment when more bank address pins are
+        # to get supported. For now, having just A12 is considered sufficient.
+        has_bank = self.has_channel(self.OFF_BANK_BOT)
+        bank_pin_count = 1 if has_bank else 0
         # Sample address on the falling ALE edge.
         # Save data on falling edge of PSEN.
         while True:
-            pins = self.wait([{13: 'f'}, {14: 'r'}])
+            pins = self.wait([{self.OFF_ALE: 'f'}, {self.OFF_PSEN: 'r'}])
+            data = pins[self.OFF_DATA_BOT:self.OFF_DATA_TOP]
+            addr = pins[self.OFF_ADDR_BOT:self.OFF_ADDR_TOP]
+            bank = pins[self.OFF_BANK_BOT:self.OFF_BANK_TOP]
+            if has_bank:
+                addr += bank[:bank_pin_count]
             # Handle those conditions (one or more) that matched this time.
             if self.matched[0]:
-                self.newaddr(pins[0:])
+                self.newaddr(addr, data)
             if self.matched[1]:
-                self.newdata(pins[0:])
+                self.newdata(data)

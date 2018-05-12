@@ -23,9 +23,6 @@ program memory accesses. This requires 14 channels: 8 for D0-D7 (data and
 lower 8 bits of address), 4 for A8-A11 (output on port P2), ALE and PSEN.
 An optional A12 is supported, which may be an arbitrary I/O pin driven by
 software (use case is dumping ROM of an HP 3478A).
-
-The two groups D0-D7 and A8-A12 must be on consecutive channels, for
-example CH8..CH15 and CH0..CH4.
 '''
 
 from .pd import Decoder
