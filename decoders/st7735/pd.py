@@ -95,17 +95,14 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        pass
-
-    def start(self):
-        self.out_ann = self.register(srd.OUTPUT_ANN)
-
-    def reset_state(self):
         self.accum_byte = 0
         self.accum_bits_num = 0
         self.bit_ss = -1
         self.byte_ss = -1
         self.current_bit = -1
+
+    def start(self):
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def put_desc(self, ss, es, cmd, data):
         if cmd == -1:
@@ -130,13 +127,13 @@ class Decoder(srd.Decoder):
         current_data = []
         desc_ss = -1
         desc_es = -1
-        self.reset_state()
+        self.reset()
         while True:
             # Check data on both CLK edges.
             (cs, clk, mosi, dc) = self.wait({1: 'e'})
 
             if cs == 1: # Wait for CS = low, ignore the rest.
-                self.reset_state()
+                self.reset()
                 continue
 
             if clk == 1:
