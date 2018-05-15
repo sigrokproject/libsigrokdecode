@@ -194,8 +194,10 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 
 	pdb->bin_class = bin_class;
 	pdb->size = size;
-	if (!(pdb->data = g_try_malloc(pdb->size)))
+	if (!(pdb->data = g_try_malloc(pdb->size))) {
+		g_free(pdb);
 		return SRD_ERR_MALLOC;
+	}
 	memcpy((void *)pdb->data, (const void *)buf, pdb->size);
 	pdata->data = pdb;
 
