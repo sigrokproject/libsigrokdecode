@@ -585,7 +585,7 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 				srd_err("Failed to get the value.");
 				goto err;
 			}
-			term = g_malloc0(sizeof(struct srd_term));
+			term = g_malloc(sizeof(struct srd_term));
 			term->type = get_term_type(term_str);
 			term->channel = PyLong_AsLong(py_key);
 			g_free(term_str);
@@ -596,7 +596,7 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 				srd_err("Failed to get number of samples to skip.");
 				goto err;
 			}
-			term = g_malloc0(sizeof(struct srd_term));
+			term = g_malloc(sizeof(struct srd_term));
 			term->type = SRD_TERM_SKIP;
 			term->num_samples_to_skip = num_samples_to_skip;
 			term->num_samples_already_skipped = 0;
@@ -759,7 +759,7 @@ static int set_skip_condition(struct srd_decoder_inst *di, uint64_t count)
 	GSList *term_list;
 
 	condition_list_free(di);
-	term = g_malloc0(sizeof(*term));
+	term = g_malloc(sizeof(*term));
 	term->type = SRD_TERM_SKIP;
 	term->num_samples_to_skip = count;
 	term->num_samples_already_skipped = 0;

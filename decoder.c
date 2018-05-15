@@ -219,7 +219,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 				"a list of dict elements.", d->name, attr);
 			goto err_out;
 		}
-		pdch = g_malloc0(sizeof(struct srd_channel));
+		pdch = g_malloc(sizeof(struct srd_channel));
 		/* Add to list right away so it doesn't get lost. */
 		pdchl = g_slist_prepend(pdchl, pdch);
 
