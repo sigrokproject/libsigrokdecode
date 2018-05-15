@@ -836,7 +836,9 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		 * while the termination request still gets signalled.
 		 */
 		found_match = FALSE;
-		ret = process_samples_until_condition_match(di, &found_match);
+
+		/* Ignore return value for now, should never be negative. */
+		(void)process_samples_until_condition_match(di, &found_match);
 
 		Py_END_ALLOW_THREADS
 
