@@ -518,13 +518,12 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
 	PyObject *py_pinvalues;
 	PyGILState_STATE gstate;
 
-	gstate = PyGILState_Ensure();
-
 	if (!di) {
 		srd_err("Invalid decoder instance.");
-		PyGILState_Release(gstate);
 		return NULL;
 	}
+
+	gstate = PyGILState_Ensure();
 
 	py_pinvalues = PyTuple_New(di->dec_num_channels);
 
