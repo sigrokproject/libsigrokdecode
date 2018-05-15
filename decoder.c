@@ -340,7 +340,7 @@ static int get_options(struct srd_decoder *d)
 				if (!py_item)
 					goto except_out;
 
-				if (Py_TYPE(py_default) != Py_TYPE(py_item)) {
+				if (py_default && (Py_TYPE(py_default) != Py_TYPE(py_item))) {
 					srd_err("All values for option '%s' must be "
 						"of the same type as the default.",
 						o->id);
