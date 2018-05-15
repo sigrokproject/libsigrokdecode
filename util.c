@@ -281,6 +281,8 @@ SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key,
 		goto err;
 	}
 
+	PyGILState_Release(gstate);
+
 	return py_str_as_str(py_value, outstr);
 
 err:
@@ -444,6 +446,8 @@ SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv)
 		strv[i] = str;
 	}
 	*out_strv = strv;
+
+	PyGILState_Release(gstate);
 
 	return SRD_OK;
 
