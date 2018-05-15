@@ -125,8 +125,7 @@ static void release_binary(struct srd_proto_data_binary *pdb)
 {
 	if (!pdb)
 		return;
-	if (pdb->data)
-		g_free((void *)pdb->data);
+	g_free((void *)pdb->data);
 	g_free(pdb);
 }
 
