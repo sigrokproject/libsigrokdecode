@@ -186,12 +186,12 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 		goto err;
 	}
 
-	pdb = g_malloc(sizeof(struct srd_proto_data_binary));
 	if (PyBytes_AsStringAndSize(py_tmp, &buf, &size) == -1)
 		goto err;
 
 	PyGILState_Release(gstate);
 
+	pdb = g_malloc(sizeof(struct srd_proto_data_binary));
 	pdb->bin_class = bin_class;
 	pdb->size = size;
 	if (!(pdb->data = g_try_malloc(pdb->size))) {
