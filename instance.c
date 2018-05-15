@@ -280,6 +280,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		pdch = g_slist_nth(di->decoder->channels, i)->data;
 		srd_err("Required channel '%s' (index %d) was not specified.",
 			pdch->id, i);
+		g_free(new_channelmap);
 		return SRD_ERR;
 	}
 
