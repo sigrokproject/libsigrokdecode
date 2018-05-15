@@ -223,7 +223,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
 		return SRD_ERR_ARG;
 	}
 
-	new_channelmap = g_malloc(sizeof(int) * di->dec_num_channels);
+	new_channelmap = g_malloc0(sizeof(int) * di->dec_num_channels);
 
 	/*
 	 * For now, map all indexes to channel -1 (can be overridden later).
