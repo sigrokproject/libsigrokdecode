@@ -937,7 +937,7 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
-static void srd_decoder_load_all_zip_path(char *path)
+static void srd_decoder_load_all_zip_path(char *zip_path)
 {
 	PyObject *zipimport_mod, *zipimporter_class, *zipimporter;
 	PyObject *prefix_obj, *files, *key, *value, *set, *modname;
@@ -958,7 +958,7 @@ static void srd_decoder_load_all_zip_path(char *path)
 	if (zipimporter_class == NULL)
 		goto err_out;
 
-	zipimporter = PyObject_CallFunction(zipimporter_class, "s", path);
+	zipimporter = PyObject_CallFunction(zipimporter_class, "s", zip_path);
 	if (zipimporter == NULL)
 		goto err_out;
 
