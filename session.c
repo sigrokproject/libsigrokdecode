@@ -45,15 +45,6 @@ SRD_PRIV int max_session_id = -1;
 
 /** @endcond */
 
-/** @private */
-SRD_PRIV int session_is_valid(struct srd_session *sess)
-{
-	if (!sess || sess->session_id < 1)
-		return SRD_ERR;
-
-	return SRD_OK;
-}
-
 /**
  * Create a decoding session.
  *
@@ -61,7 +52,7 @@ SRD_PRIV int session_is_valid(struct srd_session *sess)
  * output callbacks.
  *
  * @param sess A pointer which will hold a pointer to a newly
- *             initialized session on return.
+ *             initialized session on return. Must not be NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
@@ -69,10 +60,8 @@ SRD_PRIV int session_is_valid(struct srd_session *sess)
  */
 SRD_API int srd_session_new(struct srd_session **sess)
 {
-	if (!sess) {
-		srd_err("Invalid session pointer.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	*sess = g_malloc(sizeof(struct srd_session));
 	(*sess)->session_id = ++max_session_id;
@@ -92,7 +81,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
  * Decoders, instances and stack must have been prepared beforehand,
  * and all SRD_CONF parameters set.
  *
- * @param sess The session to start.
+ * @param sess The session to start. Must not be NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
@@ -104,10 +93,8 @@ SRD_API int srd_session_start(struct srd_session *sess)
 	struct srd_decoder_inst *di;
 	int ret;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session pointer.");
-		return SRD_ERR;
-	}
+	if (!sess)
+		return SRD_ERR_ARG;
 
 	srd_dbg("Calling start() on all instances in session %d.", sess->session_id);
 
@@ -159,7 +146,7 @@ static int srd_inst_send_meta(struct srd_decoder_inst *di, int key,
 /**
  * Set a metadata configuration key in a session.
  *
- * @param sess The session to configure.
+ * @param sess The session to configure. Must not be NULL.
  * @param key The configuration key (SRD_CONF_*).
  * @param data The new value for the key, as a GVariant with GVariantType
  *             appropriate to that key. A floating reference can be passed
@@ -175,10 +162,8 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 	GSList *l;
 	int ret;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	if (!key) {
 		srd_err("Invalid key.");
@@ -281,10 +266,8 @@ SRD_API int srd_session_send(struct srd_session *sess,
 	GSList *d;
 	int ret;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	for (d = sess->di_list; d; d = d->next) {
 		if ((ret = srd_inst_decode(d->data, abs_start_samplenum,
@@ -311,7 +294,8 @@ SRD_API int srd_session_send(struct srd_session *sess,
  * processed input data. This avoids the necessity to re-construct the
  * decoder stack.
  *
- * @param sess The session in which to terminate decoders.
+ * @param sess The session in which to terminate decoders. Must not be NULL.
+ *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @since 0.6.0
@@ -321,10 +305,8 @@ SRD_API int srd_session_terminate_reset(struct srd_session *sess)
 	GSList *d;
 	int ret;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	for (d = sess->di_list; d; d = d->next) {
 		ret = srd_inst_terminate_reset(d->data);
@@ -340,7 +322,7 @@ SRD_API int srd_session_terminate_reset(struct srd_session *sess)
  *
  * All decoder instances and output callbacks are properly released.
  *
- * @param sess The session to be destroyed.
+ * @param sess The session to be destroyed. Must not be NULL.
  *
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
@@ -350,10 +332,8 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
 {
 	int session_id;
 
-	if (!sess) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	session_id = sess->session_id;
 	if (sess->di_list)
@@ -376,6 +356,7 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
  * stack).
  *
  * @param sess The output session in which to register the callback.
+ *             Must not be NULL.
  * @param output_type The output type this callback will receive. Only one
  *                    callback per output type can be registered.
  * @param cb The function to call. Must not be NULL.
@@ -388,10 +369,8 @@ SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 {
 	struct srd_pd_callback *pd_cb;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	srd_dbg("Registering new callback for output type %d.", output_type);
 
@@ -411,10 +390,8 @@ SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(
 	GSList *l;
 	struct srd_pd_callback *tmp, *pd_cb;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return NULL;
-	}
 
 	pd_cb = NULL;
 	for (l = sess->callbacks; l; l = l->next) {

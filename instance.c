@@ -294,6 +294,7 @@ SRD_API int srd_inst_channel_set_all(struct srd_decoder_inst *di,
  * Create a new protocol decoder instance.
  *
  * @param sess The session holding the protocol decoder instance.
+ *             Must not be NULL.
  * @param decoder_id Decoder 'id' field.
  * @param options GHashtable of options which override the defaults set in
  *                the decoder class. May be NULL.
@@ -315,10 +316,8 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	i = 1;
 	srd_dbg("Creating new %s instance.", decoder_id);
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return NULL;
-	}
 
 	if (!(dec = srd_decoder_get_by_id(decoder_id))) {
 		srd_err("Protocol decoder %s not found.", decoder_id);
@@ -479,6 +478,7 @@ static void srd_inst_reset_state(struct srd_decoder_inst *di)
  * Stack a decoder instance on top of another.
  *
  * @param sess The session holding the protocol decoder instances.
+ *             Must not be NULL.
  * @param di_bottom The instance on top of which di_top will be stacked.
  * @param di_top The instance to go on top.
  *
@@ -490,10 +490,8 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 		struct srd_decoder_inst *di_bottom,
 		struct srd_decoder_inst *di_top)
 {
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return SRD_ERR_ARG;
-	}
 
 	if (!di_bottom || !di_top) {
 		srd_err("Invalid from/to instance pair.");
@@ -552,6 +550,7 @@ static struct srd_decoder_inst *srd_inst_find_by_id_stack(const char *inst_id,
  * given session.
  *
  * @param sess The session holding the protocol decoder instance.
+ *             Must not be NULL.
  * @param inst_id The instance ID to be found.
  *
  * @return Pointer to struct srd_decoder_inst, or NULL if not found.
@@ -564,10 +563,8 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 	GSList *l;
 	struct srd_decoder_inst *tmp, *di;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return NULL;
-	}
 
 	di = NULL;
 	for (l = sess->di_list; l; l = l->next) {
@@ -586,10 +583,8 @@ static struct srd_decoder_inst *srd_sess_inst_find_by_obj(
 	const GSList *l;
 	struct srd_decoder_inst *tmp, *di;
 
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return NULL;
-	}
 
 	di = NULL;
 	for (l = stack ? stack : sess->di_list; di == NULL && l != NULL; l = l->next) {
@@ -1368,10 +1363,8 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 /** @private */
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess)
 {
-	if (session_is_valid(sess) != SRD_OK) {
-		srd_err("Invalid session.");
+	if (!sess)
 		return;
-	}
 
 	g_slist_free_full(sess->di_list, (GDestroyNotify)srd_inst_free);
 }

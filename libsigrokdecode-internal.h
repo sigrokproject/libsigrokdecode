@@ -70,7 +70,6 @@ struct srd_session {
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
 
 /* session.c */
-SRD_PRIV int session_is_valid(struct srd_session *sess);
 SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session *sess,
 		int output_type);
 
