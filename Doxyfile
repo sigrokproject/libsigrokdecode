@@ -820,7 +820,7 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = config.h libsigrokdecode-internal.h exception.c \
+EXCLUDE                = build config.h libsigrokdecode-internal.h exception.c \
                          module_sigrokdecode.c type_decoder.c type_logic.c \
                          util.c
 
