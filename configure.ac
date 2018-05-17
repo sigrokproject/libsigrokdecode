@@ -119,7 +119,7 @@ SR_CHECK_COMPILE_FLAGS([SRD_EXTRA_CFLAGS], [C99], [-std=c99 -c99 -AC99 -qlanglvl
 SR_CHECK_COMPILE_FLAGS([SRD_EXTRA_CFLAGS], [visibility], [-fvisibility=hidden])
 
 # Select suitable compiler warning flags.
-SR_ARG_ENABLE_WARNINGS([SRD_WFLAGS], [-Wall], [-Wall -Wextra -Wmissing-prototypes])
+SR_ARG_ENABLE_WARNINGS([SRD_WFLAGS], [-Wall], [-Wall -Wextra -Wmissing-prototypes -Wshadow -Wformat=2 -Wno-format-nonliteral -Wfloat-equal])
 
 # Link against libm, this is required (among other things) by Python.
 SRD_EXTRA_LIBS=
