@@ -105,7 +105,7 @@ static int searchpath_add_xdg_dir(const char *datadir)
 	if (g_file_test(decdir, G_FILE_TEST_IS_DIR))
 		ret = srd_decoder_searchpath_add(decdir);
 	else
-		ret = SRD_OK; /* just ignore non-existing directory */
+		ret = SRD_OK; /* Just ignore non-existing directory. */
 
 	g_free(decdir);
 
@@ -245,7 +245,7 @@ SRD_API int srd_init(const char *path)
 	/* Locations relative to the XDG system data directories. */
 	sys_datadirs = g_get_system_data_dirs();
 	for (i = g_strv_length((char **)sys_datadirs); i > 0; i--) {
-		ret = searchpath_add_xdg_dir(sys_datadirs[i-1]);
+		ret = searchpath_add_xdg_dir(sys_datadirs[i - 1]);
 		if (ret != SRD_OK) {
 			Py_Finalize();
 			return ret;

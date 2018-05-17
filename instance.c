@@ -177,7 +177,7 @@ err_out:
 	return ret;
 }
 
-/* Helper GComparefunc for g_slist_find_custom() in srd_inst_channel_set_all() */
+/* Helper GComparefunc for g_slist_find_custom() in srd_inst_channel_set_all(). */
 static gint compare_channel_id(const struct srd_channel *pdch,
 			const char *channel_id)
 {
@@ -460,9 +460,7 @@ static void srd_inst_reset_state(struct srd_decoder_inst *di)
 
 	srd_dbg("%s: Resetting decoder state.", di->inst_id);
 
-	/*
-	 * Reset internal state of the decoder.
-	 */
+	/* Reset internal state of the decoder. */
 	condition_list_free(di);
 	match_array_free(di);
 	di->abs_start_samplenum = 0;
@@ -1269,6 +1267,7 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 
 	if (di->want_wait_terminate)
 		return SRD_ERR_TERM_REQ;
+
 	return SRD_OK;
 }
 
@@ -1285,7 +1284,9 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
  * calls like they would for newly constructed decoder stacks.
  *
  * @param di The decoder instance to call. Must not be NULL.
+ *
  * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
  * @private
  */
 SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di)
@@ -1324,9 +1325,7 @@ SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di)
 	}
 	PyGILState_Release(gstate);
 
-	/*
-	 * Pass the "restart" request to all stacked decoders.
-	 */
+	/* Pass the "restart" request to all stacked decoders. */
 	for (l = di->next_di; l; l = l->next) {
 		ret = srd_inst_terminate_reset(l->data);
 		if (ret != SRD_OK)
@@ -1343,7 +1342,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 	struct srd_pd_output *pdo;
 	PyGILState_STATE gstate;
 
-	srd_dbg("Freeing instance %s", di->inst_id);
+	srd_dbg("Freeing instance %s.", di->inst_id);
 
 	srd_inst_join_decode_thread(di);
 

@@ -48,7 +48,6 @@ SRD_PRIV int max_session_id = -1;
 /** @private */
 SRD_PRIV int session_is_valid(struct srd_session *sess)
 {
-
 	if (!sess || sess->session_id < 1)
 		return SRD_ERR;
 
@@ -70,7 +69,6 @@ SRD_PRIV int session_is_valid(struct srd_session *sess)
  */
 SRD_API int srd_session_new(struct srd_session **sess)
 {
-
 	if (!sess) {
 		srd_err("Invalid session pointer.");
 		return SRD_ERR_ARG;
@@ -333,6 +331,7 @@ SRD_API int srd_session_terminate_reset(struct srd_session *sess)
 		if (ret != SRD_OK)
 			return ret;
 	}
+
 	return SRD_OK;
 }
 

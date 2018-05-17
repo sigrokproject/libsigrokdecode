@@ -26,8 +26,7 @@ typedef struct {
         PyObject_HEAD
 } srd_Decoder;
 
-/* This is only used for nicer srd_dbg() output.
- */
+/* This is only used for nicer srd_dbg() output. */
 static const char *output_type_name(unsigned int idx)
 {
 	static const char names[][16] = {
@@ -37,6 +36,7 @@ static const char *output_type_name(unsigned int idx)
 		"OUTPUT_META",
 		"(invalid)"
 	};
+
 	return names[MIN(idx, G_N_ELEMENTS(names) - 1)];
 }
 
@@ -332,8 +332,10 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 			Py_XDECREF(py_res);
 		}
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
-			/* Frontends aren't really supposed to get Python
-			 * callbacks, but it's useful for testing. */
+			/*
+			 * Frontends aren't really supposed to get Python
+			 * callbacks, but it's useful for testing.
+			 */
 			pdata.data = py_data;
 			cb->cb(&pdata, cb->cb_data);
 		}
@@ -390,7 +392,7 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	const GVariantType *meta_type_gv;
 	int output_type;
 	char *proto_id, *meta_name, *meta_descr;
-	char *keywords[] = {"output_type", "proto_id", "meta", NULL};
+	char *keywords[] = { "output_type", "proto_id", "meta", NULL };
 	PyGILState_STATE gstate;
 	gboolean is_meta;
 	GSList *l;
@@ -407,7 +409,7 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 		goto err;
 	}
 
-	/* Default to instance id, which defaults to class id. */
+	/* Default to instance ID, which defaults to class ID. */
 	proto_id = di->inst_id;
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|s(Oss)", keywords,
 			&output_type, &proto_id,
@@ -957,14 +959,14 @@ err:
 }
 
 static PyMethodDef Decoder_methods[] = {
-	{"put", Decoder_put, METH_VARARGS,
-	 "Accepts a dictionary with the following keys: startsample, endsample, data"},
-	{"register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
-			"Register a new output stream"},
-	{"wait", Decoder_wait, METH_VARARGS,
-			"Wait for one or more conditions to occur"},
-	{"has_channel", Decoder_has_channel, METH_VARARGS,
-			"Report whether a channel was supplied"},
+	{ "put", Decoder_put, METH_VARARGS,
+	  "Accepts a dictionary with the following keys: startsample, endsample, data" },
+	{ "register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
+			"Register a new output stream" },
+	{ "wait", Decoder_wait, METH_VARARGS,
+			"Wait for one or more conditions to occur" },
+	{ "has_channel", Decoder_has_channel, METH_VARARGS,
+			"Report whether a channel was supplied" },
 	{NULL, NULL, 0, NULL}
 };
 

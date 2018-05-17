@@ -50,6 +50,7 @@ cleanup:
 		PyErr_Clear();
 		srd_dbg("Failed to stringify object.");
 	}
+
 	return str;
 }
 
@@ -80,6 +81,7 @@ cleanup:
 		PyErr_Clear();
 		srd_dbg("Failed to get object attribute %s.", attr);
 	}
+
 	return str;
 }
 

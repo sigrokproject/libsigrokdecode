@@ -490,7 +490,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 		}
 		if (!var)
 			srd_exception_catch("Failed to extract string value");
-
 	} else if (PyLong_Check(py_obj)) { /* integer */
 		int64_t val;
 
@@ -499,7 +498,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 			var = g_variant_new_int64(val);
 		else
 			srd_exception_catch("Failed to extract integer value");
-
 	} else if (PyFloat_Check(py_obj)) { /* float */
 		double val;
 
@@ -508,7 +506,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 			var = g_variant_new_double(val);
 		else
 			srd_exception_catch("Failed to extract float value");
-
 	} else {
 		srd_err("Failed to extract value of unsupported type.");
 	}
