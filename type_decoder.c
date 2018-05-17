@@ -496,6 +496,8 @@ static int get_term_type(const char *v)
 		return SRD_TERM_EITHER_EDGE;
 	case 'n':
 		return SRD_TERM_NO_EDGE;
+	default:
+		return -1;
 	}
 
 	return -1;
