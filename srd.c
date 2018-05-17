@@ -188,11 +188,6 @@ err:
 	return SRD_ERR_PYTHON;
 }
 
-SRD_API GSList *srd_searchpaths_get(void)
-{
-	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
-}
-
 /**
  * Initialize libsigrokdecode.
  *
@@ -389,6 +384,18 @@ err:
 	PyGILState_Release(gstate);
 
 	return SRD_ERR_PYTHON;
+}
+
+/**
+ * Return the list of protocol decoder search paths.
+ *
+ * @return The list of search paths used when loading protocol decoders.
+ *
+ * @since 0.5.1
+ */
+SRD_API GSList *srd_searchpaths_get(void)
+{
+	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
 }
 
 /** @} */
