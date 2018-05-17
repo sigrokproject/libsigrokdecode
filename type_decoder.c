@@ -216,7 +216,7 @@ static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
 
 	gstate = PyGILState_Ensure();
 
-	if (pdata->pdo->meta_type == G_VARIANT_TYPE_INT64) {
+	if (g_variant_type_equal(pdata->pdo->meta_type, G_VARIANT_TYPE_INT64)) {
 		if (!PyLong_Check(obj)) {
 			PyErr_Format(PyExc_TypeError, "This output was registered "
 					"as 'int', but something else was passed.");
@@ -226,7 +226,7 @@ static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
 		if (PyErr_Occurred())
 			goto err;
 		pdata->data = g_variant_new_int64(intvalue);
-	} else if (pdata->pdo->meta_type == G_VARIANT_TYPE_DOUBLE) {
+	} else if (g_variant_type_equal(pdata->pdo->meta_type, G_VARIANT_TYPE_DOUBLE)) {
 		if (!PyFloat_Check(obj)) {
 			PyErr_Format(PyExc_TypeError, "This output was registered "
 					"as 'float', but something else was passed.");
