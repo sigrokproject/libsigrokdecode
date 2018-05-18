@@ -576,62 +576,6 @@ SRD_API struct srd_decoder_inst *srd_inst_find_by_id(struct srd_session *sess,
 	return di;
 }
 
-static struct srd_decoder_inst *srd_sess_inst_find_by_obj(
-		struct srd_session *sess, const GSList *stack,
-		const PyObject *obj)
-{
-	const GSList *l;
-	struct srd_decoder_inst *tmp, *di;
-
-	if (!sess)
-		return NULL;
-
-	di = NULL;
-	for (l = stack ? stack : sess->di_list; di == NULL && l != NULL; l = l->next) {
-		tmp = l->data;
-		if (tmp->py_inst == obj)
-			di = tmp;
-		else if (tmp->next_di)
-			di = srd_sess_inst_find_by_obj(sess, tmp->next_di, obj);
-	}
-
-	return di;
-}
-
-/**
- * Find a decoder instance by its Python object.
- *
- * I.e. find that instance's instantiation of the sigrokdecode.Decoder class.
- * This will recurse to find the instance anywhere in the stack tree of all
- * sessions.
- *
- * @param stack Pointer to a GSList of struct srd_decoder_inst, indicating the
- *              stack to search. To start searching at the bottom level of
- *              decoder instances, pass NULL.
- * @param obj The Python class instantiation.
- *
- * @return Pointer to struct srd_decoder_inst, or NULL if not found.
- *
- * @private
- *
- * @since 0.1.0
- */
-SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj(const GSList *stack,
-		const PyObject *obj)
-{
-	struct srd_decoder_inst *di;
-	struct srd_session *sess;
-	GSList *l;
-
-	di = NULL;
-	for (l = sessions; di == NULL && l != NULL; l = l->next) {
-		sess = l->data;
-		di = srd_sess_inst_find_by_obj(sess, stack, obj);
-	}
-
-	return di;
-}
-
 /**
  * Set the list of initial (assumed) pin values.
  *
