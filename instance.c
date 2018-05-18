@@ -771,7 +771,8 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
  *
  * @private
  */
-static gboolean sample_matches(uint8_t old_sample, uint8_t sample, struct srd_term *term)
+__attribute__((always_inline))
+static inline gboolean sample_matches(uint8_t old_sample, uint8_t sample, struct srd_term *term)
 {
 	/* Caller ensures term != NULL. */
 
