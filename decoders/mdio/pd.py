@@ -275,10 +275,9 @@ class Decoder(srd.Decoder):
     def state_DATA(self, mdio):
         if self.data == -1:
             self.data = 0
-            self.putff([2, ['TURNAROUND', 'TA', 'T']])
+            self.putff([2, ['TA', 'T']])
             if self.ta_invalid:
-                self.putff([4, ['TURNAROUND%s' % self.ta_invalid,
-                                'TA%s' % self.ta_invalid, 'TA', 'T']])
+                self.putff([4, ['TA%s' % self.ta_invalid, 'TA', 'T']])
             self.ss_frame_field = self.samplenum
         self.data_bits -= 1
         self.data |= mdio << self.data_bits
