@@ -50,7 +50,6 @@ static void release_annotation(struct srd_proto_data_annotation *pda)
 		return;
 	if (pda->ann_text)
 		g_strfreev(pda->ann_text);
-	g_free(pda);
 }
 
 static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
@@ -110,10 +109,9 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 		goto err;
 	}
 
-	pda = g_malloc(sizeof(struct srd_proto_data_annotation));
+	pda = pdata->data;
 	pda->ann_class = ann_class;
 	pda->ann_text = ann_text;
-	pdata->data = pda;
 
 	PyGILState_Release(gstate);
 
@@ -325,6 +323,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	struct srd_decoder_inst *di, *next_di;
 	struct srd_pd_output *pdo;
 	struct srd_proto_data pdata;
+	struct srd_proto_data_annotation pda;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	struct srd_pd_callback *cb;
@@ -370,6 +369,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_ANN:
 		/* Annotations are only fed to callbacks. */
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
+			pdata.data = &pda;
 			/* Convert from PyDict to srd_proto_data_annotation. */
 			if (convert_annotation(di, py_data, &pdata) != SRD_OK) {
 				/* An error was already logged. */
