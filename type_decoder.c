@@ -212,7 +212,7 @@ err:
 	return SRD_ERR_PYTHON;
 }
 
-static struct srd_decoder_inst *srd_sess_inst_find_by_obj(
+static inline struct srd_decoder_inst *srd_sess_inst_find_by_obj(
 	struct srd_session *sess, const GSList *stack, const PyObject *obj)
 {
 	const GSList *l;
@@ -249,7 +249,7 @@ static struct srd_decoder_inst *srd_sess_inst_find_by_obj(
  *
  * @since 0.1.0
  */
-static struct srd_decoder_inst *srd_inst_find_by_obj(
+static inline struct srd_decoder_inst *srd_inst_find_by_obj(
 		const GSList *stack, const PyObject *obj)
 {
 	struct srd_decoder_inst *di;
