@@ -128,7 +128,6 @@ static void release_binary(struct srd_proto_data_binary *pdb)
 	if (!pdb)
 		return;
 	g_free((void *)pdb->data);
-	g_free(pdb);
 }
 
 static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
@@ -192,15 +191,12 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 
 	PyGILState_Release(gstate);
 
-	pdb = g_malloc(sizeof(struct srd_proto_data_binary));
+	pdb = pdata->data;
 	pdb->bin_class = bin_class;
 	pdb->size = size;
-	if (!(pdb->data = g_try_malloc(pdb->size))) {
-		g_free(pdb);
+	if (!(pdb->data = g_try_malloc(pdb->size)))
 		return SRD_ERR_MALLOC;
-	}
 	memcpy((void *)pdb->data, (const void *)buf, pdb->size);
-	pdata->data = pdb;
 
 	return SRD_OK;
 
@@ -324,6 +320,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	struct srd_pd_output *pdo;
 	struct srd_proto_data pdata;
 	struct srd_proto_data_annotation pda;
+	struct srd_proto_data_binary pdb;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	struct srd_pd_callback *cb;
@@ -405,6 +402,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		break;
 	case SRD_OUTPUT_BINARY:
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
+			pdata.data = &pdb;
 			/* Convert from PyDict to srd_proto_data_binary. */
 			if (convert_binary(di, py_data, &pdata) != SRD_OK) {
 				/* An error was already logged. */
