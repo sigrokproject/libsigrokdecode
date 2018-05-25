@@ -116,40 +116,42 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def output_tx_bytes(self):
-        if len(self.bytes) < 1: # Ignore wakeup.
+        b = self.bytes
+        if len(b) < 1: # Ignore wakeup.
             return
-        self.waddr = self.bytes[0][2]
-        self.display_waddr(self.bytes[0])
+        self.waddr = b[0][2]
+        self.display_waddr(b[0])
         if self.waddr == WORD_ADDR_COMMAND:
-            count = self.bytes[1][2]
-            self.display_count(self.bytes[1])
-            if len(self.bytes) - 1 != count:
-                self.display_warning(self.bytes[0][0], self.bytes[-1][1],
+            count = b[1][2]
+            self.display_count(b[1])
+            if len(b) - 1 != count:
+                self.display_warning(b[0][0], b[-1][1],
                     'Invalid frame length: Got {}, expecting {} '.format(
-                      len(self.bytes) - 1, count))
+                      len(b) - 1, count))
                 return
-            self.opcode = self.bytes[2][2]
-            self.display_opcode(self.bytes[2])
-            self.display_param1(self.bytes[3])
-            self.display_param2([self.bytes[4], self.bytes[5]])
-            self.display_data(self.bytes[6:-2])
-            self.display_crc([self.bytes[-2], self.bytes[-1]])
+            self.opcode = b[2][2]
+            self.display_opcode(b[2])
+            self.display_param1(b[3])
+            self.display_param2([b[4], b[5]])
+            self.display_data(b[6:-2])
+            self.display_crc([b[-2], b[-1]])
 
     def output_rx_bytes(self):
-        count = self.bytes[0][2]
-        self.display_count(self.bytes[0])
+        b = self.bytes
+        count = b[0][2]
+        self.display_count(b[0])
         if self.waddr == WORD_ADDR_RESET:
-            self.display_data([self.bytes[1]])
-            self.display_crc([self.bytes[2], self.bytes[3]])
-            self.display_status(self.bytes[0][0], self.bytes[-1][1], self.bytes[1][2])
+            self.display_data([b[1]])
+            self.display_crc([b[2], b[3]])
+            self.display_status(b[0][0], b[-1][1], b[1][2])
         elif self.waddr == WORD_ADDR_COMMAND:
             if count == 4: # Status / Error.
-                self.display_data([self.bytes[1]])
-                self.display_crc([self.bytes[2], self.bytes[3]])
-                self.display_status(self.bytes[0][0], self.bytes[-1][1], self.bytes[1][2])
+                self.display_data([b[1]])
+                self.display_crc([b[2], b[3]])
+                self.display_status(b[0][0], b[-1][1], b[1][2])
             else:
-                self.display_data(self.bytes[1:-2])
-                self.display_crc([self.bytes[-2], self.bytes[-1]])
+                self.display_data(b[1:-2])
+                self.display_crc([b[-2], b[-1]])
 
     def display_waddr(self, data):
         self.put(data[0], data[1], self.out_ann, [0, ['Word addr: %s' % WORD_ADDR[data[2]]]])
