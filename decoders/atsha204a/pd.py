@@ -163,40 +163,42 @@ class Decoder(srd.Decoder):
         self.put(data[0], data[1], self.out_ann, [2, ['Opcode: %s' % OPCODES[data[2]]]])
 
     def display_param1(self, data):
-        if self.opcode in (OPCODE_CHECK_MAC, OPCODE_DEV_REV, OPCODE_HMAC, \
+        op = self.opcode
+        if op in (OPCODE_CHECK_MAC, OPCODE_DEV_REV, OPCODE_HMAC, \
                 OPCODE_MAC, OPCODE_NONCE, OPCODE_RANDOM, OPCODE_SHA):
             self.put(data[0], data[1], self.out_ann, [3, ['Mode: %02X' % data[2]]])
-        elif self.opcode == OPCODE_DERIVE_KEY:
+        elif op == OPCODE_DERIVE_KEY:
             self.put(data[0], data[1], self.out_ann, [3, ['Random: %s' % data[2]]])
-        elif self.opcode == OPCODE_GEN_DIG:
+        elif op == OPCODE_GEN_DIG:
             self.put(data[0], data[1], self.out_ann, [3, ['Zone: %s' % ZONES[data[2]]]])
-        elif self.opcode == OPCODE_LOCK:
+        elif op == OPCODE_LOCK:
             self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Summary: {}'.format(
                 'DATA/OTP' if data[2] else 'CONFIG',
                 'Ignored' if data[2] & 0x80 else 'Used')]])
-        elif self.opcode == OPCODE_PAUSE:
+        elif op == OPCODE_PAUSE:
             self.put(data[0], data[1], self.out_ann, [3, ['Selector: %02X' % data[2]]])
-        elif self.opcode == OPCODE_READ:
+        elif op == OPCODE_READ:
             self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Length: {}'.format(ZONES[data[2] & 0x03],
                 '32 bytes' if data[2] & 0x90 else '4 bytes')]])
-        elif self.opcode == OPCODE_WRITE:
+        elif op == OPCODE_WRITE:
             self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Encrypted: {}, Length: {}'.format(ZONES[data[2] & 0x03],
                      'Yes' if data[2] & 0x40 else 'No', '32 bytes' if data[2] & 0x90 else '4 bytes')]])
         else:
             self.put(data[0], data[1], self.out_ann, [3, ['Param1: %02X' % data[2]]])
 
     def display_param2(self, data):
-        if self.opcode == OPCODE_DERIVE_KEY:
+        op = self.opcode
+        if op == OPCODE_DERIVE_KEY:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['TargetKey: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif self.opcode in (OPCODE_NONCE, OPCODE_PAUSE, OPCODE_RANDOM):
+        elif op in (OPCODE_NONCE, OPCODE_PAUSE, OPCODE_RANDOM):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Zero: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif self.opcode in (OPCODE_HMAC, OPCODE_MAC, OPCODE_CHECK_MAC, OPCODE_GEN_DIG):
+        elif op in (OPCODE_HMAC, OPCODE_MAC, OPCODE_CHECK_MAC, OPCODE_GEN_DIG):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['SlotID: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif self.opcode == OPCODE_LOCK:
+        elif op == OPCODE_LOCK:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Summary: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif self.opcode in (OPCODE_READ, OPCODE_WRITE):
+        elif op in (OPCODE_READ, OPCODE_WRITE):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Address: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif self.opcode == OPCODE_UPDATE_EXTRA:
+        elif op == OPCODE_UPDATE_EXTRA:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['NewValue: {:02x}'.format(data[0][2])]])
         else:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['-']])
@@ -204,17 +206,18 @@ class Decoder(srd.Decoder):
     def display_data(self, data):
         if len(data) == 0:
             return
-        if self.opcode == OPCODE_CHECK_MAC:
+        op = self.opcode
+        if op == OPCODE_CHECK_MAC:
             self.put(data[0][0], data[31][1], self.out_ann, [5, ['ClientChal: %s' % ' '.join(format(i[2], '02x') for i in data[0:31])]])
             self.put(data[32][0], data[63][1], self.out_ann, [5, ['ClientResp: %s' % ' '.join(format(i[2], '02x') for i in data[32:63])]])
             self.put(data[64][0], data[76][1], self.out_ann, [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in data[64:76])]])
-        elif self.opcode == OPCODE_DERIVE_KEY:
+        elif op == OPCODE_DERIVE_KEY:
             self.put(data[0][0], data[31][1], self.out_ann, [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in data)]])
-        elif self.opcode == OPCODE_GEN_DIG:
+        elif op == OPCODE_GEN_DIG:
             self.put(data[0][0], data[3][1], self.out_ann, [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in data)]])
-        elif self.opcode == OPCODE_MAC:
+        elif op == OPCODE_MAC:
             self.put(data[0][0], data[31][1], self.out_ann, [5, ['Challenge: %s' % ' '.join(format(i[2], '02x') for i in data)]])
-        elif self.opcode == OPCODE_WRITE:
+        elif op == OPCODE_WRITE:
             if len(data) > 32: # Value + MAC.
                 self.put(data[0][0], data[-31][1], self.out_ann, [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in data)]])
                 self.put(data[-32][0], data[-1][1], self.out_ann, [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in data)]])
