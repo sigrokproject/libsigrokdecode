@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
             if len(b) - 1 != count:
                 self.display_warning(b[0][0], b[-1][1],
                     'Invalid frame length: Got {}, expecting {} '.format(
-                      len(b) - 1, count))
+                    len(b) - 1, count))
                 return
             self.opcode = b[2][2]
             self.display_opcode(b[2])
@@ -153,87 +153,96 @@ class Decoder(srd.Decoder):
                 self.display_data(b[1:-2])
                 self.display_crc([b[-2], b[-1]])
 
-    def display_waddr(self, data):
-        self.put(data[0], data[1], self.out_ann, [0, ['Word addr: %s' % WORD_ADDR[data[2]]]])
+    def putx(self, s, data):
+        self.put(s[0], s[1], self.out_ann, data)
 
-    def display_count(self, data):
-        self.put(data[0], data[1], self.out_ann, [1, ['Count: %s' % data[2]]])
+    def puty(self, s, data):
+        self.put(s[0][0], s[1][1], self.out_ann, data)
 
-    def display_opcode(self, data):
-        self.put(data[0], data[1], self.out_ann, [2, ['Opcode: %s' % OPCODES[data[2]]]])
+    def putz(self, ss, es, data):
+        self.put(ss, es, self.out_ann, data)
 
-    def display_param1(self, data):
+    def display_waddr(self, s):
+        self.putx(s, [0, ['Word addr: %s' % WORD_ADDR[s[2]]]])
+
+    def display_count(self, s):
+        self.putx(s, [1, ['Count: %s' % s[2]]])
+
+    def display_opcode(self, s):
+        self.putx(s, [2, ['Opcode: %s' % OPCODES[s[2]]]])
+
+    def display_param1(self, s):
         op = self.opcode
         if op in (OPCODE_CHECK_MAC, OPCODE_DEV_REV, OPCODE_HMAC, \
                 OPCODE_MAC, OPCODE_NONCE, OPCODE_RANDOM, OPCODE_SHA):
-            self.put(data[0], data[1], self.out_ann, [3, ['Mode: %02X' % data[2]]])
+            self.putx(s, [3, ['Mode: %02X' % s[2]]])
         elif op == OPCODE_DERIVE_KEY:
-            self.put(data[0], data[1], self.out_ann, [3, ['Random: %s' % data[2]]])
+            self.putx(s, [3, ['Random: %s' % s[2]]])
         elif op == OPCODE_GEN_DIG:
-            self.put(data[0], data[1], self.out_ann, [3, ['Zone: %s' % ZONES[data[2]]]])
+            self.putx(s, [3, ['Zone: %s' % ZONES[s[2]]]])
         elif op == OPCODE_LOCK:
-            self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Summary: {}'.format(
-                'DATA/OTP' if data[2] else 'CONFIG',
-                'Ignored' if data[2] & 0x80 else 'Used')]])
+            self.putx(s, [3, ['Zone: {}, Summary: {}'.format(
+                'DATA/OTP' if s[2] else 'CONFIG',
+                'Ignored' if s[2] & 0x80 else 'Used')]])
         elif op == OPCODE_PAUSE:
-            self.put(data[0], data[1], self.out_ann, [3, ['Selector: %02X' % data[2]]])
+            self.putx(s, [3, ['Selector: %02X' % s[2]]])
         elif op == OPCODE_READ:
-            self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Length: {}'.format(ZONES[data[2] & 0x03],
-                '32 bytes' if data[2] & 0x90 else '4 bytes')]])
+            self.putx(s, [3, ['Zone: {}, Length: {}'.format(ZONES[s[2] & 0x03],
+                '32 bytes' if s[2] & 0x90 else '4 bytes')]])
         elif op == OPCODE_WRITE:
-            self.put(data[0], data[1], self.out_ann, [3, ['Zone: {}, Encrypted: {}, Length: {}'.format(ZONES[data[2] & 0x03],
-                     'Yes' if data[2] & 0x40 else 'No', '32 bytes' if data[2] & 0x90 else '4 bytes')]])
+            self.putx(s, [3, ['Zone: {}, Encrypted: {}, Length: {}'.format(ZONES[s[2] & 0x03],
+                'Yes' if s[2] & 0x40 else 'No', '32 bytes' if s[2] & 0x90 else '4 bytes')]])
         else:
-            self.put(data[0], data[1], self.out_ann, [3, ['Param1: %02X' % data[2]]])
+            self.putx(s, [3, ['Param1: %02X' % s[2]]])
 
-    def display_param2(self, data):
+    def display_param2(self, s):
         op = self.opcode
         if op == OPCODE_DERIVE_KEY:
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['TargetKey: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
+            self.puty(s, [4, ['TargetKey: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
         elif op in (OPCODE_NONCE, OPCODE_PAUSE, OPCODE_RANDOM):
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['Zero: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
+            self.puty(s, [4, ['Zero: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
         elif op in (OPCODE_HMAC, OPCODE_MAC, OPCODE_CHECK_MAC, OPCODE_GEN_DIG):
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['SlotID: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
+            self.puty(s, [4, ['SlotID: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
         elif op == OPCODE_LOCK:
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['Summary: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
+            self.puty(s, [4, ['Summary: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
         elif op in (OPCODE_READ, OPCODE_WRITE):
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['Address: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
+            self.puty(s, [4, ['Address: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
         elif op == OPCODE_UPDATE_EXTRA:
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['NewValue: {:02x}'.format(data[0][2])]])
+            self.puty(s, [4, ['NewValue: {:02x}'.format(s[0][2])]])
         else:
-            self.put(data[0][0], data[1][1], self.out_ann, [4, ['-']])
+            self.puty(s, [4, ['-']])
 
-    def display_data(self, data):
-        if len(data) == 0:
+    def display_data(self, s):
+        if len(s) == 0:
             return
         op = self.opcode
         if op == OPCODE_CHECK_MAC:
-            self.put(data[0][0], data[31][1], self.out_ann, [5, ['ClientChal: %s' % ' '.join(format(i[2], '02x') for i in data[0:31])]])
-            self.put(data[32][0], data[63][1], self.out_ann, [5, ['ClientResp: %s' % ' '.join(format(i[2], '02x') for i in data[32:63])]])
-            self.put(data[64][0], data[76][1], self.out_ann, [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in data[64:76])]])
+            self.putz(s[0][0], s[31][1], [5, ['ClientChal: %s' % ' '.join(format(i[2], '02x') for i in s[0:31])]])
+            self.putz(s[32][0], s[63][1], [5, ['ClientResp: %s' % ' '.join(format(i[2], '02x') for i in s[32:63])]])
+            self.putz(s[64][0], s[76][1], [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in s[64:76])]])
         elif op == OPCODE_DERIVE_KEY:
-            self.put(data[0][0], data[31][1], self.out_ann, [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+            self.putz(s[0][0], s[31][1], [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_GEN_DIG:
-            self.put(data[0][0], data[3][1], self.out_ann, [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+            self.putz(s[0][0], s[3][1], [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_MAC:
-            self.put(data[0][0], data[31][1], self.out_ann, [5, ['Challenge: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+            self.putz(s[0][0], s[31][1], [5, ['Challenge: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_WRITE:
-            if len(data) > 32: # Value + MAC.
-                self.put(data[0][0], data[-31][1], self.out_ann, [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in data)]])
-                self.put(data[-32][0], data[-1][1], self.out_ann, [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+            if len(s) > 32: # Value + MAC.
+                self.putz(s[0][0], s[-31][1], [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in s)]])
+                self.putz(s[-32][0], s[-1][1], [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in s)]])
             else: # Just value.
-                self.put(data[0][0], data[-1][1], self.out_ann, [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+                self.putz(s[0][0], s[-1][1], [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         else:
-            self.put(data[0][0], data[-1][1], self.out_ann, [5, ['Data: %s' % ' '.join(format(i[2], '02x') for i in data)]])
+            self.putz(s[0][0], s[-1][1], [5, ['Data: %s' % ' '.join(format(i[2], '02x') for i in s)]])
 
-    def display_crc(self, data):
-        self.put(data[0][0], data[1][1], self.out_ann, [6, ['CRC: {:02X} {:02X}'.format(data[0][2], data[1][2])]])
+    def display_crc(self, s):
+        self.puty(s, [6, ['CRC: {:02X} {:02X}'.format(s[0][2], s[1][2])]])
 
-    def display_status(self, start, end, status):
-        self.put(start, end, self.out_ann, [7, ['Status: %s' % STATUS[status]]])
+    def display_status(self, ss, es, status):
+        self.putz(ss, es, [7, ['Status: %s' % STATUS[status]]])
 
-    def display_warning(self, start, end, msg):
-        self.put(start, end, self.out_ann, [8, ['Warning: %s' % msg]])
+    def display_warning(self, ss, es, msg):
+        self.putz(ss, es, [8, ['Warning: %s' % msg]])
 
     def decode(self, ss, es, data):
         cmd, databyte = data
