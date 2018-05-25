@@ -163,10 +163,8 @@ class Decoder(srd.Decoder):
         self.put(data[0], data[1], self.out_ann, [2, ['Opcode: %s' % OPCODES[data[2]]]])
 
     def display_param1(self, data):
-        if (self.opcode == OPCODE_CHECK_MAC) or (self.opcode == OPCODE_DEV_REV) or \
-           (self.opcode == OPCODE_HMAC) or (self.opcode == OPCODE_MAC) or \
-           (self.opcode == OPCODE_NONCE) or (self.opcode == OPCODE_RANDOM) or \
-           (self.opcode == OPCODE_SHA):
+        if self.opcode in (OPCODE_CHECK_MAC, OPCODE_DEV_REV, OPCODE_HMAC, \
+                OPCODE_MAC, OPCODE_NONCE, OPCODE_RANDOM, OPCODE_SHA):
             self.put(data[0], data[1], self.out_ann, [3, ['Mode: %02X' % data[2]]])
         elif self.opcode == OPCODE_DERIVE_KEY:
             self.put(data[0], data[1], self.out_ann, [3, ['Random: %s' % data[2]]])
@@ -190,14 +188,13 @@ class Decoder(srd.Decoder):
     def display_param2(self, data):
         if self.opcode == OPCODE_DERIVE_KEY:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['TargetKey: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif (self.opcode == OPCODE_NONCE) or (self.opcode == OPCODE_PAUSE) or (self.opcode == OPCODE_RANDOM):
+        elif self.opcode in (OPCODE_NONCE, OPCODE_PAUSE, OPCODE_RANDOM):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Zero: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif (self.opcode == OPCODE_HMAC) or (self.opcode == OPCODE_MAC) or \
-             (self.opcode == OPCODE_CHECK_MAC) or (self.opcode == OPCODE_GEN_DIG):
+        elif self.opcode in (OPCODE_HMAC, OPCODE_MAC, OPCODE_CHECK_MAC, OPCODE_GEN_DIG):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['SlotID: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
         elif self.opcode == OPCODE_LOCK:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Summary: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
-        elif (self.opcode == OPCODE_READ) or (self.opcode == OPCODE_WRITE):
+        elif self.opcode in (OPCODE_READ, OPCODE_WRITE):
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['Address: {:02x} {:02x}'.format(data[1][2], data[0][2])]])
         elif self.opcode == OPCODE_UPDATE_EXTRA:
             self.put(data[0][0], data[1][1], self.out_ann, [4, ['NewValue: {:02x}'.format(data[0][2])]])
