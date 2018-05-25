@@ -120,38 +120,38 @@ class Decoder(srd.Decoder):
         if len(b) < 1: # Ignore wakeup.
             return
         self.waddr = b[0][2]
-        self.display_waddr(b[0])
+        self.put_waddr(b[0])
         if self.waddr == WORD_ADDR_COMMAND:
             count = b[1][2]
-            self.display_count(b[1])
+            self.put_count(b[1])
             if len(b) - 1 != count:
-                self.display_warning(b[0][0], b[-1][1],
+                self.put_warning(b[0][0], b[-1][1],
                     'Invalid frame length: Got {}, expecting {} '.format(
                     len(b) - 1, count))
                 return
             self.opcode = b[2][2]
-            self.display_opcode(b[2])
-            self.display_param1(b[3])
-            self.display_param2([b[4], b[5]])
-            self.display_data(b[6:-2])
-            self.display_crc([b[-2], b[-1]])
+            self.put_opcode(b[2])
+            self.put_param1(b[3])
+            self.put_param2([b[4], b[5]])
+            self.put_data(b[6:-2])
+            self.put_crc([b[-2], b[-1]])
 
     def output_rx_bytes(self):
         b = self.bytes
         count = b[0][2]
-        self.display_count(b[0])
+        self.put_count(b[0])
         if self.waddr == WORD_ADDR_RESET:
-            self.display_data([b[1]])
-            self.display_crc([b[2], b[3]])
-            self.display_status(b[0][0], b[-1][1], b[1][2])
+            self.put_data([b[1]])
+            self.put_crc([b[2], b[3]])
+            self.put_status(b[0][0], b[-1][1], b[1][2])
         elif self.waddr == WORD_ADDR_COMMAND:
             if count == 4: # Status / Error.
-                self.display_data([b[1]])
-                self.display_crc([b[2], b[3]])
-                self.display_status(b[0][0], b[-1][1], b[1][2])
+                self.put_data([b[1]])
+                self.put_crc([b[2], b[3]])
+                self.put_status(b[0][0], b[-1][1], b[1][2])
             else:
-                self.display_data(b[1:-2])
-                self.display_crc([b[-2], b[-1]])
+                self.put_data(b[1:-2])
+                self.put_crc([b[-2], b[-1]])
 
     def putx(self, s, data):
         self.put(s[0], s[1], self.out_ann, data)
@@ -162,16 +162,16 @@ class Decoder(srd.Decoder):
     def putz(self, ss, es, data):
         self.put(ss, es, self.out_ann, data)
 
-    def display_waddr(self, s):
+    def put_waddr(self, s):
         self.putx(s, [0, ['Word addr: %s' % WORD_ADDR[s[2]]]])
 
-    def display_count(self, s):
+    def put_count(self, s):
         self.putx(s, [1, ['Count: %s' % s[2]]])
 
-    def display_opcode(self, s):
+    def put_opcode(self, s):
         self.putx(s, [2, ['Opcode: %s' % OPCODES[s[2]]]])
 
-    def display_param1(self, s):
+    def put_param1(self, s):
         op = self.opcode
         if op in (OPCODE_CHECK_MAC, OPCODE_DEV_REV, OPCODE_HMAC, \
                 OPCODE_MAC, OPCODE_NONCE, OPCODE_RANDOM, OPCODE_SHA):
@@ -195,7 +195,7 @@ class Decoder(srd.Decoder):
         else:
             self.putx(s, [3, ['Param1: %02X' % s[2]]])
 
-    def display_param2(self, s):
+    def put_param2(self, s):
         op = self.opcode
         if op == OPCODE_DERIVE_KEY:
             self.puty(s, [4, ['TargetKey: {:02x} {:02x}'.format(s[1][2], s[0][2])]])
@@ -212,7 +212,7 @@ class Decoder(srd.Decoder):
         else:
             self.puty(s, [4, ['-']])
 
-    def display_data(self, s):
+    def put_data(self, s):
         if len(s) == 0:
             return
         op = self.opcode
@@ -235,13 +235,13 @@ class Decoder(srd.Decoder):
         else:
             self.putz(s[0][0], s[-1][1], [5, ['Data: %s' % ' '.join(format(i[2], '02x') for i in s)]])
 
-    def display_crc(self, s):
+    def put_crc(self, s):
         self.puty(s, [6, ['CRC: {:02X} {:02X}'.format(s[0][2], s[1][2])]])
 
-    def display_status(self, ss, es, status):
+    def put_status(self, ss, es, status):
         self.putz(ss, es, [7, ['Status: %s' % STATUS[status]]])
 
-    def display_warning(self, ss, es, msg):
+    def put_warning(self, ss, es, msg):
         self.putz(ss, es, [8, ['Warning: %s' % msg]])
 
     def decode(self, ss, es, data):
