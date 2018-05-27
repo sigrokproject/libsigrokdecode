@@ -87,20 +87,39 @@ class Decoder(srd.Decoder):
             condition.append({PIN_RESET: opt_edge_map[reset_edge]})
 
         edge_count = 0
+        edge_start = None
         word_count = 0
+        word_start = None
         while True:
             self.wait(condition)
             now = self.samplenum
 
             if have_reset and self.matched[cond_reset]:
                 edge_count = 0
+                edge_start = now
                 word_count = 0
+                word_start = now
                 self.putc(ROW_RESET, now, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
 
+            # Implementation note: In the absence of a RESET condition
+            # before the first data edge, any arbitrary choice of where
+            # to start the annotation is valid. One may choose to emit a
+            # narrow annotation (where ss=es), or assume that the cycle
+            # which corresponds to the counter value started at sample
+            # number 0. We decided to go with the latter here, to avoid
+            # narrow annotations (see bug #1210). None of this matters in
+            # the presence of a RESET condition in the input stream.
+            if edge_start is None:
+                edge_start = 0
+            if word_start is None:
+                word_start = 0
+
             edge_count += 1
-            self.putc(ROW_EDGE, now, ["{:d}".format(edge_count)])
+            self.putc(ROW_EDGE, edge_start, ["{:d}".format(edge_count)])
+            edge_start = now
 
             if divider and (edge_count % divider) == 0:
                 word_count += 1
-                self.putc(ROW_WORD, now, ["{:d}".format(word_count)])
+                self.putc(ROW_WORD, word_start, ["{:d}".format(word_count)])
+                word_start = now
