@@ -75,13 +75,13 @@ class Decoder(srd.Decoder):
         self.put(self.samplenum, self.samplenum, self.out_ann, [cls, annlist])
 
     def decode(self):
-        condition = [{'rising':  {0: 'r'},
-                      'falling': {0: 'f'},
-                      'any':     {0: 'e'},}[self.edge]]
+        opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
+
+        condition = [{0: opt_edge_map[self.edge]}]
 
         if self.has_channel(1):
             self.have_reset = True
-            condition.append({1: self.options['reset_edge'][0]})
+            condition.append({1: opt_edge_map[self.options['reset_edge']]})
 
         while True:
             self.wait(condition)
