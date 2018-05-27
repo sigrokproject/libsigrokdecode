@@ -59,9 +59,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.edge_count = 0
-        self.word_count = 0
-        self.have_reset = None
+        pass
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -69,10 +67,6 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.edge = self.options['data_edge']
-        self.divider = self.options['divider']
-        if self.divider < 0:
-            self.divider = 0
 
     def putc(self, cls, annlist):
         self.put(self.samplenum, self.samplenum, self.out_ann, [cls, annlist])
@@ -80,12 +74,19 @@ class Decoder(srd.Decoder):
     def decode(self):
         opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
 
+        self.edge = self.options['data_edge']
+        self.divider = self.options['divider']
+        if self.divider < 0:
+            self.divider = 0
+
         condition = [{PIN_DATA: opt_edge_map[self.edge]}]
         self.have_reset = self.has_channel(PIN_RESET)
         if self.have_reset:
             cond_reset = len(condition)
             condition.append({PIN_RESET: opt_edge_map[self.options['reset_edge']]})
 
+        self.edge_count = 0
+        self.word_count = 0
         while True:
             self.wait(condition)
 
