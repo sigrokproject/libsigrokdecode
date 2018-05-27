@@ -74,31 +74,32 @@ class Decoder(srd.Decoder):
     def decode(self):
         opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
 
-        self.edge = self.options['data_edge']
-        self.divider = self.options['divider']
-        if self.divider < 0:
-            self.divider = 0
+        data_edge = self.options['data_edge']
+        divider = self.options['divider']
+        if divider < 0:
+            divider = 0
+        reset_edge = self.options['reset_edge']
 
-        condition = [{PIN_DATA: opt_edge_map[self.edge]}]
-        self.have_reset = self.has_channel(PIN_RESET)
-        if self.have_reset:
+        condition = [{PIN_DATA: opt_edge_map[data_edge]}]
+        have_reset = self.has_channel(PIN_RESET)
+        if have_reset:
             cond_reset = len(condition)
-            condition.append({PIN_RESET: opt_edge_map[self.options['reset_edge']]})
+            condition.append({PIN_RESET: opt_edge_map[reset_edge]})
 
-        self.edge_count = 0
-        self.word_count = 0
+        edge_count = 0
+        word_count = 0
         while True:
             self.wait(condition)
 
-            if self.have_reset and self.matched[cond_reset]:
-                self.edge_count = 0
-                self.word_count = 0
+            if have_reset and self.matched[cond_reset]:
+                edge_count = 0
+                word_count = 0
                 self.putc(ROW_RESET, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
 
-            self.edge_count += 1
-            self.putc(ROW_EDGE, [str(self.edge_count)])
+            edge_count += 1
+            self.putc(ROW_EDGE, [str(edge_count)])
 
-            if self.divider > 0 and (self.edge_count % self.divider) == 0:
-                self.word_count += 1
-                self.putc(ROW_WORD, [str(self.word_count)])
+            if divider and (edge_count % divider) == 0:
+                word_count += 1
+                self.putc(ROW_WORD, [str(word_count)])
