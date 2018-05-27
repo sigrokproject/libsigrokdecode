@@ -19,6 +19,9 @@
 
 import sigrokdecode as srd
 
+(PIN_DATA, PIN_RESET) = range(2)
+(ROW_EDGE, ROW_WORD, ROW_RESET) = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'counter'
@@ -40,9 +43,9 @@ class Decoder(srd.Decoder):
         ('word_reset', 'Word reset'),
     )
     annotation_rows = (
-        ('edge_counts', 'Edges', (0,)),
-        ('word_counts', 'Words', (1,)),
-        ('word_resets', 'Word resets', (2,)),
+        ('edge_counts', 'Edges', (ROW_EDGE,)),
+        ('word_counts', 'Words', (ROW_WORD,)),
+        ('word_resets', 'Word resets', (ROW_RESET,)),
     )
     options = (
         {'id': 'data_edge', 'desc': 'Edges to count (data)', 'default': 'any',
@@ -77,23 +80,24 @@ class Decoder(srd.Decoder):
     def decode(self):
         opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
 
-        condition = [{0: opt_edge_map[self.edge]}]
-
-        if self.has_channel(1):
-            self.have_reset = True
-            condition.append({1: opt_edge_map[self.options['reset_edge']]})
+        condition = [{PIN_DATA: opt_edge_map[self.edge]}]
+        self.have_reset = self.has_channel(PIN_RESET)
+        if self.have_reset:
+            cond_reset = len(condition)
+            condition.append({PIN_RESET: opt_edge_map[self.options['reset_edge']]})
 
         while True:
             self.wait(condition)
-            if self.have_reset and self.matched[1]:
+
+            if self.have_reset and self.matched[cond_reset]:
                 self.edge_count = 0
                 self.word_count = 0
-                self.putc(2, ['Word reset', 'Reset', 'Rst', 'R'])
+                self.putc(ROW_RESET, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
 
             self.edge_count += 1
+            self.putc(ROW_EDGE, [str(self.edge_count)])
 
-            self.putc(0, [str(self.edge_count)])
             if self.divider > 0 and (self.edge_count % self.divider) == 0:
                 self.word_count += 1
-                self.putc(1, [str(self.word_count)])
+                self.putc(ROW_WORD, [str(self.word_count)])
