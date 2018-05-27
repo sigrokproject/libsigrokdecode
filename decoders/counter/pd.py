@@ -68,8 +68,8 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def putc(self, cls, annlist):
-        self.put(self.samplenum, self.samplenum, self.out_ann, [cls, annlist])
+    def putc(self, cls, ss, annlist):
+        self.put(ss, self.samplenum, self.out_ann, [cls, annlist])
 
     def decode(self):
         opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
@@ -90,16 +90,17 @@ class Decoder(srd.Decoder):
         word_count = 0
         while True:
             self.wait(condition)
+            now = self.samplenum
 
             if have_reset and self.matched[cond_reset]:
                 edge_count = 0
                 word_count = 0
-                self.putc(ROW_RESET, ['Word reset', 'Reset', 'Rst', 'R'])
+                self.putc(ROW_RESET, now, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
 
             edge_count += 1
-            self.putc(ROW_EDGE, ["{:d}".format(edge_count)])
+            self.putc(ROW_EDGE, now, ["{:d}".format(edge_count)])
 
             if divider and (edge_count % divider) == 0:
                 word_count += 1
-                self.putc(ROW_WORD, ["{:d}".format(word_count)])
+                self.putc(ROW_WORD, now, ["{:d}".format(word_count)])
