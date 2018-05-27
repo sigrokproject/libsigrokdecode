@@ -98,8 +98,8 @@ class Decoder(srd.Decoder):
                 continue
 
             edge_count += 1
-            self.putc(ROW_EDGE, [str(edge_count)])
+            self.putc(ROW_EDGE, ["{:d}".format(edge_count)])
 
             if divider and (edge_count % divider) == 0:
                 word_count += 1
-                self.putc(ROW_WORD, [str(word_count)])
+                self.putc(ROW_WORD, ["{:d}".format(word_count)])
