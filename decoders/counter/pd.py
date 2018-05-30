@@ -19,8 +19,8 @@
 
 import sigrokdecode as srd
 
-(PIN_DATA, PIN_RESET) = range(2)
-(ROW_EDGE, ROW_WORD, ROW_RESET) = range(3)
+PIN_DATA, PIN_RESET = range(2)
+ROW_EDGE, ROW_WORD, ROW_RESET = range(3)
 
 class Decoder(srd.Decoder):
     api_version = 3
