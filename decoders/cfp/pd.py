@@ -71,7 +71,6 @@ class Decoder(srd.Decoder):
         pass
 
     def start(self):
-        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def decode(self, ss, es, data):
