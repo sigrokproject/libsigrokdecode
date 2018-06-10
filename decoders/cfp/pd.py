@@ -59,12 +59,12 @@ class Decoder(srd.Decoder):
     inputs = ['mdio']
     outputs = ['cfp']
     annotations = (
-        ('cfp-register', 'Register'),
-        ('cfp-decode', 'Decode'),
+        ('register', 'Register'),
+        ('decode', 'Decode'),
     )
     annotation_rows = (
-        ('cfp-register', 'Register', (0,)),
-        ('cfp-decode', 'Decode', (1,)),
+        ('registers', 'Registers', (0,)),
+        ('decodes', 'Decodes', (1,)),
     )
 
     def __init__(self):
@@ -77,24 +77,24 @@ class Decoder(srd.Decoder):
         for (clause45, clause45_address, is_read, portad, devad, register) in data:
             if is_read:
                 if clause45_address >= 0x8000 and clause45_address <= 0x807F:
-                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 1: Basic ID registers', 'NVR1']])
+                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 1: Basic ID register', 'NVR1']])
                     if clause45_address == 0x8000:
                         self.put(ss, es, self.out_ann, [1, ['Module identifier: %s' % MODULE_ID.get(register, 'Reserved')]])
                 elif clause45_address >= 0x8080 and clause45_address <= 0x80FF:
-                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 2: Extended ID registers', 'NVR2']])
+                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 2: Extended ID register', 'NVR2']])
                 elif clause45_address >= 0x8100 and clause45_address <= 0x817F:
-                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 3: Network lane specific registers', 'NVR3']])
+                    self.put(ss, es, self.out_ann, [0, ['CFP NVR 3: Network lane specific register', 'NVR3']])
                 elif clause45_address >= 0x8180 and clause45_address <= 0x81FF:
                     self.put(ss, es, self.out_ann, [0, ['CFP NVR 4', 'NVR4']])
                 elif clause45_address >= 0x8400 and clause45_address <= 0x847F:
-                    self.put(ss, es, self.out_ann, [0, ['Vendor NVR 1: Vendor data registers', 'V-NVR1']])
+                    self.put(ss, es, self.out_ann, [0, ['Vendor NVR 1: Vendor data register', 'V-NVR1']])
                 elif clause45_address >= 0x8480 and clause45_address <= 0x84FF:
-                    self.put(ss, es, self.out_ann, [0, ['Vendor NVR 2: Vendor data registers', 'V-NVR2']])
+                    self.put(ss, es, self.out_ann, [0, ['Vendor NVR 2: Vendor data register', 'V-NVR2']])
                 elif clause45_address >= 0x8800 and clause45_address <= 0x887F:
-                    self.put(ss, es, self.out_ann, [0, ['User NVR 1: User data registers', 'U-NVR1']])
+                    self.put(ss, es, self.out_ann, [0, ['User NVR 1: User data register', 'U-NVR1']])
                 elif clause45_address >= 0x8880 and clause45_address <= 0x88FF:
-                    self.put(ss, es, self.out_ann, [0, ['User NVR 2: User data registers', 'U-NVR2']])
+                    self.put(ss, es, self.out_ann, [0, ['User NVR 2: User data register', 'U-NVR2']])
                 elif clause45_address >= 0xA000 and clause45_address <= 0xA07F:
-                    self.put(ss, es, self.out_ann, [0, ['CFP Module VR 1: CFP Module level control and DDM registers', 'Mod-VR1']])
+                    self.put(ss, es, self.out_ann, [0, ['CFP Module VR 1: CFP Module level control and DDM register', 'Mod-VR1']])
                 elif clause45_address >= 0xA080 and clause45_address <= 0xA0FF:
-                    self.put(ss, es, self.out_ann, [0, ['MLG VR 1: MLG Management Interface registers', 'MLG-VR1']])
+                    self.put(ss, es, self.out_ann, [0, ['MLG VR 1: MLG Management Interface register', 'MLG-VR1']])
