@@ -53,8 +53,8 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'cfp'
     name = 'CFP'
-    longname = '100 Gigabit C form-factor pluggable (CFP)'
-    desc = 'Data structure describing display device capabilities.'
+    longname = '100 Gigabit C form-factor pluggable'
+    desc = '100 Gigabit C form-factor pluggable (CFP) protocol.'
     license = 'BSD'
     inputs = ['mdio']
     outputs = ['cfp']
