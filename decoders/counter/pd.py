@@ -53,6 +53,8 @@ class Decoder(srd.Decoder):
         {'id': 'divider', 'desc': 'Count divider (word width)', 'default': 0},
         {'id': 'reset_edge', 'desc': 'Edge which clears counters (reset)',
             'default': 'falling', 'values': ('rising', 'falling')},
+        {'id': 'edge_off', 'desc': 'Initial edge counter value', 'default': 0},
+        {'id': 'word_off', 'desc': 'Initial word counter value', 'default': 0},
     )
 
     def __init__(self):
@@ -86,9 +88,9 @@ class Decoder(srd.Decoder):
             cond_reset = len(condition)
             condition.append({PIN_RESET: opt_edge_map[reset_edge]})
 
-        edge_count = 0
+        edge_count = int(self.options['edge_off'])
         edge_start = None
-        word_count = 0
+        word_count = int(self.options['word_off'])
         word_start = None
         while True:
             self.wait(condition)
