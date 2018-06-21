@@ -231,10 +231,7 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def select_reg(self, ir_value: int):
-        if ir_value in ejtag_state_map:
-            self.state = ejtag_state_map[ir_value]
-        else:
-            self.state = State.RESET
+        self.state = ejtag_state_map.get(ir_value, State.RESET)
 
     def parse_pracc(self):
         control_in = bin_to_int(self.last_data['in']['data'][0])
@@ -270,12 +267,7 @@ class Decoder(srd.Decoder):
     def parse_control_reg(self, ann):
         reg_write = ann == Ann.CONTROL_FIELD_IN
         control_bit_positions = []
-        data_select = ''
-
-        if reg_write:
-            data_select = 'in'
-        else:
-            data_select = 'out'
+        data_select = 'in' if (reg_write) else 'out'
 
         control_bit_positions = self.last_data[data_select]['data'][1]
         control_data = self.last_data[data_select]['data'][0]
