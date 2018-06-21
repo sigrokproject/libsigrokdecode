@@ -243,24 +243,23 @@ class Decoder(srd.Decoder):
         ss, es = self.pracc_state.ss, self.pracc_state.es
         pracc_write = (control_out & ControlReg.PRNW) != 0
 
-        display_string = 'PrAcc: '
-        display_string += 'Store' if pracc_write else 'Load/Fetch'
+        s = 'PrAcc: '
+        s += 'Store' if pracc_write else 'Load/Fetch'
 
         if pracc_write:
             if self.pracc_state.address_out != None:
-                display_string += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
+                s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
             if self.pracc_state.data_out != None:
-                display_string += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_out)
+                s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_out)
         else:
             if self.pracc_state.address_out != None:
-                display_string += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
+                s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
             if self.pracc_state.data_in != None:
-                display_string += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_in)
+                s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_in)
 
         self.pracc_state.reset()
 
-        display_data = [Ann.PRACC, [display_string]]
-        self.put_at(ss, es, display_data)
+        self.put_at(ss, es, [Ann.PRACC, [s]])
 
     def parse_control_reg(self, ann):
         reg_write = ann == Ann.CONTROL_FIELD_IN
@@ -292,9 +291,8 @@ class Decoder(srd.Decoder):
 
             short_desc = comment + ': ' + value_str
             long_desc = value_descriptions[value_index] if len(value_descriptions) > value_index else '?'
-            display_data = [ann, [long_desc, short_desc]]
 
-            self.put_at(ss, es, display_data)
+            self.put_at(ss, es, [ann, [long_desc, short_desc]])
 
     def check_last_data(self):
         if not hasattr(self, 'last_data'):
