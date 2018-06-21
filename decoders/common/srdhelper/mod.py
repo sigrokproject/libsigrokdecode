@@ -21,6 +21,9 @@
 def bcd2int(b):
     return (b & 0x0f) + ((b >> 4) * 10)
 
+def bin2int(s: str):
+    return int('0b' + s, 2)
+
 def bitpack(bits):
     res = 0
     for i, b in enumerate(bits):

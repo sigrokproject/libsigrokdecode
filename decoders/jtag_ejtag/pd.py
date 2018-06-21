@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import bin2int
 
 class Instruction(object):
     IDCODE            = 0x01
@@ -158,9 +159,6 @@ ejtag_state_map = {
     Instruction.FASTDATA: State.FASTDATA,
 }
 
-def bin_to_int(s: str):
-    return int('0b' + s, 2)
-
 class RegData(object):
     def __init__(self):
         self.ss = None
@@ -234,8 +232,8 @@ class Decoder(srd.Decoder):
         self.state = ejtag_state_map.get(ir_value, State.RESET)
 
     def parse_pracc(self):
-        control_in = bin_to_int(self.last_data['in']['data'][0])
-        control_out = bin_to_int(self.last_data['out']['data'][0])
+        control_in = bin2int(self.last_data['in']['data'][0])
+        control_out = bin2int(self.last_data['out']['data'][0])
 
         # Check if JTAG master acknowledges a pending PrAcc.
         if not ((not (control_in & ControlReg.PRACC)) and \
@@ -290,7 +288,7 @@ class Decoder(srd.Decoder):
             es = control_bit_positions[end_bit][1]
 
             value_str = control_data[end_bit : start_bit + 1]
-            value_index = bin_to_int(value_str)
+            value_index = bin2int(value_str)
 
             short_desc = comment + ': ' + value_str
             long_desc = value_descriptions[value_index] if len(value_descriptions) > value_index else '?'
@@ -315,7 +313,7 @@ class Decoder(srd.Decoder):
         bitstring = val[0]
         bit_sample_pos = val[1]
         fastdata_state = bitstring[32]
-        data = bin_to_int(bitstring[0:32])
+        data = bin2int(bitstring[0:32])
 
         fastdata_bit_pos = bit_sample_pos[32]
         data_pos = [bit_sample_pos[31][0], bit_sample_pos[0][1]]
@@ -335,7 +333,7 @@ class Decoder(srd.Decoder):
         self.put_at(ss_data, es_data, display_data)
 
     def handle_dr_tdi(self, val):
-        value = bin_to_int(val[0])
+        value = bin2int(val[0])
         self.check_last_data()
         self.last_data['in'] = {'ss': self.ss, 'es': self.es, 'data': val}
 
@@ -349,7 +347,7 @@ class Decoder(srd.Decoder):
             self.handle_fastdata(val, Ann.CONTROL_FIELD_IN)
 
     def handle_dr_tdo(self, val):
-        value = bin_to_int(val[0])
+        value = bin2int(val[0])
         self.check_last_data()
         self.last_data['out'] = {'ss': self.ss, 'es': self.es, 'data': val}
         if self.state == State.ADDRESS:
@@ -360,7 +358,7 @@ class Decoder(srd.Decoder):
             self.handle_fastdata(val, Ann.CONTROL_FIELD_OUT)
 
     def handle_ir_tdi(self, val):
-        code = bin_to_int(val[0])
+        code = bin2int(val[0])
         hex = '0x{:02X}'.format(code)
         if code in ejtag_insn:
             # Format instruction name.
