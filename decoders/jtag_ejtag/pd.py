@@ -179,8 +179,8 @@ class PraccState(object):
         self.data_in = None
         self.data_out = None
         self.write = False
-        self.start_sample = 0
-        self.end_sample = 0
+        self.ss = 0
+        self.es = 0
 
     def __init__(self):
         self.reset()
@@ -245,8 +245,7 @@ class Decoder(srd.Decoder):
                 (control_out & ControlReg.PRACC)):
             return
 
-        start_sample = self.pracc_state.start_sample
-        end_sample = self.pracc_state.end_sample
+        ss, es = self.pracc_state.ss, self.pracc_state.es
         pracc_write = (control_out & ControlReg.PRNW) != 0
 
         display_string = 'PrAcc: '
@@ -266,7 +265,7 @@ class Decoder(srd.Decoder):
         self.pracc_state.reset()
 
         display_data = [Ann.PRACC, [display_string]]
-        self.put_at(start_sample, end_sample, display_data)
+        self.put_at(ss, es, display_data)
 
     def parse_control_reg(self, ann):
         reg_write = ann == Ann.CONTROL_FIELD_IN
@@ -295,8 +294,8 @@ class Decoder(srd.Decoder):
             else:
                 value_descriptions = field[3][0]
 
-            start_sample = control_bit_positions[start_bit][0]
-            end_sample = control_bit_positions[end_bit][1]
+            ss = control_bit_positions[start_bit][0]
+            es = control_bit_positions[end_bit][1]
 
             value_str = control_data[end_bit : start_bit + 1]
             value_index = bin_to_int(value_str)
@@ -305,7 +304,7 @@ class Decoder(srd.Decoder):
             long_desc = value_descriptions[value_index] if len(value_descriptions) > value_index else '?'
             display_data = [ann, [short_desc, long_desc]]
 
-            self.put_at(start_sample, end_sample, display_data)
+            self.put_at(ss, es, display_data)
 
     def check_last_data(self):
         if not hasattr(self, 'last_data'):
@@ -329,8 +328,8 @@ class Decoder(srd.Decoder):
         fastdata_bit_pos = bit_sample_pos[32]
         data_pos = [bit_sample_pos[31][0], bit_sample_pos[0][1]]
 
-        fastdata_sample_start, fastdata_sample_end = fastdata_bit_pos
-        data_sample_start, data_sample_end = data_pos
+        ss_fastdata, es_fastdata = fastdata_bit_pos
+        ss_data, es_data = data_pos
 
         display_data = [ann, ['0x{:08X}'.format(data)]]
         spracc_display_data = []
@@ -340,16 +339,15 @@ class Decoder(srd.Decoder):
         elif ann == Ann.CONTROL_FIELD_OUT:
             spracc_display_data = [ann, spracc_read_desc[int(fastdata_state)]]
 
-        self.put_at(fastdata_sample_start, fastdata_sample_end, spracc_display_data)
-        self.put_at(data_sample_start, data_sample_end, display_data)
+        self.put_at(ss_fastdata, es_fastdata, spracc_display_data)
+        self.put_at(ss_data, es_data, display_data)
 
     def handle_dr_tdi(self, val):
         value = bin_to_int(val[0])
         self.check_last_data()
         self.last_data['in'] = {'ss': self.ss, 'es': self.es, 'data': val}
 
-        self.pracc_state.start_sample = self.ss
-        self.pracc_state.end_sample = self.es
+        self.pracc_state.ss, self.pracc_state.es = self.ss, self.es
 
         if self.state == State.ADDRESS:
             self.pracc_state.address_in = value
