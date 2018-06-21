@@ -292,7 +292,7 @@ class Decoder(srd.Decoder):
 
             short_desc = comment + ': ' + value_str
             long_desc = value_descriptions[value_index] if len(value_descriptions) > value_index else '?'
-            display_data = [ann, [short_desc, long_desc]]
+            display_data = [ann, [long_desc, short_desc]]
 
             self.put_at(ss, es, display_data)
 
@@ -366,7 +366,7 @@ class Decoder(srd.Decoder):
             s_short = insn[0]
             s_long = insn[0] + ': ' + insn[1] + ' (' + hex + ')'
             # Display it and select data register.
-            self.put_current([Ann.INSTRUCTION, [s_short, s_long]])
+            self.put_current([Ann.INSTRUCTION, [s_long, s_short]])
         else:
             self.put_current([Ann.INSTRUCTION, [hex, 'IR TDI ({})'.format(hex)]])
         self.select_reg(code)
