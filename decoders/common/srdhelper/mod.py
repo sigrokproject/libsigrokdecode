@@ -25,10 +25,7 @@ def bin2int(s: str):
     return int('0b' + s, 2)
 
 def bitpack(bits):
-    res = 0
-    for i, b in enumerate(bits):
-        res |= b << i
-    return res
+    return sum([b << i for i, b in enumerate(bits)])
 
 def bitunpack(num, minbits=0):
     res = []
