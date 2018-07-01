@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import bitpack
 from math import floor, ceil
 
 '''
@@ -229,15 +230,6 @@ class Decoder(srd.Decoder):
         if self.startsample[rxtx] == -1:
             self.startsample[rxtx] = self.samplenum
 
-        # Get the next data bit in LSB-first or MSB-first fashion.
-        if self.options['bit_order'] == 'lsb-first':
-            self.datavalue[rxtx] >>= 1
-            self.datavalue[rxtx] |= \
-                (signal << (self.options['num_data_bits'] - 1))
-        else:
-            self.datavalue[rxtx] <<= 1
-            self.datavalue[rxtx] |= (signal << 0)
-
         self.putg([rxtx + 12, ['%d' % signal]])
 
         # Store individual data bits and their start/end samplenumbers.
@@ -249,6 +241,11 @@ class Decoder(srd.Decoder):
         if self.cur_data_bit[rxtx] < self.options['num_data_bits']:
             return
 
+        # Convert accumulated data bits to a data value.
+        bits = [b[0] for b in self.databits[rxtx]]
+        if self.options['bit_order'] == 'msb-first':
+            bits.reverse()
+        self.datavalue[rxtx] = bitpack(bits)
         self.putpx(rxtx, ['DATA', rxtx,
             (self.datavalue[rxtx], self.databits[rxtx])])
 
