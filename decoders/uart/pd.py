@@ -150,11 +150,11 @@ class Decoder(srd.Decoder):
 
     def putx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
-        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
+        self.put(s - floor(halfbit), ceil(self.endsample[rxtx] - halfbit), self.out_ann, data)
 
     def putpx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
-        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_python, data)
+        self.put(s - floor(halfbit), ceil(self.endsample[rxtx] - halfbit), self.out_python, data)
 
     def putg(self, data):
         s, halfbit = self.samplenum, self.bit_width / 2.0
@@ -172,7 +172,7 @@ class Decoder(srd.Decoder):
 
     def putbin(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
-        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_binary, data)
+        self.put(s - floor(halfbit), ceil(self.endsample[rxtx] - halfbit), self.out_binary, data)
 
     def __init__(self):
         self.reset()
@@ -188,6 +188,7 @@ class Decoder(srd.Decoder):
         self.paritybit = [-1, -1]
         self.stopbit1 = [-1, -1]
         self.startsample = [-1, -1]
+        self.endsample = [-1, -1]
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.databits = [[], []]
         self.break_start = [None, None]
@@ -250,6 +251,7 @@ class Decoder(srd.Decoder):
         # Save the sample number of the middle of the first data bit.
         if self.startsample[rxtx] == -1:
             self.startsample[rxtx] = self.samplenum
+            self.endsample[rxtx] = self.startsample[rxtx] + self.options["num_data_bits"]*self.bit_width
 
         self.putg([rxtx + 12, ['%d' % signal]])
 
