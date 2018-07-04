@@ -257,7 +257,8 @@ class Decoder(srd.Decoder):
 
         # Store individual data bits and their start/end samplenumbers.
         s, halfbit = self.samplenum, int(self.bit_width / 2)
-        self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
+        if self.startsample[rxtx] <= self.samplenum <= self.endsample[rxtx]:
+            self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
 
         # Return here, unless we already received all data bits.
         self.cur_data_bit[rxtx] += 1
