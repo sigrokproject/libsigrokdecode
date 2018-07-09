@@ -277,6 +277,9 @@ struct srd_decoder_inst {
 	/** Requests termination of wait() and decode(). */
 	gboolean want_wait_terminate;
 
+	/** Indicates the current state of the decoder stack. */
+	int decoder_state;
+
 	GCond got_new_samples_cond;
 	GCond handled_all_samples_cond;
 	GMutex data_mutex;

@@ -398,6 +398,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	di->got_new_samples = FALSE;
 	di->handled_all_samples = FALSE;
 	di->want_wait_terminate = FALSE;
+	di->decoder_state = SRD_OK;
 
 	/*
 	 * Strictly speaking initialization of statically allocated
@@ -471,6 +472,7 @@ static void srd_inst_reset_state(struct srd_decoder_inst *di)
 	di->got_new_samples = FALSE;
 	di->handled_all_samples = FALSE;
 	di->want_wait_terminate = FALSE;
+	di->decoder_state = SRD_OK;
 	/* Conditions and mutex got reset after joining the thread. */
 }
 
@@ -1032,6 +1034,9 @@ static gpointer di_thread(gpointer data)
 	py_res = PyObject_CallMethod(di->py_inst, "decode", NULL);
 	srd_dbg("%s: decode() method terminated.", di->inst_id);
 
+	if (!py_res)
+		di->decoder_state = SRD_ERR;
+
 	/*
 	 * Make sure to unblock potentially pending srd_inst_decode()
 	 * calls in application threads after the decode() method might
@@ -1272,7 +1277,7 @@ SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di)
 			return ret;
 	}
 
-	return SRD_OK;
+	return di->decoder_state;
 }
 
 /** @private */
