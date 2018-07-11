@@ -259,14 +259,14 @@ class Decoder(srd.Decoder):
             else: # Just value.
                 self.putz(s[0][0], s[-1][1], [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_VERIFY:
-            if len(s) >= 64: # ECDSA components
+            if len(s) >= 64: # ECDSA components (always present)
                 self.putz(s[0][0], s[31][1], [5, ['ECDSA R: %s' % ' '.join(format(i[2], '02x') for i in s[0:32])]])
                 self.putz(s[32][0], s[63][1], [5, ['ECDSA S: %s' % ' '.join(format(i[2], '02x') for i in s[32:64])]])
-            if len(s) >= 128: # Public key components
+            if len(s) == 83: # OtherData (follow ECDSA components in validate / invalidate mode)
+                self.putz(s[64][0], s[82][1], [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in s[64:83])]])
+            if len(s) == 128: # Public key components (follow ECDSA components in external mode)
                 self.putz(s[64][0], s[95][1], [5, ['Pub X: %s' % ' '.join(format(i[2], '02x') for i in s[64:96])]])
                 self.putz(s[96][0], s[127][1], [5, ['Pub Y: %s' % ' '.join(format(i[2], '02x') for i in s[96:128])]])
-            if len(s) == 147: # OtherData
-                self.putz(s[128][0], s[146][1], [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in s[128:147])]])
         elif op == OPCODE_WRITE:
             if len(s) > 32: # Value + MAC.
                 self.putz(s[0][0], s[-31][1], [5, ['Value: %s' % ' '.join(format(i[2], '02x') for i in s)]])
