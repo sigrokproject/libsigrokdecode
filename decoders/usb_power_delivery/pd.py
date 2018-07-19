@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2015 Google, Inc
+## Copyright (C) 2018 Peter Hazenberg <sigrok@haas-en-berg.nl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -152,7 +153,7 @@ RDO_FLAGS = {
     (1 << 26): 'cap_mismatch',
     (1 << 27): 'give_back'
 }
-PDO_TYPE = ['', 'BATT:', 'VAR:', '<bad>']
+
 PDO_FLAGS = {
     (1 << 29): 'dual_role_power',
     (1 << 28): 'suspend',
@@ -185,6 +186,8 @@ VDM_CMDS = {
         17: 'DP Configure',
 }
 VDM_ACK = ['REQ', 'ACK', 'NAK', 'BSY']
+
+STORED_PDOS = {}
 
 class SamplerateError(Exception):
     pass
@@ -239,56 +242,44 @@ class Decoder(srd.Decoder):
         flags = ''
         for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
-                flags += ' ' + RDO_FLAGS[f]
-        return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
+                flags += ' [' + RDO_FLAGS[f] + ']'
+        return '(PDO #%d: %s) %gA (operating) / %gA (max)%s' % (pos, STORED_PDOS[pos], op_ma/1000.0, max_ma/1000.0, flags)
 
-    def get_source_cap(self, pdo):
-        t = (pdo >> 30) & 3
-        if t == 0:
-            mv = ((pdo >> 10) & 0x3ff) * 50
-            ma = ((pdo >> 0) & 0x3ff) * 10
-            p = '%.1fV %.1fA' % (mv/1000.0, ma/1000.0)
-        elif t == 1:
-            minv = ((pdo >> 10) & 0x3ff) * 50
-            maxv = ((pdo >> 20) & 0x3ff) * 50
-            mw = ((pdo >> 0) & 0x3ff) * 250
-            p = '%.1f/%.1fV %.1fW' % (minv/1000.0, maxv/1000.0, mw/1000.0)
-        elif t == 2:
-            minv = ((pdo >> 10) & 0x3ff) * 50
-            maxv = ((pdo >> 20) & 0x3ff) * 50
-            ma = ((pdo >> 0) & 0x3ff) * 10
-            p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
-        else:
-            p = ''
+    def get_source_sink_cap(self, pdo, idx):
+        t1 = (pdo >> 30) & 3
+        if t1 == 0:
+            t_name = 'Fixed'
+            mv = ((pdo >> 10) & 0x3ff) * 0.05
+            ma = ((pdo >> 0) & 0x3ff) * 0.01
+            p = '%gV %gA (%gW)' % (mv, ma, mv*ma)
+            STORED_PDOS[idx] = '%s %gV' % (t_name, mv)
+        elif t1 == 1:
+            t_name = 'Battery'
+            minv = ((pdo >> 10) & 0x3ff) * 0.05
+            maxv = ((pdo >> 20) & 0x3ff) * 0.05
+            mw = ((pdo >> 0) & 0x3ff) * 0.25
+            p = '%g/%gV %gW' % (minv, maxv, mw)
+            STORED_PDOS[idx] = '%s %g/%gV' % (t_name, minv, maxv)
+        elif t1 == 2:
+            t_name = 'Variable'
+            minv = ((pdo >> 10) & 0x3ff) * 0.05
+            maxv = ((pdo >> 20) & 0x3ff) * 0.05
+            ma = ((pdo >> 0) & 0x3ff) * 0.01
+            p = '%g/%gV %gA' % (minv, maxv, ma)
+            STORED_PDOS[idx] = '%s %g/%gV' % (t_name, minv, maxv)
+        elif t1 == 3:
+            t2 = (pdo >> 28) & 3
+            if t2 == 0:
+                t_name = 'Programmable'
+                p = 'TODO: PPS support'
+            else:
+                t_name = 'Reserved APDO: '+bin(t2)
+                p = ''
         flags = ''
         for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
-        return '%s%s%s' % (PDO_TYPE[t], p, flags)
-
-    def get_sink_cap(self, pdo):
-        t = (pdo >> 30) & 3
-        if t == 0:
-            mv = ((pdo >> 10) & 0x3ff) * 50
-            ma = ((pdo >> 0) & 0x3ff) * 10
-            p = '%.1fV %.1fA' % (mv/1000.0, ma/1000.0)
-        elif t == 1:
-            minv = ((pdo >> 10) & 0x3ff) * 50
-            maxv = ((pdo >> 20) & 0x3ff) * 50
-            mw = ((pdo >> 0) & 0x3ff) * 250
-            p = '%.1f/%.1fV %.1fW' % (minv/1000.0, maxv/1000.0, mw/1000.0)
-        elif t == 2:
-            minv = ((pdo >> 10) & 0x3ff) * 50
-            maxv = ((pdo >> 20) & 0x3ff) * 50
-            ma = ((pdo >> 0) & 0x3ff) * 10
-            p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
-        else:
-            p = ''
-        flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
-            if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
-        return '%s%s%s' % (PDO_TYPE[t], p, flags)
+                flags += ' [' + PDO_FLAGS[f] + ']'
+        return '[%s] %s%s' % (t_name, p, flags)
 
     def get_vdm(self, idx, data):
         if idx == 0:    # VDM header
@@ -322,17 +313,15 @@ class Decoder(srd.Decoder):
 
     def putpayload(self, s0, s1, idx):
         t = self.head_type()
-        txt = '???'
+        txt = '['+str(idx+1)+'] '
         if t == 2:
-            txt = self.get_request(self.data[idx])
-        elif t == 1:
-            txt = self.get_source_cap(self.data[idx])
-        elif t == 4:
-            txt = self.get_sink_cap(self.data[idx])
+            txt += self.get_request(self.data[idx])
+        elif t == 1 or t == 4:
+            txt += self.get_source_sink_cap(self.data[idx], idx+1)
         elif t == 15:
-            txt = self.get_vdm(idx, self.data[idx])
+            txt += self.get_vdm(idx, self.data[idx])
         elif t == 3:
-            txt = self.get_bist(idx, self.data[idx])
+            txt += self.get_bist(idx, self.data[idx])
         self.putx(s0, s1, [11, [txt, txt]])
         self.text += ' - ' + txt
 
