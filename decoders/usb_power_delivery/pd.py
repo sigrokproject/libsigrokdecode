@@ -44,7 +44,13 @@ CTRL_TYPES = {
     12: 'WAIT',
     13: 'SOFT RESET',
     14: 'reserved',
-    15: 'reserved'
+    15: 'reserved',
+    16: 'Not Supported',
+    17: 'Get_Source_Cap_Extended',
+    18: 'Get_Status',
+    19: 'FR_Swap',
+    20: 'Get_PPS_Status',
+    21: 'Get_Country_Codes'
 }
 
 # Data message type
