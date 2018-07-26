@@ -156,6 +156,7 @@ SYM_NAME = [
 ]
 
 RDO_FLAGS = {
+    (1 << 23): 'unchuncked',
     (1 << 24): 'no_suspend',
     (1 << 25): 'comm_cap',
     (1 << 26): 'cap_mismatch',
