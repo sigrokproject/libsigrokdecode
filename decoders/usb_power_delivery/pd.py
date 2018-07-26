@@ -59,6 +59,9 @@ DATA_TYPES = {
     2: 'REQUEST',
     3: 'BIST',
     4: 'SINK CAP',
+    5: 'Battery_Status',
+    6: 'Alert',
+    7: 'Get_Country_Info',
     15: 'VDM'
 }
 
