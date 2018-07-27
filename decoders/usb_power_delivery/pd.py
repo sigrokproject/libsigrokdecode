@@ -283,7 +283,14 @@ class Decoder(srd.Decoder):
             ma = ((pdo >> 0) & 0x3ff) * 10
             p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
         else:
-            p = ''
+            # Programmable Power Supply APDO - Source
+            if (pdo >> 28) & 3 == 0:
+                minv = ((pdo >> 8) & 0xff) * 100
+                maxv = ((pdo >> 17) & 0xff) * 100
+                ma = ((pdo >> 0) & 0x7f) * 50
+                p = 'PPS %.1f/%.1fV %.1fA' % (minv / 1000.0, maxv / 1000.0, ma / 1000.0)
+            else:
+                p = ''
         flags = ''
         for f in sorted(PDO_FLAGS[t].keys(), reverse = True):
             if pdo & f:
