@@ -371,7 +371,7 @@ class Decoder(srd.Decoder):
         else:
             shortm = DATA_TYPES[t] if t in DATA_TYPES else 'DAT???'
 
-        longm = '{:s}[{:d}]:{:s}'.format(role, self.head_id(), shortm)
+        longm = '{:s}(r{:d})[{:d}]:{:s}'.format(role, self.head_rev(), self.head_id(), shortm)
         self.putx(0, -1, [ann_type, [longm, shortm]])
         self.text += longm
 
