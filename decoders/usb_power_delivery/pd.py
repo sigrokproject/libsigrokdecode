@@ -258,16 +258,28 @@ class Decoder(srd.Decoder):
 
     def get_request(self, rdo):
         pos = (rdo >> 28) & 7
-        op_ma = ((rdo >> 10) & 0x3ff) * 10
-        max_ma = (rdo & 0x3ff) * 10
+        mark = self.cap_mark[pos]
+        if mark == 3:
+            op_mv = ((rdo >> 9) & 0x7ff) * 20
+            op_ma = (rdo & 0x3f) * 50
+            p = '%.2fV/%.2fA' % (op_mv/1000.0, op_ma/1000.0)
+        elif mark == 2:
+            op_mw = ((rdo >> 10) & 0x3ff) * 250
+            mp_mw = (rdo & 0x3ff) * 250
+            p = '%.2fW/%.2fW' % (op_mw/1000.0, mp_mw/1000.0)
+        else:
+            op_ma = ((rdo >> 10) & 0x3ff) * 10
+            max_ma = (rdo & 0x3ff) * 10
+            p = '%d/%d mA' % (op_ma, max_ma)
         flags = ''
         for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
                 flags += ' ' + RDO_FLAGS[f]
-        return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
+        return '[%d]%s%s' % (pos, p, flags)
 
-    def get_source_cap(self, pdo):
+    def get_source_cap(self, pdo, idx):
         t = (pdo >> 30) & 3
+        self.cap_mark[idx] = t
         if t == 0:
             mv = ((pdo >> 10) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
@@ -364,7 +376,7 @@ class Decoder(srd.Decoder):
         if t == 2:
             txt = self.get_request(self.data[idx])
         elif t == 1:
-            txt = self.get_source_cap(self.data[idx])
+            txt = self.get_source_cap(self.data[idx], idx)
         elif t == 4:
             txt = self.get_sink_cap(self.data[idx])
         elif t == 15:
@@ -499,6 +511,7 @@ class Decoder(srd.Decoder):
         self.bad = []
         self.half_one = False
         self.start_one = 0
+        self.cap_mark = [0, 0, 0, 0, 0, 0, 0, 0]
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
