@@ -162,14 +162,28 @@ RDO_FLAGS = {
     (1 << 26): 'cap_mismatch',
     (1 << 27): 'give_back'
 }
-PDO_TYPE = ['', 'BATT:', 'VAR:', '<bad>']
-PDO_FLAGS = {
-    (1 << 29): 'dual_role_power',
-    (1 << 28): 'suspend',
-    (1 << 27): 'ext',
-    (1 << 26): 'comm_cap',
-    (1 << 25): 'dual_role_data'
-}
+PDO_TYPE = ['FIX:', 'BAT:', 'VAR:', 'APDO:']
+PDO_FLAGS = [
+    # Fixed Supply PDO - Source
+    {
+        (1 << 29): 'dual_role_power',
+        (1 << 28): 'suspend',
+        (1 << 27): 'ext',
+        (1 << 26): 'comm_cap',
+        (1 << 25): 'dual_role_data',
+        (1 << 24): 'unchuncked'
+    },
+    # Battery Supply PDO - Source
+    {
+    },
+    # Variable Supply (non-Battery) PDO - Source
+    {
+    },
+    # Programmable Power Supply APDO - Source
+    {
+        (1 << 27): 'PPS_P_LIM',     # PPS Power Limited
+    }
+]
 
 BIST_MODES = {
         0: 'Receiver',
@@ -271,9 +285,9 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
+        for f in sorted(PDO_FLAGS[t].keys(), reverse = True):
             if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
+                flags += ' ' + PDO_FLAGS[t][f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_sink_cap(self, pdo):
@@ -295,9 +309,9 @@ class Decoder(srd.Decoder):
         else:
             p = ''
         flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
+        for f in sorted(PDO_FLAGS[t].keys(), reverse = True):
             if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
+                flags += ' ' + PDO_FLAGS[t][f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_vdm(self, idx, data):
