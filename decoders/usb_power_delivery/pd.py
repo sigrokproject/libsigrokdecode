@@ -187,7 +187,6 @@ VDM_CMDS = {
 }
 VDM_ACK = ['REQ', 'ACK', 'NAK', 'BSY']
 
-STORED_PDOS = {}
 
 class SamplerateError(Exception):
     pass
@@ -202,7 +201,10 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['usb_pd']
     channels = (
-        {'id': 'cc', 'name': 'CC', 'desc': 'Control channel'},
+        {'id': 'cc1', 'name': 'CC1', 'desc': 'Control channel 1'},
+    )
+    optional_channels = (
+        {'id': 'cc2', 'name': 'CC2', 'desc': 'Control channel 2'},
     )
     options = (
         {'id': 'fulltext', 'desc': 'full text decoding of the packet',
@@ -235,15 +237,21 @@ class Decoder(srd.Decoder):
         ('raw-data', 'RAW binary data'),
     )
 
+    stored_pdos = {}
+
+
     def get_request(self, rdo):
         pos = (rdo >> 28) & 7
-        op_ma = ((rdo >> 10) & 0x3ff) * 10
-        max_ma = (rdo & 0x3ff) * 10
+        op_ma = ((rdo >> 10) & 0x3ff) * 0.01
+        max_ma = (rdo & 0x3ff) * 0.01
         flags = ''
         for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
                 flags += ' [' + RDO_FLAGS[f] + ']'
-        return '(PDO #%d: %s) %gA (operating) / %gA (max)%s' % (pos, STORED_PDOS[pos], op_ma/1000.0, max_ma/1000.0, flags)
+        if pos in self.stored_pdos.keys():
+            return '(PDO #%d: %s) %gA (operating) / %gA (max)%s' % (pos, self.stored_pdos[pos], op_ma, max_ma, flags)
+        else:
+            return '(PDO #%d) %gA (operating) / %gA (max)%s' % (pos, op_ma, max_ma, flags)
 
     def get_source_sink_cap(self, pdo, idx):
         t1 = (pdo >> 30) & 3
@@ -252,21 +260,21 @@ class Decoder(srd.Decoder):
             mv = ((pdo >> 10) & 0x3ff) * 0.05
             ma = ((pdo >> 0) & 0x3ff) * 0.01
             p = '%gV %gA (%gW)' % (mv, ma, mv*ma)
-            STORED_PDOS[idx] = '%s %gV' % (t_name, mv)
+            self.stored_pdos[idx] = '%s %gV' % (t_name, mv)
         elif t1 == 1:
             t_name = 'Battery'
             minv = ((pdo >> 10) & 0x3ff) * 0.05
             maxv = ((pdo >> 20) & 0x3ff) * 0.05
             mw = ((pdo >> 0) & 0x3ff) * 0.25
             p = '%g/%gV %gW' % (minv, maxv, mw)
-            STORED_PDOS[idx] = '%s %g/%gV' % (t_name, minv, maxv)
+            self.stored_pdos[idx] = '%s %g/%gV' % (t_name, minv, maxv)
         elif t1 == 2:
             t_name = 'Variable'
             minv = ((pdo >> 10) & 0x3ff) * 0.05
             maxv = ((pdo >> 20) & 0x3ff) * 0.05
             ma = ((pdo >> 0) & 0x3ff) * 0.01
             p = '%g/%gV %gA' % (minv, maxv, ma)
-            STORED_PDOS[idx] = '%s %g/%gV' % (t_name, minv, maxv)
+            self.stored_pdos[idx] = '%s %g/%gV' % (t_name, minv, maxv)
         elif t1 == 3:
             t2 = (pdo >> 28) & 3
             if t2 == 0:
@@ -450,6 +458,7 @@ class Decoder(srd.Decoder):
         self.bad = []
         self.half_one = False
         self.start_one = 0
+        self.stored_pdos = {}
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -529,7 +538,8 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         while True:
-            self.wait({0: 'e'})
+            pins = self.wait([{0: 'e'}, {1: 'e'}, {'skip': 100*1000}])
+
 
             # First sample of the packet, just record the start date
             if not self.startsample:
