@@ -95,7 +95,7 @@ class Decoder(srd.Decoder):
             if self.clause45 and self.clause45_addr != -1:
                 decoded_min += str.format('ADDR: %04X ' % self.clause45_addr)
             elif self.clause45:
-                decoded_min += str.format('ADDR: UKWN ' % self.clause45_addr)
+                decoded_min += str.format('ADDR: UKWN ')
 
             if self.clause45 and self.opcode > 1 \
             or (not self.clause45 and self.opcode):
