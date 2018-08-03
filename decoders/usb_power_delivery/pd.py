@@ -278,11 +278,18 @@ class Decoder(srd.Decoder):
         elif t1 == 3:
             t2 = (pdo >> 28) & 3
             if t2 == 0:
-                t_name = 'Programmable'
-                p = 'TODO: PPS support'
+                t_name = 'Programmable|PPS'
+                minv = ((pdo >> 8) & 0xff) * 0.1
+                maxv = ((pdo >> 17) & 0xff) * 0.1
+                ma = ((pdo >> 0) & 0xff) * 0.05
+                p = '%g/%gV %gA' % (minv, maxv, ma)
+                if (pdo >> 27) & 0x1:
+                    p += ' [limited]'
+                self.stored_pdos[idx] = '%s %g/%gV' % (t_name, minv, maxv)
             else:
                 t_name = 'Reserved APDO: '+bin(t2)
-                p = ''
+                p = '[raw: %s]' % (bin(pdo))
+                self.stored_pdos[idx] = '%s %s' % (t_name, p)
         flags = ''
         for f in sorted(PDO_FLAGS.keys(), reverse = True):
             if pdo & f:
