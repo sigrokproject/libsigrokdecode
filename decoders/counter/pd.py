@@ -55,6 +55,7 @@ class Decoder(srd.Decoder):
             'default': 'falling', 'values': ('rising', 'falling')},
         {'id': 'edge_off', 'desc': 'Edge counter value after start/reset', 'default': 0},
         {'id': 'word_off', 'desc': 'Word counter value after start/reset', 'default': 0},
+        {'id': 'dead_cycles', 'desc': 'Ignore this many edges after reset', 'default': 0},
     )
 
     def __init__(self):
@@ -92,6 +93,7 @@ class Decoder(srd.Decoder):
         edge_start = None
         word_count = int(self.options['word_off'])
         word_start = None
+        dead_count = 0
         while True:
             self.wait(condition)
             now = self.samplenum
@@ -102,6 +104,13 @@ class Decoder(srd.Decoder):
                 word_count = int(self.options['word_off'])
                 word_start = now
                 self.putc(ROW_RESET, now, ['Word reset', 'Reset', 'Rst', 'R'])
+                dead_count = int(self.options['dead_cycles'])
+                continue
+
+            if dead_count:
+                dead_count -= 1
+                edge_start = now
+                word_start = now
                 continue
 
             # Implementation note: In the absence of a RESET condition
