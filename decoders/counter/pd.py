@@ -53,8 +53,8 @@ class Decoder(srd.Decoder):
         {'id': 'divider', 'desc': 'Count divider (word width)', 'default': 0},
         {'id': 'reset_edge', 'desc': 'Edge which clears counters (reset)',
             'default': 'falling', 'values': ('rising', 'falling')},
-        {'id': 'edge_off', 'desc': 'Initial edge counter value', 'default': 0},
-        {'id': 'word_off', 'desc': 'Initial word counter value', 'default': 0},
+        {'id': 'edge_off', 'desc': 'Edge counter value after start/reset', 'default': 0},
+        {'id': 'word_off', 'desc': 'Word counter value after start/reset', 'default': 0},
     )
 
     def __init__(self):
@@ -97,9 +97,9 @@ class Decoder(srd.Decoder):
             now = self.samplenum
 
             if have_reset and self.matched[cond_reset]:
-                edge_count = 0
+                edge_count = int(self.options['edge_off'])
                 edge_start = now
-                word_count = 0
+                word_count = int(self.options['word_off'])
                 word_start = now
                 self.putc(ROW_RESET, now, ['Word reset', 'Reset', 'Rst', 'R'])
                 continue
