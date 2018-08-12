@@ -137,7 +137,8 @@ class Decoder(srd.Decoder):
             self.putc(ROW_EDGE, edge_start, ["{:d}".format(edge_count)])
             edge_start = now
 
-            if divider and (edge_count % divider) == 0:
+            word_edge_count = edge_count - int(self.options['edge_off'])
+            if divider and (word_edge_count % divider) == 0:
                 word_count += 1
                 self.putc(ROW_WORD, word_start, ["{:d}".format(word_count)])
                 word_start = now
