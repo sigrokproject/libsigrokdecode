@@ -130,6 +130,28 @@ SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data)
 }
 
 /**
+ * Get the libsigrokdecode log callback routine and callback data.
+ *
+ * @param[out] cb Pointer to a function pointer to receive the log callback
+ *	function. Optional, can be NULL.
+ * @param[out] cb_data Pointer to a void pointer to receive the log callback's
+ *	additional arguments. Optional, can be NULL.
+ *
+ * @return SRD_OK upon success.
+ *
+ * @since 0.6.0
+ */
+SRD_API int srd_log_callback_get(srd_log_callback *cb, void **cb_data)
+{
+	if (cb)
+		*cb = srd_log_cb;
+	if (cb_data)
+		*cb_data = srd_log_cb_data;
+
+	return SRD_OK;
+}
+
+/**
  * Set the libsigrokdecode log callback to the default built-in one.
  *
  * Additionally, the internal 'srd_log_cb_data' pointer is set to NULL.
