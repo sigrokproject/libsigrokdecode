@@ -267,10 +267,7 @@ class Decoder(srd.Decoder):
 
     def ann_field(self, start, end, annotation):
         annotation = annotation if isinstance(annotation, list) else [annotation]
-        if self.extension:
-            sn = self.ext_sn[self.extension - 1]
-        else:
-            sn = self.sn
+        sn = self.ext_sn[self.extension - 1] if self.extension else self.sn
         self.put(sn[start][0], sn[end][1],
                  self.out_ann, [ANN_FIELDS, annotation])
 
@@ -525,10 +522,7 @@ class Decoder(srd.Decoder):
         self.ann_field(offset+3, offset+3, "Tag: {0:X}".format(tag))
         self.ann_field(offset+4, offset+4, "Flag")
 
-        if self.extension:
-            sn = self.ext_sn[extension - 1]
-        else:
-            sn = self.sn
+        sn = self.ext_sn[self.extension - 1] if self.extension else self.sn
 
         if tag == 0xff:
             # Monitor serial number
