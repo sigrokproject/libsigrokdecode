@@ -307,7 +307,8 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	g_slist_foreach(sessions, (GFunc)srd_session_destroy, NULL);
+	for (GSList *l = sessions; l; l = l->next)
+		srd_session_destroy(l->data);
 
 	srd_decoder_unload_all();
 	g_slist_free_full(searchpaths, g_free);
