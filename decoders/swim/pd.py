@@ -123,10 +123,7 @@ class Decoder(srd.Decoder):
         self.sync_reflen_min = math.floor(self.samplerate * 64 / self.HSI_max)
         self.sync_reflen_max = math.ceil(self.samplerate * 128 / (self.HSI_min / 2))
 
-        if self.options['debug'] == 'yes':
-            self.debug = True
-        else:
-            self.debug = False
+        self.debug = True if self.options['debug'] == 'yes' else False
 
         # The SWIM entry sequence is 4 pulses at 2kHz followed by 4 at 1kHz.
         self.eseq_reflen = math.ceil(self.samplerate / 2048)
