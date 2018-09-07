@@ -545,8 +545,7 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         while True:
-            pins = self.wait([{0: 'e'}, {1: 'e'}, {'skip': 100*1000}])
-
+            pins = self.wait([{0: 'e'}, {1: 'e'}, {'skip': int(self.samplerate/1e3)}])
 
             # First sample of the packet, just record the start date
             if not self.startsample:
