@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2015 Google, Inc
+## Copyright (C) 2018 davidanger <davidanger@163.com>
 ## Copyright (C) 2018 Peter Hazenberg <sigrok@haas-en-berg.nl>
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -45,7 +46,13 @@ CTRL_TYPES = {
     12: 'WAIT',
     13: 'SOFT RESET',
     14: 'reserved',
-    15: 'reserved'
+    15: 'reserved',
+    16: 'Not Supported',
+    17: 'Get_Source_Cap_Extended',
+    18: 'Get_Status',
+    19: 'FR_Swap',
+    20: 'Get_PPS_Status',
+    21: 'Get_Country_Codes',
 }
 
 # Data message type
@@ -54,6 +61,9 @@ DATA_TYPES = {
     2: 'REQUEST',
     3: 'BIST',
     4: 'SINK CAP',
+    5: 'Battery_Status',
+    6: 'Alert',
+    7: 'Get_Country_Info',
     15: 'VDM'
 }
 
@@ -148,18 +158,11 @@ SYM_NAME = [
 ]
 
 RDO_FLAGS = {
+    (1 << 23): 'unchunked',
     (1 << 24): 'no_suspend',
     (1 << 25): 'comm_cap',
     (1 << 26): 'cap_mismatch',
     (1 << 27): 'give_back'
-}
-
-PDO_FLAGS = {
-    (1 << 29): 'dual_role_power',
-    (1 << 28): 'suspend',
-    (1 << 27): 'ext',
-    (1 << 26): 'comm_cap',
-    (1 << 25): 'dual_role_data'
 }
 
 BIST_MODES = {
@@ -242,43 +245,90 @@ class Decoder(srd.Decoder):
 
     def get_request(self, rdo):
         pos = (rdo >> 28) & 7
+
         op_ma = ((rdo >> 10) & 0x3ff) * 0.01
         max_ma = (rdo & 0x3ff) * 0.01
-        flags = ''
+
+        mark = self.cap_mark[pos]
+        if mark == 3:
+            op_v = ((rdo >> 9) & 0x7ff) * 0.02
+            op_a = (rdo & 0x3f) * 0.05
+            t_settings = '%gV %gA' % (op_v, op_a)
+        elif mark == 2:
+            op_w = ((rdo >> 10) & 0x3ff) * 0.25
+            mp_w = (rdo & 0x3ff) * 0.25
+            t_settings = '%gW (operating) / %gW (max)' % (op_w, max_w)
+        else:
+            op_a = ((rdo >> 10) & 0x3ff) * 0.01
+            max_a = (rdo & 0x3ff) * 0.01
+            t_settings = '%gA (operating) / %gA (max)' % (op_a, max_a)
+
+        t_flags = ''
         for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
-                flags += ' [' + RDO_FLAGS[f] + ']'
-        if pos in self.stored_pdos.keys():
-            return '(PDO #%d: %s) %gA (operating) / %gA (max)%s' % (pos, self.stored_pdos[pos], op_ma, max_ma, flags)
-        else:
-            return '(PDO #%d) %gA (operating) / %gA (max)%s' % (pos, op_ma, max_ma, flags)
+                t_flags += ' [' + RDO_FLAGS[f] + ']'
 
-    def get_source_sink_cap(self, pdo, idx):
+        if pos in self.stored_pdos.keys():
+            t_pdo = '#%d: %s' % (pos, self.stored_pdos[pos])
+        else:
+            t_pdo = '#d' % (pos)
+
+        return '(PDO %s) %s%s' % (t_pdo, t_settings, t_flags)
+
+    def get_source_sink_cap(self, pdo, idx, source):
         t1 = (pdo >> 30) & 3
+        self.cap_mark[idx] = t1
+
+        flags = {}
         if t1 == 0:
             t_name = 'Fixed'
+            if source:
+                flags = {
+                    (1 << 29): 'dual_role_power',
+                    (1 << 28): 'suspend',
+                    (1 << 27): 'unconstrained',
+                    (1 << 26): 'comm_cap',
+                    (1 << 25): 'dual_role_data',
+                    (1 << 24): 'unchunked',
+                }
+            else: #sink
+                flags = {
+                    (1 << 29): 'dual_role_power',
+                    (1 << 28): 'high_capability',
+                    (1 << 27): 'unconstrained',
+                    (1 << 26): 'comm_cap',
+                    (1 << 25): 'dual_role_data',
+                    (0b01 << 23): 'fr_swap default power',
+                    (0b10 << 23): 'fr_swap 1.5 A',
+                    (0b11 << 23): 'fr_swap 3.0 A',
+                }
             mv = ((pdo >> 10) & 0x3ff) * 0.05
-            ma = ((pdo >> 0) & 0x3ff) * 0.01
+            ma = ((pdo >>  0) & 0x3ff) * 0.01
             p = '%gV %gA (%gW)' % (mv, ma, mv*ma)
             self.stored_pdos[idx] = '%s %gV' % (t_name, mv)
         elif t1 == 1:
             t_name = 'Battery'
+            flags = {} # No flags defined for Battery PDO in PD 3.0 spec
             minv = ((pdo >> 10) & 0x3ff) * 0.05
             maxv = ((pdo >> 20) & 0x3ff) * 0.05
-            mw = ((pdo >> 0) & 0x3ff) * 0.25
+            mw   = ((pdo >>  0) & 0x3ff) * 0.25
             p = '%g/%gV %gW' % (minv, maxv, mw)
             self.stored_pdos[idx] = '%s %g/%gV' % (t_name, minv, maxv)
         elif t1 == 2:
             t_name = 'Variable'
+            flags = {} # No flags defined for Variable PDO in PD 3.0 spec
             minv = ((pdo >> 10) & 0x3ff) * 0.05
             maxv = ((pdo >> 20) & 0x3ff) * 0.05
-            ma = ((pdo >> 0) & 0x3ff) * 0.01
+            ma   = ((pdo >>  0) & 0x3ff) * 0.01
             p = '%g/%gV %gA' % (minv, maxv, ma)
             self.stored_pdos[idx] = '%s %g/%gV' % (t_name, minv, maxv)
         elif t1 == 3:
             t2 = (pdo >> 28) & 3
             if t2 == 0:
                 t_name = 'Programmable|PPS'
+                flags = {
+                    (1 << 29): 'power_limited',
+                }
                 minv = ((pdo >> 8) & 0xff) * 0.1
                 maxv = ((pdo >> 17) & 0xff) * 0.1
                 ma = ((pdo >> 0) & 0xff) * 0.05
@@ -290,11 +340,11 @@ class Decoder(srd.Decoder):
                 t_name = 'Reserved APDO: '+bin(t2)
                 p = '[raw: %s]' % (bin(pdo))
                 self.stored_pdos[idx] = '%s %s' % (t_name, p)
-        flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
+        t_flags = ''
+        for f in sorted(flags.keys(), reverse = True):
             if pdo & f:
-                flags += ' [' + PDO_FLAGS[f] + ']'
-        return '[%s] %s%s' % (t_name, p, flags)
+                t_flags += ' [' + flags[f] + ']'
+        return '[%s] %s%s' % (t_name, p, t_flags)
 
     def get_vdm(self, idx, data):
         if idx == 0:    # VDM header
@@ -332,7 +382,7 @@ class Decoder(srd.Decoder):
         if t == 2:
             txt += self.get_request(self.data[idx])
         elif t == 1 or t == 4:
-            txt += self.get_source_sink_cap(self.data[idx], idx+1)
+            txt += self.get_source_sink_cap(self.data[idx], idx+1, t==1)
         elif t == 15:
             txt += self.get_vdm(idx, self.data[idx])
         elif t == 3:
@@ -351,7 +401,7 @@ class Decoder(srd.Decoder):
         else:
             shortm = DATA_TYPES[t] if t in DATA_TYPES else 'DAT???'
 
-        longm = '{:s}[{:d}]:{:s}'.format(role, self.head_id(), shortm)
+        longm = '(r{:d}) {:s}[{:d}]: {:s}'.format(self.head_rev(), role, self.head_id(), shortm)
         self.putx(0, -1, [ann_type, [longm, shortm]])
         self.text += longm
 
@@ -466,6 +516,7 @@ class Decoder(srd.Decoder):
         self.half_one = False
         self.start_one = 0
         self.stored_pdos = {}
+        self.cap_mark = [0, 0, 0, 0, 0, 0, 0, 0]
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
