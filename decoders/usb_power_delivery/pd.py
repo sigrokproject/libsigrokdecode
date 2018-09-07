@@ -201,10 +201,10 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['usb_pd']
     channels = (
-        {'id': 'cc1', 'name': 'CC1', 'desc': 'Control channel 1'},
+        {'id': 'cc1', 'name': 'CC1', 'desc': 'Configuration Channel 1'},
     )
     optional_channels = (
-        {'id': 'cc2', 'name': 'CC2', 'desc': 'Control channel 2'},
+        {'id': 'cc2', 'name': 'CC2', 'desc': 'Configuration Channel 2'},
     )
     options = (
         {'id': 'fulltext', 'desc': 'full text decoding of the packet',
