@@ -84,8 +84,7 @@ class Decoder(srd.Decoder):
 
     def precalculate(self):
         # Restrict max length of ACK/NACK labels to 2 BIT pulses.
-        bit_time = timing[Pulse.ZERO]['total']['min']
-        bit_time = bit_time * 2
+        bit_time = timing[Pulse.ZERO]['total']['min'] * 2
         self.max_ack_len_samples = round((bit_time / 1000) * self.samplerate)
 
     def reset(self):
@@ -149,16 +148,10 @@ class Decoder(srd.Decoder):
 
         # Header only commands are PINGS
         if i == 1:
-            if self.eom:
-                str += ' | OPC: PING'
-            else:
-                str += ' | OPC: NONE. Aborted cmd'
+            str += ' | OPC: PING' if self.eom else ' | OPC: NONE. Aborted cmd'
 
         # Add extra information (ack of the command from the destination)
-        if is_nack:
-            str += ' | R: NACK'
-        else:
-            str += ' | R: ACK'
+        str += ' | R: NACK' if is_nack else ' | R: ACK'
 
         self.put(self.frame_start, self.frame_end, self.out_ann, [8, [str]])
 
@@ -254,10 +247,8 @@ class Decoder(srd.Decoder):
             self.eom = bit
             self.frame_end = self.fall_end
 
-            if self.eom:
-                self.put(self.fall_start, self.fall_end, self.out_ann, [2, ['EOM=Y']])
-            else:
-                self.put(self.fall_start, self.fall_end, self.out_ann, [1, ['EOM=N']])
+            a = [2, ['EOM=Y']] if self.eom else [1, ['EOM=N']]
+            self.put(self.fall_start, self.fall_end, self.out_ann, a)
 
             self.set_stat(Stat.WAIT_ACK)
 

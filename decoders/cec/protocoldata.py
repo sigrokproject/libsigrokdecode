@@ -107,10 +107,7 @@ def resolve_logical_address(id, is_initiator):
 
     # Special handling of 0x0F.
     if id == 0x0F:
-        if is_initiator:
-            return 'Unregistered'
-        else:
-            return 'Broadcast'
+        return 'Unregistered' if is_initiator else 'Broadcast'
 
     return logical_adresses[id]
 
