@@ -527,7 +527,6 @@ class Decoder(srd.Decoder):
             self.threshold = self.us2samples(THRESHOLD_US)
 
     def start(self):
-        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_bitrate = self.register(
