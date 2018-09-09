@@ -51,6 +51,9 @@ class Decoder(srd.Decoder):
         ('bitstring', 'Bitstring'),
     )
     annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
+    binary = (
+        ('raw', 'Raw binary'),
+    )
 
     def __init__(self):
         self.samplerate = None
@@ -176,7 +179,7 @@ class Decoder(srd.Decoder):
 
         numbytes = numbits // 8 + (numbits % 8 > 0)
         bytestring = bitvalue.to_bytes(numbytes, 'little')
-        self.put(int(stringstart), int(stringend), self.out_binary, [1, bytestring])
+        self.put(int(stringstart), int(stringend), self.out_binary, [0, bytestring])
 
     def decode(self):
         while True:
