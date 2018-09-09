@@ -210,18 +210,18 @@ class Decoder(srd.Decoder):
         {'id': 'cc2', 'name': 'CC2', 'desc': 'Configuration Channel 2'},
     )
     options = (
-        {'id': 'fulltext', 'desc': 'full text decoding of the packet',
+        {'id': 'fulltext', 'desc': 'Full text decoding of packets',
          'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
         ('type', 'Packet Type'),
-        ('Preamble', 'Preamble'),
-        ('SOP', 'Start of Packet'),
-        ('Head', 'Header'),
-        ('Data', 'Data'),
-        ('CRC', 'Checksum'),
-        ('EOP', 'End Of Packet'),
-        ('Sym', '4b5b symbols'),
+        ('preamble', 'Preamble'),
+        ('sop', 'Start of Packet'),
+        ('header', 'Header'),
+        ('data', 'Data'),
+        ('crc', 'Checksum'),
+        ('eop', 'End Of Packet'),
+        ('sym', '4b5b symbols'),
         ('warnings', 'Warnings'),
         ('src', 'Source Message'),
         ('snk', 'Sink Message'),
@@ -229,19 +229,18 @@ class Decoder(srd.Decoder):
         ('text', 'Plain text'),
     )
     annotation_rows = (
-       ('4B5B', 'symbols', (7, )),
-       ('Phase', 'parts', (1, 2, 3, 4, 5, 6, )),
-       ('payload', 'Payload', (11, )),
-       ('type', 'Type', (0, 9, 10, )),
-       ('warnings', 'Warnings', (8, )),
-       ('text', 'Full text', (12, )),
+       ('4b5b', 'Symbols', (7,)),
+       ('phase', 'Parts', (1, 2, 3, 4, 5, 6)),
+       ('payload', 'Payload', (11,)),
+       ('type', 'Type', (0, 9, 10)),
+       ('warnings', 'Warnings', (8,)),
+       ('text', 'Full text', (12,)),
     )
     binary = (
         ('raw-data', 'RAW binary data'),
     )
 
     stored_pdos = {}
-
 
     def get_request(self, rdo):
         pos = (rdo >> 28) & 7
@@ -291,7 +290,7 @@ class Decoder(srd.Decoder):
                     (1 << 25): 'dual_role_data',
                     (1 << 24): 'unchunked',
                 }
-            else: #sink
+            else: # Sink
                 flags = {
                     (1 << 29): 'dual_role_power',
                     (1 << 28): 'high_capability',
@@ -347,11 +346,11 @@ class Decoder(srd.Decoder):
         return '[%s] %s%s' % (t_name, p, t_flags)
 
     def get_vdm(self, idx, data):
-        if idx == 0:    # VDM header
+        if idx == 0: # VDM header
             vid = data >> 16
             struct = data & (1 << 15)
             txt = 'VDM'
-            if struct:  # Structured VDM
+            if struct: # Structured VDM
                 cmd = data & 0x1f
                 src = data & (1 << 5)
                 ack = (data >> 6) & 3
@@ -360,10 +359,10 @@ class Decoder(srd.Decoder):
                 txt = VDM_ACK[ack] + ' '
                 txt += VDM_CMDS[cmd] if cmd in VDM_CMDS else 'cmd?'
                 txt += ' pos %d' % (pos) if pos else ' '
-            else:   # Unstructured VDM
+            else: # Unstructured VDM
                 txt = 'unstruct [%04x]' % (data & 0x7fff)
             txt += ' SVID:%04x' % (vid)
-        else:   # VDM payload
+        else: # VDM payload
             txt = 'VDO:%08x' % (data)
         return txt
 
@@ -373,7 +372,7 @@ class Decoder(srd.Decoder):
         mode_name = BIST_MODES[mode] if mode in BIST_MODES else 'INVALID'
         if mode == 2:
             mode_name = 'Counter[= %d]' % (counter)
-        # TODO check all 0 bits are 0 / emit warnings
+        # TODO: Check all 0 bits are 0 / emit warnings.
         return 'mode %s' % (mode_name) if idx == 0 else 'invalid BRO'
 
     def putpayload(self, s0, s1, idx):
@@ -447,13 +446,13 @@ class Decoder(srd.Decoder):
 
     def get_short(self):
         i = self.idx
-        # Check it's not a truncated packet
+        # Check it's not a truncated packet.
         if len(self.bits) - i <= 20:
             self.putwarn('Truncated', '!')
             return 0x0BAD
         k = [self.get_sym(i), self.get_sym(i+5),
              self.get_sym(i+10), self.get_sym(i+15)]
-        # TODO check bad symbols
+        # TODO: Check bad symbols.
         val = k[0] | (k[1] << 4) | (k[2] << 8) | (k[3] << 12)
         self.idx += 20
         return val
@@ -478,28 +477,28 @@ class Decoder(srd.Decoder):
             sym = START_OF_PACKETS.get(k, None)
             if not sym:
                 sym = self.find_corrupted_sop(k)
-            # We have an interesting symbol sequence
+            # We have an interesting symbol sequence.
             if sym:
-                # annotate the preamble
+                # Annotate the preamble.
                 self.putx(0, i, [1, ['Preamble', '...']])
-                # annotate each symbol
+                # Annotate each symbol.
                 self.rec_sym(i, k[0])
                 self.rec_sym(i+5, k[1])
                 self.rec_sym(i+10, k[2])
                 self.rec_sym(i+15, k[3])
                 if sym == 'Hard Reset':
                     self.text += 'HRST'
-                    return -1   # Hard reset
+                    return -1 # Hard reset
                 elif sym == 'Cable Reset':
                     self.text += 'CRST'
-                    return -1   # Cable reset
+                    return -1 # Cable reset
                 else:
                     self.putx(i, i+20, [2, [sym, 'S']])
                 return i+20
         self.putx(0, len(self.bits), [1, ['Junk???', 'XXX']])
         self.text += 'Junk???'
         self.putwarn('No start of packet found', 'XXX')
-        return -1   # No Start Of Packet
+        return -1 # No Start Of Packet
 
     def __init__(self):
         self.reset()
@@ -521,9 +520,9 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-            # 0 is 2 UI, space larger than 1.5x 0 is definitely wrong
+            # 0 is 2 UI, space larger than 1.5x 0 is definitely wrong.
             self.maxbit = self.us2samples(3 * UI_US)
-            # duration threshold between half 1 and 0
+            # Duration threshold between half 1 and 0.
             self.threshold = self.us2samples(THRESHOLD_US)
 
     def start(self):
@@ -543,7 +542,7 @@ class Decoder(srd.Decoder):
         self.text = ''
 
         if len(self.edges) < 50:
-            return  # Not a real PD packet
+            return # Not a real PD packet
 
         self.packet_seq += 1
         tstamp = float(self.startsample) / self.samplerate
@@ -551,9 +550,9 @@ class Decoder(srd.Decoder):
 
         self.idx = self.scan_eop()
         if self.idx < 0:
-            # Full text trace of the issue
+            # Full text trace of the issue.
             self.putx(0, self.idx, [12, [self.text, '...']])
-            return  # No real packet: ABORT
+            return # No real packet: ABORT.
 
         # Packet header
         self.head = self.get_short()
@@ -597,7 +596,7 @@ class Decoder(srd.Decoder):
         while True:
             pins = self.wait([{0: 'e'}, {1: 'e'}, {'skip': int(self.samplerate/1e3)}])
 
-            # First sample of the packet, just record the start date
+            # First sample of the packet, just record the start date.
             if not self.startsample:
                 self.startsample = self.samplenum
                 self.previous = self.samplenum
@@ -605,20 +604,20 @@ class Decoder(srd.Decoder):
 
             diff = self.samplenum - self.previous
 
-            # Large idle: use it as the end of packet
+            # Large idle: use it as the end of packet.
             if diff > self.maxbit:
-                # the last edge of the packet
+                # The last edge of the packet.
                 self.edges.append(self.previous)
-                # Export the packet
+                # Export the packet.
                 self.decode_packet()
-                # Reset for next packet
+                # Reset for next packet.
                 self.startsample = self.samplenum
                 self.bits = []
                 self.edges = []
                 self.bad = []
                 self.half_one = False
                 self.start_one = 0
-            else:   # add the bit to the packet
+            else: # Add the bit to the packet.
                 is_zero = diff > self.threshold
                 if is_zero and not self.half_one:
                     self.bits.append(0)
@@ -630,9 +629,9 @@ class Decoder(srd.Decoder):
                 elif not is_zero and not self.half_one:
                     self.half_one = True
                     self.start_one = self.previous
-                else:   # Invalid BMC sequence
+                else: # Invalid BMC sequence
                     self.bad.append((self.start_one, self.previous))
-                    # TODO try to recover
+                    # TODO: Try to recover.
                     self.bits.append(0)
                     self.edges.append(self.previous)
                     self.half_one = False
