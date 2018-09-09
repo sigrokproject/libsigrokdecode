@@ -44,7 +44,13 @@ CTRL_TYPES = {
     12: 'WAIT',
     13: 'SOFT RESET',
     14: 'reserved',
-    15: 'reserved'
+    15: 'reserved',
+    16: 'Not Supported',
+    17: 'Get_Source_Cap_Extended',
+    18: 'Get_Status',
+    19: 'FR_Swap',
+    20: 'Get_PPS_Status',
+    21: 'Get_Country_Codes'
 }
 
 # Data message type
@@ -53,6 +59,9 @@ DATA_TYPES = {
     2: 'REQUEST',
     3: 'BIST',
     4: 'SINK CAP',
+    5: 'Battery_Status',
+    6: 'Alert',
+    7: 'Get_Country_Info',
     15: 'VDM'
 }
 
@@ -147,19 +156,34 @@ SYM_NAME = [
 ]
 
 RDO_FLAGS = {
+    (1 << 23): 'unchuncked',
     (1 << 24): 'no_suspend',
     (1 << 25): 'comm_cap',
     (1 << 26): 'cap_mismatch',
     (1 << 27): 'give_back'
 }
-PDO_TYPE = ['', 'BATT:', 'VAR:', '<bad>']
-PDO_FLAGS = {
-    (1 << 29): 'dual_role_power',
-    (1 << 28): 'suspend',
-    (1 << 27): 'ext',
-    (1 << 26): 'comm_cap',
-    (1 << 25): 'dual_role_data'
-}
+PDO_TYPE = ['FIX:', 'BAT:', 'VAR:', 'APDO:']
+PDO_FLAGS = [
+    # Fixed Supply PDO - Source
+    {
+        (1 << 29): 'dual_role_power',
+        (1 << 28): 'suspend',
+        (1 << 27): 'ext',
+        (1 << 26): 'comm_cap',
+        (1 << 25): 'dual_role_data',
+        (1 << 24): 'unchuncked'
+    },
+    # Battery Supply PDO - Source
+    {
+    },
+    # Variable Supply (non-Battery) PDO - Source
+    {
+    },
+    # Programmable Power Supply APDO - Source
+    {
+        (1 << 27): 'PPS_P_LIM',     # PPS Power Limited
+    }
+]
 
 BIST_MODES = {
         0: 'Receiver',
@@ -234,16 +258,28 @@ class Decoder(srd.Decoder):
 
     def get_request(self, rdo):
         pos = (rdo >> 28) & 7
-        op_ma = ((rdo >> 10) & 0x3ff) * 10
-        max_ma = (rdo & 0x3ff) * 10
+        mark = self.cap_mark[pos]
+        if mark == 3:
+            op_mv = ((rdo >> 9) & 0x7ff) * 20
+            op_ma = (rdo & 0x3f) * 50
+            p = '%.2fV/%.2fA' % (op_mv/1000.0, op_ma/1000.0)
+        elif mark == 2:
+            op_mw = ((rdo >> 10) & 0x3ff) * 250
+            mp_mw = (rdo & 0x3ff) * 250
+            p = '%.2fW/%.2fW' % (op_mw/1000.0, mp_mw/1000.0)
+        else:
+            op_ma = ((rdo >> 10) & 0x3ff) * 10
+            max_ma = (rdo & 0x3ff) * 10
+            p = '%d/%d mA' % (op_ma, max_ma)
         flags = ''
         for f in sorted(RDO_FLAGS.keys(), reverse = True):
             if rdo & f:
                 flags += ' ' + RDO_FLAGS[f]
-        return '[%d]%d/%d mA%s' % (pos, op_ma, max_ma, flags)
+        return '[%d]%s%s' % (pos, p, flags)
 
-    def get_source_cap(self, pdo):
+    def get_source_cap(self, pdo, idx):
         t = (pdo >> 30) & 3
+        self.cap_mark[idx] = t
         if t == 0:
             mv = ((pdo >> 10) & 0x3ff) * 50
             ma = ((pdo >> 0) & 0x3ff) * 10
@@ -259,11 +295,18 @@ class Decoder(srd.Decoder):
             ma = ((pdo >> 0) & 0x3ff) * 10
             p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
         else:
-            p = ''
+            # Programmable Power Supply APDO - Source
+            if (pdo >> 28) & 3 == 0:
+                minv = ((pdo >> 8) & 0xff) * 100
+                maxv = ((pdo >> 17) & 0xff) * 100
+                ma = ((pdo >> 0) & 0x7f) * 50
+                p = 'PPS %.1f/%.1fV %.1fA' % (minv / 1000.0, maxv / 1000.0, ma / 1000.0)
+            else:
+                p = ''
         flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
+        for f in sorted(PDO_FLAGS[t].keys(), reverse = True):
             if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
+                flags += ' ' + PDO_FLAGS[t][f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_sink_cap(self, pdo):
@@ -283,11 +326,18 @@ class Decoder(srd.Decoder):
             ma = ((pdo >> 0) & 0x3ff) * 10
             p = '%.1f/%.1fV %.1fA' % (minv/1000.0, maxv/1000.0, ma/1000.0)
         else:
-            p = ''
+            # Programmable Power Supply APDO - Source
+            if (pdo >> 28) & 3 == 0:
+                minv = ((pdo >> 8) & 0xff) * 100
+                maxv = ((pdo >> 17) & 0xff) * 100
+                ma = ((pdo >> 0) & 0x7f) * 50
+                p = 'PPS %.1f/%.1fV %.1fA' % (minv / 1000.0, maxv / 1000.0, ma / 1000.0)
+            else:
+                p = ''
         flags = ''
-        for f in sorted(PDO_FLAGS.keys(), reverse = True):
+        for f in sorted(PDO_FLAGS[t].keys(), reverse = True):
             if pdo & f:
-                flags += ' ' + PDO_FLAGS[f]
+                flags += ' ' + PDO_FLAGS[t][f]
         return '%s%s%s' % (PDO_TYPE[t], p, flags)
 
     def get_vdm(self, idx, data):
@@ -326,7 +376,7 @@ class Decoder(srd.Decoder):
         if t == 2:
             txt = self.get_request(self.data[idx])
         elif t == 1:
-            txt = self.get_source_cap(self.data[idx])
+            txt = self.get_source_cap(self.data[idx], idx)
         elif t == 4:
             txt = self.get_sink_cap(self.data[idx])
         elif t == 15:
@@ -347,7 +397,7 @@ class Decoder(srd.Decoder):
         else:
             shortm = DATA_TYPES[t] if t in DATA_TYPES else 'DAT???'
 
-        longm = '{:s}[{:d}]:{:s}'.format(role, self.head_id(), shortm)
+        longm = '{:s}(r{:d})[{:d}]:{:s}'.format(role, self.head_rev(), self.head_id(), shortm)
         self.putx(0, -1, [ann_type, [longm, shortm]])
         self.text += longm
 
@@ -461,6 +511,7 @@ class Decoder(srd.Decoder):
         self.bad = []
         self.half_one = False
         self.start_one = 0
+        self.cap_mark = [0, 0, 0, 0, 0, 0, 0, 0]
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
