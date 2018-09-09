@@ -136,7 +136,7 @@ class Decoder(srd.Decoder):
                 (src, dst) = decode_header(self.cmd_bytes[i]['val'])
                 str = 'HDR: ' + src + ', ' + dst
             elif i == 1: # Parse opcode
-                str += ' | OPC: ' + decode_opcode(self.cmd_bytes[i]['val'])
+                str += ' | OPC: ' + opcodes.get(self.cmd_bytes[i]['val'], 'Invalid')
             else: # Parse operands
                 if operands == 0:
                     str += ' | OPS: '

@@ -115,9 +115,3 @@ def decode_header(header):
     src = (header & 0xF0) >> 4
     dst = (header & 0x0F)
     return (resolve_logical_address(src, 1), resolve_logical_address(dst, 0))
-
-def decode_opcode(opcode):
-    if opcode in opcodes:
-        return opcodes[opcode]
-    else:
-        return 'Invalid'
