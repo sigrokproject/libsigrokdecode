@@ -111,9 +111,6 @@ class Decoder(srd.Decoder):
             self.samplerate = value
             self.precalculate()
 
-    def set_stat(self, stat):
-        self.stat = stat
-
     def handle_frame(self, is_nack):
         if self.fall_start is None or self.fall_end is None:
             return
@@ -168,7 +165,7 @@ class Decoder(srd.Decoder):
 
         # VALIDATION: Invalid pulse
         if pulse == Pulse.INVALID:
-            self.set_stat(Stat.WAIT_START)
+            self.stat = Stat.WAIT_START
             self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Invalid pulse: Wrong timing']])
             return
 
@@ -180,14 +177,14 @@ class Decoder(srd.Decoder):
         # VALIDATION: If waiting for ACK or EOM, only BIT pulses (0/1) are expected
         if (self.stat == Stat.WAIT_ACK or self.stat == Stat.WAIT_EOM) and pulse == Pulse.START:
             self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Expected BIT: START received)']])
-            self.set_stat(Stat.WAIT_START)
+            self.stat = Stat.WAIT_START
 
         # VALIDATION: ACK bit pulse remains high till the next frame (if any): Validate only min time of the low period
         if self.stat == Stat.WAIT_ACK and pulse != Pulse.START:
             if total_time < timing[pulse]['total']['min']:
                 pulse = Pulse.INVALID
                 self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['ACK pulse below minimun time']])
-                self.set_stat(Stat.WAIT_START)
+                self.stat = Stat.WAIT_START
                 return
 
         # VALIDATION / PING FRAME DETECTION: Initiator doesn't sets the EOM = 1 but stops sending when ack doesn't arrive
@@ -199,14 +196,14 @@ class Decoder(srd.Decoder):
                 self.put(self.frame_start, self.samplenum, self.out_ann, [9, ['ERROR: Incomplete byte received']])
 
             # Set wait start so we receive next frame
-            self.set_stat(Stat.WAIT_START)
+            self.stat = Stat.WAIT_START
 
         # VALIDATION: Check timing of the BIT (0/1) pulse in any other case (not waiting for ACK)
         if self.stat != Stat.WAIT_ACK and pulse != Pulse.START:
             if total_time < timing[pulse]['total']['min'] or total_time > timing[pulse]['total']['max']:
                 self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Bit pulse exceeds total pulse timespan']])
                 pulse = Pulse.INVALID
-                self.set_stat(Stat.WAIT_START)
+                self.stat = Stat.WAIT_START
                 return
 
         if pulse == Pulse.ZERO:
@@ -216,7 +213,7 @@ class Decoder(srd.Decoder):
 
         # STATE: WAIT START
         if self.stat == Stat.WAIT_START:
-            self.set_stat(Stat.GET_BITS)
+            self.stat = Stat.GET_BITS
             self.reset_frame_vars()
             self.put(self.fall_start, self.fall_end, self.out_ann, [0, ['ST']])
 
@@ -238,7 +235,7 @@ class Decoder(srd.Decoder):
             if self.bit_count == 8:
                 self.bit_count = 0
                 self.byte_count += 1
-                self.set_stat(Stat.WAIT_EOM)
+                self.stat = Stat.WAIT_EOM
                 self.put(self.byte_start, self.samplenum, self.out_ann, [6, ['0x{:02x}'.format(self.byte)]])
                 self.cmd_bytes.append({'st': self.byte_start, 'ed': self.samplenum, 'val': self.byte})
 
@@ -250,7 +247,7 @@ class Decoder(srd.Decoder):
             a = [2, ['EOM=Y']] if self.eom else [1, ['EOM=N']]
             self.put(self.fall_start, self.fall_end, self.out_ann, a)
 
-            self.set_stat(Stat.WAIT_ACK)
+            self.stat = Stat.WAIT_ACK
 
         # STATE: WAIT ACK
         elif self.stat == Stat.WAIT_ACK:
@@ -276,10 +273,10 @@ class Decoder(srd.Decoder):
             # After ACK bit, wait for new datagram or continue reading current
             # one based on EOM value.
             if self.eom or self.is_nack:
-                self.set_stat(Stat.WAIT_START)
+                self.stat = Stat.WAIT_START
                 self.handle_frame(self.is_nack)
             else:
-                self.set_stat(Stat.GET_BITS)
+                self.stat = Stat.GET_BITS
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
