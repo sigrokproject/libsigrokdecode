@@ -257,7 +257,7 @@ class Decoder(srd.Decoder):
         elif mark == 2:
             op_w = ((rdo >> 10) & 0x3ff) * 0.25
             mp_w = (rdo & 0x3ff) * 0.25
-            t_settings = '%gW (operating) / %gW (max)' % (op_w, max_w)
+            t_settings = '%gW (operating)' % op_w
         else:
             op_a = ((rdo >> 10) & 0x3ff) * 0.01
             max_a = (rdo & 0x3ff) * 0.01
