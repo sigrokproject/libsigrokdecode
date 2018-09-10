@@ -34,8 +34,8 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'miller'
     name = 'Miller'
-    longname = 'Miller decoder for NFC'
-    desc = 'Decodes (modified) Miller encoding as used in NFC communication.'
+    longname = 'Miller encoding'
+    desc = 'Miller encoding protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['miller']

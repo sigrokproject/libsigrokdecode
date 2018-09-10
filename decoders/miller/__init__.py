@@ -20,7 +20,7 @@
 '''
 The Miller protocol decoder supports (modified) Miller encoded data.
 
-Used in NFC communication at 106 kbaud.
+E.g. used in NFC communication at 106 kbaud.
 '''
 
 from .pd import Decoder
