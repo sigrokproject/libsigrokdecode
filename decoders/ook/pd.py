@@ -142,22 +142,18 @@ class Decoder(srd.Decoder):
     def dump_pulse_lengths(self):
         if self.samplerate:
             self.pulse_lengths[-1] = self.sample_first # Fix final pulse length.
-            mystring = 'Pulses(us)='
-            mystring += ','.join(str(int(int(x) * 1000000 / self.samplerate))
-                                 for x in self.pulse_lengths)
-            mystring += '\n'
+            s = 'Pulses(us)='
+            s += ','.join(str(int(int(x) * 1000000 / self.samplerate))
+                          for x in self.pulse_lengths)
+            s += '\n'
             self.put(self.samplenum - 10, self.samplenum, self.out_binary,
-                     [0, bytes([ord(c) for c in mystring])])
+                     [0, bytes([ord(c) for c in s])])
 
     def decode_nrz(self, start, samples, state):
         self.pulse_lengths.append(samples)
         # Use different high and low widths to compensate skewed waveforms.
-        if state == '1':
-            dsamples = self.sample_high
-        else:
-            dsamples = self.sample_low
-        self.ss = start
-        self.es = start + samples
+        dsamples = self.sample_high if state == '1' else self.sample_low
+        self.ss, self.es = start, start + samples
         while samples > dsamples * 0.5:
             if samples >= dsamples * 1.5: # More than one bit.
                 self.es = self.ss + dsamples
@@ -259,10 +255,7 @@ class Decoder(srd.Decoder):
         self.pulse_lengths.append(samples)
 
         # Use different high and low widths to compensate skewed waveforms.
-        if state == '1':
-            dsamples = self.sample_high
-        else:
-            dsamples = self.sample_low
+        dsamples = self.sample_high if state == '1' else self.sample_low
 
         self.es = start + samples
         p_length = round(samples / dsamples) # Find relative pulse length.
@@ -362,10 +355,7 @@ class Decoder(srd.Decoder):
         self.pulse_lengths.append(samples)
 
         # Use different high and low widths to compensate skewed waveforms.
-        if state == '1':
-            dsamples = self.sample_high
-        else:
-            dsamples = self.sample_low
+        dsamples = self.sample_high if state == '1' else self.sample_low
 
         if self.preamble_val != '1010': # 1111 preamble is half clock T.
             (self.half_time, self.lstate, self.ss_1111, ook_bit, errors) = (
@@ -390,8 +380,7 @@ class Decoder(srd.Decoder):
 
         # Stream display and save ook_bit.
         if ook_bit != []:
-            self.ss = ook_bit[0]
-            self.es = ook_bit[1]
+            self.ss, self.es = ook_bit[0], ook_bit[1]
             if self.preamble_val == '1111':
                 self.putx([2, [ook_bit[2]]])
             if self.preamble_val == '1010':
@@ -416,13 +405,11 @@ class Decoder(srd.Decoder):
 
             if self.preamble_val == 'auto': # Display OOK packet.
                 for i in range(len(decoded)):
-                    self.ss = decoded[i][0]
-                    self.es = decoded[i][1]
+                    self.ss, self.es = decoded[i][0], decoded[i][1]
                     self.putx([d_row, [decoded[i][2]]])
 
             if (man_errors < self.max_errors and len(decoded) > 0):
-                self.ss = decoded[0][0]
-                self.es = decoded[len(decoded) - 1][1]
+                self.ss, self.es = decoded[0][0], decoded[len(decoded) - 1][1]
                 self.putp(decoded)
             else:
                 error_message = 'Not Manchester encoded or wrong preamble'
@@ -473,10 +460,7 @@ class Decoder(srd.Decoder):
                 pinstate = int(not pinstate)
             if self.invert == 'yes': # Invert signal.
                 pinstate = int(not pinstate)
-            if pinstate:
-                state = '0'
-            else:
-                state = '1'
+            state = '0' if pinstate else '1'
 
             # No preamble filtering or checking and no skew correction.
             if self.preamble_len == '0':
