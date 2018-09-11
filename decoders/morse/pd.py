@@ -165,7 +165,7 @@ class Decoder(srd.Decoder):
             curtime = self.samplenum
             dt = (curtime - prevtime) / self.samplerate
             units = dt / timeunit
-            iunits = round(units)
+            iunits = int(max(1, round(units)))
             error = abs(units - iunits)
 
             symbol = (pval, iunits)
@@ -175,15 +175,17 @@ class Decoder(srd.Decoder):
                 continue
 
             self.put(prevtime, curtime, self.out_ann, [0, ['{:.3g}'.format(dt)]])
-            self.put(prevtime, curtime, self.out_ann, [1, ['{:.1f}*{:.3g}'.format(units, timeunit)]])
 
             if symbol in symbols:
+                self.put(prevtime, curtime, self.out_ann, [1, ['{:.1f}*{:.3g}'.format(units, timeunit)]])
                 yield (prevtime, curtime, symbol)
+            else:
+                self.put(prevtime, curtime, self.out_ann, [1, ['!! {:.1f}*{:.3g} !!'.format(units, timeunit)]])
 
             prevtime = curtime
 
             thisunit = dt / iunits
-            timeunit += (thisunit - timeunit) * 0.02 * iunits # Adapt.
+            timeunit += (thisunit - timeunit) * 0.2 * max(0, 1 - 2*error) # Adapt.
 
     def decode_morse(self):
         # Group symbols into letters.
