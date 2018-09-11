@@ -74,24 +74,19 @@ class Decoder(srd.Decoder):
         nib = self.decoded_nibbles
         hexstring = ''
         for x in nib:
-            if x[3] != '':
-                hexstring += str(x[3])
-            else:
-                hexstring += ' '
-        mystring = 'Oregon ' + self.ver + ' \"' + hexstring.upper() + '\"\n'
+            hexstring += str(x[3]) if x[3] != '' else ' '
+        s = 'Oregon ' + self.ver + ' \"' + hexstring.upper() + '\"\n'
         self.put(start, finish, self.out_binary,
-                [0, bytes([ord(c) for c in mystring])])
+                [0, bytes([ord(c) for c in s])])
 
     def oregon_put_pre_and_sync(self, len_pream, len_sync, ver):
         ook = self.decoded
         self.decode_pos = len_pream
-        self.ss = ook[0][0]
-        self.es = ook[self.decode_pos][0]
+        self.ss, self.es = ook[0][0], ook[self.decode_pos][0]
         self.putx([1, ['Oregon ' + ver + ' Preamble', ver + ' Preamble',
                         ver + ' Pre', ver]])
         self.decode_pos += len_sync
-        self.ss = ook[len_pream][0]
-        self.es = ook[self.decode_pos][0]
+        self.ss, self.es = ook[len_pream][0], ook[self.decode_pos][0]
         self.putx([1, ['Sync', 'Syn', 'S']])
 
         # Strip off preamble and sync bits.
@@ -122,8 +117,7 @@ class Decoder(srd.Decoder):
                 self.oregon_v3()
         elif len(self.ookstring) > 16: # Ignore short packets.
             error_message = 'Not Oregon or wrong preamble'
-            self.ss = ook[0][0]
-            self.es = ook[len(ook)-1][1]
+            self.ss, self.es = ook[0][0], ook[len(ook) - 1][1]
             self.putx([1,[error_message]])
 
     def oregon_v1(self):
@@ -183,10 +177,8 @@ class Decoder(srd.Decoder):
         for i in range(len(param)):
             ss = self.decoded[self.decode_pos + (4 * i)][0]
             es = self.decoded[self.decode_pos + (4 * i) + 3][1]
-            if 'E' in param[i]: # Blank out nibbles with errors.
-                result = ''
-            else:
-                result = hex(int(param[i], 2))[2:]
+            # Blank out nibbles with errors.
+            result = '' if ('E' in param[i]) else hex(int(param[i], 2))[2:]
             # Save nibbles for L2 decoder.
             self.decoded_nibbles.append([ss, es, label, result])
         self.decode_pos += numbits
@@ -238,10 +230,7 @@ class Decoder(srd.Decoder):
         nib = self.decoded_nibbles
         if nib[offset + 3][3] != '':
             temp_sign = str(int(nib[offset + 3][3], 16))
-            if temp_sign != '0':
-                temp_sign = '-'
-            else:
-                temp_sign = '+'
+            temp_sign = '-' if temp_sign != '0' else '+'
         else:
             temp_sign = '?'
         self.oregon_put_l2_param(offset, 3, 1, temp_sign, '\u2103')
@@ -354,7 +343,7 @@ class Decoder(srd.Decoder):
                         result = 'OK'
                 else:
                     if checksum == (int(nib[nibbles][3], 16) * 16 +
-                                    int(nib[nibbles+1][3], 16)):
+                                    int(nib[nibbles + 1][3], 16)):
                         result = 'OK'
             rx_check = (nib[nibbles + 1][3] + nib[nibbles][3]).upper()
             details = '%s Calc %s Rx %s ' % (result, hex(checksum)[2:].upper(),
