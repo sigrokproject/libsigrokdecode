@@ -113,8 +113,7 @@ class Decoder(srd.Decoder):
 
             if len(ook) >= preamble_end:
                 preamble_end += int(self.sync_offset) - 1
-                self.ss = ook[0][0]
-                self.es = ook[preamble_end][1]
+                self.ss, self.es = ook[0][0], ook[preamble_end][1]
                 self.putx([line, ['Preamble', 'Pre', 'P']])
                 self.decode_pos += preamble_end
 
@@ -149,10 +148,7 @@ class Decoder(srd.Decoder):
         ook = self.decoded
         for i in range(len(ook)):
             self.ookstring += ook[i][2]
-        if 'Nibble' in self.displayas:
-            bits = 4
-        else:
-            bits = 8
+        bits = 4 if 'Nibble' in self.displayas else 8
         rem_nibbles = len(self.ookstring) // bits
         for i in range(rem_nibbles): # Display the rest of the nibbles.
             self.ss = ook[self.decode_pos][0]
