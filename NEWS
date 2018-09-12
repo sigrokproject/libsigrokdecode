@@ -1,3 +1,66 @@
+0.5.2 (2018-09-12)
+------------------
+
+Note: This release does NOT change the libsigrokdecode public C API in
+incompatible ways. This means existing frontends should not require any
+changes. However, individual PDs and their output changed, which may
+require some adaptations on the user's side in some cases.
+
+ * New supported protocol decoders:
+   - mcs48            Intel MCS-48 external memory access protocol
+   - st7735           Sitronix ST7735 TFT controller protocol
+   - atsha204a        Microchip ATSHA204A CryptoAuthentication device
+   - cfp              100 Gigabit C form-factor pluggable (CFP) protocol
+   - jtag_ejtag       MIPS EJTAG protocol
+   - swim             STM8 Single Wire Interface Module (SWIM) protocol
+   - cec              HDMI Consumer Electronics Control (CEC) protocol
+   - miller           Miller encoding protocol
+   - ook              On-off keying protocol
+   - ook_oregon       Oregon Scientific weather sensor protocol
+   - ook_vis          OOK visualisation in various formats
+ * Various minor performance improvements in the backend.
+ * Fix an issue causing decoder termination to take a long time.
+ * Fix multiple self.put() memory leaks (bug #329).
+ * Fix multiple memory leaks reported by scan-build.
+ * Show a backtrace when the decode aborts due to an error (bug #1158).
+ * Perform the log level check for non-default handlers as well (bug #698).
+ * Fix multiple compiler warnings.
+ * Compiler: Add -Wshadow -Wformat=2 -Wno-format-nonliteral -Wfloat-equal.
+ * Build system: Add Python 3.7 support.
+ * Fix a 'make install' issue that happens with Python >= 3.7.
+ * Add two missing Python GIL release operations.
+ * libsigrokdecode API changes:
+   - Add the srd_log_callback_get() API call.
+   - Add the SRD_ERR_TERM_REQ error code.
+ * dcf77:
+   - Annotate invalid dow and month fields, do not abort execution (bug #1173).
+   - Annotate unexpected bit numbers and values, do not abort execution.
+ * spiflash:
+   - Add basic Adesto AT45DBxx support (WRITE1/2, STATUS).
+   - Add Adesto AT45DB161E metadata.
+ * jtag:
+   - Fix shifting of registers (bug #1066).
+ * jtag_stm32:
+   - Fix handling of boundary scan TAP and incorrect state transitions.
+ * eeprom24xx:
+   - Add ON Semi CAT24C256 and CAT24M01 support.
+ * counter:
+   - Emit wider annotations to improve readability in UIs (bug #1210).
+   - Add support for user specified initial counter values (bug #1229).
+   - Add an option to ignore a certain number of edges.
+   - Let the user decide how to handle the initial dead_cycles state.
+ * mdio:
+   - Accept MDIO READ without previous ADDRESS command (bug #1258).
+ * edid:
+   - Add support for extension blocks.
+   - Various annotation improvements.
+ * spi:
+   - Fix an issue causing an AttributeError during certain decodes.
+ * usb_power_delivery:
+   - Emit more details in annotations (power, PDO type, RDO info).
+   - Add PPS support.
+   - Add better USB Power Delivery 3.0 support.
+
 0.5.1 (2018-04-12)
 ------------------
 
