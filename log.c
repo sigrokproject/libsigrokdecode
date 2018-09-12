@@ -139,7 +139,7 @@ SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data)
  *
  * @return SRD_OK upon success.
  *
- * @since 0.6.0
+ * @since 0.5.2
  */
 SRD_API int srd_log_callback_get(srd_log_callback *cb, void **cb_data)
 {
