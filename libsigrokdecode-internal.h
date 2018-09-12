@@ -70,13 +70,10 @@ struct srd_session {
 SRD_PRIV int srd_decoder_searchpath_add(const char *path);
 
 /* session.c */
-SRD_PRIV int session_is_valid(struct srd_session *sess);
 SRD_PRIV struct srd_pd_callback *srd_pd_output_callback_find(struct srd_session *sess,
 		int output_type);
 
 /* instance.c */
-SRD_PRIV struct srd_decoder_inst *srd_inst_find_by_obj( const GSList *stack,
-		const PyObject *obj);
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di);
 SRD_PRIV void match_array_free(struct srd_decoder_inst *di);
 SRD_PRIV void condition_list_free(struct srd_decoder_inst *di);

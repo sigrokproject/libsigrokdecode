@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
             else:
                 self.tmp |= (bit << (c - 1))
             if c == 14:
-                s = bin(self.tmp)[2:].zfill(14)
+                s = '{:014b}'.format(self.tmp)
                 self.putb([1, ['Special bits: %s' % s, 'SB: %s' % s]])
         elif c == 15:
             s = '' if (bit == 1) else 'not '
@@ -210,9 +210,13 @@ class Decoder(srd.Decoder):
                 self.tmp |= (bit << (c - 42))
             if c == 44:
                 d = bcd2int(self.tmp)
-                dn = calendar.day_name[d - 1] # day_name[0] == Monday
-                self.putb([13, ['Day of week: %d (%s)' % (d, dn),
-                                'DoW: %d (%s)' % (d, dn)]])
+                try:
+                    dn = calendar.day_name[d - 1] # day_name[0] == Monday
+                    self.putb([13, ['Day of week: %d (%s)' % (d, dn),
+                                    'DoW: %d (%s)' % (d, dn)]])
+                except IndexError:
+                    self.putb([19, ['Day of week: %d (%s)' % (d, 'invalid'),
+                                    'DoW: %d (%s)' % (d, 'inv')]])
         elif c in range(45, 49 + 1):
             # Month (1-12): DCF77 bits 45-49 (BCD format).
             if c == 45:
@@ -222,9 +226,13 @@ class Decoder(srd.Decoder):
                 self.tmp |= (bit << (c - 45))
             if c == 49:
                 m = bcd2int(self.tmp)
-                mn = calendar.month_name[m] # month_name[1] == January
-                self.putb([14, ['Month: %d (%s)' % (m, mn),
-                                'Mon: %d (%s)' % (m, mn)]])
+                try:
+                    mn = calendar.month_name[m] # month_name[1] == January
+                    self.putb([14, ['Month: %d (%s)' % (m, mn),
+                                    'Mon: %d (%s)' % (m, mn)]])
+                except IndexError:
+                    self.putb([19, ['Month: %d (%s)' % (m, 'invalid'),
+                                    'Mon: %d (%s)' % (m, 'inv')]])
         elif c in range(50, 57 + 1):
             # Year (0-99): DCF77 bits 50-57 (BCD format).
             if c == 50:
@@ -241,7 +249,8 @@ class Decoder(srd.Decoder):
             self.putx([16, ['Date parity: %s' % s, 'DP: %s' % s]])
             self.datebits = []
         else:
-            raise Exception('Invalid DCF77 bit: %d' % c)
+            self.putx([19, ['Invalid DCF77 bit: %d' % c,
+                            'Invalid bit: %d' % c, 'Inv: %d' % c]])
 
     def decode(self):
         if not self.samplerate:
@@ -290,11 +299,12 @@ class Decoder(srd.Decoder):
                 elif len_high_ms in range(161, 260 + 1):
                     bit = 1
                 else:
-                    bit = -1 # TODO: Error?
+                    bit = -1
 
-                # There's no bit 59, make sure none is decoded.
-                if bit in (0, 1) and self.bitcount in range(0, 58 + 1):
+                if bit in (0, 1):
                     self.handle_dcf77_bit(bit)
                     self.bitcount += 1
+                else:
+                    self.putx([19, ['Invalid bit timing', 'Inv timing', 'Inv']])
 
                 self.state = 'WAIT FOR RISING EDGE'

@@ -95,7 +95,7 @@ class Decoder(srd.Decoder):
             if self.clause45 and self.clause45_addr != -1:
                 decoded_min += str.format('ADDR: %04X ' % self.clause45_addr)
             elif self.clause45:
-                decoded_min += str.format('ADDR: UKWN ' % self.clause45_addr)
+                decoded_min += str.format('ADDR: UKWN ')
 
             if self.clause45 and self.opcode > 1 \
             or (not self.clause45 and self.opcode):
@@ -275,10 +275,9 @@ class Decoder(srd.Decoder):
     def state_DATA(self, mdio):
         if self.data == -1:
             self.data = 0
-            self.putff([2, ['TURNAROUND', 'TA', 'T']])
+            self.putff([2, ['TA', 'T']])
             if self.ta_invalid:
-                self.putff([4, ['TURNAROUND%s' % self.ta_invalid,
-                                'TA%s' % self.ta_invalid, 'TA', 'T']])
+                self.putff([4, ['TA%s' % self.ta_invalid, 'TA', 'T']])
             self.ss_frame_field = self.samplenum
         self.data_bits -= 1
         self.data |= mdio << self.data_bits

@@ -219,7 +219,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 				"a list of dict elements.", d->name, attr);
 			goto err_out;
 		}
-		pdch = g_malloc0(sizeof(struct srd_channel));
+		pdch = g_malloc(sizeof(struct srd_channel));
 		/* Add to list right away so it doesn't get lost. */
 		pdchl = g_slist_prepend(pdchl, pdch);
 
@@ -243,6 +243,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 except_out:
 	srd_exception_catch("Failed to get %s list of %s decoder",
 			attr, d->name);
+
 err_out:
 	g_slist_free_full(pdchl, &channel_free);
 	Py_XDECREF(py_channellist);
@@ -324,8 +325,10 @@ static int get_options(struct srd_decoder *d)
 
 		py_values = PyDict_GetItemString(py_opt, "values");
 		if (py_values) {
-			/* A default is required if a list of values is
-			 * given, since it's used to verify their type. */
+			/*
+			 * A default is required if a list of values is
+			 * given, since it's used to verify their type.
+			 */
 			if (!o->def) {
 				srd_err("No default for option '%s'.", o->id);
 				goto err_out;
@@ -340,7 +343,7 @@ static int get_options(struct srd_decoder *d)
 				if (!py_item)
 					goto except_out;
 
-				if (Py_TYPE(py_default) != Py_TYPE(py_item)) {
+				if (py_default && (Py_TYPE(py_default) != Py_TYPE(py_item))) {
 					srd_err("All values for option '%s' must be "
 						"of the same type as the default.",
 						o->id);
@@ -365,6 +368,7 @@ static int get_options(struct srd_decoder *d)
 
 except_out:
 	srd_exception_catch("Failed to get %s decoder options", d->name);
+
 err_out:
 	g_slist_free_full(options, &decoder_option_free);
 	Py_XDECREF(py_opts);
@@ -373,8 +377,7 @@ err_out:
 	return SRD_ERR_PYTHON;
 }
 
-/* Convert annotation class attribute to GSList of char **.
- */
+/* Convert annotation class attribute to GSList of char **. */
 static int get_annotations(struct srd_decoder *dec)
 {
 	PyObject *py_annlist, *py_ann;
@@ -426,6 +429,7 @@ static int get_annotations(struct srd_decoder *dec)
 
 except_out:
 	srd_exception_catch("Failed to get %s decoder annotations", dec->name);
+
 err_out:
 	g_slist_free_full(annotations, (GDestroyNotify)&g_strfreev);
 	Py_XDECREF(py_annlist);
@@ -434,8 +438,7 @@ err_out:
 	return SRD_ERR_PYTHON;
 }
 
-/* Convert annotation_rows to GSList of 'struct srd_decoder_annotation_row'.
- */
+/* Convert annotation_rows to GSList of 'struct srd_decoder_annotation_row'. */
 static int get_annotation_rows(struct srd_decoder *dec)
 {
 	PyObject *py_ann_rows, *py_ann_row, *py_ann_classes, *py_item;
@@ -530,6 +533,7 @@ static int get_annotation_rows(struct srd_decoder *dec)
 except_out:
 	srd_exception_catch("Failed to get %s decoder annotation rows",
 			dec->name);
+
 err_out:
 	g_slist_free_full(annotation_rows, &annotation_row_free);
 	Py_XDECREF(py_ann_rows);
@@ -538,8 +542,7 @@ err_out:
 	return SRD_ERR_PYTHON;
 }
 
-/* Convert binary classes to GSList of char **.
- */
+/* Convert binary classes to GSList of char **. */
 static int get_binary_classes(struct srd_decoder *dec)
 {
 	PyObject *py_bin_classes, *py_bin_class;
@@ -593,6 +596,7 @@ static int get_binary_classes(struct srd_decoder *dec)
 except_out:
 	srd_exception_catch("Failed to get %s decoder binary classes",
 			dec->name);
+
 err_out:
 	g_slist_free_full(bin_classes, (GDestroyNotify)&g_strfreev);
 	Py_XDECREF(py_bin_classes);
@@ -601,8 +605,7 @@ err_out:
 	return SRD_ERR_PYTHON;
 }
 
-/* Check whether the Decoder class defines the named method.
- */
+/* Check whether the Decoder class defines the named method. */
 static int check_method(PyObject *py_dec, const char *mod_name,
 		const char *method_name)
 {
@@ -746,8 +749,8 @@ SRD_API int srd_decoder_load(const char *module_name)
 		goto err_out;
 	}
 
-	/* Check Decoder class for required methods.
-	 */
+	/* Check Decoder class for required methods. */
+
 	if (check_method(d->py_dec, module_name, "start") != SRD_OK) {
 		fail_txt = "no 'start()' method";
 		goto err_out;
@@ -842,6 +845,7 @@ except_out:
 				    module_name, fail_txt);
 	}
 	fail_txt = NULL;
+
 err_out:
 	if (fail_txt)
 		srd_err("Failed to load decoder %s: %s", module_name, fail_txt);
@@ -937,7 +941,7 @@ SRD_API int srd_decoder_unload(struct srd_decoder *dec)
 	return SRD_OK;
 }
 
-static void srd_decoder_load_all_zip_path(char *path)
+static void srd_decoder_load_all_zip_path(char *zip_path)
 {
 	PyObject *zipimport_mod, *zipimporter_class, *zipimporter;
 	PyObject *prefix_obj, *files, *key, *value, *set, *modname;
@@ -958,7 +962,7 @@ static void srd_decoder_load_all_zip_path(char *path)
 	if (zipimporter_class == NULL)
 		goto err_out;
 
-	zipimporter = PyObject_CallFunction(zipimporter_class, "s", path);
+	zipimporter = PyObject_CallFunction(zipimporter_class, "s", zip_path);
 	if (zipimporter == NULL)
 		goto err_out;
 
@@ -1027,21 +1031,21 @@ static void srd_decoder_load_all_path(char *path)
 	const gchar *direntry;
 
 	if (!(dir = g_dir_open(path, 0, NULL))) {
-		/* Not really fatal */
-		/* Try zipimport method too */
+		/* Not really fatal. Try zipimport method too. */
 		srd_decoder_load_all_zip_path(path);
 		return;
 	}
 
-	/* This ignores errors returned by srd_decoder_load(). That
+	/*
+	 * This ignores errors returned by srd_decoder_load(). That
 	 * function will have logged the cause, but in any case we
-	 * want to continue anyway. */
+	 * want to continue anyway.
+	 */
 	while ((direntry = g_dir_read_name(dir)) != NULL) {
 		/* The directory name is the module name (e.g. "i2c"). */
 		srd_decoder_load(direntry);
 	}
 	g_dir_close(dir);
-
 }
 
 /**
@@ -1073,7 +1077,8 @@ SRD_API int srd_decoder_load_all(void)
  */
 SRD_API int srd_decoder_unload_all(void)
 {
-	g_slist_foreach(pd_list, (GFunc)srd_decoder_unload, NULL);
+	for (GSList *l = pd_list; l; l = l->next)
+		srd_decoder_unload(l->data);
 	g_slist_free(pd_list);
 	pd_list = NULL;
 

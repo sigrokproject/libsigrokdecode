@@ -137,18 +137,17 @@ class Decoder(srd.Decoder):
         self.cs_was_deasserted = False
         self.have_cs = self.have_miso = self.have_mosi = None
 
-    def metadata(self, key, value):
-        if key == srd.SRD_CONF_SAMPLERATE:
-            self.samplerate = value
-
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
-        if self.samplerate:
-            self.out_bitrate = self.register(srd.OUTPUT_META,
-                    meta=(int, 'Bitrate', 'Bitrate during transfers'))
+        self.out_bitrate = self.register(srd.OUTPUT_META,
+                meta=(int, 'Bitrate', 'Bitrate during transfers'))
         self.bw = (self.options['wordsize'] + 7) // 8
+
+    def metadata(self, key, value):
+       if key == srd.SRD_CONF_SAMPLERATE:
+            self.samplerate = value
 
     def putw(self, data):
         self.put(self.ss_block, self.samplenum, self.out_ann, data)

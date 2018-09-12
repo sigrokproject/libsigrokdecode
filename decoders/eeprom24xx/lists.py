@@ -124,6 +124,28 @@ chips = {
         'max_speed': 400,
     },
 
+    # ON Semiconductor
+    'onsemi_cat24c256': {
+        'vendor': 'ON Semiconductor',
+        'model': 'CAT24C256',
+        'size': 32 * 1024,
+        'page_size': 64,
+        'page_wraparound': True,
+        'addr_bytes': 2,
+        'addr_pins': 3,
+        'max_speed': 1000,
+    },
+    'onsemi_cat24m01': {
+        'vendor': 'ON Semiconductor',
+        'model': 'CAT24M01',
+        'size': 128 * 1024,
+        'page_size': 256,
+        'page_wraparound': True,
+        'addr_bytes': 2,
+        'addr_pins': 2, # Pin A0 not connected
+        'max_speed': 1000,
+    },
+
     # Siemens
     'siemens_slx_24c01': {
         'vendor': 'Siemens',

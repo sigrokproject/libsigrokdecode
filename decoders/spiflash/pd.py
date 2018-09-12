@@ -25,8 +25,8 @@ L = len(cmds)
 # Don't forget to keep this in sync with 'cmds' is lists.py.
 class Ann:
     WRSR, PP, READ, WRDI, RDSR, WREN, FAST_READ, SE, RDSCUR, WRSCUR, \
-    RDSR2, CE, ESRY, DSRY, REMS, RDID, RDP_RES, CP, ENSO, DP, READ2X, \
-    EXSO, CE2, BE, REMS2, \
+    RDSR2, CE, ESRY, DSRY, WRITE1, WRITE2, REMS, RDID, RDP_RES, CP, ENSO, DP, \
+    READ2X, EXSO, CE2, STATUS, BE, REMS2, \
     BIT, FIELD, WARN = range(L + 3)
 
 def cmd_annotation_classes():
@@ -273,6 +273,30 @@ class Decoder(srd.Decoder):
             self.data.append(miso)
         self.cmdstate += 1
 
+    def handle_write_common(self, mosi, miso, ann):
+        # Write data bytes: Master asserts CS#, sends WRITE command, sends
+        # 3-byte address, writes >= 1 data bytes, de-asserts CS#.
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.emit_cmd_byte()
+        elif self.cmdstate in (2, 3, 4):
+            # Bytes 2/3/4: Master sends write address (24bits, MSB-first).
+            self.emit_addr_bytes(mosi)
+        elif self.cmdstate >= 5:
+            # Bytes 5-x: Master writes data bytes (until CS# de-asserted).
+            self.es_field = self.es # Will be overwritten for each byte.
+            if self.cmdstate == 5:
+                self.ss_field = self.ss
+                self.on_end_transaction = lambda: self.output_data_block('Data', ann)
+            self.data.append(mosi)
+        self.cmdstate += 1
+
+    def handle_write1(self, mosi, miso):
+        self.handle_write_common(mosi, miso, Ann.WRITE1)
+
+    def handle_write2(self, mosi, miso):
+        self.handle_write_common(mosi, miso, Ann.WRITE2)
+
     def handle_fast_read(self, mosi, miso):
         # Fast read: Master asserts CS#, sends FAST READ command, sends
         # 3-byte address + 1 dummy byte, reads >= 1 data bytes, de-asserts CS#.
@@ -322,6 +346,20 @@ class Decoder(srd.Decoder):
                 self.on_end_transaction = lambda: self.output_data_block('Data', Ann.READ2X)
             self.data.append(b1)
             self.data.append(b2)
+        self.cmdstate += 1
+
+    def handle_status(self, mosi, miso):
+        if self.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.emit_cmd_byte()
+            self.on_end_transaction = lambda: self.putc([Ann.STATUS, [cmds[self.state][1]]])
+        else:
+            # Will be overwritten for each byte.
+            self.es_cmd = self.es
+            self.es_field = self.es
+            if self.cmdstate == 2:
+                self.ss_field = self.ss
+            self.putx([Ann.BIT, ['Status register byte %d: 0x%02x' % ((self.cmdstate % 2) + 1, miso)]])
         self.cmdstate += 1
 
     # TODO: Warn/abort if we don't see the necessary amount of bytes.

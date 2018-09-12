@@ -50,6 +50,7 @@ cleanup:
 		PyErr_Clear();
 		srd_dbg("Failed to stringify object.");
 	}
+
 	return str;
 }
 
@@ -80,18 +81,21 @@ cleanup:
 		PyErr_Clear();
 		srd_dbg("Failed to get object attribute %s.", attr);
 	}
+
 	return str;
 }
 
 /** @private */
 SRD_PRIV void srd_exception_catch(const char *format, ...)
 {
+	int i, ret;
 	va_list args;
 	PyObject *py_etype, *py_evalue, *py_etraceback;
 	PyObject *py_mod, *py_func, *py_tracefmt;
-	char *msg, *etype_name, *evalue_str, *tracefmt_str;
+	char *msg, *etype_name, *evalue_str, *outstr;
 	const char *etype_name_fallback;
 	PyGILState_STATE gstate;
+	GString *s;
 
 	py_etype = py_evalue = py_etraceback = py_mod = py_func = NULL;
 
@@ -136,17 +140,21 @@ SRD_PRIV void srd_exception_catch(const char *format, ...)
 	/* Call into Python to format the stack trace. */
 	py_tracefmt = PyObject_CallFunctionObjArgs(py_func,
 			py_etype, py_evalue, py_etraceback, NULL);
-	if (!py_tracefmt)
+	if (!py_tracefmt || !PyList_Check(py_tracefmt))
 		goto cleanup;
 
-	tracefmt_str = py_stringify(py_tracefmt);
-	Py_DECREF(py_tracefmt);
-
-	/* Log the detailed stack trace. */
-	if (tracefmt_str) {
-		srd_dbg("%s", tracefmt_str);
-		g_free(tracefmt_str);
+	s = g_string_sized_new(128);
+	for (i = 0; i < PyList_Size(py_tracefmt); i++) {
+		ret = py_listitem_as_str(py_tracefmt, i, &outstr);
+		if (ret == 0) {
+			s = g_string_append(s, outstr);
+			g_free(outstr);
+		}
 	}
+	srd_err("%s", s->str);
+	g_string_free(s, TRUE);
+
+	Py_DECREF(py_tracefmt);
 
 cleanup:
 	Py_XDECREF(py_func);

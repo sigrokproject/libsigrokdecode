@@ -37,6 +37,8 @@ cmds = OrderedDict([
     (0x60, ('CE', 'Chip erase')),
     (0x70, ('ESRY', 'Enable SO to output RY/BY#')),
     (0x80, ('DSRY', 'Disable SO to output RY/BY#')),
+    (0x82, ('WRITE1', 'Main memory page program through buffer 1 with built-in erase')),
+    (0x85, ('WRITE2', 'Main memory page program through buffer 2 with built-in erase')),
     (0x90, ('REMS', 'Read electronic manufacturer & device ID')),
     (0x9f, ('RDID', 'Read identification')),
     (0xab, ('RDP/RES', 'Release from deep powerdown / Read electronic ID')),
@@ -46,11 +48,15 @@ cmds = OrderedDict([
     (0xbb, ('2READ', '2x I/O read')), # a.k.a. "Fast read dual I/O".
     (0xc1, ('EXSO', 'Exit secured OTP')),
     (0xc7, ('CE2', 'Chip erase')), # Alternative command ID
+    (0xd7, ('STATUS', 'Status register read')),
     (0xd8, ('BE', 'Block erase')),
     (0xef, ('REMS2', 'Read ID for 2x I/O mode')),
 ])
 
 device_name = {
+    'adesto': {
+        0x00: 'AT45Dxxx family, standard series',
+    },
     'fidelix': {
         0x15: 'FM25Q32',
     },
@@ -62,6 +68,18 @@ device_name = {
 }
 
 chips = {
+    # Adesto
+    'adesto_at45db161e': {
+        'vendor': 'Adesto',
+        'model': 'AT45DB161E',
+        'res_id': 0xff, # The chip doesn't emit an ID here.
+        'rems_id': 0xffff, # Not supported by the chip.
+        'rems2_id': 0xffff, # Not supported by the chip.
+        'rdid_id': 0x1f26000100, # RDID and 2 extra "EDI" bytes.
+        'page_size': 528, # Configurable, could also be 512 bytes.
+        'sector_size': 128 * 1024,
+        'block_size': 4 * 1024,
+    },
     # FIDELIX
     'fidelix_fm25q32': {
         'vendor': 'FIDELIX',

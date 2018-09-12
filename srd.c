@@ -105,7 +105,7 @@ static int searchpath_add_xdg_dir(const char *datadir)
 	if (g_file_test(decdir, G_FILE_TEST_IS_DIR))
 		ret = srd_decoder_searchpath_add(decdir);
 	else
-		ret = SRD_OK; /* just ignore non-existing directory */
+		ret = SRD_OK; /* Just ignore non-existing directory. */
 
 	g_free(decdir);
 
@@ -188,11 +188,6 @@ err:
 	return SRD_ERR_PYTHON;
 }
 
-SRD_API GSList *srd_searchpaths_get(void)
-{
-	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
-}
-
 /**
  * Initialize libsigrokdecode.
  *
@@ -245,7 +240,7 @@ SRD_API int srd_init(const char *path)
 	/* Locations relative to the XDG system data directories. */
 	sys_datadirs = g_get_system_data_dirs();
 	for (i = g_strv_length((char **)sys_datadirs); i > 0; i--) {
-		ret = searchpath_add_xdg_dir(sys_datadirs[i-1]);
+		ret = searchpath_add_xdg_dir(sys_datadirs[i - 1]);
 		if (ret != SRD_OK) {
 			Py_Finalize();
 			return ret;
@@ -312,7 +307,8 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	g_slist_foreach(sessions, (GFunc)srd_session_destroy, NULL);
+	for (GSList *l = sessions; l; l = l->next)
+		srd_session_destroy(l->data);
 
 	srd_decoder_unload_all();
 	g_slist_free_full(searchpaths, g_free);
@@ -389,6 +385,18 @@ err:
 	PyGILState_Release(gstate);
 
 	return SRD_ERR_PYTHON;
+}
+
+/**
+ * Return the list of protocol decoder search paths.
+ *
+ * @return The list of search paths used when loading protocol decoders.
+ *
+ * @since 0.5.1
+ */
+SRD_API GSList *srd_searchpaths_get(void)
+{
+	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
 }
 
 /** @} */

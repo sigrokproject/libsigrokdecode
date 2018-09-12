@@ -178,8 +178,9 @@ class Decoder(srd.Decoder):
             self.putx([jtag_states.index(self.oldstate), [self.oldstate]])
             self.putp(['NEW STATE', self.state])
 
-        # Upon SHIFT-IR/SHIFT-DR collect the current TDI/TDO values.
-        if self.state.startswith('SHIFT-'):
+        # Upon SHIFT-*/EXIT1-* collect the current TDI/TDO values.
+        if self.oldstate.startswith('SHIFT-') or \
+           self.oldstate.startswith('EXIT1-'):
             if self.first_bit:
                 self.ss_bitstring = self.samplenum
                 self.first_bit = False
@@ -197,31 +198,26 @@ class Decoder(srd.Decoder):
             self.bits_samplenums_tdi.insert(0, [self.samplenum, -1])
             self.bits_samplenums_tdo.insert(0, [self.samplenum, -1])
 
-        # Output all TDI/TDO bits if we just switched from SHIFT-* to EXIT1-*.
-        if self.oldstate.startswith('SHIFT-') and \
-           self.state.startswith('EXIT1-'):
+        # Output all TDI/TDO bits if we just switched to UPDATE-*.
+        if self.state.startswith('UPDATE-'):
 
             self.es_bitstring = self.samplenum
 
             t = self.state[-2:] + ' TDI'
-            b = ''.join(map(str, self.bits_tdi))
-            h = ' (0x%x' % int('0b' + b, 2) + ')'
-            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi)) + ' bits'
+            b = ''.join(map(str, self.bits_tdi[1:]))
+            h = ' (0x%x' % int('0b0' + b, 2) + ')'
+            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi[1:])) + ' bits'
             self.putx_bs([18, [s]])
-            self.bits_samplenums_tdi[0][1] = self.samplenum # ES of last bit.
-            self.putp_bs([t, [b, self.bits_samplenums_tdi]])
-            self.putx([16, [str(self.bits_tdi[0])]]) # Last bit.
+            self.putp_bs([t, [b, self.bits_samplenums_tdi[1:]]])
             self.bits_tdi = []
             self.bits_samplenums_tdi = []
 
             t = self.state[-2:] + ' TDO'
-            b = ''.join(map(str, self.bits_tdo))
-            h = ' (0x%x' % int('0b' + b, 2) + ')'
-            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo)) + ' bits'
+            b = ''.join(map(str, self.bits_tdo[1:]))
+            h = ' (0x%x' % int('0b0' + b, 2) + ')'
+            s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo[1:])) + ' bits'
             self.putx_bs([19, [s]])
-            self.bits_samplenums_tdo[0][1] = self.samplenum # ES of last bit.
-            self.putp_bs([t, [b, self.bits_samplenums_tdo]])
-            self.putx([17, [str(self.bits_tdo[0])]]) # Last bit.
+            self.putp_bs([t, [b, self.bits_samplenums_tdo[1:]]])
             self.bits_tdo = []
             self.bits_samplenums_tdo = []
 

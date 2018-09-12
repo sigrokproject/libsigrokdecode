@@ -281,6 +281,8 @@ SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key,
 		goto err;
 	}
 
+	PyGILState_Release(gstate);
+
 	return py_str_as_str(py_value, outstr);
 
 err:
@@ -445,6 +447,8 @@ SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv)
 	}
 	*out_strv = strv;
 
+	PyGILState_Release(gstate);
+
 	return SRD_OK;
 
 err_out:
@@ -486,7 +490,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 		}
 		if (!var)
 			srd_exception_catch("Failed to extract string value");
-
 	} else if (PyLong_Check(py_obj)) { /* integer */
 		int64_t val;
 
@@ -495,7 +498,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 			var = g_variant_new_int64(val);
 		else
 			srd_exception_catch("Failed to extract integer value");
-
 	} else if (PyFloat_Check(py_obj)) { /* float */
 		double val;
 
@@ -504,7 +506,6 @@ SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj)
 			var = g_variant_new_double(val);
 		else
 			srd_exception_catch("Failed to extract float value");
-
 	} else {
 		srd_err("Failed to extract value of unsupported type.");
 	}

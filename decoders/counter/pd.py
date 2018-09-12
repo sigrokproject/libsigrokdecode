@@ -19,6 +19,9 @@
 
 import sigrokdecode as srd
 
+PIN_DATA, PIN_RESET = range(2)
+ROW_EDGE, ROW_WORD, ROW_RESET = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'counter'
@@ -40,9 +43,9 @@ class Decoder(srd.Decoder):
         ('word_reset', 'Word reset'),
     )
     annotation_rows = (
-        ('edge_counts', 'Edges', (0,)),
-        ('word_counts', 'Words', (1,)),
-        ('word_resets', 'Word resets', (2,)),
+        ('edge_counts', 'Edges', (ROW_EDGE,)),
+        ('word_counts', 'Words', (ROW_WORD,)),
+        ('word_resets', 'Word resets', (ROW_RESET,)),
     )
     options = (
         {'id': 'data_edge', 'desc': 'Edges to count (data)', 'default': 'any',
@@ -50,15 +53,18 @@ class Decoder(srd.Decoder):
         {'id': 'divider', 'desc': 'Count divider (word width)', 'default': 0},
         {'id': 'reset_edge', 'desc': 'Edge which clears counters (reset)',
             'default': 'falling', 'values': ('rising', 'falling')},
+        {'id': 'edge_off', 'desc': 'Edge counter value after start/reset', 'default': 0},
+        {'id': 'word_off', 'desc': 'Word counter value after start/reset', 'default': 0},
+        {'id': 'dead_cycles', 'desc': 'Ignore this many edges after reset', 'default': 0},
+        {'id': 'start_with_reset', 'desc': 'Assume decode starts with reset',
+            'default': 'no', 'values': ('no', 'yes')},
     )
 
     def __init__(self):
         self.reset()
 
     def reset(self):
-        self.edge_count = 0
-        self.word_count = 0
-        self.have_reset = None
+        pass
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -66,34 +72,73 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.edge = self.options['data_edge']
-        self.divider = self.options['divider']
-        if self.divider < 0:
-            self.divider = 0
 
-    def putc(self, cls, annlist):
-        self.put(self.samplenum, self.samplenum, self.out_ann, [cls, annlist])
+    def putc(self, cls, ss, annlist):
+        self.put(ss, self.samplenum, self.out_ann, [cls, annlist])
 
     def decode(self):
-        condition = [{'rising':  {0: 'r'},
-                      'falling': {0: 'f'},
-                      'any':     {0: 'e'},}[self.edge]]
+        opt_edge_map = {'rising': 'r', 'falling': 'f', 'any': 'e'}
 
-        if self.has_channel(1):
-            self.have_reset = True
-            condition.append({1: self.options['reset_edge'][0]})
+        data_edge = self.options['data_edge']
+        divider = self.options['divider']
+        if divider < 0:
+            divider = 0
+        reset_edge = self.options['reset_edge']
+
+        condition = [{PIN_DATA: opt_edge_map[data_edge]}]
+        have_reset = self.has_channel(PIN_RESET)
+        if have_reset:
+            cond_reset = len(condition)
+            condition.append({PIN_RESET: opt_edge_map[reset_edge]})
+
+        edge_count = int(self.options['edge_off'])
+        edge_start = None
+        word_count = int(self.options['word_off'])
+        word_start = None
+
+        if self.options['start_with_reset'] == 'yes':
+            dead_count = int(self.options['dead_cycles'])
+        else:
+            dead_count = 0
 
         while True:
             self.wait(condition)
-            if self.have_reset and self.matched[1]:
-                self.edge_count = 0
-                self.word_count = 0
-                self.putc(2, ['Word reset', 'Reset', 'Rst', 'R'])
+            now = self.samplenum
+
+            if have_reset and self.matched[cond_reset]:
+                edge_count = int(self.options['edge_off'])
+                edge_start = now
+                word_count = int(self.options['word_off'])
+                word_start = now
+                self.putc(ROW_RESET, now, ['Word reset', 'Reset', 'Rst', 'R'])
+                dead_count = int(self.options['dead_cycles'])
                 continue
 
-            self.edge_count += 1
+            if dead_count:
+                dead_count -= 1
+                edge_start = now
+                word_start = now
+                continue
 
-            self.putc(0, [str(self.edge_count)])
-            if self.divider > 0 and (self.edge_count % self.divider) == 0:
-                self.word_count += 1
-                self.putc(1, [str(self.word_count)])
+            # Implementation note: In the absence of a RESET condition
+            # before the first data edge, any arbitrary choice of where
+            # to start the annotation is valid. One may choose to emit a
+            # narrow annotation (where ss=es), or assume that the cycle
+            # which corresponds to the counter value started at sample
+            # number 0. We decided to go with the latter here, to avoid
+            # narrow annotations (see bug #1210). None of this matters in
+            # the presence of a RESET condition in the input stream.
+            if edge_start is None:
+                edge_start = 0
+            if word_start is None:
+                word_start = 0
+
+            edge_count += 1
+            self.putc(ROW_EDGE, edge_start, ["{:d}".format(edge_count)])
+            edge_start = now
+
+            word_edge_count = edge_count - int(self.options['edge_off'])
+            if divider and (word_edge_count % divider) == 0:
+                word_count += 1
+                self.putc(ROW_WORD, word_start, ["{:d}".format(word_count)])
+                word_start = now

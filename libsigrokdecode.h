@@ -71,6 +71,7 @@ enum srd_error_code {
 	SRD_ERR_BUG          = -4, /**< Errors hinting at internal bugs */
 	SRD_ERR_PYTHON       = -5, /**< Python C API error */
 	SRD_ERR_DECODERS_DIR = -6, /**< Protocol decoder path invalid */
+	SRD_ERR_TERM_REQ     = -7, /**< Termination requested */
 
 	/*
 	 * Note: When adding entries here, don't forget to also update the
@@ -276,6 +277,9 @@ struct srd_decoder_inst {
 	/** Requests termination of wait() and decode(). */
 	gboolean want_wait_terminate;
 
+	/** Indicates the current state of the decoder stack. */
+	int decoder_state;
+
 	GCond got_new_samples_cond;
 	GCond handled_all_samples_cond;
 	GMutex data_mutex;
@@ -363,6 +367,7 @@ typedef int (*srd_log_callback)(void *cb_data, int loglevel,
 				  const char *format, va_list args);
 SRD_API int srd_log_loglevel_set(int loglevel);
 SRD_API int srd_log_loglevel_get(void);
+SRD_API int srd_log_callback_get(srd_log_callback *cb, void **cb_data);
 SRD_API int srd_log_callback_set(srd_log_callback cb, void *cb_data);
 SRD_API int srd_log_callback_set_default(void);
 
