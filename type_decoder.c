@@ -67,16 +67,16 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 
 	/* Should be a list of [annotation class, [string, ...]]. */
 	if (!PyList_Check(obj)) {
-		srd_err("Protocol decoder %s submitted an annotation that"
-			" is not a list", di->decoder->name);
+		srd_err("Protocol decoder %s submitted an annotation that is not a list",
+				di->decoder->name);
 		goto err;
 	}
 
 	/* Should have 2 elements. */
 	if (PyList_Size(obj) != 2) {
-		srd_err("Protocol decoder %s submitted annotation list with "
-			"%zd elements instead of 2", di->decoder->name,
-			PyList_Size(obj));
+		ssize_t sz = PyList_Size(obj);
+		srd_err("Protocol decoder %s submitted annotation list with %zd elements instead of 2",
+				di->decoder->name, sz);
 		goto err;
 	}
 
@@ -86,27 +86,27 @@ static int convert_annotation(struct srd_decoder_inst *di, PyObject *obj,
 	 */
 	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted annotation list, but "
-			"first element was not an integer.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but first element was not an integer.",
+				di->decoder->name);
 		goto err;
 	}
 	ann_class = PyLong_AsLong(py_tmp);
 	if (!(pdo = g_slist_nth_data(di->decoder->annotations, ann_class))) {
-		srd_err("Protocol decoder %s submitted data to unregistered "
-			"annotation class %d.", di->decoder->name, ann_class);
+		srd_err("Protocol decoder %s submitted data to unregistered annotation class %d.",
+				di->decoder->name, ann_class);
 		goto err;
 	}
 
 	/* Second element must be a list. */
 	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyList_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted annotation list, but "
-			"second element was not a list.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but second element was not a list.",
+				di->decoder->name);
 		goto err;
 	}
 	if (py_strseq_to_char(py_tmp, &ann_text) != SRD_OK) {
-		srd_err("Protocol decoder %s submitted annotation list, but "
-			"second element was malformed.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted annotation list, but second element was malformed.",
+				di->decoder->name);
 		goto err;
 	}
 
@@ -235,38 +235,38 @@ static int convert_binary(struct srd_decoder_inst *di, PyObject *obj,
 
 	/* Should have 2 elements. */
 	if (PyList_Size(obj) != 2) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list "
-				"with %zd elements instead of 2", di->decoder->name,
-				PyList_Size(obj));
+		ssize_t sz = PyList_Size(obj);
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list with %zd elements instead of 2",
+				di->decoder->name, sz);
 		goto err;
 	}
 
 	/* The first element should be an integer. */
 	py_tmp = PyList_GetItem(obj, 0);
 	if (!PyLong_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, "
-			"but first element was not an integer.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, but first element was not an integer.",
+				di->decoder->name);
 		goto err;
 	}
 	bin_class = PyLong_AsLong(py_tmp);
 	if (!(class_name = g_slist_nth_data(di->decoder->binary, bin_class))) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY with "
-			"unregistered binary class %d.", di->decoder->name, bin_class);
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY with unregistered binary class %d.",
+				di->decoder->name, bin_class);
 		goto err;
 	}
 
 	/* Second element should be bytes. */
 	py_tmp = PyList_GetItem(obj, 1);
 	if (!PyBytes_Check(py_tmp)) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, "
-			"but second element was not bytes.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY list, but second element was not bytes.",
+				di->decoder->name);
 		goto err;
 	}
 
 	/* Consider an empty set of bytes a bug. */
 	if (PyBytes_Size(py_tmp) == 0) {
-		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY "
-				"with empty data set.", di->decoder->name);
+		srd_err("Protocol decoder %s submitted SRD_OUTPUT_BINARY with empty data set.",
+				di->decoder->name);
 		goto err;
 	}
 
@@ -359,8 +359,8 @@ static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
 
 	if (g_variant_type_equal(pdata->pdo->meta_type, G_VARIANT_TYPE_INT64)) {
 		if (!PyLong_Check(obj)) {
-			PyErr_Format(PyExc_TypeError, "This output was registered "
-					"as 'int', but something else was passed.");
+			PyErr_Format(PyExc_TypeError,
+				"This output was registered as 'int', but something else was passed.");
 			goto err;
 		}
 		intvalue = PyLong_AsLongLong(obj);
@@ -369,8 +369,8 @@ static int convert_meta(struct srd_proto_data *pdata, PyObject *obj)
 		pdata->data = g_variant_new_int64(intvalue);
 	} else if (g_variant_type_equal(pdata->pdo->meta_type, G_VARIANT_TYPE_DOUBLE)) {
 		if (!PyFloat_Check(obj)) {
-			PyErr_Format(PyExc_TypeError, "This output was registered "
-					"as 'float', but something else was passed.");
+			PyErr_Format(PyExc_TypeError,
+				"This output was registered as 'float', but something else was passed.");
 			goto err;
 		}
 		dvalue = PyFloat_AsDouble(obj);
