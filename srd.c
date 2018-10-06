@@ -396,7 +396,12 @@ err:
  */
 SRD_API GSList *srd_searchpaths_get(void)
 {
-	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
+	GSList *paths = NULL;
+
+	for (GSList *l = searchpaths; l; l = l->next)
+		paths = g_slist_append(paths, g_strdup(l->data));
+
+	return paths;
 }
 
 /** @} */
