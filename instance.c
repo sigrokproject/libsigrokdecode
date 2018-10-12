@@ -314,7 +314,6 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	PyGILState_STATE gstate;
 
 	i = 1;
-	srd_dbg("Creating new %s instance.", decoder_id);
 
 	if (!sess)
 		return NULL;
@@ -412,7 +411,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 
 	/* Instance takes input from a frontend by default. */
 	sess->di_list = g_slist_append(sess->di_list, di);
-	srd_dbg("Created new %s instance with ID %s.", decoder_id, di->inst_id);
+	srd_dbg("Creating new %s instance %s.", decoder_id, di->inst_id);
 
 	return di;
 }
@@ -508,7 +507,7 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 	/* Stack on top of source di. */
 	di_bottom->next_di = g_slist_append(di_bottom->next_di, di_top);
 
-	srd_dbg("Stacked %s onto %s.", di_top->inst_id, di_bottom->inst_id);
+	srd_dbg("Stacking %s onto %s.", di_top->inst_id, di_bottom->inst_id);
 
 	return SRD_OK;
 }
@@ -637,7 +636,6 @@ static void oldpins_array_seed(struct srd_decoder_inst *di)
 	if (di->old_pins_array)
 		return;
 
-	srd_dbg("%s: Seeding old pins, %s().", di->inst_id, __func__);
 	count = di->dec_num_channels;
 	arr = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), count);
 	g_array_set_size(arr, count);
@@ -667,8 +665,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	int ret;
 	PyGILState_STATE gstate;
 
-	srd_dbg("Calling start() method on protocol decoder instance %s.",
-			di->inst_id);
+	srd_dbg("Calling start() of instance %s.", di->inst_id);
 
 	gstate = PyGILState_Ensure();
 
@@ -1028,9 +1025,9 @@ static gpointer di_thread(gpointer data)
 	 * "Regular" termination of the decode() method is not expected.
 	 */
 	Py_IncRef(di->py_inst);
-	srd_dbg("%s: Calling decode() method.", di->inst_id);
+	srd_dbg("%s: Calling decode().", di->inst_id);
 	py_res = PyObject_CallMethod(di->py_inst, "decode", NULL);
-	srd_dbg("%s: decode() method terminated.", di->inst_id);
+	srd_dbg("%s: decode() terminated.", di->inst_id);
 
 	if (!py_res)
 		di->decoder_state = SRD_ERR;
@@ -1262,7 +1259,7 @@ SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di)
 	 */
 	gstate = PyGILState_Ensure();
 	if (PyObject_HasAttrString(di->py_inst, "reset")) {
-		srd_dbg("Calling .reset() of instance %s", di->inst_id);
+		srd_dbg("Calling reset() of instance %s", di->inst_id);
 		py_ret = PyObject_CallMethod(di->py_inst, "reset", NULL);
 		Py_XDECREF(py_ret);
 	}
