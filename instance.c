@@ -32,8 +32,8 @@ extern SRD_PRIV GSList *sessions;
 
 static void srd_inst_join_decode_thread(struct srd_decoder_inst *di);
 static void srd_inst_reset_state(struct srd_decoder_inst *di);
-SRD_PRIV void oldpins_array_seed(struct srd_decoder_inst *di);
-SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di);
+static void oldpins_array_seed(struct srd_decoder_inst *di);
+static void oldpins_array_free(struct srd_decoder_inst *di);
 
 /** @endcond */
 
@@ -627,8 +627,7 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 	return SRD_OK;
 }
 
-/** @private */
-SRD_PRIV void oldpins_array_seed(struct srd_decoder_inst *di)
+static void oldpins_array_seed(struct srd_decoder_inst *di)
 {
 	size_t count;
 	GArray *arr;
@@ -646,8 +645,7 @@ SRD_PRIV void oldpins_array_seed(struct srd_decoder_inst *di)
 	di->old_pins_array = arr;
 }
 
-/** @private */
-SRD_PRIV void oldpins_array_free(struct srd_decoder_inst *di)
+static void oldpins_array_free(struct srd_decoder_inst *di)
 {
 	if (!di)
 		return;
