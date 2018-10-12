@@ -353,9 +353,12 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
-	srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on oid %d.",
-		 di->inst_id, start_sample, end_sample,
-		 output_type_name(pdo->output_type), output_id);
+	/* Upon SRD_OUTPUT_PYTHON for stacked PDs, we have a nicer log message later. */
+	if (pdo->output_type != SRD_OUTPUT_PYTHON && di->next_di != NULL) {
+		srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on oid %d.",
+			 di->inst_id, start_sample, end_sample,
+			 output_type_name(pdo->output_type), output_id);
+	}
 
 	pdata.start_sample = start_sample;
 	pdata.end_sample = end_sample;
@@ -381,8 +384,10 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_PYTHON:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
-			srd_spew("Sending %" PRIu64 "-%" PRIu64 " to instance %s",
-				 start_sample, end_sample, next_di->inst_id);
+			srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on "
+				 "oid %d to instance %s.", di->inst_id, start_sample,
+				 end_sample, output_type_name(pdo->output_type),
+				 output_id, next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
 				next_di->py_inst, "decode", "KKO", start_sample,
 				end_sample, py_data))) {
