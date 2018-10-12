@@ -372,7 +372,8 @@ SRD_API int srd_pd_output_callback_add(struct srd_session *sess,
 	if (!sess)
 		return SRD_ERR_ARG;
 
-	srd_dbg("Registering new callback for output type %d.", output_type);
+	srd_dbg("Registering new callback for output type %s.",
+		output_type_name(output_type));
 
 	pd_cb = g_malloc(sizeof(struct srd_pd_callback));
 	pd_cb->output_type = output_type;

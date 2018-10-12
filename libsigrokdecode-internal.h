@@ -108,6 +108,7 @@ SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d);
 
 /* type_decoder.c */
 SRD_PRIV PyObject *srd_Decoder_type_new(void);
+SRD_PRIV const char *output_type_name(unsigned int idx);
 
 /* type_logic.c */
 SRD_PRIV PyObject *srd_logic_type_new(void);

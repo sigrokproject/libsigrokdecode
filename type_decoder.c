@@ -31,7 +31,7 @@ typedef struct {
 } srd_Decoder;
 
 /* This is only used for nicer srd_dbg() output. */
-static const char *output_type_name(unsigned int idx)
+SRD_PRIV const char *output_type_name(unsigned int idx)
 {
 	static const char names[][16] = {
 		"OUTPUT_ANN",
@@ -519,8 +519,8 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 		return py_new_output_id;
 	}
 
-	srd_dbg("Instance %s creating new output type %d for %s.",
-		di->inst_id, output_type, proto_id);
+	srd_dbg("Instance %s creating new output type %s for %s.",
+		di->inst_id, output_type_name(output_type), proto_id);
 
 	pdo = g_malloc(sizeof(struct srd_pd_output));
 
