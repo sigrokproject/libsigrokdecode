@@ -347,8 +347,6 @@ SRD_API int srd_exit(void)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
- *
- * @since 0.1.0
  */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
