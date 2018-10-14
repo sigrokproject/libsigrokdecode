@@ -30,11 +30,6 @@
 
 extern SRD_PRIV GSList *sessions;
 
-static void srd_inst_join_decode_thread(struct srd_decoder_inst *di);
-static void srd_inst_reset_state(struct srd_decoder_inst *di);
-static void oldpins_array_seed(struct srd_decoder_inst *di);
-static void oldpins_array_free(struct srd_decoder_inst *di);
-
 /** @endcond */
 
 /**
@@ -50,6 +45,36 @@ static void oldpins_array_free(struct srd_decoder_inst *di);
  *
  * @{
  */
+
+static void oldpins_array_seed(struct srd_decoder_inst *di)
+{
+	size_t count;
+	GArray *arr;
+
+	if (!di)
+		return;
+	if (di->old_pins_array)
+		return;
+
+	count = di->dec_num_channels;
+	arr = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), count);
+	g_array_set_size(arr, count);
+	memset(arr->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0, count);
+	di->old_pins_array = arr;
+}
+
+static void oldpins_array_free(struct srd_decoder_inst *di)
+{
+	if (!di)
+		return;
+	if (!di->old_pins_array)
+		return;
+
+	srd_dbg("%s: Releasing initial pin state.", di->inst_id);
+
+	g_array_free(di->old_pins_array, TRUE);
+	di->old_pins_array = NULL;
+}
 
 /**
  * Set one or more options in a decoder instance.
@@ -624,36 +649,6 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 	g_string_free(s, TRUE);
 
 	return SRD_OK;
-}
-
-static void oldpins_array_seed(struct srd_decoder_inst *di)
-{
-	size_t count;
-	GArray *arr;
-
-	if (!di)
-		return;
-	if (di->old_pins_array)
-		return;
-
-	count = di->dec_num_channels;
-	arr = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), count);
-	g_array_set_size(arr, count);
-	memset(arr->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0, count);
-	di->old_pins_array = arr;
-}
-
-static void oldpins_array_free(struct srd_decoder_inst *di)
-{
-	if (!di)
-		return;
-	if (!di->old_pins_array)
-		return;
-
-	srd_dbg("%s: Releasing initial pin state.", di->inst_id);
-
-	g_array_free(di->old_pins_array, TRUE);
-	di->old_pins_array = NULL;
 }
 
 /** @private */
