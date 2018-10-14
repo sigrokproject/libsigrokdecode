@@ -289,6 +289,12 @@ SRD_API int srd_init(const char *path)
 	return SRD_OK;
 }
 
+static void srd_session_destroy_cb(void *arg, void *ignored)
+{
+	(void)ignored; // Prevent unused warning
+	srd_session_destroy((struct srd_session *)arg);
+}
+
 /**
  * Shutdown libsigrokdecode.
  *
@@ -307,8 +313,9 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	for (GSList *l = sessions; l; l = l->next)
-		srd_session_destroy(l->data);
+	g_slist_foreach(sessions, srd_session_destroy_cb, NULL);
+	g_slist_free(sessions);
+	sessions = NULL;
 
 	srd_decoder_unload_all();
 	g_slist_free_full(searchpaths, g_free);

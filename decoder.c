@@ -1068,6 +1068,12 @@ SRD_API int srd_decoder_load_all(void)
 	return SRD_OK;
 }
 
+static void srd_decoder_unload_cb(void *arg, void *ignored)
+{
+	(void)ignored; // Prevent unused warning
+	srd_decoder_unload((struct srd_decoder *)arg);
+}
+
 /**
  * Unload all loaded protocol decoders.
  *
@@ -1077,8 +1083,7 @@ SRD_API int srd_decoder_load_all(void)
  */
 SRD_API int srd_decoder_unload_all(void)
 {
-	for (GSList *l = pd_list; l; l = l->next)
-		srd_decoder_unload(l->data);
+	g_slist_foreach(pd_list, srd_decoder_unload_cb, NULL);
 	g_slist_free(pd_list);
 	pd_list = NULL;
 
