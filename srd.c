@@ -172,6 +172,7 @@ static int print_searchpaths(void)
 		py_path = PyList_GetItem(py_paths, i);
 		py_bytes = PyUnicode_AsUTF8String(py_path);
 		g_string_append_printf(s, " - %s\n", PyBytes_AsString(py_bytes));
+		Py_DECREF(py_bytes);
 	}
 	s->str[s->len - 1] = '\0';
 	srd_dbg("%s", s->str);
