@@ -387,11 +387,13 @@ class Decoder(srd.Decoder):
     def handle_be(self, mosi, miso):
         pass # TODO
 
+    # TODO: Warn if WREN was not seen before.
     def handle_ce(self, mosi, miso):
-        pass # TODO
+        self.putx([Ann.CE, self.cmd_ann_list()])
 
+    # TODO: Warn if WREN was not seen before.
     def handle_ce2(self, mosi, miso):
-        pass # TODO
+        self.putx([Ann.CE2, self.cmd_ann_list()])
 
     def handle_pp(self, mosi, miso):
         # Page program: Master asserts CS#, sends PP command, sends 3-byte
