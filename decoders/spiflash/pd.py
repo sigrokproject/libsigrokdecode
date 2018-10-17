@@ -246,12 +246,12 @@ class Decoder(srd.Decoder):
             self.emit_cmd_byte()
         elif self.cmdstate == 2:
             # Byte 2: Master sends status register 1.
-            self.putx([Ann.BIT, [decode_status_reg(miso)]])
+            self.putx([Ann.BIT, [decode_status_reg(mosi)]])
             self.putx([Ann.FIELD, ['Status register 1']])
         elif self.cmdstate == 3:
             # Byte 3: Master sends status register 2.
             # TODO: Decode status register 2 correctly.
-            self.putx([Ann.BIT, [decode_status_reg(miso)]])
+            self.putx([Ann.BIT, [decode_status_reg(mosi)]])
             self.putx([Ann.FIELD, ['Status register 2']])
             self.es_cmd = self.es
             self.putc([Ann.WRSR, self.cmd_ann_list()])
