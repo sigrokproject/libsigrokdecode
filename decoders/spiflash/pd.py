@@ -217,6 +217,8 @@ class Decoder(srd.Decoder):
             self.putx([Ann.BIT, [decode_status_reg(miso)]])
             self.putx([Ann.FIELD, ['Status register']])
             self.putc([Ann.RDSR, self.cmd_ann_list()])
+            # Set write latch state.
+            self.writestate = 1 if (miso & (1 << 1)) else 0
         self.cmdstate += 1
 
     def handle_rdsr2(self, mosi, miso):
@@ -248,6 +250,8 @@ class Decoder(srd.Decoder):
             # Byte 2: Master sends status register 1.
             self.putx([Ann.BIT, [decode_status_reg(mosi)]])
             self.putx([Ann.FIELD, ['Status register 1']])
+            # Set write latch state.
+            self.writestate = 1 if (miso & (1 << 1)) else 0
         elif self.cmdstate == 3:
             # Byte 3: Master sends status register 2.
             # TODO: Decode status register 2 correctly.
