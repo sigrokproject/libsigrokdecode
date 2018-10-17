@@ -104,6 +104,7 @@ class Decoder(srd.Decoder):
         self.device_id = -1
         self.on_end_transaction = None
         self.end_current_transaction()
+        self.writestate = 0
 
         # Build dict mapping command keys to handler functions. Each
         # command in 'cmds' (defined in lists.py) has a matching
@@ -174,10 +175,11 @@ class Decoder(srd.Decoder):
 
     def handle_wren(self, mosi, miso):
         self.putx([Ann.WREN, self.cmd_ann_list()])
-        self.state = None
+        self.writestate = 1
 
     def handle_wrdi(self, mosi, miso):
-        pass # TODO
+        self.putx([Ann.WRDI, self.cmd_ann_list()])
+        self.writestate = 0
 
     def handle_rdid(self, mosi, miso):
         if self.cmdstate == 1:
@@ -279,6 +281,8 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
+            if self.writestate == 0:
+                self.putc([Ann.WARN, ['Warning: WREN might be missing']])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends write address (24bits, MSB-first).
             self.emit_addr_bytes(mosi)
@@ -363,11 +367,12 @@ class Decoder(srd.Decoder):
         self.cmdstate += 1
 
     # TODO: Warn/abort if we don't see the necessary amount of bytes.
-    # TODO: Warn if WREN was not seen before.
     def handle_se(self, mosi, miso):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
+            if self.writestate == 0:
+                self.putx([Ann.WARN, ['Warning: WREN might be missing']])
         elif self.cmdstate in (2, 3, 4):
             # Bytes 2/3/4: Master sends sector address (24bits, MSB-first).
             self.emit_addr_bytes(mosi)
@@ -387,13 +392,15 @@ class Decoder(srd.Decoder):
     def handle_be(self, mosi, miso):
         pass # TODO
 
-    # TODO: Warn if WREN was not seen before.
     def handle_ce(self, mosi, miso):
         self.putx([Ann.CE, self.cmd_ann_list()])
+        if self.writestate == 0:
+            self.putx([Ann.WARN, ['Warning: WREN might be missing']])
 
-    # TODO: Warn if WREN was not seen before.
     def handle_ce2(self, mosi, miso):
         self.putx([Ann.CE2, self.cmd_ann_list()])
+        if self.writestate == 0:
+            self.putx([Ann.WARN, ['Warning: WREN might be missing']])
 
     def handle_pp(self, mosi, miso):
         # Page program: Master asserts CS#, sends PP command, sends 3-byte
