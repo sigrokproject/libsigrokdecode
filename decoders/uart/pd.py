@@ -207,6 +207,7 @@ class Decoder(srd.Decoder):
         self.break_start = [None, None]
         self.packet_cache = [[], []]
         self.ss_packet, self.es_packet = [None, None], [None, None]
+        self.idle_start = [None, None]
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -405,6 +406,7 @@ class Decoder(srd.Decoder):
             (self.datavalue[rxtx], self.frame_valid[rxtx])])
 
         self.state[rxtx] = 'WAIT FOR START BIT'
+        self.idle_start[rxtx] = self.frame_start[rxtx] + self.frame_len_sample_count
 
     def handle_break(self, rxtx):
         self.putpse(self.frame_start[rxtx], self.samplenum,
@@ -431,6 +433,17 @@ class Decoder(srd.Decoder):
             bitnum += 0 if self.options['parity_type'] == 'none' else 1
         want_num = ceil(self.get_sample_point(rxtx, bitnum))
         return {'skip': want_num - self.samplenum}
+
+    def get_idle_cond(self, rxtx, inv):
+        # Return a condition that corresponds to the (expected) end of
+        # the next frame, assuming that it will be an "idle frame"
+        # (constant high input level for the frame's length).
+        if self.idle_start[rxtx] is None:
+            return None
+        end_of_frame = self.idle_start[rxtx] + self.frame_len_sample_count
+        if end_of_frame < self.samplenum:
+            return None
+        return {'skip': end_of_frame - self.samplenum}
 
     def inspect_sample(self, rxtx, signal, inv):
         # Inspect a sample returned by .wait() for the specified UART line.
@@ -465,6 +478,25 @@ class Decoder(srd.Decoder):
             self.handle_break(rxtx)
         self.break_start[rxtx] = None
 
+    def inspect_idle(self, rxtx, signal, inv):
+        # Check each edge and each period of stable input (either level).
+        # Can derive the "idle frame period has passed" condition.
+        if inv:
+            signal = not signal
+        if not signal:
+            # Low input, cease inspection.
+            self.idle_start[rxtx] = None
+            return
+        # High input, either just reached, or still stable.
+        if self.idle_start[rxtx] is None:
+            self.idle_start[rxtx] = self.samplenum
+        diff = self.samplenum - self.idle_start[rxtx]
+        if diff < self.frame_len_sample_count:
+            return
+        ss, es = self.idle_start[rxtx], self.samplenum
+        self.putpse(ss, es, ['IDLE', rxtx, 0])
+        self.idle_start[rxtx] = self.samplenum
+
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -484,8 +516,10 @@ class Decoder(srd.Decoder):
         frame_samples += 0 if self.options['parity_type'] == 'none' else 1
         frame_samples += self.options['num_stop_bits']
         frame_samples *= self.bit_width
-        self.break_min_sample_count = ceil(frame_samples)
+        self.frame_len_sample_count = ceil(frame_samples)
+        self.break_min_sample_count = self.frame_len_sample_count
         cond_edge_idx = [None] * len(has_pin)
+        cond_idle_idx = [None] * len(has_pin)
 
         while True:
             conds = []
@@ -494,17 +528,33 @@ class Decoder(srd.Decoder):
                 conds.append(self.get_wait_cond(RX, inv[RX]))
                 cond_edge_idx[RX] = len(conds)
                 conds.append({RX: 'e'})
+                cond_idle_idx[RX] = None
+                idle_cond = self.get_idle_cond(RX, inv[RX])
+                if idle_cond:
+                    cond_idle_idx[RX] = len(conds)
+                    conds.append(idle_cond)
             if has_pin[TX]:
                 cond_data_idx[TX] = len(conds)
                 conds.append(self.get_wait_cond(TX, inv[TX]))
                 cond_edge_idx[TX] = len(conds)
                 conds.append({TX: 'e'})
+                cond_idle_idx[TX] = None
+                idle_cond = self.get_idle_cond(TX, inv[TX])
+                if idle_cond:
+                    cond_idle_idx[TX] = len(conds)
+                    conds.append(idle_cond)
             (rx, tx) = self.wait(conds)
             if cond_data_idx[RX] is not None and self.matched[cond_data_idx[RX]]:
                 self.inspect_sample(RX, rx, inv[RX])
             if cond_edge_idx[RX] is not None and self.matched[cond_edge_idx[RX]]:
                 self.inspect_edge(RX, rx, inv[RX])
+                self.inspect_idle(RX, rx, inv[RX])
+            if cond_idle_idx[RX] is not None and self.matched[cond_idle_idx[RX]]:
+                self.inspect_idle(RX, rx, inv[RX])
             if cond_data_idx[TX] is not None and self.matched[cond_data_idx[TX]]:
                 self.inspect_sample(TX, tx, inv[TX])
             if cond_edge_idx[TX] is not None and self.matched[cond_edge_idx[TX]]:
                 self.inspect_edge(TX, tx, inv[TX])
+                self.inspect_idle(TX, tx, inv[TX])
+            if cond_idle_idx[TX] is not None and self.matched[cond_idle_idx[TX]]:
+                self.inspect_idle(TX, tx, inv[TX])
