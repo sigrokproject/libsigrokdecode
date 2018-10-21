@@ -65,6 +65,9 @@ device_name = {
         0x15: 'MX25L3205D',
         0x16: 'MX25L6405D',
     },
+    'winbond': {
+        0x13: 'W25Q80DV',
+    },
 }
 
 chips = {
@@ -125,5 +128,17 @@ chips = {
         'page_size': 256,
         'sector_size': 4 * 1024,
         'block_size': 64 * 1024,
+    },
+    # Winbond
+    'winbond_w25q80dv': {
+        'vendor': 'Winbond',
+        'model': 'W25Q80DV',
+        'res_id': 0x13,
+        'rems_id': 0xef13,
+        'rems2_id': 0xffff, # Not supported by the chip.
+        'rdid_id': 0xef4014,
+        'page_size': 256,
+        'sector_size': 4 * 1024,
+        'block_size': 64 * 1024, # Configurable, could also be 32 * 1024 bytes.
     },
 }
