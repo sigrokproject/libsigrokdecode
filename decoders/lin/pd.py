@@ -123,8 +123,7 @@ class Decoder(srd.Decoder):
         self.fsm.reset()
         self.fsm.transit(LinFsm.State.Sync)
 
-        data = [1, ['Break condition', 'Break', 'Brk', 'B']]
-        self.put(self.ss_block, self.es_block, self.out_ann, data)
+        self.putx([1, ['Break condition', 'Break', 'Brk', 'B']])
 
     def handle_sync(self, value):
         self.fsm.transit(LinFsm.State.Pid)
