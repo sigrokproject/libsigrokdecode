@@ -37,10 +37,7 @@ class LinFsm:
     def _transition_allowed(self, target_state):
         if target_state == LinFsm.State.Error:
             return True
-        for s in self.allowed_state[self.state]:
-            if s == target_state:
-                return True
-        return False
+        return target_state in self.allowed_state[self.state]
 
     def reset(self):
         self.state = LinFsm.State.WaitForBreak
