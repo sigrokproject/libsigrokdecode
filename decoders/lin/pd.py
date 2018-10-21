@@ -21,7 +21,7 @@ import sigrokdecode as srd
 
 class LinFsm:
     class State:
-        WaitForBreak = 'WAIT FOR BREAK'
+        WaitForBreak = 'WAIT_FOR_BREAK'
         Sync = 'SYNC'
         Pid = 'PID'
         Data = 'DATA'
@@ -43,13 +43,14 @@ class LinFsm:
         self.state = LinFsm.State.WaitForBreak
 
     def __init__(self):
-        self.allowed_state = dict()
-        self.allowed_state[LinFsm.State.WaitForBreak] = (LinFsm.State.Sync,)
-        self.allowed_state[LinFsm.State.Sync]         = (LinFsm.State.Pid,)
-        self.allowed_state[LinFsm.State.Pid]          = (LinFsm.State.Data,)
-        self.allowed_state[LinFsm.State.Data]         = (LinFsm.State.Data, LinFsm.State.Checksum)
-        self.allowed_state[LinFsm.State.Checksum]     = (LinFsm.State.WaitForBreak,)
-        self.allowed_state[LinFsm.State.Error]        = (LinFsm.State.Sync,)
+        a = dict()
+        a[LinFsm.State.WaitForBreak] = (LinFsm.State.Sync,)
+        a[LinFsm.State.Sync]         = (LinFsm.State.Pid,)
+        a[LinFsm.State.Pid]          = (LinFsm.State.Data,)
+        a[LinFsm.State.Data]         = (LinFsm.State.Data, LinFsm.State.Checksum)
+        a[LinFsm.State.Checksum]     = (LinFsm.State.WaitForBreak,)
+        a[LinFsm.State.Error]        = (LinFsm.State.Sync,)
+        self.allowed_state = a
 
         self.state = None
         self.reset()
@@ -98,7 +99,7 @@ class Decoder(srd.Decoder):
 
     def wipe_break_null_byte(self, value):
         # Upon a break condition a null byte is received which must be ignored.
-        if self.fsm.state != LinFsm.State.WaitForBreak and self.fsm.state != LinFsm.State.Error:
+        if self.fsm.state not in (LinFsm.State.WaitForBreak, LinFsm.State.Error):
             if len(self.lin_rsp):
                 value = self.lin_rsp.pop()[2]
             else:
@@ -106,7 +107,7 @@ class Decoder(srd.Decoder):
 
         if value != 0:
             self.fsm.transit(LinFsm.State.Error)
-            self.handle_error()
+            self.handle_error(None)
             return False
 
         return True
@@ -115,7 +116,7 @@ class Decoder(srd.Decoder):
         self.wipe_break_null_byte(value)
 
     def handle_break(self, value):
-        if self.fsm.state != LinFsm.State.WaitForBreak and self.fsm.state != LinFsm.State.Error:
+        if self.fsm.state not in (LinFsm.State.WaitForBreak, LinFsm.State.Error):
             if self.wipe_break_null_byte(value):
                 self.fsm.transit(LinFsm.State.Checksum)
                 self.handle_checksum()
@@ -182,7 +183,7 @@ class Decoder(srd.Decoder):
         self.lin_header.clear()
         self.lin_rsp.clear()
 
-    def handle_error(self):
+    def handle_error(self, dummy):
         self.putx([3, ['Error', 'Err', 'E']])
 
     def checksum_is_valid(self, pid, data, checksum):
@@ -229,9 +230,5 @@ class Decoder(srd.Decoder):
         #  - Sync byte is followed by a PID byte (Protected Identifier).
         #  - PID byte is followed by 1 - 8 data bytes and a final checksum byte.
 
-        if   self.fsm.state == LinFsm.State.Error:        self.handle_error()
-        elif self.fsm.state == LinFsm.State.WaitForBreak: self.handle_wait_for_break(pdata)
-        elif self.fsm.state == LinFsm.State.Sync:         self.handle_sync(pdata)
-        elif self.fsm.state == LinFsm.State.Pid:          self.handle_pid(pdata)
-        elif self.fsm.state == LinFsm.State.Data:         self.handle_data(pdata)
-        elif self.fsm.state == LinFsm.State.Checksum:     self.handle_checksum()
+        handler = getattr(self, 'handle_%s' % self.fsm.state.lower())
+        handler(pdata)
