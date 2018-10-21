@@ -751,6 +751,11 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	/* Check Decoder class for required methods. */
 
+	if (check_method(d->py_dec, module_name, "reset") != SRD_OK) {
+		fail_txt = "no 'reset()' method";
+		goto err_out;
+	}
+
 	if (check_method(d->py_dec, module_name, "start") != SRD_OK) {
 		fail_txt = "no 'start()' method";
 		goto err_out;
