@@ -107,10 +107,4 @@ class Decoder(srd.Decoder):
                 self.cmd_digit = 0
                 self.read_value = 0
                 self.write_value = 0
-        elif ptype == 'TRANSFER':
-            pass
-        elif ptype == 'BITS':
-            pass
-        else:
-            pass
 
