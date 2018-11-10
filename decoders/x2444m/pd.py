@@ -64,10 +64,11 @@ class Decoder(srd.Decoder):
 
     def putreadwrite(self, ss, es, reg, idx, addr, value):
         self.put(ss, es, self.out_ann,
-                 [idx, ['%s: %s => 0x%4.4x' % (reg, addr, value)]])
+                 [idx, ['%s: %s => 0x%4.4x' % (reg, addr, value),
+                        '%s: %s => 0x%4.4x' % (reg[0], addr, value), reg[0]]])
 
     def putcmd(self, ss, es, reg, idx):
-        self.put(ss, es, self.out_ann, [idx, ['%s' % reg]])
+        self.put(ss, es, self.out_ann, [idx, [reg, reg[0]]])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
