@@ -55,13 +55,12 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        pass
-
-    def start(self):
-        self.out_ann = self.register(srd.OUTPUT_ANN)
         self.cs_start = 0
         self.cs_asserted = False
         self.cmd_digit = 0
+
+    def start(self):
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putreadwrite(self, ss, es, reg, idx, addr, value):
         self.put(ss, es, self.out_ann,
