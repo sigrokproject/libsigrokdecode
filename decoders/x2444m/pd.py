@@ -21,17 +21,15 @@ import re
 import sigrokdecode as srd
 
 registers = {
-    0x80: ['WRDS',  lambda _: ''],
-    0x81: ['STO',   lambda _: ''],
-    0x82: ['SLEEP', lambda _: ''],
-    0x83: ['WRITE', lambda v: '0x%x' % v],
-    0x84: ['WREN',  lambda _: ''],
-    0x85: ['RCL',   lambda _: ''],
-    0x86: ['READ',  lambda v: '0x%x' % v],
-    0x87: ['READ',  lambda v: '0x%x' % v],
+    0x80: ['WRDS',  0, lambda _: ''],
+    0x81: ['STO',   1, lambda _: ''],
+    0x82: ['SLEEP', 2, lambda _: ''],
+    0x83: ['WRITE', 3, lambda v: '0x%x' % v],
+    0x84: ['WREN',  4, lambda _: ''],
+    0x85: ['RCL',   5, lambda _: ''],
+    0x86: ['READ',  6, lambda v: '0x%x' % v],
+    0x87: ['READ',  7, lambda v: '0x%x' % v],
 }
-
-ann_write, ann_read = range(2)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -43,11 +41,14 @@ class Decoder(srd.Decoder):
     inputs = ['spi']
     outputs = ['x2444m']
     annotations = (
-        ('write', 'Commands and data written to the device'),
-        ('read', 'Data read from the device'),
-    )
-    annotation_rows = (
-        ('data', 'Data', (ann_write, ann_read)),
+        ('wrds', 'Write disable'),
+        ('sto', 'Store RAM data in EEPROM'),
+        ('sleep', 'Enter sleep mode'),
+        ('write', 'Write data into RAM'),
+        ('wren', 'Write enable'),
+        ('rcl', 'Recall EEPROM data into RAM'),
+        ('read', 'Data read from RAM'),
+        ('read', 'Data read from RAM'),
     )
 
     def __init__(self):
@@ -62,12 +63,12 @@ class Decoder(srd.Decoder):
         self.cs_asserted = False
         self.cmd_digit = 0
 
-    def putreadwrite(self, ss, es, reg, addr, value):
+    def putreadwrite(self, ss, es, reg, idx, addr, value):
         self.put(ss, es, self.out_ann,
-                 [ann_write, ['%s: %s => 0x%4.4x' % (reg, addr, value)]])
+                 [idx, ['%s: %s => 0x%4.4x' % (reg, addr, value)]])
 
-    def putcmd(self, ss, es, reg):
-        self.put(ss, es, self.out_ann, [ann_write, ['%s' % reg]])
+    def putcmd(self, ss, es, reg, idx):
+        self.put(ss, es, self.out_ann, [idx, ['%s' % reg]])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
@@ -89,17 +90,17 @@ class Decoder(srd.Decoder):
             if not self.cs_asserted:
                 # Only one digit, simple command. Else read/write.
                 if self.cmd_digit == 1:
-                    name, decoder = registers[self.addr & 0x87]
-                    self.putcmd(self.addr_start, es, name)
+                    name, idx, decoder = registers[self.addr & 0x87]
+                    self.putcmd(self.addr_start, es, name, idx)
                 elif self.cmd_digit > 1:
-                    name, decoder = registers[self.addr & 0x87]
+                    name, idx, decoder = registers[self.addr & 0x87]
                     if name == 'READ':
                         value = self.read_value
                     elif name == 'WRITE':
                         value = self.write_value
                     else:
                         value = 0
-                    self.putreadwrite(self.addr_start, es, name,
+                    self.putreadwrite(self.addr_start, es, name, idx,
                                       decoder((self.addr >> 3) & 0x0f), value)
 
             if self.cs_asserted:
