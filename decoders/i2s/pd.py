@@ -145,10 +145,12 @@ class Decoder(srd.Decoder):
 
                 self.samplesreceived += 1
 
-                idx = 0 if self.oldws else 1
-                c1 = 'Left channel' if self.oldws else 'Right channel'
-                c2 = 'Left' if self.oldws else 'Right'
-                c3 = 'L' if self.oldws else 'R'
+                sck = self.wait({0: 'f'})
+
+                idx = 0 if not self.oldws else 1
+                c1 = 'Left channel' if not self.oldws else 'Right channel'
+                c2 = 'Left' if not self.oldws else 'Right'
+                c3 = 'L' if not self.oldws else 'R'
                 v = '%08x' % self.data
                 self.putpb(['DATA', [c3, self.data]])
                 self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
@@ -161,6 +163,8 @@ class Decoder(srd.Decoder):
                                    'word' % (self.bitcount, self.wordlength)]])
 
                 self.wordlength = self.bitcount
+            else:
+                sck = self.wait({0: 'f'})
 
             # Reset decoder state.
             self.data = 0
