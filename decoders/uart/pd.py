@@ -41,6 +41,9 @@ This is the list of <ptype>s and their respective <pdata> values:
    the expected parity value, the second is the actual parity value.
  - TODO: Frame error?
  - 'BREAK': The data is always 0.
+ - 'FRAME': The data is always a tuple containing two items: The (integer)
+   value of the UART data, and a boolean which reflects the validity of the
+   UART frame.
 
 The <rxtx> field is 0 for RX packets, 1 for TX packets.
 '''
@@ -178,6 +181,7 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.samplenum = 0
         self.frame_start = [-1, -1]
+        self.frame_valid = [None, None]
         self.startbit = [-1, -1]
         self.cur_data_bit = [0, 0]
         self.datavalue = [0, 0]
@@ -214,6 +218,7 @@ class Decoder(srd.Decoder):
     def wait_for_start_bit(self, rxtx, signal):
         # Save the sample number where the start bit begins.
         self.frame_start[rxtx] = self.samplenum
+        self.frame_valid[rxtx] = True
 
         self.state[rxtx] = 'GET START BIT'
 
@@ -225,6 +230,10 @@ class Decoder(srd.Decoder):
         if self.startbit[rxtx] != 0:
             self.putp(['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
             self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
+            self.frame_valid[rxtx] = False
+            es = self.samplenum + ceil(self.bit_width / 2.0)
+            self.putpse(self.frame_start[rxtx], es, ['FRAME', rxtx,
+                (self.datavalue[rxtx], self.frame_valid[rxtx])])
             self.state[rxtx] = 'WAIT FOR START BIT'
             return
 
@@ -331,6 +340,7 @@ class Decoder(srd.Decoder):
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
             self.putg([rxtx + 6, ['Parity error', 'Parity err', 'PE']])
+            self.frame_valid[rxtx] = False
 
         self.state[rxtx] = 'GET STOP BITS'
 
@@ -342,10 +352,15 @@ class Decoder(srd.Decoder):
         if self.stopbit1[rxtx] != 1:
             self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
             self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
-            # TODO: Abort? Ignore the frame? Other?
+            self.frame_valid[rxtx] = False
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
         self.putg([rxtx + 4, ['Stop bit', 'Stop', 'T']])
+
+        # Pass the complete UART frame to upper layers.
+        es = self.samplenum + ceil(self.bit_width / 2.0)
+        self.putpse(self.frame_start[rxtx], es, ['FRAME', rxtx,
+            (self.datavalue[rxtx], self.frame_valid[rxtx])])
 
         self.state[rxtx] = 'WAIT FOR START BIT'
 
