@@ -40,6 +40,7 @@ This is the list of <ptype>s and their respective <pdata> values:
  - 'PARITY ERROR': The data is a tuple with two entries. The first one is
    the expected parity value, the second is the actual parity value.
  - TODO: Frame error?
+ - 'BREAK': The data is always 0.
 
 The <rxtx> field is 0 for RX packets, 1 for TX packets.
 '''
