@@ -39,7 +39,6 @@ This is the list of <ptype>s and their respective <pdata> values:
  - 'INVALID STOPBIT': The data is the (integer) value of the stop bit (0/1).
  - 'PARITY ERROR': The data is a tuple with two entries. The first one is
    the expected parity value, the second is the actual parity value.
- - TODO: Frame error?
  - 'BREAK': The data is always 0.
  - 'FRAME': The data is always a tuple containing two items: The (integer)
    value of the UART data, and a boolean which reflects the validity of the
