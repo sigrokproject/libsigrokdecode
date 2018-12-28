@@ -75,6 +75,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['parallel']
+    tags = ['Logic', 'Bus']
     optional_channels = channel_list(NUM_CHANNELS)
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',

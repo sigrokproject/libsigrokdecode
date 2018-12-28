@@ -45,6 +45,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['arm_itm']
+    tags = ['Logic', 'MCU Debugging']
     options = (
         {'id': 'objdump', 'desc': 'objdump path',
             'default': 'arm-none-eabi-objdump'},

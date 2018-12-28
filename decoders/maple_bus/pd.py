@@ -37,6 +37,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['maple_bus']
+    tags = ['Logic', 'Bus']
     channels = (
         {'id': 'sdcka', 'name': 'SDCKA', 'desc': 'Data/clock line A'},
         {'id': 'sdckb', 'name': 'SDCKB', 'desc': 'Data/clock line B'},

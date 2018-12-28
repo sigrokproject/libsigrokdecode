@@ -197,6 +197,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['jtag']
     outputs = ['jtag_ejtag']
+    tags = ['Logic', 'MCU Debugging', 'Bus']
     annotations = (
         ('instruction', 'Instruction'),
     ) + regs_items['ann'] + (

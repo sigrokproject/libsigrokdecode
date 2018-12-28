@@ -29,6 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['sdcard_sd']
+    tags = ['Logic', 'Memory']
     channels = (
         {'id': 'cmd',  'name': 'CMD',  'desc': 'Command'},
         {'id': 'clk',  'name': 'CLK',  'desc': 'Clock'},

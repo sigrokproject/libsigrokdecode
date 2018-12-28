@@ -28,6 +28,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['uart'] # Emulate uart output so that arm_itm/arm_etm can stack.
+    tags = ['Logic', 'MCU Debugging']
     options = (
         {'id': 'stream', 'desc': 'Stream index', 'default': 1},
         {'id': 'sync_offset', 'desc': 'Initial sync offset', 'default': 0},

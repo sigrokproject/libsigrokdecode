@@ -120,6 +120,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['pdi']
+    tags = ['Logic', 'MCU Debugging']
     channels = (
         {'id': 'reset', 'name': 'RESET', 'desc': 'RESET / PDI_CLK'},
         {'id': 'data', 'name': 'DATA', 'desc': 'PDI_DATA'},

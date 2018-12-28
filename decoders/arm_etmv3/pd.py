@@ -135,6 +135,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['arm_etmv3']
+    tags = ['Logic', 'MCU Debugging']
     annotations = (
         ('trace', 'Trace info'),
         ('branch', 'Branches'),

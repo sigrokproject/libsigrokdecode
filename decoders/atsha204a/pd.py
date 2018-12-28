@@ -89,6 +89,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['atsha204a']
+    tags = ['Logic']
     annotations = (
         ('waddr', 'Word address'),
         ('count', 'Count'),

@@ -47,6 +47,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['adns5020']
+    tags = ['Logic', 'Sensors']
     annotations = (
         ('read', 'Register read commands'),
         ('write', 'Register write commands'),
