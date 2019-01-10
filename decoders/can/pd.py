@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2012-2013 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2019 Stephan Thiele <stephan.thiele@mailbox.org>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -207,18 +208,27 @@ class Decoder(srd.Decoder):
     # Returns True if the frame ended (EOF), False otherwise.
     def decode_standard_frame(self, can_rx, bitnum):
 
-        # Bit 14: RB0 (reserved bit)
-        # Has to be sent dominant, but receivers should accept recessive too.
+        # Bit 14: FDF (Flexible Data Format)
+        # Has to be sent dominant when FD frame, has to be sent recessive when classic CAN frame.
         if bitnum == 14:
-            self.putx([7, ['Reserved bit 0: %d' % can_rx,
-                           'RB0: %d' % can_rx, 'RB0']])
+            self.fd = True if can_rx else False
 
-            # Bit 12: Remote transmission request (RTR) bit
-            # Data frame: dominant, remote frame: recessive
-            # Remote frames do not contain a data field.
-            rtr = 'remote' if self.bits[12] == 1 else 'data'
-            self.put12([8, ['Remote transmission request: %s frame' % rtr,
-                            'RTR: %s frame' % rtr, 'RTR']])
+            self.putx([7, ['Flexible Data Format: %d' % can_rx,
+                           'FDF: %d' % can_rx, 'FDF']])
+
+            # SRR Substitute Remote Request
+            if self.fd:
+                self.put12([8, ['Substitute Remote Request', 'SRR']])
+            else:
+                # Bit 12: Remote transmission request (RTR) bit
+                # Data frame: dominant, remote frame: recessive
+                # Remote frames do not contain a data field.
+                rtr = 'remote' if self.bits[12] == 1 else 'data'
+                self.put12([8, ['Remote transmission request: %s frame' % rtr,
+                                'RTR: %s frame' % rtr, 'RTR']])
+
+        # TODO: add Res, BRS and ESI bits when FD format:
+
 
         # Remember start of DLC (see below).
         elif bitnum == 15:
@@ -377,6 +387,8 @@ class Decoder(srd.Decoder):
 
         # Bits 14-X: Frame-type dependent, passed to the resp. handlers.
         elif bitnum >= 14:
+            self.fd = True if can_rx else False
+
             if self.frame_type == 'standard':
                 done = self.decode_standard_frame(can_rx, bitnum)
             else:
