@@ -69,7 +69,7 @@ command = {
         12: ['Standby', 'StBy'],
         13: ['Mute', 'M'],
         14: ['Personal preferences', 'PP'],
-        14: ['Display', 'Disp'],
+        15: ['Display', 'Disp'],
         16: ['Volume up', 'Vol+'],
         17: ['Volume down', 'Vol-'],
         18: ['Brightness up', 'Br+'],
