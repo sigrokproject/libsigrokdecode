@@ -193,7 +193,7 @@ class Decoder(srd.Decoder):
         self.put(s, e, self.out_ann, data)
 
     def set_new_target_samplenum(self):
-        self.samplepos += self.bitwidth;
+        self.samplepos += self.bitwidth
         self.samplenum_target = int(self.samplepos)
         self.samplenum_lastedge = self.samplenum_edge
         self.samplenum_edge = int(self.samplepos - (self.bitwidth / 2))

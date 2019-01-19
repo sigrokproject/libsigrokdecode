@@ -223,7 +223,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def put_at(self, ss: int, es: int, data):
-        self.put(ss, es, self.out_ann, data);
+        self.put(ss, es, self.out_ann, data)
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
