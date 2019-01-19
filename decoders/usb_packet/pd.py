@@ -147,7 +147,7 @@ def reverse_number(num, count):
     out = list(count * '0')
     for i in range(0, count):
         if num >> i & 1:
-            out[i] = '1';
+            out[i] = '1'
     return int(''.join(out), 2)
 
 def calc_crc5(bitstr):
