@@ -101,15 +101,15 @@ opcodes = {
     0x9A: 'SET_AUDIO_RATE',
 }
 
-def resolve_logical_address(id, is_initiator):
-    if id < 0 or id > 0x0F:
+def resolve_logical_address(id_, is_initiator):
+    if id_ < 0 or id_ > 0x0F:
         return 'Invalid'
 
     # Special handling of 0x0F.
-    if id == 0x0F:
+    if id_ == 0x0F:
         return 'Unregistered' if is_initiator else 'Broadcast'
 
-    return logical_adresses[id]
+    return logical_adresses[id_]
 
 def decode_header(header):
     src = (header & 0xF0) >> 4

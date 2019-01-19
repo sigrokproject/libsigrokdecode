@@ -473,8 +473,8 @@ class Decoder(srd.Decoder):
             self.putx([Ann.FIELD, ['%s ID: 0x%02x' % (d, miso)]])
 
         if self.cmdstate == 6:
-            id = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            self.device_id = id
+            id_ = self.ids[1] if self.manufacturer_id_first else self.ids[0]
+            self.device_id = id_
             self.es_cmd = self.es
             self.putc([Ann.REMS, self.cmd_vendor_dev_list()])
             self.state = None
