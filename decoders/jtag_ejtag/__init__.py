@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'jtag' PD and decodes JTAG data specific
 to the MIPS EJTAG protocol.
-'''
+"""
 
 from .pd import Decoder

@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder can decode synchronous parallel buses with various
 number of data bits/channels and one (optional) clock line.
 
@@ -29,6 +29,6 @@ It is required to use the lowest data channels, and use consecutive ones.
 For example, for a 4-bit sync parallel bus, channels D0/D1/D2/D3 (and CLK)
 should be used. Using combinations like D7/D12/D3/D15 is not supported.
 For an 8-bit bus you should use D0-D7, for a 16-bit bus use D0-D15 and so on.
-'''
+"""
 
 from .pd import Decoder

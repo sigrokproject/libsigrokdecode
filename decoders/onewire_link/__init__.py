@@ -18,7 +18,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder handles the 1-Wire link layer.
 
 The 1-Wire protocol enables bidirectional communication over a single wire
@@ -51,6 +51,6 @@ Two speeds are available: normal and overdrive. The decoder detects when
 switching from one to another but the user can set which to start decoding with:
 
  - overdrive (to decode starting with overdrive speed)
-'''
+"""
 
 from .pd import Decoder

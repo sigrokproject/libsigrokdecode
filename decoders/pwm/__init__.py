@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Pulse-width modulation (a.k.a pulse-duration modulation, PDM) decoder.
-'''
+"""
 
 from .pd import Decoder

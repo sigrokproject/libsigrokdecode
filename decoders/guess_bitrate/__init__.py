@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder tries to guess the bitrate / baudrate of the
 communication on the specified channel. Typically this will be used to
 guess / detect the baudrate used in a UART communication snippet, but it
@@ -31,6 +31,6 @@ The precision of the estimated bitrate / baudrate will also depend on the
 samplerate used to sample the respective channel. For good results it is
 recommended to use a logic analyzer samplerate that is much higher than
 the expected bitrate/baudrate that might be used on the channel.
-'''
+"""
 
 from .pd import Decoder

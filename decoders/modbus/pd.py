@@ -24,25 +24,25 @@ RX = 0
 TX = 1
 
 class No_more_data(Exception):
-    '''This exception is a signal that we should stop parsing an ADU as there
-    is no more data to parse.'''
+    """This exception is a signal that we should stop parsing an ADU as there
+    is no more data to parse."""
     pass
 
 class Data:
-    '''The Data class is used to hold the bytes from the serial decode.'''
+    """The Data class is used to hold the bytes from the serial decode."""
     def __init__(self, start, end, data):
         self.start = start
         self.end = end
         self.data = data
 
 class Modbus_ADU:
-    '''An Application Data Unit is what Modbus calls one message.
+    """An Application Data Unit is what Modbus calls one message.
     Protocol decoders are supposed to keep track of state and then provide
     decoded data to the backend as it reads it. In Modbus' case, the state is
     the ADU up to that point. This class represents the state and writes the
     messages to the backend.
     This class is for the common infrastructure between CS and SC. It should
-    not be used directly, only inhereted from.'''
+    not be used directly, only inhereted from."""
 
     def __init__(self, parent, start, write_channel, annotation_prefix):
         self.data = [] # List of all the data received up to now
@@ -65,10 +65,10 @@ class Modbus_ADU:
         self.hasError = False
 
     def add_data(self, start, end, data):
-        '''Let the frame handle another piece of data.
+        """Let the frame handle another piece of data.
         start: start of this data
         end: end of this data
-        data: data as received from the UART decoder'''
+        data: data as received from the UART decoder"""
         ptype, rxtx, pdata = data
         self.last_read = end
         if ptype == 'DATA':
@@ -76,14 +76,14 @@ class Modbus_ADU:
             self.parse() # parse() is defined in the specific type of ADU.
 
     def puti(self, byte_to_put, annotation, message):
-        '''This class keeps track of how much of the data has already been
+        """This class keeps track of how much of the data has already been
         annotated. This function tells the parent class to write message, but
         only if it hasn't written about this bit before.
         byte_to_put: Only write if it hasn't yet written byte_to_put. It will
                      write from the start of self.last_byte_put+1 to the end
                      of byte_to_put.
         annotation: Annotation to write to, without annotation_prefix.
-        message: Message to write.'''
+        message: Message to write."""
         if byte_to_put > len(self.data) - 1:
             # If the byte_to_put hasn't been read yet.
             raise No_more_data
@@ -101,8 +101,8 @@ class Modbus_ADU:
             raise No_more_data
 
     def putl(self, annotation, message, maximum=None):
-        '''Puts the last byte on the stack with message. The contents of the
-        last byte will be applied to message using format.'''
+        """Puts the last byte on the stack with message. The contents of the
+        last byte will be applied to message using format."""
         last_byte_address = len(self.data) - 1
         if maximum is not None and last_byte_address > maximum:
             return
@@ -110,9 +110,9 @@ class Modbus_ADU:
                   message.format(self.data[-1].data))
 
     def close(self, message_overflow):
-        '''Function to be called when next message is started. As there is
+        """Function to be called when next message is started. As there is
         always space between one message and the next, we can use that space
-        for errors at the end.'''
+        for errors at the end."""
         # TODO: Figure out how to make this happen for last message.
         data = self.data
         if len(data) < self.minimum_length:
@@ -141,7 +141,7 @@ class Modbus_ADU:
                 pass
 
     def check_crc(self, byte_to_put):
-        '''Check the CRC code, data[byte_to_put] is the 2nd byte of the CRC.'''
+        """Check the CRC code, data[byte_to_put] is the 2nd byte of the CRC."""
         crc_byte1, crc_byte2 = self.calc_crc(byte_to_put)
         data = self.data
         if data[-2].data == crc_byte1 and data[-1].data == crc_byte2:
@@ -151,16 +151,16 @@ class Modbus_ADU:
                 'CRC should be {} {}'.format(crc_byte1, crc_byte2))
 
     def half_word(self, start):
-        '''Return the half word (16 bit) value starting at start bytes in. If
-        it goes out of range it raises the usual errors.'''
+        """Return the half word (16 bit) value starting at start bytes in. If
+        it goes out of range it raises the usual errors."""
         if (start + 1) > (len(self.data) - 1):
             # If there isn't enough length to access data[start + 1].
             raise No_more_data
         return self.data[start].data * 0x100 + self.data[start + 1].data
 
     def calc_crc(self, last_byte):
-        '''Calculate the CRC, as described in the spec.
-        The last byte of the CRC should be data[last_byte].'''
+        """Calculate the CRC, as described in the spec.
+        The last byte of the CRC should be data[last_byte]."""
         if last_byte < 3:
             # Every Modbus ADU should be as least 4 long, so we should never
             # have to calculate a CRC on something shorter.
@@ -180,7 +180,7 @@ class Modbus_ADU:
         return (byte1, byte2)
 
     def parse_write_single_coil(self):
-        '''Parse function 5, write single coil.'''
+        """Parse function 5, write single coil."""
         self.minimum_length = 8
 
         self.puti(1, 'function', 'Function 5: Write Single Coil')
@@ -200,7 +200,7 @@ class Modbus_ADU:
         self.check_crc(7)
 
     def parse_write_single_register(self):
-        '''Parse function 6, write single register.'''
+        """Parse function 6, write single register."""
         self.minimum_length = 8
 
         self.puti(1, 'function', 'Function 6: Write Single Register')
@@ -216,8 +216,8 @@ class Modbus_ADU:
         self.check_crc(7)
 
     def parse_diagnostics(self):
-        '''Parse function 8, diagnostics. This function has many subfunctions,
-        but they are all more or less the same.'''
+        """Parse function 8, diagnostics. This function has many subfunctions,
+        but they are all more or less the same."""
         self.minimum_length = 8
 
         self.puti(1, 'function', 'Function 8: Diagnostics')
@@ -252,7 +252,7 @@ class Modbus_ADU:
         self.check_crc(7)
 
     def parse_mask_write_register(self):
-        '''Parse function 22, Mask Write Register.'''
+        """Parse function 22, Mask Write Register."""
         self.minimum_length = 10
         data = self.data
 
@@ -277,9 +277,9 @@ class Modbus_ADU:
         self.check_crc(9)
 
     def parse_not_implemented(self):
-        '''Explicitly mark certain functions as legal functions, but not
+        """Explicitly mark certain functions as legal functions, but not
         implemented in this parser. This is due to the author not being able to
-        find anything (hardware or software) that supports these functions.'''
+        find anything (hardware or software) that supports these functions."""
         # TODO: Implement these functions.
 
         # Mentioning what function it is is no problem.
@@ -297,9 +297,9 @@ class Modbus_ADU:
         self.putl('data', 'This function is not currently supported')
 
 class Modbus_ADU_SC(Modbus_ADU):
-    '''SC stands for Server -> Client.'''
+    """SC stands for Server -> Client."""
     def parse(self):
-        '''Select which specific Modbus function we should parse.'''
+        """Select which specific Modbus function we should parse."""
         data = self.data
 
         # This try-catch is being used as flow control.
@@ -461,8 +461,8 @@ class Modbus_ADU_SC(Modbus_ADU):
         self.check_crc(bytecount + 4)
 
     def parse_write_multiple(self):
-        '''Function 15 and 16 are almost the same, so we can parse them both
-        using one function.'''
+        """Function 15 and 16 are almost the same, so we can parse them both
+        using one function."""
         self.mimumum_length = 8
 
         function = self.data[1].data
@@ -530,7 +530,7 @@ class Modbus_ADU_SC(Modbus_ADU):
         self.check_crc(4 + bytecount)
 
     def parse_error(self):
-        '''Parse a Modbus error message.'''
+        """Parse a Modbus error message."""
         self.mimumum_length = 5
         # The function code of an error is always 0x80 above the function call
         # that caused it.
@@ -579,9 +579,9 @@ class Modbus_ADU_SC(Modbus_ADU):
         self.check_crc(4)
 
 class Modbus_ADU_CS(Modbus_ADU):
-    '''CS stands for Client -> Server.'''
+    """CS stands for Client -> Server."""
     def parse(self):
-        '''Select which specific Modbus function we should parse.'''
+        """Select which specific Modbus function we should parse."""
         data = self.data
 
         # This try-catch is being used as flow control.
@@ -629,8 +629,8 @@ class Modbus_ADU_CS(Modbus_ADU):
             pass
 
     def parse_read_data_command(self):
-        '''Interpret a command to read x units of data starting at address, ie
-        functions 1, 2, 3 and 4, and write the result to the annotations.'''
+        """Interpret a command to read x units of data starting at address, ie
+        functions 1, 2, 3 and 4, and write the result to the annotations."""
         data = self.data
         self.minimum_length = 8
 
@@ -658,7 +658,7 @@ class Modbus_ADU_CS(Modbus_ADU):
         self.check_crc(7)
 
     def parse_single_byte_request(self):
-        '''Some Modbus functions have no arguments, this parses those.'''
+        """Some Modbus functions have no arguments, this parses those."""
         function = self.data[1].data
         function_name = {7: 'Read Exception Status',
                          11: 'Get Comm Event Counter',
@@ -671,8 +671,8 @@ class Modbus_ADU_CS(Modbus_ADU):
         self.check_crc(3)
 
     def parse_write_multiple(self):
-        '''Function 15 and 16 are almost the same, so we can parse them both
-        using one function.'''
+        """Function 15 and 16 are almost the same, so we can parse them both
+        using one function."""
         self.mimumum_length = 9
 
         function = self.data[1].data
@@ -771,7 +771,7 @@ class Modbus_ADU_CS(Modbus_ADU):
         self.check_crc(4 + bytecount)
 
     def parse_read_write_registers(self):
-        '''Parse function 23: Read/Write multiple registers.'''
+        """Parse function 23: Read/Write multiple registers."""
         self.minimum_length = 13
 
         self.puti(1, 'function', 'Function 23: Read/Write Multiple Registers')
@@ -864,19 +864,19 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def puta(self, start, end, ann_str, message):
-        '''Put an annotation from start to end, with ann as a
+        """Put an annotation from start to end, with ann as a
         string. This means you don't have to know the ann's
-        number to write annotations to it.'''
+        number to write annotations to it."""
         ann = [s[0] for s in self.annotations].index(ann_str)
         self.put(start, end, self.out_ann, [ann, [message]])
 
     def decode_adu(self, ss, es, data, direction):
-        '''Decode the next byte or bit (depending on type) in the ADU.
+        """Decode the next byte or bit (depending on type) in the ADU.
         ss: Start time of the data
         es: End time of the data
         data: Data as passed from the UART decoder
         direction: Is this data for the Cs (client -> server) or Sc (server ->
-                   client) being decoded right now?'''
+                   client) being decoded right now?"""
         ptype, rxtx, pdata = data
 
         # We don't have a nice way to get the baud rate from UART, so we have

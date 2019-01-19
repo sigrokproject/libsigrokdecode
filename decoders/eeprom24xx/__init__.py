@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'i2c' PD and decodes the
 industry standard 24xx series serial EEPROM protocol.
-'''
+"""
 
 from .pd import Decoder

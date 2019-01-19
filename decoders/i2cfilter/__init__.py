@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This is a generic I²C filtering protocol decoder.
 
 It takes input from the I²C protocol decoder and removes all traffic
@@ -32,6 +32,6 @@ with the 'direction' option, which should be 'read', 'write', or 'both'.
 
 Both of these are optional; if no options are specified the entire payload
 of the I²C session will be output.
-'''
+"""
 
 from .pd import Decoder

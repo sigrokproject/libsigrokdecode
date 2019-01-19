@@ -17,12 +17,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'i2c' PD and decodes the MEMSIC MXC6225XU
 digital thermal orientation sensor (DTOS) protocol.
 
 The chip's I²C interface supports standard mode and fast mode (max. 400kHz).
 Its I²C slave address is 0x2a.
-'''
+"""
 
 from .pd import Decoder

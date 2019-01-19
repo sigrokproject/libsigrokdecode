@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This PD decodes the stepper motor controller signals (step / dir) and
 shows the step speed and absolute position of the stepper motor.
-'''
+"""
 
 from .pd import Decoder

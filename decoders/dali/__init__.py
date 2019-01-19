@@ -17,8 +17,8 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 DALI is a biphase/manchester based lighting control protocol.
-'''
+"""
 
 from .pd import Decoder

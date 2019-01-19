@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This PD decodes the remote control protocol which is frequently used
 within key fobs and power socket remotes.
 
@@ -31,6 +31,6 @@ This PD should also decode the HX2262 and SC5262 which are equivalents.
 The decoder also contains some additional decoding for a Maplin L95AR
 remote control and will turn the received signal into which button was
 pressed and what the address code DIP switches are set to.
-'''
+"""
 
 from .pd import Decoder

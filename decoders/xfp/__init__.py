@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This PD decodes the XFP I²C management interface structures/protocol.
 
 XFP modules include an I²C interface, used to monitor and control various
@@ -34,6 +34,6 @@ memory and table 0x01.
 The XFP specification is available here:
 
   ftp://ftp.seagate.com/sff/INF-8077.PDF
-'''
+"""
 
 from .pd import Decoder

@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'uart' decoder and decodes packets of
 the ARMv7m Embedded Trace Macroblock v3.x.
-'''
+"""
 
 from .pd import Decoder

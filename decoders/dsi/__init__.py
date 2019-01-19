@@ -17,8 +17,8 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 DSI is a biphase/manchester based lighting control protocol.
-'''
+"""
 
 from .pd import Decoder

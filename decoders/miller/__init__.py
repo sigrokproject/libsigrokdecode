@@ -17,10 +17,10 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 The Miller protocol decoder supports (modified) Miller encoded data.
 
 E.g. used in NFC communication at 106 kbaud.
-'''
+"""
 
 from .pd import Decoder

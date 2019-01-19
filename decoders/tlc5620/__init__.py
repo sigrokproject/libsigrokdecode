@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 The Texas Instruments TLC5620 is an 8-bit quad DAC.
-'''
+"""
 
 from .pd import Decoder

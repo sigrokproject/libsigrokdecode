@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 EM4305 is a 100-150kHz RFID protocol.
-'''
+"""
 
 from .pd import Decoder

@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Instruction tuple: (d, i, ro, wo, rep, format string)
 
   The placeholders d and i are the number of bytes in the instruction
@@ -37,7 +37,7 @@ Instruction tuple: (d, i, ro, wo, rep, format string)
   format string as a placeholder for the register name.
   Relative jump instructions may specify {j} instead of {d} to output
   the displacement relative to the start of the instruction.
-'''
+"""
 
 # Instructions without a prefix
 main_instructions = {

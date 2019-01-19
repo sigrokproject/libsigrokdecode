@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Maple bus is serial communication protocol used by peripherals for the
 SEGA Dreamcast game console.
-'''
+"""
 
 from .pd import Decoder

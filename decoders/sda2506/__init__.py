@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Decoder for Siemens EEPROM SDA2506.
-'''
+"""
 
 from .pd import Decoder

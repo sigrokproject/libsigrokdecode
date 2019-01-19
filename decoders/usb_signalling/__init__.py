@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This PD decodes the USB (low-speed and full-speed) signalling protocol.
 
 Electrical/signalling layer (USB spec, chapter 7):
@@ -45,6 +45,6 @@ The SE0 transmitted to signal an end-of-packet is two bit intervals long
 Details:
 https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
-'''
+"""
 
 from .pd import Decoder

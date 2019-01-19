@@ -17,13 +17,13 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'jtag' PD and decodes JTAG data specific to
 the STM32 microcontroller series.
 
 Details:
 https://en.wikipedia.org/wiki/STM32
 http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/REFERENCE_MANUAL/CD00171190.pdf (e.g. chapter 31.7: "JTAG debug port")
-'''
+"""
 
 from .pd import Decoder

@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'ook' PD and visualizes protocol details
 in various ways.
-'''
+"""
 
 from .pd import Decoder

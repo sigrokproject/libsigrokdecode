@@ -17,13 +17,13 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 I²S (Integrated Interchip Sound) is a serial bus for connecting digital
 audio devices (usually on the same device/board).
 
 Details:
 http://www.nxp.com/acrobat_download/various/I2SBUS.pdf
 http://en.wikipedia.org/wiki/I2s
-'''
+"""
 
 from .pd import Decoder

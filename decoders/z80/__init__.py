@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 The Zilog Z80 is an 8-bit microprocessor compatible with the Intel 8080.
 
 In addition to the 8-bit data bus, this decoder requires the input signals
@@ -30,6 +30,6 @@ Notes on the Z80 opcode format and descriptions of both documented and
 
   http://www.z80.info/decoding.htm
   http://clrhome.org/table/
-'''
+"""
 
 from .pd import Decoder

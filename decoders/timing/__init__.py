@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Timing decoder, find the time between edges.
-'''
+"""
 
 from .pd import Decoder

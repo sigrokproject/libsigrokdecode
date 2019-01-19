@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes the HopeRF RFM12
 wireless transceiver control protocol.
-'''
+"""
 
 from .pd import Decoder

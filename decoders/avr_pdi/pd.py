@@ -74,7 +74,7 @@ import sigrokdecode as srd
 from collections import namedtuple
 
 class Ann:
-    '''Annotation and binary output classes.'''
+    """Annotation and binary output classes."""
     (
         BIT, START, DATA, PARITY_OK, PARITY_ERR,
         STOP_OK, STOP_ERR, BREAK,
@@ -88,7 +88,7 @@ class Ann:
 Bit = namedtuple('Bit', 'val ss es')
 
 class PDI:
-    '''PDI protocol instruction opcodes, and operand formats.'''
+    """PDI protocol instruction opcodes, and operand formats."""
     (
         OP_LDS, OP_LD, OP_STS, OP_ST,
         OP_LDCS, OP_REPEAT, OP_STCS, OP_KEY,
@@ -212,7 +212,7 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_binary, [row, value])
 
     def handle_byte(self, ss, es, byteval):
-        '''Handle a byte at the PDI protocol layer.'''
+        """Handle a byte at the PDI protocol layer."""
 
         # Handle BREAK conditions, which will abort any
         # potentially currently executing instruction.
@@ -443,7 +443,7 @@ class Decoder(srd.Decoder):
         self.insn_rep_count = save_rep_count
 
     def handle_bits(self, ss, es, bitval):
-        '''Handle a bit at the UART layer.'''
+        """Handle a bit at the UART layer."""
 
         # Concentrate annotation literals here for easier maintenance.
         ann_class_text = {

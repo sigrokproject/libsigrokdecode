@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 S/PDIF (Sony/Philips Digital Interface Format) is a serial bus for
 transmitting audio data.
-'''
+"""
 
 from .pd import Decoder

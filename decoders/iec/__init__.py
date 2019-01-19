@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder can decode the Commodore serial IEEE-488 (IEC) protocol.
-'''
+"""
 
 from .pd import Decoder

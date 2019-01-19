@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 T55xx is a 100-150kHz RFID protocol according to the Atmel e555x
 downlink/write protocol (pulse interval coding).
-'''
+"""
 
 from .pd import Decoder

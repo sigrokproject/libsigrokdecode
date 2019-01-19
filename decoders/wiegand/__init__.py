@@ -17,12 +17,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 The Wiegand interface is a de facto wiring standard commonly used to connect
 a card swipe mechanism to the rest of an electronic entry system.
 
 Details:
 https://en.wikipedia.org/wiki/Wiegand_interface
-'''
+"""
 
 from .pd import Decoder

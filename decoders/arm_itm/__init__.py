@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'uart' or 'arm_tpiu' PD and decodes the
 ARM Cortex-M processor trace data from Instrumentation Trace Macroblock.
-'''
+"""
 
 from .pd import Decoder

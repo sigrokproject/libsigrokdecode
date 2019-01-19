@@ -26,7 +26,7 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-'''
+"""
 The MDIO (Management Data Input/Output) protocol decoder supports the
 MII Management serial bus (a bidirectional bus between the PHY and the STA),
 with a clock line (MDC) and a bi-directional data line (MDIO).
@@ -34,6 +34,6 @@ with a clock line (MDC) and a bi-directional data line (MDIO).
 MDIO is also known as SMI (Serial Management Interface).
 
 It's part of the Ethernet standard.
-'''
+"""
 
 from .pd import Decoder

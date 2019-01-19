@@ -26,9 +26,9 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'mdio' PD and decodes the CFP 100G
 pluggable transceiver protocol.
-'''
+"""
 
 from .pd import Decoder

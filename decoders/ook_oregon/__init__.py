@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'ook' PD and decodes the Oregon Scientific
 433MHz remote control protocol for weather sensors.
-'''
+"""
 
 from .pd import Decoder

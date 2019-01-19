@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'uart' PD and decodes the Panasonic PAN1321
 Bluetooth module Serial Port Profile (SPP) protocol.
-'''
+"""
 
 from .pd import Decoder

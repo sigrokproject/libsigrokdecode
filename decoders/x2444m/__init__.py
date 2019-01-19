@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes the Xicor X2444M/P
 nonvolatile static RAM protocol.
-'''
+"""
 
 from .pd import Decoder

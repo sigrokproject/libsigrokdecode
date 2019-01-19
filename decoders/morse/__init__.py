@@ -17,12 +17,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Morse code is a method of transmitting text information as a series of
 on-off tones.
 
 Details:
 https://en.wikipedia.org/wiki/Morse_code
-'''
+"""
 
 from .pd import Decoder

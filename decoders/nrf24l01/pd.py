@@ -107,15 +107,15 @@ class Decoder(srd.Decoder):
             regs.update(xn297_regs)
 
     def warn(self, pos, msg):
-        '''Put a warning message 'msg' at 'pos'.'''
+        """Put a warning message 'msg' at 'pos'."""
         self.put(pos[0], pos[1], self.out_ann, [self.ann_warn, [msg]])
 
     def putp(self, pos, ann, msg):
-        '''Put an annotation message 'msg' at 'pos'.'''
+        """Put an annotation message 'msg' at 'pos'."""
         self.put(pos[0], pos[1], self.out_ann, [ann, [msg]])
 
     def next(self):
-        '''Resets the decoder after a complete command was decoded.'''
+        """Resets the decoder after a complete command was decoded."""
         # 'True' for the first byte after CS went low.
         self.first = True
 
@@ -132,16 +132,16 @@ class Decoder(srd.Decoder):
         self.mb_e = -1
 
     def mosi_bytes(self):
-        '''Returns the collected MOSI bytes of a multi byte command.'''
+        """Returns the collected MOSI bytes of a multi byte command."""
         return [b[0] for b in self.mb]
 
     def miso_bytes(self):
-        '''Returns the collected MISO bytes of a multi byte command.'''
+        """Returns the collected MISO bytes of a multi byte command."""
         return [b[1] for b in self.mb]
 
     def decode_command(self, pos, b):
-        '''Decodes the command byte 'b' at position 'pos' and prepares
-        the decoding of the following data bytes.'''
+        """Decodes the command byte 'b' at position 'pos' and prepares
+        the decoding of the following data bytes."""
         c = self.parse_command(b)
         if c is None:
             self.warn(pos, 'unknown command')
@@ -157,7 +157,7 @@ class Decoder(srd.Decoder):
             self.putp(pos, self.ann_cmd, self.format_command())
 
     def format_command(self):
-        '''Returns the label for the current command.'''
+        """Returns the label for the current command."""
         if self.cmd == 'R_REGISTER':
             reg = regs[self.dat][0] if self.dat in regs else 'unknown register'
             return 'Cmd R_REGISTER "{}"'.format(reg)
@@ -165,14 +165,14 @@ class Decoder(srd.Decoder):
             return 'Cmd {}'.format(self.cmd)
 
     def parse_command(self, b):
-        '''Parses the command byte.
+        """Parses the command byte.
 
         Returns a tuple consisting of:
         - the name of the command
         - additional data needed to dissect the following bytes
         - minimum number of following bytes
         - maximum number of following bytes
-        '''
+        """
 
         if (b & 0xe0) in (0b00000000, 0b00100000):
             c = 'R_REGISTER' if not (b & 0xe0) else 'W_REGISTER'
@@ -202,14 +202,14 @@ class Decoder(srd.Decoder):
             return ('NOP', None, 0, 0)
 
     def decode_register(self, pos, ann, regid, data):
-        '''Decodes a register.
+        """Decodes a register.
 
         pos   -- start and end sample numbers of the register
         ann   -- is the annotation number that is used to output the register.
         regid -- may be either an integer used as a key for the 'regs'
                  dictionary, or a string directly containing a register name.'
         data  -- is the register content.
-        '''
+        """
 
         if type(regid) == int:
             # Get the name of the register.
@@ -232,10 +232,10 @@ class Decoder(srd.Decoder):
         self.decode_mb_data(pos, ann, data, label, True)
 
     def decode_mb_data(self, pos, ann, data, label, always_hex):
-        '''Decodes the data bytes 'data' of a multibyte command at position
+        """Decodes the data bytes 'data' of a multibyte command at position
         'pos'. The decoded data is prefixed with 'label'. If 'always_hex' is
         True, all bytes are decoded as hex codes, otherwise only non
-        printable characters are escaped.'''
+        printable characters are escaped."""
 
         if always_hex:
             def escape(b):
@@ -252,7 +252,7 @@ class Decoder(srd.Decoder):
         self.putp(pos, ann, text)
 
     def finish_command(self, pos):
-        '''Decodes the remaining data bytes at position 'pos'.'''
+        """Decodes the remaining data bytes at position 'pos'."""
 
         if self.cmd == 'R_REGISTER':
             self.decode_register(pos, self.ann_reg,

@@ -18,7 +18,7 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes Analog Devices
 ADE77xx command/responses.
 
@@ -27,6 +27,6 @@ Information".
 
 This PD has been tested with an ADE7758 so far, support for other devices
 from the ADE77xx series can be added in the future.
-'''
+"""
 
 from .pd import Decoder

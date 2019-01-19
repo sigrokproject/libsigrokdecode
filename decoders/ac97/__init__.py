@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 AC'97 (Audio Codec '97) was specifically designed by Intel for audio and
 modem I/O functionality in mainstream PC systems. See the specification in
 http://download.intel.com/support/motherboards/desktop/sb/ac97_r23.pdf
@@ -31,6 +31,6 @@ each. One 16bit slot contains management information, twelve 20bit slots
 follow which carry data for three management and nine audio/modem channels.
 Optionally two slots of one frame can get combined for higher resolution
 on fewer channels, or double data rate.
-'''
+"""
 
 from .pd import Decoder

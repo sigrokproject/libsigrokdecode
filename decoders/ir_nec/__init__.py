@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 NEC is a pulse-distance based infrared remote control protocol.
-'''
+"""
 
 from .pd import Decoder

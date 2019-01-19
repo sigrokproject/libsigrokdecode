@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 DMX512 (Digital MultipleX 512) is a protocol based on RS485, used to control
 professional lighting fixtures.
-'''
+"""
 
 from .pd import Decoder

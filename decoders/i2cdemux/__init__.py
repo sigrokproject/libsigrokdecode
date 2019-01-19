@@ -17,11 +17,11 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This is a generic I²C demultiplexing protocol decoder.
 
 It takes an I²C stream as input and outputs multiple I²C streams, each
 stream containing only I²C packets for one specific I²C slave.
-'''
+"""
 
 from .pd import Decoder

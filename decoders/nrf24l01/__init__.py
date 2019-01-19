@@ -17,13 +17,13 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes the protocol spoken
 by the Nordic Semiconductor nRF24L01 and nRF24L01+ 2.4GHz transceiver chips.
 
 Details:
 http://www.nordicsemi.com/eng/Products/2.4GHz-RF/nRF24L01
 http://www.nordicsemi.com/eng/Products/2.4GHz-RF/nRF24L01P
-'''
+"""
 
 from .pd import Decoder

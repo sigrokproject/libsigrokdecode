@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 OOK decodes On-off keying based remote control protocols.
 
 It is aimed at 433MHz but should also work with other common RC frequencies.
@@ -31,6 +31,6 @@ area of interest to be zoomed onto, then selected with the "Cursors" and the
 There is a limited amount of pre-filtering and garbage removal built into the
 decoder which can sometimes extract signals directly from a larger over the air
 trace. It depends heavily on your environment.
-'''
+"""
 
 from .pd import Decoder

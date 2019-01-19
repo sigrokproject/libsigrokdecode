@@ -17,10 +17,10 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder can decode PS/2 device -> host communication.
 
 Host -> device communication is currently not supported.
-'''
+"""
 
 from .pd import Decoder

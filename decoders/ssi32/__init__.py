@@ -20,9 +20,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes the Bosch
 SSI32 protocol.
-'''
+"""
 
 from .pd import Decoder

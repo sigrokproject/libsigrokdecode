@@ -18,12 +18,12 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-'''
+"""
 SWIM is a single wire interface for STM8 series 8-bit microcontrollers
 that allows non-intrusive read/wite access to be performed on-the-fly
 to the memory and registers of the MCU for debug and flashing purposes.
 
 See the STMicroelectronics document UM0470 for details.
-'''
+"""
 
 from .pd import Decoder

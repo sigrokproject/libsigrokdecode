@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'onewire_network' PD and decodes the
 Maxim DS243x (1-Wire EEPROM) protocol.
-'''
+"""
 
 from .pd import Decoder

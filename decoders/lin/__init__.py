@@ -17,12 +17,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'uart' PD and decodes the LIN
 (Local Interconnect Network) protocol.
 
 LIN is layered on top of the UART (async serial) protocol, with 8n1 settings.
 Bytes are sent LSB-first.
-'''
+"""
 
 from .pd import Decoder

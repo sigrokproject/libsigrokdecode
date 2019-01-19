@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'usb_signalling' PD and decodes the USB
 (low-speed and full-speed) packet protocol.
 
@@ -38,6 +38,6 @@ The check field is the one's complement of the packet type field.
 Details:
 https://en.wikipedia.org/wiki/USB
 http://www.usb.org/developers/docs/
-'''
+"""
 
 from .pd import Decoder

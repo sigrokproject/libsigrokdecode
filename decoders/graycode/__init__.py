@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Gray code and rotary encoder protocol.
-'''
+"""
 
 from .pd import Decoder

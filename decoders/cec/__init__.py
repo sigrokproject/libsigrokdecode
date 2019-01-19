@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 Consumer Electronics Control (CEC) protocol allows users to command and
 control devices connected through HDMI.
-'''
+"""
 
 from .pd import Decoder

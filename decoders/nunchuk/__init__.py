@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'i2c' PD and decodes the Nintendo Wii
 Nunchuk controller protocol.
 
@@ -25,6 +25,6 @@ Details:
 http://wiibrew.org/wiki/Wiimote/Extension_Controllers/Nunchuck
 http://todbot.com/blog/2008/02/18/wiichuck-wii-nunchuck-adapter-available/
 https://www.sparkfun.com/products/9281
-'''
+"""
 
 from .pd import Decoder

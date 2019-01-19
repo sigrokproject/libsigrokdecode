@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This protocol decoder decodes the AUD (Advanced User Debugger) interface
 of certain Renesas / Hitachi microcontrollers, when set in Branch Trace mode.
 
@@ -26,6 +26,6 @@ AUD has two modes, this PD currently only supports "Branch Trace" mode.
 Details:
 http://www.renesas.eu/products/mpumcu/superh/sh7050/sh7058/Documentation.jsp
 ("rej09b0046 - SH7058 Hardware manual")
-'''
+"""
 
 from .pd import Decoder

@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 EM4100 is a biphase/manchester/PSK based 100-150kHz RFID protocol.
-'''
+"""
 
 from .pd import Decoder

@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 I²C (Inter-Integrated Circuit) is a bidirectional, multi-master
 bus using two signals (SCL = serial clock line, SDA = serial data line).
-'''
+"""
 
 from .pd import Decoder

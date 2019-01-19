@@ -17,13 +17,13 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes the protocol spoken
 by the Analog Devices ADF4350 and ADF4351 RF synthesizer chips.
 
 Details:
 http://www.analog.com/media/en/technical-documentation/data-sheets/ADF4350.pdf
 http://www.analog.com/media/en/technical-documentation/data-sheets/ADF4351.pdf
-'''
+"""
 
 from .pd import Decoder

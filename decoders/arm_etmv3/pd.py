@@ -32,8 +32,8 @@ for i in range(8, 496):
     exc_names.append('IRQ%d' % i)
 
 def parse_varint(bytes):
-    '''Parse an integer where the top bit is the continuation bit.
-    Returns value and number of parsed bytes.'''
+    """Parse an integer where the top bit is the continuation bit.
+    Returns value and number of parsed bytes."""
     v = 0
     for i, b in enumerate(bytes):
         v |= (b & 0x7F) << (i * 7)
@@ -42,14 +42,14 @@ def parse_varint(bytes):
     return v, len(bytes)
 
 def parse_uint(bytes):
-    '''Parse little-endian integer.'''
+    """Parse little-endian integer."""
     v = 0
     for i, b in enumerate(bytes):
         v |= b << (i * 8)
     return v
 
 def parse_exc_info(bytes):
-    '''Parse exception information bytes from a branch packet.'''
+    """Parse exception information bytes from a branch packet."""
     if len(bytes) < 1:
         return None
 
@@ -70,9 +70,9 @@ def parse_exc_info(bytes):
     return (ns, exc, cancel, altisa, hyp, resume)
 
 def parse_branch_addr(bytes, ref_addr, cpu_state, branch_enc):
-    '''Parse encoded branch address.
+    """Parse encoded branch address.
        Returns addr, addrlen, cpu_state, exc_info.
-       Returns None if packet is not yet complete'''
+       Returns None if packet is not yet complete"""
 
     addr, addrlen = parse_varint(bytes)
 
@@ -192,11 +192,11 @@ class Decoder(srd.Decoder):
         self.load_objdump()
 
     def load_objdump(self):
-        '''Parse disassembly obtained from objdump into two tables:
+        """Parse disassembly obtained from objdump into two tables:
         next_instr_lookup: Find the next PC addr from current PC.
         disasm_lookup: Find the instruction text from current PC.
         source_lookup: Find the source code line from current PC.
-        '''
+        """
         if not (self.options['objdump'] and self.options['elffile']):
             return
 
@@ -273,10 +273,10 @@ class Decoder(srd.Decoder):
             self.current_func = None
 
     def instructions_executed(self, exec_status):
-        '''Advance program counter based on executed instructions.
+        """Advance program counter based on executed instructions.
         Argument is a list of False for not executed and True for executed
         instructions.
-        '''
+        """
 
         if len(exec_status) == 0:
             return
@@ -332,9 +332,9 @@ class Decoder(srd.Decoder):
                 self.current_pc = target_n
 
     def get_packet_type(self, byte):
-        '''Identify packet type based on its first byte.
+        """Identify packet type based on its first byte.
            See ARM IHI0014Q section "ETMv3 Signal Protocol" "Packet Types"
-        '''
+        """
         if byte & 0x01 == 0x01:
             return 'branch'
         elif byte == 0x00:

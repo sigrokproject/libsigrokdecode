@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes generic RGB LED string
 values that are clocked over SPI in RGB values.
-'''
+"""
 
 from .pd import Decoder

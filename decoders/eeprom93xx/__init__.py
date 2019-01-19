@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'microwire' PD and decodes the 93xx EEPROM
 specific instructions.
 
@@ -27,6 +27,6 @@ different names.
 
 Warning: Other EEPROMs using Microwire might have different operation codes
 and instructions.
-'''
+"""
 
 from .pd import Decoder

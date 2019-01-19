@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder handles the proprietary single wire communication protocol used
 by the Aosong AM230x/DHTxx/RHTxx series of digital humidity and temperature
 sensors.
@@ -31,6 +31,6 @@ The AM230x and DHTxx/RHTxx digital humidity and temperature sensors use the
 same single-wire protocol with different encoding of the measured values.
 Therefore the option 'device' must be used to properly decode the
 communication of the respective sensor.
-'''
+"""
 
 from .pd import Decoder

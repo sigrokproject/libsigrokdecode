@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 EDID 1.3 structure decoder.
 
 The three-character vendor ID as specified in the EDID standard refers to
@@ -33,6 +33,6 @@ January 2012.
 More information on EDID is available here:
 
  https://en.wikipedia.org/wiki/Extended_display_identification_data
-'''
+"""
 
 from .pd import Decoder

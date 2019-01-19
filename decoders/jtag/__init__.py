@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 JTAG (Joint Test Action Group), a.k.a. "IEEE 1149.1: Standard Test Access Port
 and Boundary-Scan Architecture", is a protocol used for testing, debugging,
 and flashing various digital ICs.
@@ -25,6 +25,6 @@ and flashing various digital ICs.
 Details:
 https://en.wikipedia.org/wiki/Joint_Test_Action_Group
 http://focus.ti.com/lit/an/ssya002c/ssya002c.pdf
-'''
+"""
 
 from .pd import Decoder

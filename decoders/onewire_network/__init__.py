@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'onewire_link' PD and decodes the
 1-Wire protocol (network layer).
 
@@ -51,6 +51,6 @@ The following network layer annotations are shown:
 TODO:
  - Add CRC checks, to see if there were communication errors on the wire.
  - Add reporting original/complement address values from the search algorithm.
-'''
+"""
 
 from .pd import Decoder

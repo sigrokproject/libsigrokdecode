@@ -17,11 +17,11 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder decodes the ST7735 TFT controller protocol.
 
 Details:
 http://www.displayfuture.com/Display/datasheet/controller/ST7735.pdf
-'''
+"""
 
 from .pd import Decoder

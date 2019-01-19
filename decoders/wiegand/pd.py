@@ -69,13 +69,13 @@ class Decoder(srd.Decoder):
         self._bits = []
 
     def start(self):
-        'Register output types and verify user supplied decoder values.'
+        """Register output types and verify user supplied decoder values."""
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self._active = 1 if self.options['active'] == 'high' else 0
         self._inactive = 1 - self._active
 
     def metadata(self, key, value):
-        'Receive decoder metadata about the data stream.'
+        """Receive decoder metadata about the data stream."""
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
             if self.samplerate:
@@ -84,7 +84,7 @@ class Decoder(srd.Decoder):
                 self._samples_per_bit = int(max(1, int(ms_per_bit / ms_per_sample)))
 
     def _update_state(self, state, bit=None):
-        'Update state and bit values when they change.'
+        """Update state and bit values when they change."""
         if self._bit is not None:
             self._bits.append(self._bit)
             self.put(self.ss_bit, self.samplenum, self.out_ann,

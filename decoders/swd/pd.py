@@ -119,7 +119,7 @@ class Decoder(srd.Decoder):
             self.state = 'REQ' # No need to wait for a LINE RESET.
 
     def putx(self, ann, length, data):
-        '''Output annotated data.'''
+        """Output annotated data."""
         ann = ANNOTATIONS.index(ann)
         try:
             ss = self.samplenums[-length]
@@ -134,7 +134,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss_req, self.samplenum, self.out_python, [ptype, pdata])
 
     def put_python_data(self):
-        '''Emit Python data item based on current SWD packet contents.'''
+        """Emit Python data item based on current SWD packet contents."""
         ptype = {
             ('AP', 'R'): 'AP_READ',
             ('AP', 'W'): 'AP_WRITE',
@@ -181,7 +181,7 @@ class Decoder(srd.Decoder):
             }[self.state]()
 
     def next_state(self):
-        '''Step to the next SWD state, reset internal counters accordingly.'''
+        """Step to the next SWD state, reset internal counters accordingly."""
         self.bits = ''
         self.samplenums = []
         self.linereset_count = 0
@@ -206,7 +206,7 @@ class Decoder(srd.Decoder):
             self.turnaround = 1 if self.rw == 'R' else 0
 
     def reset_state(self):
-        '''Line reset (or equivalent), wait for a new pending SWD request.'''
+        """Line reset (or equivalent), wait for a new pending SWD request."""
         if self.state != 'REQ': # Emit a Python data item.
             self.put_python_data()
         # Clear state.
@@ -220,15 +220,15 @@ class Decoder(srd.Decoder):
         self.state = 'REQ'
 
     def handle_unknown_edge(self):
-        '''
+        """
         Clock edge in the UNKNOWN state.
         In the unknown state, clock edges get ignored until we see a line
         reset (which is detected in the decode method, not here.)
-        '''
+        """
         pass
 
     def handle_req_edge(self):
-        '''Clock edge in the REQ state (waiting for SWD r/w request).'''
+        """Clock edge in the REQ state (waiting for SWD r/w request)."""
         # Check for a JTAG->SWD enable sequence.
         m = re.search(RE_SWDSWITCH, self.bits)
         if m is not None:
@@ -249,7 +249,7 @@ class Decoder(srd.Decoder):
             return
 
     def handle_ack_edge(self):
-        '''Clock edge in the ACK state (waiting for complete ACK sequence).'''
+        """Clock edge in the ACK state (waiting for complete ACK sequence)."""
         if len(self.bits) < 3:
             return
         if self.bits == '100':
@@ -282,7 +282,7 @@ class Decoder(srd.Decoder):
             self.reset_state()
 
     def handle_data_edge(self):
-        '''Clock edge in the DATA state (waiting for 32 bits to clock past).'''
+        """Clock edge in the DATA state (waiting for 32 bits to clock past)."""
         if len(self.bits) < 32:
             return
         self.data = 0
@@ -297,7 +297,7 @@ class Decoder(srd.Decoder):
         self.next_state()
 
     def handle_dparity_edge(self):
-        '''Clock edge in the DPARITY state (clocking in parity bit).'''
+        """Clock edge in the DPARITY state (clocking in parity bit)."""
         if str(self.dparity) != self.bits:
             self.putx('parity', 1, str(self.dparity) + self.bits) # PARITY ERROR
         elif self.rw == 'W':
@@ -305,10 +305,10 @@ class Decoder(srd.Decoder):
         self.next_state()
 
     def handle_completed_write(self):
-        '''
+        """
         Update internal state of the debug port based on a completed
         write operation.
-        '''
+        """
         if self.apdp != 'DP':
             return
         elif self.addr == ADDR_DP_SELECT:
@@ -317,10 +317,10 @@ class Decoder(srd.Decoder):
             self.orundetect = self.data & BIT_CTRLSTAT_ORUNDETECT
 
     def get_address_description(self):
-        '''
+        """
         Return a human-readable description of the currently selected address,
         for annotated results.
-        '''
+        """
         if self.apdp == 'DP':
             if self.rw == 'R':
                 # Tables 2-4 & 2-5 in ADIv5.2 spec ARM document IHI 0031C

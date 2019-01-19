@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 PDI (Program and Debug Interface) is an Atmel proprietary interface for
 external programming and on-chip debugging of the device. See the Atmel
 Application Note AVR1612 "PDI programming driver" and the "Program and
@@ -36,6 +36,6 @@ it's possible to identify the device, read from and write to several
 kinds of memory (signature rows, fuses and lock bits, internal flash and
 EEPROM, memory mapped peripherals), and to control execution of software
 on the device.
-'''
+"""
 
 from .pd import Decoder

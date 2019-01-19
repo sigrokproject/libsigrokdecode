@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This PD decodes the ARM SWD (version 1) protocol, as described in the
 "ARM Debug Interface v5.2" Architecture Specification.
 
@@ -29,6 +29,6 @@ Not supported:
  * Turnaround periods other than the default 1, as set in DLCR.TURNROUND
    (should be trivial to add)
  * SWD protocol version 2 (multi-drop support, etc.)
-'''
+"""
 
 from .pd import Decoder

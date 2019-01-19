@@ -17,12 +17,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'uart' PD and decodes Modbus RTU,
 a protocol with a single a client and one or more servers.
 
 The RX channel will be checked for both client->server and server->client
 communication, the TX channel only for client->server.
-'''
+"""
 
 from .pd import Decoder

@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 RC-5 is a biphase/manchester based infrared remote control protocol.
-'''
+"""
 
 from .pd import Decoder

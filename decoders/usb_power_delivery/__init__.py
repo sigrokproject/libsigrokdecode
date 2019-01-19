@@ -17,8 +17,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 USB Power Delivery - baseband protocol decoder / checker.
-'''
+"""
 
 from .pd import *

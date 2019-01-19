@@ -17,13 +17,13 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 CAN (Controller Area Network) is a field bus protocol for distributed
 real-time control.
 
 This decoder assumes that a single CAN_RX line is sampled (e.g. on
 the digital output side of a CAN transceiver IC such as the Microchip
 MCP-2515DM-BM).
-'''
+"""
 
 from .pd import Decoder

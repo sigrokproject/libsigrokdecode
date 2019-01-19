@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 LPC (Low-Pin Count) is a protocol for low-bandwidth devices used on
 some PC mainboards, such as the "BIOS chip" or the so-called "Super I/O".
-'''
+"""
 
 from .pd import Decoder

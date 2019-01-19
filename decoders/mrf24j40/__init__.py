@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'spi' PD and decodes Microchip MRF24J40
 IEEE 802.15.4 2.4 GHz RF tranceiver commands and data.
-'''
+"""
 
 from .pd import Decoder

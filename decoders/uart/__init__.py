@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 UART (Universal Asynchronous Receiver Transmitter) is a simple serial
 communication protocol which allows two devices to talk to each other.
 
@@ -35,6 +35,6 @@ the correct place where to probe). Once the data is in digital form and
 matches the "UART" description above, this protocol decoder can work with
 it though, no matter whether the source was on TTL UART levels, or RS232,
 or others.
-'''
+"""
 
 from .pd import Decoder

@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder stacks on top of the 'i2c' PD and decodes the Dallas DS1307
 real-time clock (RTC) specific registers and commands.
-'''
+"""
 
 from .pd import Decoder

@@ -17,9 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-'''
+"""
 This decoder decodes demodulated data streams used by the Qi standard
 for communication from the receiver to the charging station.
-'''
+"""
 
 from .pd import Decoder
