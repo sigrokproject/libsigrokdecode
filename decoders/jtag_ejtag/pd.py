@@ -247,14 +247,14 @@ class Decoder(srd.Decoder):
         s += 'Store' if pracc_write else 'Load/Fetch'
 
         if pracc_write:
-            if self.pracc_state.address_out != None:
+            if self.pracc_state.address_out is not None:
                 s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
-            if self.pracc_state.data_out != None:
+            if self.pracc_state.data_out is not None:
                 s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_out)
         else:
-            if self.pracc_state.address_out != None:
+            if self.pracc_state.address_out is not None:
                 s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
-            if self.pracc_state.data_in != None:
+            if self.pracc_state.data_in is not None:
                 s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_in)
 
         self.pracc_state.reset()
