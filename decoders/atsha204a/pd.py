@@ -287,7 +287,6 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
         cmd, databyte = data
-
         # State machine.
         if self.state == 'IDLE':
             # Wait for an I²C START condition.
@@ -309,7 +308,8 @@ class Decoder(srd.Decoder):
                 # Reset the opcode before received data, as this causes
                 # responses to be displayed incorrectly.
                 self.opcode = -1
-                self.output_rx_bytes()
+                if len(self.bytes) > 0:
+                        self.output_rx_bytes()
                 self.waddr = -1
                 self.bytes = []
                 self.state = 'IDLE'
