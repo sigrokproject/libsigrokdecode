@@ -357,16 +357,16 @@ class Decoder(srd.Decoder):
 
     def handle_ir_tdi(self, val):
         code = bin2int(val[0])
-        hex_value = '0x{:02X}'.format(code)
+        hexval = '0x{:02X}'.format(code)
         if code in ejtag_insn:
             # Format instruction name.
             insn = ejtag_insn[code]
             s_short = insn[0]
-            s_long = insn[0] + ': ' + insn[1] + ' (' + hex_value + ')'
+            s_long = insn[0] + ': ' + insn[1] + ' (' + hexval + ')'
             # Display it and select data register.
             self.put_current([Ann.INSTRUCTION, [s_long, s_short]])
         else:
-            self.put_current([Ann.INSTRUCTION, [hex_value, 'IR TDI ({})'.format(hex_value)]])
+            self.put_current([Ann.INSTRUCTION, [hexval, 'IR TDI ({})'.format(hexval)]])
         self.select_reg(code)
 
     def handle_new_state(self, new_state):
