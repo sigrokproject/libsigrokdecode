@@ -182,7 +182,7 @@ class Decoder(srd.Decoder):
               else:
                 crc_type = "CRC-21"
             else:
-              crc_type = "CRC-15"
+              crc_type = "CRC" # TODO: CRC-15 (will break existing tests)
 
             x = self.last_databit + 1
             crc_bits = self.bits[x:x + self.crc_len + 1]
@@ -216,7 +216,7 @@ class Decoder(srd.Decoder):
             self.ss_block = self.samplenum
 
         # End of frame (EOF), 7 recessive bits
-        elif bitnum == (self.last_databit + self.crc_len + 11):
+        elif bitnum == (self.last_databit + self.crc_len + 10):
             self.putb([2, ['End of frame', 'EOF', 'E']])
             if self.rawbits[-7:] != [1, 1, 1, 1, 1, 1, 1]:
                 self.putb([16, ['End of frame (EOF) must be 7 recessive bits']])
@@ -233,9 +233,14 @@ class Decoder(srd.Decoder):
         if bitnum == 14:
             self.fd = True if can_rx else False
 
-            self.putx([7, ['Flexible Data Format: %d' % can_rx,
-                           'FDF: %d' % can_rx,
-                           'FDF']])
+            if self.fd:
+                self.putx([7, ['Flexible Data Format: %d' % can_rx,
+                               'FDF: %d' % can_rx,
+                               'FDF']])
+            else:
+                self.putx([7, ['Reserved bit 0: %d' % can_rx,
+                               'RB0: %d' % can_rx,
+                               'RB0']])
 
             # SRR Substitute Remote Request
             if self.fd:
@@ -250,7 +255,6 @@ class Decoder(srd.Decoder):
                                 'RTR: %s frame' % rtr, 'RTR']])
                 self.dlc_start = 15
 
-        # TODO: add Res, BRS and ESI bits when FD format:
         if bitnum == 15:
             if self.fd:
                 self.putx([7, ['Reserved: %d' % can_rx, 'R0: %d' % can_rx, 'R0']])
@@ -270,9 +274,11 @@ class Decoder(srd.Decoder):
         # Bits 15-18: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == self.dlc_start + 3:
             self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
-            self.putb([10, ['Data length code: %d (%d Bytes)' % (self.dlc, self.dlc2len(self.dlc)),
-                            'DLC: %d (%d B)' % (self.dlc, self.dlc2len(self.dlc)), 'DLC']])
+            self.putb([10, ['Data length code: %d' % self.dlc,
+                             'DLC: %d' % self.dlc, 'DLC']])
             self.last_databit = self.dlc_start + 3 + (self.dlc2len(self.dlc) * 8)
+            if self.dlc > 8 and not self.fd:
+                self.putb([16, ['Data length code (DLC) > 8 is not allowed']])
 
         # Remember all databyte bits, except the very last one.
         elif bitnum in range(self.dlc_start + 4, self.last_databit):
@@ -344,8 +350,8 @@ class Decoder(srd.Decoder):
         # Bits 35-38: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == 38:
             self.dlc = int(''.join(str(d) for d in self.bits[35:38 + 1]), 2)
-            self.putb([10, ['Data length code: %d (%d Bytes)' % (self.dlc, self.dlc2len(self.dlc)),
-                            'DLC: %d (%d B)' % (self.dlc, self.dlc2len(self.dlc)), 'DLC']])
+            self.putb([10, ['Data length code: %d' % self.dlc,
+                            'DLC: %d' % self.dlc, 'DLC']])
             self.last_databit = 38 + (self.dlc2len(self.dlc) * 8)
 
         # Remember all databyte bits, except the very last one.
