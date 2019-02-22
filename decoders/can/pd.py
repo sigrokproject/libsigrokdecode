@@ -162,41 +162,57 @@ class Decoder(srd.Decoder):
         if bitnum == (self.last_databit + 1):
             self.ss_block = self.samplenum
 
-        # CRC sequence (15 bits)
-        elif bitnum == (self.last_databit + 15):
+            if self.fd:
+                if self.dlc < 16:
+                    self.crc_len = 27 # 17 + SBC + stuff bits
+                else:
+                    self.crc_len = 21
+            else:
+                self.crc_len = 15
+
+        # CRC sequence (15 bits, 17 bits or 21 bits)
+        elif bitnum == (self.last_databit + self.crc_len):
+            if self.fd:
+              if self.dlc < 16:
+                crc_type = "CRC-17"
+              else:
+                crc_type = "CRC-21"
+            else:
+              crc_type = "CRC-15"
+
             x = self.last_databit + 1
-            crc_bits = self.bits[x:x + 15 + 1]
+            crc_bits = self.bits[x:x + self.crc_len + 1]
             self.crc = int(''.join(str(d) for d in crc_bits), 2)
-            self.putb([11, ['CRC sequence: 0x%04x' % self.crc,
-                            'CRC: 0x%04x' % self.crc, 'CRC']])
+            self.putb([11, ['%s sequence: 0x%04x' % (crc_type, self.crc),
+                            '%s: 0x%04x' % (crc_type, self.crc), '%s' % crc_type]])
             if not self.is_valid_crc(crc_bits):
                 self.putb([16, ['CRC is invalid']])
 
         # CRC delimiter bit (recessive)
-        elif bitnum == (self.last_databit + 16):
+        elif bitnum == (self.last_databit + self.crc_len + 1):
             self.putx([12, ['CRC delimiter: %d' % can_rx,
                             'CRC d: %d' % can_rx, 'CRC d']])
             if can_rx != 1:
                 self.putx([16, ['CRC delimiter must be a recessive bit']])
 
         # ACK slot bit (dominant: ACK, recessive: NACK)
-        elif bitnum == (self.last_databit + 17):
+        elif bitnum == (self.last_databit + self.crc_len + 2):
             ack = 'ACK' if can_rx == 0 else 'NACK'
             self.putx([13, ['ACK slot: %s' % ack, 'ACK s: %s' % ack, 'ACK s']])
 
         # ACK delimiter bit (recessive)
-        elif bitnum == (self.last_databit + 18):
+        elif bitnum == (self.last_databit + self.crc_len + 3):
             self.putx([14, ['ACK delimiter: %d' % can_rx,
                             'ACK d: %d' % can_rx, 'ACK d']])
             if can_rx != 1:
                 self.putx([16, ['ACK delimiter must be a recessive bit']])
 
         # Remember start of EOF (see below).
-        elif bitnum == (self.last_databit + 19):
+        elif bitnum == (self.last_databit + self.crc_len + 4):
             self.ss_block = self.samplenum
 
         # End of frame (EOF), 7 recessive bits
-        elif bitnum == (self.last_databit + 25):
+        elif bitnum == (self.last_databit + self.crc_len + 11):
             self.putb([2, ['End of frame', 'EOF', 'E']])
             if self.rawbits[-7:] != [1, 1, 1, 1, 1, 1, 1]:
                 self.putb([16, ['End of frame (EOF) must be 7 recessive bits']])
