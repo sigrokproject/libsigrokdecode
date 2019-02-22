@@ -65,6 +65,7 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', tuple(range(15))),
         ('warnings', 'Warnings', (16,)),
     )
+    fd = False
 
     def __init__(self):
         self.reset()
@@ -166,17 +167,17 @@ class Decoder(srd.Decoder):
             self.ss_block = self.samplenum
 
             if self.fd:
-                if self.dlc < 16:
+                if self.dlc2len(self.dlc) < 16:
                     self.crc_len = 27 # 17 + SBC + stuff bits
                 else:
-                    self.crc_len = 21
+                    self.crc_len = 32 # 21 + SBC + stuff bits
             else:
                 self.crc_len = 15
 
         # CRC sequence (15 bits, 17 bits or 21 bits)
         elif bitnum == (self.last_databit + self.crc_len):
             if self.fd:
-              if self.dlc < 16:
+              if self.dlc2len(self.dlc) < 16:
                 crc_type = "CRC-17"
               else:
                 crc_type = "CRC-21"
@@ -271,9 +272,7 @@ class Decoder(srd.Decoder):
             self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
             self.putb([10, ['Data length code: %d (%d Bytes)' % (self.dlc, self.dlc2len(self.dlc)),
                             'DLC: %d (%d B)' % (self.dlc, self.dlc2len(self.dlc)), 'DLC']])
-            self.last_databit = self.dlc_start + 3 + (self.dlc * 8)
-            if self.dlc > 8:
-                self.putb([16, ['Data length code (DLC) > 8 is not allowed']])
+            self.last_databit = self.dlc_start + 3 + (self.dlc2len(self.dlc) * 8)
 
         # Remember all databyte bits, except the very last one.
         elif bitnum in range(self.dlc_start + 4, self.last_databit):
@@ -283,7 +282,7 @@ class Decoder(srd.Decoder):
         # The bits within a data byte are transferred MSB-first.
         elif bitnum == self.last_databit:
             self.ss_databytebits.append(self.samplenum) # Last databyte bit.
-            for i in range(self.dlc):
+            for i in range(self.dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
                 ss = self.ss_databytebits[i * 8]
@@ -345,9 +344,9 @@ class Decoder(srd.Decoder):
         # Bits 35-38: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == 38:
             self.dlc = int(''.join(str(d) for d in self.bits[35:38 + 1]), 2)
-            self.putb([10, ['Data length code: %d' % self.dlc,
-                            'DLC: %d' % self.dlc, 'DLC']])
-            self.last_databit = 38 + (self.dlc * 8)
+            self.putb([10, ['Data length code: %d (%d Bytes)' % (self.dlc, self.dlc2len(self.dlc)),
+                            'DLC: %d (%d B)' % (self.dlc, self.dlc2len(self.dlc)), 'DLC']])
+            self.last_databit = 38 + (self.dlc2len(self.dlc) * 8)
 
         # Remember all databyte bits, except the very last one.
         elif bitnum in range(39, self.last_databit):
@@ -357,7 +356,7 @@ class Decoder(srd.Decoder):
         # The bits within a data byte are transferred MSB-first.
         elif bitnum == self.last_databit:
             self.ss_databytebits.append(self.samplenum) # Last databyte bit.
-            for i in range(self.dlc):
+            for i in range(self.dlc2len(self.dlc)):
                 x = 38 + (8 * i) + 1
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
                 ss = self.ss_databytebits[i * 8]
