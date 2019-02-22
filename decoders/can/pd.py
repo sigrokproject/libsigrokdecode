@@ -69,6 +69,9 @@ class Decoder(srd.Decoder):
     def __init__(self):
         self.reset()
 
+    def dlc2len(self, dlc):
+        return [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64][dlc]
+
     def reset(self):
         self.samplerate = None
         self.reset_variables()
@@ -266,8 +269,8 @@ class Decoder(srd.Decoder):
         # Bits 15-18: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == self.dlc_start + 3:
             self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
-            self.putb([10, ['Data length code: %d' % self.dlc,
-                            'DLC: %d' % self.dlc, 'DLC']])
+            self.putb([10, ['Data length code: %d (%d Bytes)' % (self.dlc, self.dlc2len(self.dlc)),
+                            'DLC: %d (%d B)' % (self.dlc, self.dlc2len(self.dlc)), 'DLC']])
             self.last_databit = self.dlc_start + 3 + (self.dlc * 8)
             if self.dlc > 8:
                 self.putb([16, ['Data length code (DLC) > 8 is not allowed']])
