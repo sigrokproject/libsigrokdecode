@@ -308,6 +308,8 @@ class Decoder(srd.Decoder):
         # Remember start of EID (see below).
         if bitnum == 14:
             self.ss_block = self.samplenum
+            self.fd = False
+            self.dlc_start = 35
 
         # Bits 14-31: Extended identifier (EID[17..0])
         elif bitnum == 31:
@@ -328,34 +330,53 @@ class Decoder(srd.Decoder):
         # Bit 32: Remote transmission request (RTR) bit
         # Data frame: dominant, remote frame: recessive
         # Remote frames do not contain a data field.
+
+        # Remember start of RTR (see below).
         if bitnum == 32:
             rtr = 'remote' if can_rx == 1 else 'data'
             self.putx([8, ['Remote transmission request: %s frame' % rtr,
                            'RTR: %s frame' % rtr, 'RTR']])
 
+            # TODO: annotate as R1 on FD frame
+
         # Bit 33: RB1 (reserved bit)
         elif bitnum == 33:
-            self.putx([7, ['Reserved bit 1: %d' % can_rx,
-                           'RB1: %d' % can_rx, 'RB1']])
+            self.fd = True if can_rx else False
+
+            if self.fd:
+                self.dlc_start = 37
+                self.putx([7, ['Flexible Data Format: %d' % can_rx,
+                               'FDF: %d' % can_rx, 'FDF']])
+            else:
+                self.putx([7, ['Reserved bit 1: %d' % can_rx,
+                               'RB1: %d' % can_rx, 'RB1']])
 
         # Bit 34: RB0 (reserved bit)
         elif bitnum == 34:
             self.putx([7, ['Reserved bit 0: %d' % can_rx,
                            'RB0: %d' % can_rx, 'RB0']])
 
+        elif bitnum == 35 and self.fd:
+            self.putx([7, ['Bit rate switch: %d' % can_rx,
+                           'BRS: %d' % can_rx, 'BRS']])
+
+        elif bitnum == 36 and self.fd:
+            self.putx([7, ['Error state indicator: %d' % can_rx,
+                           'ESI: %d' % can_rx, 'ESI']])
+
         # Remember start of DLC (see below).
-        elif bitnum == 35:
+        elif bitnum == self.dlc_start:
             self.ss_block = self.samplenum
 
         # Bits 35-38: Data length code (DLC), in number of bytes (0-8).
-        elif bitnum == 38:
-            self.dlc = int(''.join(str(d) for d in self.bits[35:38 + 1]), 2)
+        elif bitnum == self.dlc_start + 3:
+            self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
-            self.last_databit = 38 + (self.dlc2len(self.dlc) * 8)
+            self.last_databit = self.dlc_start + 3 + (self.dlc2len(self.dlc) * 8)
 
         # Remember all databyte bits, except the very last one.
-        elif bitnum in range(39, self.last_databit):
+        elif bitnum in range(self.dlc_start + 4, self.last_databit):
             self.ss_databytebits.append(self.samplenum)
 
         # Bits 39-X: Data field (0-8 bytes, depending on DLC)
@@ -363,7 +384,7 @@ class Decoder(srd.Decoder):
         elif bitnum == self.last_databit:
             self.ss_databytebits.append(self.samplenum) # Last databyte bit.
             for i in range(self.dlc2len(self.dlc)):
-                x = 38 + (8 * i) + 1
+                x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
