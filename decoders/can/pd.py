@@ -65,7 +65,6 @@ class Decoder(srd.Decoder):
         ('fields', 'Fields', tuple(range(15))),
         ('warnings', 'Warnings', (16,)),
     )
-    fd = False
 
     def __init__(self):
         self.reset()
@@ -99,6 +98,10 @@ class Decoder(srd.Decoder):
     def put12(self, data):
         self.putg(self.ss_bit12, self.ss_bit12, data)
 
+    # Single-CAN-bit annotation using the samplenum of CAN bit 32.
+    def put32(self, data):
+        self.putg(self.ss_bit32, self.ss_bit32, data)
+
     # Multi-CAN-bit annotation from self.ss_block to current samplenum.
     def putb(self, data):
         self.putg(self.ss_block, self.samplenum, data)
@@ -112,7 +115,10 @@ class Decoder(srd.Decoder):
         self.last_databit = 999 # Positive value that bitnum+x will never match
         self.ss_block = None
         self.ss_bit12 = None
+        self.ss_bit32 = None
         self.ss_databytebits = []
+        self.fd = False
+        self.rtr = None
 
     # Poor man's clock synchronization. Use signal edges which change to
     # dominant state in rather simple ways. This naive approach is neither
@@ -333,11 +339,13 @@ class Decoder(srd.Decoder):
 
         # Remember start of RTR (see below).
         if bitnum == 32:
-            rtr = 'remote' if can_rx == 1 else 'data'
-            self.putx([8, ['Remote transmission request: %s frame' % rtr,
-                           'RTR: %s frame' % rtr, 'RTR']])
+            self.ss_bit32 = self.samplenum
+            self.rtr = can_rx
 
-            # TODO: annotate as R1 on FD frame
+            if not self.fd:
+               rtr = 'remote' if can_rx == 1 else 'data'
+               self.putx([8, ['Remote transmission request: %s frame' % rtr,
+                              'RTR: %s frame' % rtr, 'RTR']])
 
         # Bit 33: RB1 (reserved bit)
         elif bitnum == 33:
@@ -347,6 +355,9 @@ class Decoder(srd.Decoder):
                 self.dlc_start = 37
                 self.putx([7, ['Flexible Data Format: %d' % can_rx,
                                'FDF: %d' % can_rx, 'FDF']])
+
+                self.put32([7, ['Reserved bit 1: %d' % self.rtr,
+                                'RB1: %d' % self.rtr, 'RB1']])
             else:
                 self.putx([7, ['Reserved bit 1: %d' % can_rx,
                                'RB1: %d' % can_rx, 'RB1']])
