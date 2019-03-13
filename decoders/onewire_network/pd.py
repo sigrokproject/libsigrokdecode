@@ -29,6 +29,7 @@ command = {
     0xec: ['Conditional search ROM', 'SEARCH ROM'],
     0x3c: ['Overdrive skip ROM'    , 'TRANSPORT' ],
     0x69: ['Overdrive match ROM'   , 'GET ROM'   ],
+    0xa5: ['Resume'                , 'TRANSPORT' ],
 }
 
 class Decoder(srd.Decoder):
