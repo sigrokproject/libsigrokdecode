@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['sdcard_spi']
-    tags = ['Logic', 'Memory']
+    tags = ['Memory']
     annotations = \
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \
         tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + ( \

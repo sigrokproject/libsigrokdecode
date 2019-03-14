@@ -72,6 +72,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['swd']
+    tags = ['Debug/trace']
     channels = (
         {'id': 'swclk', 'name': 'SWCLK', 'desc': 'Master clock'},
         {'id': 'swdio', 'name': 'SWDIO', 'desc': 'Data input/output'},

@@ -96,7 +96,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['spi']
     outputs = ['adf435x']
-    tags = ['Logic']
+    tags = ['Clock/timing', 'IC', 'Wireless/RF']
     annotations = (
         # Sent from the host to the chip.
         ('register', 'Register written to the device'),

@@ -42,7 +42,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['am230x']
-    tags = ['Logic', 'Sensors']
+    tags = ['IC', 'Sensor']
     channels = (
         {'id': 'sda', 'name': 'SDA', 'desc': 'Single wire serial data line'},
     )

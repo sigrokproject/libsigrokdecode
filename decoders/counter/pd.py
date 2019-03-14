@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = []
-    tags = ['Logic', 'Tools']
+    tags = ['Util']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )

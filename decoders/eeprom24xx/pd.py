@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['eeprom24xx']
-    tags = ['Logic', 'Memory']
+    tags = ['IC', 'Memory']
     options = (
         {'id': 'chip', 'desc': 'Chip', 'default': 'generic',
             'values': tuple(chips.keys())},

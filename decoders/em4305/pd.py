@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['em4305']
-    tags = ['Logic', 'Wireless']
+    tags = ['IC', 'RFID']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )

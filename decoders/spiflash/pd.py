@@ -79,6 +79,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['spiflash']
+    tags = ['IC', 'Memory']
     annotations = cmd_annotation_classes() + (
         ('bit', 'Bit'),
         ('field', 'Field'),

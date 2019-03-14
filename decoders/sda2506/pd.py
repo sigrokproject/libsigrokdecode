@@ -31,6 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['sda2506']
+    tags = ['IC', 'Memory']
     channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
         {'id': 'd', 'name': 'DATA', 'desc': 'Data'},

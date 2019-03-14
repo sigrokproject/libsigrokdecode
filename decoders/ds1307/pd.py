@@ -60,6 +60,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['ds1307']
+    tags = ['Clock/timing', 'IC']
     annotations =  regs_and_bits() + (
         ('read-datetime', 'Read date/time'),
         ('write-datetime', 'Write date/time'),

@@ -33,7 +33,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['aud']
-    tags = ['Logic', 'MCU Debugging']
+    tags = ['Debug/trace']
     channels = (
         {'id': 'audck', 'name': 'AUDCK', 'desc': 'AUD clock'},
         {'id': 'naudsync', 'name': 'nAUDSYNC', 'desc': 'AUD sync'},

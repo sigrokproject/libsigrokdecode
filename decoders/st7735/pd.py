@@ -73,6 +73,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['st7735']
+    tags = ['Display', 'IC']
     channels = (
         {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},

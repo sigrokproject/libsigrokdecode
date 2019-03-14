@@ -31,6 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['xfp']
+    tags = ['Networking']
     annotations = (
         ('fieldnames-and-values', 'XFP structure field names and values'),
         ('fields', 'XFP structure fields'),

@@ -36,6 +36,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['rtc8564']
+    tags = ['Clock/timing']
     annotations = reg_list() + (
         ('read', 'Read date/time'),
         ('write', 'Write date/time'),

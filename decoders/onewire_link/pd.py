@@ -97,6 +97,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['onewire_link']
+    tags = ['Embedded/industrial']
     channels = (
         {'id': 'owr', 'name': 'OWR', 'desc': '1-Wire signal line'},
     )

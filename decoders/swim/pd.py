@@ -33,6 +33,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = []
+    tags = ['Debug/trace']
     options = (
         {'id': 'debug', 'desc': 'Debug', 'default': 'no', 'values': ('yes', 'no') },
     )

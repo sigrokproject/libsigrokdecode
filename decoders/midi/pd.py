@@ -33,7 +33,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['midi']
-    tags = ['Logic', 'Bus', 'Audio']
+    tags = ['Audio', 'PC']
     annotations = (
         ('text-verbose', 'Human-readable text (verbose)'),
         ('text-sysreal-verbose', 'Human-readable SysReal text (verbose)'),

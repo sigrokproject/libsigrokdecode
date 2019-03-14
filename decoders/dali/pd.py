@@ -32,6 +32,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dali']
+    tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dali', 'name': 'DALI', 'desc': 'DALI data line'},
     )

@@ -37,6 +37,7 @@ class Decoder(srd.Decoder):
     license = 'bsd'
     inputs = ['logic']
     outputs = ['mdio']
+    tags = ['Networking']
     channels = (
         {'id': 'mdc', 'name': 'MDC', 'desc': 'Clock'},
         {'id': 'mdio', 'name': 'MDIO', 'desc': 'Data'},

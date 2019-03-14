@@ -29,6 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['mrf24j40']
+    tags = ['IC', 'Wireless/RF']
     annotations = (
         ('sread', 'Short register read commands'),
         ('swrite', 'Short register write commands'),

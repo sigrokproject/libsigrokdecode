@@ -28,7 +28,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['microwire']
     outputs = ['eeprom93xx']
-    tags = ['Logic', 'Memory']
+    tags = ['IC', 'Memory']
     options = (
         {'id': 'addresssize', 'desc': 'Address size', 'default': 8},
         {'id': 'wordsize', 'desc': 'Word size', 'default': 16},

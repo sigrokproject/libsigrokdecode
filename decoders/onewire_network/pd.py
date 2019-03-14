@@ -40,6 +40,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['onewire_link']
     outputs = ['onewire_network']
+    tags = ['Embedded/industrial']
     annotations = (
         ('text', 'Human-readable text'),
     )

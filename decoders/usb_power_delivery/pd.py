@@ -203,6 +203,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb_pd']
+    tags = ['PC']
     channels = (
         {'id': 'cc1', 'name': 'CC1', 'desc': 'Configuration Channel 1'},
     )

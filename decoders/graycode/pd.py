@@ -81,6 +81,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['graycode']
+    tags = ['Encoding']
     optional_channels = tuple(
         {'id': 'd{}'.format(i), 'name': 'D{}'.format(i), 'desc': 'Data line {}'.format(i)}
         for i in range(MAX_CHANNELS)

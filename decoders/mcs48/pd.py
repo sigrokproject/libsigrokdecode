@@ -31,6 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['mcs48']
+    tags = ['Retro computing']
     channels = (
         {'id': 'ale', 'name': 'ALE', 'desc': 'Address latch enable'},
         {'id': 'psen', 'name': '/PSEN', 'desc': 'Program store enable'},

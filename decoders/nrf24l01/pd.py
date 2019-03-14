@@ -67,6 +67,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['nrf24l01']
+    tags = ['IC', 'Wireless/RF']
     options = (
         {'id': 'chip', 'desc': 'Chip type',
             'default': 'nrf24l01', 'values': ('nrf24l01', 'xn297')},

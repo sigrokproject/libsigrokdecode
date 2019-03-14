@@ -31,6 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['ssi32']
+    tags = ['Embedded/industrial']
     options = (
         {'id': 'msgsize', 'desc': 'Message size', 'default': 64},
     )

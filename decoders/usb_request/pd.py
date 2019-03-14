@@ -120,6 +120,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['usb_packet']
     outputs = ['usb_request']
+    tags = ['PC']
     annotations = (
         ('request-setup-read', 'Setup: Device-to-host'),
         ('request-setup-write', 'Setup: Host-to-device'),

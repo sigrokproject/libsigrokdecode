@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
     license  = 'gplv3+'
     inputs   = ['logic']
     outputs  = ['z80']
-    tags = ['Logic', 'MCU Debugging']
+    tags     = ['Retro computing']
     channels = tuple({
             'id': 'd%d' % i,
             'name': 'D%d' % i,

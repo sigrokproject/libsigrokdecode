@@ -64,6 +64,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['lin']
+    tags = ['Automotive']
     options = (
         {'id': 'version', 'desc': 'Protocol version', 'default': 2, 'values': (1, 2)},
     )

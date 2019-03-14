@@ -38,6 +38,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['jitter']
+    tags = ['Clock/timing', 'Util']
     channels = (
         {'id': 'clk', 'name': 'Clock', 'desc': 'Clock reference channel'},
         {'id': 'sig', 'name': 'Resulting signal', 'desc': 'Resulting signal controlled by the clock'},

@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
     license = 'mit'
     inputs = ['spi']
     outputs = ['ade77xx']
-    tags = ['Logic', 'Sensors']
+    tags = ['Analog/digital', 'IC', 'Sensor']
     annotations = (
         ('read', 'Register read commands'),
         ('write', 'Register write commands'),

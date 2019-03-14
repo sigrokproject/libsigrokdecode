@@ -47,6 +47,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['lm75']
+    tags = ['Sensor']
     options = (
         {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75',
             'values': ('lm75',)},

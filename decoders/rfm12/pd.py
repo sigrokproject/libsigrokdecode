@@ -28,6 +28,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['rfm12']
+    tags = ['Wireless/RF']
     annotations = (
         ('cmd', 'Command'),
         ('params', 'Command parameters'),

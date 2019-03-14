@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['avr_isp']
-    tags = ['Logic', 'MCU Debugging']
+    tags = ['Debug/trace']
     annotations = (
         ('pe', 'Programming enable'),
         ('rsb0', 'Read signature byte 0'),
