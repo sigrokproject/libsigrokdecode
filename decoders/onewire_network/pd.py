@@ -21,15 +21,16 @@ import sigrokdecode as srd
 
 # Dictionary of ROM commands and their names, next state.
 command = {
-    0x33: ['Read ROM'              , 'GET ROM'   ],
-    0x0f: ['Conditional read ROM'  , 'GET ROM'   ],
-    0xcc: ['Skip ROM'              , 'TRANSPORT' ],
-    0x55: ['Match ROM'             , 'GET ROM'   ],
-    0xf0: ['Search ROM'            , 'SEARCH ROM'],
-    0xec: ['Conditional search ROM', 'SEARCH ROM'],
-    0x3c: ['Overdrive skip ROM'    , 'TRANSPORT' ],
-    0x69: ['Overdrive match ROM'   , 'GET ROM'   ],
-    0xa5: ['Resume'                , 'TRANSPORT' ],
+    0x33: ['Read ROM'                  , 'GET ROM'   ],
+    0x0f: ['Conditional read ROM'      , 'GET ROM'   ],
+    0xcc: ['Skip ROM'                  , 'TRANSPORT' ],
+    0x55: ['Match ROM'                 , 'GET ROM'   ],
+    0xf0: ['Search ROM'                , 'SEARCH ROM'],
+    0xec: ['Conditional search ROM'    , 'SEARCH ROM'],
+    0x3c: ['Overdrive skip ROM'        , 'TRANSPORT' ],
+    0x69: ['Overdrive match ROM'       , 'GET ROM'   ],
+    0xa5: ['Resume'                    , 'TRANSPORT' ],
+    0x96: ['DS2408: Disable Test Mode' , 'GET ROM'   ],
 }
 
 class Decoder(srd.Decoder):
