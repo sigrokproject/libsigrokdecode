@@ -21,6 +21,7 @@
 This protocol decoder retrieves the timing jitter between two digital signals.
 
 It allows to define a clock source channel and a resulting signal channel.
+
 Each time a significant edge is detected in the clock source, we calculate the
 elapsed time before the resulting signal answers and report the timing jitter.
 '''

@@ -18,7 +18,7 @@
 ##
 
 '''
-Pulse-width modulation (a.k.a pulse-duration modulation, PDM) decoder.
+Pulse-width modulation (PWM) a.k.a pulse-duration modulation (PDM) decoder.
 '''
 
 from .pd import Decoder

@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     id = 'counter'
     name = 'Counter'
     longname = 'Edge counter'
-    desc = 'Count number of edges.'
+    desc = 'Count the number of edges in a signal.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = []

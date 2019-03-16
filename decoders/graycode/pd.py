@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
     id = 'graycode'
     name = 'Gray code'
     longname = 'Gray code and rotary encoder'
-    desc = 'Accumulate rotary encoder increments, provide timing statistics.'
+    desc = 'Accumulate rotary encoder increments, provide statistics.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['graycode']

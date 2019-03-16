@@ -191,7 +191,7 @@ regs_items = {
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'jtag_ejtag'
-    name = 'JTAG / EJTAG (MIPS)'
+    name = 'JTAG / EJTAG'
     longname = 'Joint Test Action Group / EJTAG (MIPS)'
     desc = 'MIPS EJTAG protocol.'
     license = 'gplv2+'

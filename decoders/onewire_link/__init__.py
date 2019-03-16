@@ -45,10 +45,10 @@ as an example.
  - owr (1-Wire signal line)
 
 Options:
-1-Wire is an asynchronous protocol with fixed timing values, so the decoder must
-know the samplerate.
+1-Wire is an asynchronous protocol with fixed timing values, so the decoder
+must know the samplerate.
 Two speeds are available: normal and overdrive. The decoder detects when
-switching from one to another but the user can set which to start decoding with:
+switching speed, but the user can set which to start decoding with:
 
  - overdrive (to decode starting with overdrive speed)
 '''

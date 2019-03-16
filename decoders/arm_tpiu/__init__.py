@@ -18,10 +18,11 @@
 ##
 
 '''
-This decoder stacks on top of the 'uart' decoder and decodes the frame format
-of ARMv7m Trace Port Interface Unit. It filters the data coming from various
-trace sources (such as ARMv7m ITM and ETM blocks) into separate streams that
-can be further decoded by other PDs.
+This decoder stacks on top of the 'uart' PD and decodes the frame format
+of ARMv7m Trace Port Interface Unit.
+
+It filters the data coming from various trace sources (such as ARMv7m ITM
+and ETM blocks) into separate streams that can be further decoded by other PDs.
 '''
 
 from .pd import Decoder

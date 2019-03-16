@@ -130,8 +130,8 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'arm_etmv3'
     name = 'ARM ETMv3'
-    longname = 'ARM Embedded Trace Macroblock'
-    desc = 'Decode ETM instruction trace packets.'
+    longname = 'ARM Embedded Trace Macroblock v3'
+    desc = 'ARM ETM v3 instruction trace protocol.'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['arm_etmv3']

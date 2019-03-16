@@ -32,7 +32,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['logic']
     outputs = ['rgb_led_ws281x']
-    tags = ['Display']
+    tags = ['Display', 'IC']
     channels = (
         {'id': 'din', 'name': 'DIN', 'desc': 'DIN data line'},
     )

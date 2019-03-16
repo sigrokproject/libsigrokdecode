@@ -64,7 +64,7 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'ds243x'
     name = 'DS243x'
-    longname = 'Maxim DS2432/2433'
+    longname = 'Maxim DS2432/3'
     desc = 'Maxim DS243x series 1-Wire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['onewire_network']

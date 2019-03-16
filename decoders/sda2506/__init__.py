@@ -18,7 +18,7 @@
 ##
 
 '''
-Decoder for Siemens EEPROM SDA2506.
+Decoder for Siemens EEPROM SDA 2506-5.
 '''
 
 from .pd import Decoder

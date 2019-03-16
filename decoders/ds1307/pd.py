@@ -56,7 +56,7 @@ class Decoder(srd.Decoder):
     id = 'ds1307'
     name = 'DS1307'
     longname = 'Dallas DS1307'
-    desc = 'Realtime clock module protocol.'
+    desc = 'Dallas DS1307 realtime clock module protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['ds1307']

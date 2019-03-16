@@ -116,7 +116,7 @@ class Decoder(srd.Decoder):
     id = 'avr_pdi'
     name = 'AVR PDI'
     longname = 'Atmel Program and Debug Interface'
-    desc = 'Atmel proprietary interface for the ATxmega MCU.'
+    desc = 'Atmel ATxmega Program and Debug Interface (PDI) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['pdi']

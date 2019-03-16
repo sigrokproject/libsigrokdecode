@@ -116,7 +116,7 @@ class Decoder(srd.Decoder):
     id = 'usb_request'
     name = 'USB request'
     longname = 'Universal Serial Bus (LS/FS) transaction/request'
-    desc = 'USB (low-speed and full-speed) transaction/request protocol.'
+    desc = 'USB (low-speed/full-speed) transaction/request protocol.'
     license = 'gplv2+'
     inputs = ['usb_packet']
     outputs = ['usb_request']

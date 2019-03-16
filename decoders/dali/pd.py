@@ -28,7 +28,7 @@ class Decoder(srd.Decoder):
     id = 'dali'
     name = 'DALI'
     longname = 'Digital Addressable Lighting Interface'
-    desc = 'DALI lighting control protocol.'
+    desc = 'Digital Addressable Lighting Interface (DALI) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dali']
