@@ -17,12 +17,6 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-## ToDo:
-## - are hex values supposed to be printed with '0x'? SPI decoder does not...
-## - example data and screenshots
-## - decode the status register
-
-
 import sigrokdecode as srd
 from .lists import *
 
@@ -79,6 +73,10 @@ class Decoder(srd.Decoder):
     def putp(self, pos, ann, msg):
         '''Put an annotation message 'msg' at 'pos'.'''
         self.put(pos[0], pos[1], self.out_ann, [ann, [msg]])
+
+    def putp2(self, pos, ann, msg1, msg2):
+        '''Put an annotation message 'msg' at 'pos'.'''
+        self.put(pos[0], pos[1], self.out_ann, [ann, [msg1, msg2]])
 
     def next(self):
         '''Resets the decoder after a complete command was decoded.'''
@@ -197,12 +195,36 @@ class Decoder(srd.Decoder):
 
         if regid == 'STATUS' and ann == self.ann_status:
             label = 'Status'
-        elif self.cmd in ('SINGLE_WRITE', 'SINGLE_READ', 'STATUS_READ', 'BURST_READ', 'BURST_WRITE'):
-            label = '{}: {}'.format(self.format_command(), name)
+            self.decode_status_reg(pos, ann, data, label)
         else:
-            label = 'Reg ({}) {}'.format(self.cmd, name)
+            if self.cmd in ('SINGLE_WRITE', 'SINGLE_READ', 'STATUS_READ', 'BURST_READ', 'BURST_WRITE'):
+                label = '{}: {}'.format(self.format_command(), name)
+            else:
+                label = 'Reg ({}) {}'.format(self.cmd, name)
+            self.decode_mb_data(pos, ann, data, label)
 
-        self.decode_mb_data(pos, ann, data, label)
+    def decode_status_reg(self, pos, ann, data, label):
+        '''Decodes the data bytes 'data' of a status register at position
+        'pos'. The decoded data is prefixed with 'label'. '''
+        status = data[0]
+        # bit 7 --> CHIP_RDYn
+        if status & 0b10000000 == 0b10000000:
+            longtext_chiprdy = 'CHIP_RDYn is high! '
+        else:
+            longtext_chiprdy = ''
+        # bits 6:4 --> STATE
+        state = (status & 0x70) >> 4
+        longtext_state = 'STATE is {}, '.format(status_reg_states[state])
+        # bits 3:0 --> FIFO_BYTES_AVAILABLE
+        fifo_bytes = status & 0x0F
+        if self.cmd in ('SINGLE_READ', 'STATUS_READ', 'BURST_READ'):
+            longtext_fifo = '{} bytes available in RX FIFO'.format(fifo_bytes)
+        else:
+            longtext_fifo = '{} bytes free in TX FIFO'.format(fifo_bytes)
+        
+        text = '{} = "0x{}"'.format(label, status)
+        longtext = ''.join([text, '; ', longtext_chiprdy, longtext_state, longtext_fifo])
+        self.putp2(pos, ann, longtext, text)
 
     def decode_mb_data(self, pos, ann, data, label):
         '''Decodes the data bytes 'data' of a multibyte command at position

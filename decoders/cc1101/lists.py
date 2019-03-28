@@ -100,5 +100,18 @@ strobes = {
     0x3A: 'SFRX',
     0x3B: 'SFTX',
     0x3C: 'SWORRST',
-    0x3D: 'SNOP',
+    0x3D: 'SNOP'
+}
+
+
+status_reg_states = {
+#   value:  'state name'
+    0b000:  'IDLE',
+    0b001:  'RX',
+    0b010:  'TX',
+    0b011:  'FSTXON',
+    0b100:  'CALIBRATE',
+    0b101:  'SETTLING',
+    0b110:  'RXFIFO_OVERFLOW',
+    0b111:  'TXFIFO_OVERFLOW'
 }
