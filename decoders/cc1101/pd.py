@@ -222,7 +222,7 @@ class Decoder(srd.Decoder):
         else:
             longtext_fifo = '{} bytes free in TX FIFO'.format(fifo_bytes)
         
-        text = '{} = "0x{}"'.format(label, status)
+        text = '{} = "0x{:02X}"'.format(label, status)
         longtext = ''.join([text, '; ', longtext_chiprdy, longtext_state, longtext_fifo])
         self.putp2(pos, ann, longtext, text)
 
