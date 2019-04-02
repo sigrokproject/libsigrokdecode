@@ -529,6 +529,27 @@ SRD_API int srd_inst_stack(struct srd_session *sess,
 		sess->di_list = g_slist_remove(sess->di_list, di_top);
 	}
 
+	/*
+	 * Check if there's at least one matching input/output pair
+	 * for the stacked PDs. We warn if that's not the case, but it's
+	 * not a hard error for the time being.
+	 */
+	gboolean at_least_one_match = FALSE;
+	for (GSList *out = di_bottom->decoder->outputs; out; out = out->next) {
+		const char *o = out->data;
+		for (GSList *in = di_top->decoder->inputs; in; in = in->next) {
+			const char *i = in->data;
+			if (!strcmp(o, i)) {
+				at_least_one_match = TRUE;
+				break;
+			}
+		}
+	}
+
+	if (!at_least_one_match)
+		srd_warn("No matching in-/output when stacking %s onto %s.",
+			di_top->inst_id, di_bottom->inst_id);
+
 	/* Stack on top of source di. */
 	di_bottom->next_di = g_slist_append(di_bottom->next_di, di_top);
 
