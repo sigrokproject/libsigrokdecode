@@ -39,7 +39,7 @@ class Decoder(srd.Decoder):
     desc = 'Xicor X2444M/P nonvolatile static RAM protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['x2444m']
+    outputs = []
     tags = ['IC', 'Memory']
     annotations = (
         ('wrds', 'Write disable'),

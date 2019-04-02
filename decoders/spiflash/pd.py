@@ -78,7 +78,7 @@ class Decoder(srd.Decoder):
     desc = 'xx25 series SPI (NOR) flash chip protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['spiflash']
+    outputs = []
     tags = ['IC', 'Memory']
     annotations = cmd_annotation_classes() + (
         ('bit', 'Bit'),

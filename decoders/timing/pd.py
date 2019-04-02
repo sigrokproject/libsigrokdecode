@@ -53,7 +53,7 @@ class Decoder(srd.Decoder):
     desc = 'Calculate time between edges.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['timing']
+    outputs = []
     tags = ['Clock/timing', 'Util']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},

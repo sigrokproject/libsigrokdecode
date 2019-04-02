@@ -35,7 +35,7 @@ class Decoder(srd.Decoder):
     desc = 'Realtime clock module protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['rtc8564']
+    outputs = []
     tags = ['Clock/timing']
     annotations = reg_list() + (
         ('read', 'Read date/time'),

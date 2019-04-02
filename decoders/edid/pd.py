@@ -80,7 +80,7 @@ class Decoder(srd.Decoder):
     desc = 'Data structure describing display device capabilities.'
     license = 'gplv3+'
     inputs = ['i2c']
-    outputs = ['edid']
+    outputs = []
     tags = ['Display', 'Memory', 'PC']
     annotations = (
         ('fields', 'EDID structure fields'),

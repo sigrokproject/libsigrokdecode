@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     desc = 'RGB LED string protocol (WS281x).'
     license = 'gplv3+'
     inputs = ['logic']
-    outputs = ['rgb_led_ws281x']
+    outputs = []
     tags = ['Display', 'IC']
     channels = (
         {'id': 'din', 'name': 'DIN', 'desc': 'DIN data line'},

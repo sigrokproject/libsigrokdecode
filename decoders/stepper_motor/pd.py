@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     desc = 'Absolute position and movement speed from step/dir.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['stepper_motor']
+    outputs = []
     tags = ['Embedded/industrial']
     channels = (
         {'id': 'step', 'name': 'Step', 'desc': 'Step pulse'},

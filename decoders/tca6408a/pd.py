@@ -29,7 +29,7 @@ class Decoder(srd.Decoder):
     desc = 'Texas Instruments TCA6408A 8-bit I²C I/O expander.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['tca6408a']
+    outputs = []
     tags = ['Embedded/industrial', 'IC']
     annotations = (
         ('register', 'Register type'),

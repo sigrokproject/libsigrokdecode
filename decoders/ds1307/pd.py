@@ -59,7 +59,7 @@ class Decoder(srd.Decoder):
     desc = 'Dallas DS1307 realtime clock module protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['ds1307']
+    outputs = []
     tags = ['Clock/timing', 'IC']
     annotations =  regs_and_bits() + (
         ('read-datetime', 'Read date/time'),

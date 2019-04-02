@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Intel MCS-48 external memory access protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['mcs48']
+    outputs = []
     tags = ['Retro computing']
     channels = (
         {'id': 'ale', 'name': 'ALE', 'desc': 'Address latch enable'},

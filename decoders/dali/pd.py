@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     desc = 'Digital Addressable Lighting Interface (DALI) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['dali']
+    outputs = []
     tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dali', 'name': 'DALI', 'desc': 'DALI data line'},

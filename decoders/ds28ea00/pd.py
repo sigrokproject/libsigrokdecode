@@ -42,7 +42,7 @@ class Decoder(srd.Decoder):
     desc = '1-Wire digital thermometer with Sequence Detect and PIO.'
     license = 'gplv2+'
     inputs = ['onewire_network']
-    outputs = ['ds28ea00']
+    outputs = []
     tags = ['IC', 'Sensor']
     annotations = (
         ('text', 'Human-readable text'),

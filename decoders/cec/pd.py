@@ -55,7 +55,7 @@ class Decoder(srd.Decoder):
     desc = 'HDMI Consumer Electronics Control (CEC) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['cec']
+    outputs = []
     tags = ['Display', 'PC']
     channels = (
         {'id': 'cec', 'name': 'CEC', 'desc': 'CEC bus data'},

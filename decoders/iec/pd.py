@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
     desc = 'Commodore serial IEEE-488 (IEC) bus protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['gpib']
+    outputs = []
     tags = ['PC', 'Retro computing']
     channels = (
         {'id': 'data', 'name': 'DATA', 'desc': 'Data I/O'},

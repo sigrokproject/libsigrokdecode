@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     desc = 'Analog level encoded in duty cycle percentage.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['pwm']
+    outputs = []
     tags = ['Encoding']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},

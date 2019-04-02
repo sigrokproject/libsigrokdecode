@@ -63,7 +63,7 @@ class Decoder(srd.Decoder):
     desc = 'Local Interconnect Network (LIN) protocol.'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = ['lin']
+    outputs = []
     tags = ['Automotive']
     options = (
         {'id': 'version', 'desc': 'Protocol version', 'default': 2, 'values': (1, 2)},

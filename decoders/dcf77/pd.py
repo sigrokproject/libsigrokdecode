@@ -32,7 +32,7 @@ class Decoder(srd.Decoder):
     desc = 'European longwave time signal (77.5kHz carrier signal).'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['dcf77']
+    outputs = []
     tags = ['Clock/timing']
     channels = (
         {'id': 'data', 'name': 'DATA', 'desc': 'DATA line'},

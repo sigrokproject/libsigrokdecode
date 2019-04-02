@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     desc = 'Digital MultipleX 512 (DMX512) lighting protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['dmx512']
+    outputs = []
     tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dmx', 'name': 'DMX data', 'desc': 'Any DMX data line'},

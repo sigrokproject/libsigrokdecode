@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     desc = '93xx series Microwire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['microwire']
-    outputs = ['eeprom93xx']
+    outputs = []
     tags = ['IC', 'Memory']
     options = (
         {'id': 'addresssize', 'desc': 'Address size', 'default': 8},

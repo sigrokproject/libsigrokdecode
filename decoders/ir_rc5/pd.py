@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     desc = 'RC-5 infrared remote control protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['ir_rc5']
+    outputs = []
     tags = ['IR']
     channels = (
         {'id': 'ir', 'name': 'IR', 'desc': 'IR data line'},

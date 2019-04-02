@@ -68,7 +68,7 @@ class Decoder(srd.Decoder):
     desc = 'Maxim DS243x series 1-Wire EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['onewire_network']
-    outputs = ['ds243x']
+    outputs = []
     tags = ['IC', 'Memory']
     annotations = (
         ('text', 'Human-readable text'),

@@ -38,7 +38,7 @@ class Decoder(srd.Decoder):
     desc = 'Miller encoding protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['miller']
+    outputs = []
     tags = ['Encoding']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data signal'},

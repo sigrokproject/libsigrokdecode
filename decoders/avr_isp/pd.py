@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Atmel AVR In-System Programming (ISP) protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['avr_isp']
+    outputs = []
     tags = ['Debug/trace']
     annotations = (
         ('pe', 'Programming enable'),

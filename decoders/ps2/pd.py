@@ -33,7 +33,7 @@ class Decoder(srd.Decoder):
     desc = 'PS/2 keyboard/mouse interface.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['ps2']
+    outputs = []
     tags = ['PC']
     channels = (
         {'id': 'clk', 'name': 'Clock', 'desc': 'Clock line'},

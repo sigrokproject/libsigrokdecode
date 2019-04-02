@@ -28,7 +28,7 @@ class Decoder(srd.Decoder):
     desc = 'Secure Digital card (SPI mode) low-level protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['sdcard_spi']
+    outputs = []
     tags = ['Memory']
     annotations = \
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \

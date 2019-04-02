@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Guess the bitrate/baudrate of a UART (or other) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['guess_bitrate']
+    outputs = []
     tags = ['Clock/timing', 'Util']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},

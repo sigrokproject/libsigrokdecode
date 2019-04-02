@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
     desc = '2.4GHz RF transceiver chip.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['nrf24l01']
+    outputs = []
     tags = ['IC', 'Wireless/RF']
     options = (
         {'id': 'chip', 'desc': 'Chip type',

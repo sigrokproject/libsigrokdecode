@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
     desc = 'Bidirectional optical mouse sensor protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['adns5020']
+    outputs = []
     tags = ['IC', 'PC', 'Sensor']
     annotations = (
         ('read', 'Register read commands'),

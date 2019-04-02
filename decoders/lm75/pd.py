@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
     desc = 'National LM75 (and compatibles) temperature sensor.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['lm75']
+    outputs = []
     tags = ['Sensor']
     options = (
         {'id': 'sensor', 'desc': 'Sensor type', 'default': 'lm75',

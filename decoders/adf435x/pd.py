@@ -95,7 +95,7 @@ class Decoder(srd.Decoder):
     desc = 'Wideband synthesizer with integrated VCO.'
     license = 'gplv3+'
     inputs = ['spi']
-    outputs = ['adf435x']
+    outputs = []
     tags = ['Clock/timing', 'IC', 'Wireless/RF']
     annotations = (
         # Sent from the host to the chip.

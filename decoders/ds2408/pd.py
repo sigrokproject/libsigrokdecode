@@ -37,7 +37,7 @@ class Decoder(srd.Decoder):
     desc = '1-Wire 8-channel addressable switch.'
     license = 'gplv2+'
     inputs = ['onewire_network']
-    outputs = ['ds2408']
+    outputs = []
     tags = ['Embedded/industrial', 'IC']
     annotations = (
         ('text', 'Human-readable text'),

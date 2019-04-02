@@ -119,7 +119,7 @@ class Decoder(srd.Decoder):
     desc = 'Atmel ATxmega Program and Debug Interface (PDI) protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['pdi']
+    outputs = []
     tags = ['Debug/trace']
     channels = (
         {'id': 'reset', 'name': 'RESET', 'desc': 'RESET / PDI_CLK'},

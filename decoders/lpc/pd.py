@@ -102,7 +102,7 @@ class Decoder(srd.Decoder):
     desc = 'Protocol for low-bandwidth devices on PC mainboards.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['lpc']
+    outputs = []
     tags = ['PC']
     channels = (
         {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'Frame'},

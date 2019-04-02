@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     desc = 'RGB LED string protocol (RGB values clocked over SPI).'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['rgb_led_spi']
+    outputs = []
     tags = ['Display']
     annotations = (
         ('rgb', 'RGB values'),

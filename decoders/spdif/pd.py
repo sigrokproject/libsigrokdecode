@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Serial bus for connecting digital audio devices.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['spdif']
+    outputs = []
     tags = ['Audio', 'PC']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},

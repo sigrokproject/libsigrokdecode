@@ -44,7 +44,7 @@ class Decoder(srd.Decoder):
     desc = 'ARM Cortex-M / ARMv7m ITM trace protocol.'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = ['arm_itm']
+    outputs = []
     tags = ['Debug/trace']
     options = (
         {'id': 'objdump', 'desc': 'objdump path',

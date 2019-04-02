@@ -134,7 +134,7 @@ class Decoder(srd.Decoder):
     desc = 'ARM ETM v3 instruction trace protocol.'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = ['arm_etmv3']
+    outputs = []
     tags = ['Debug/trace']
     annotations = (
         ('trace', 'Trace info'),

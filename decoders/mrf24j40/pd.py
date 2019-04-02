@@ -28,7 +28,7 @@ class Decoder(srd.Decoder):
     desc = 'IEEE 802.15.4 2.4 GHz RF tranceiver chip.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['mrf24j40']
+    outputs = []
     tags = ['IC', 'Wireless/RF']
     annotations = (
         ('sread', 'Short register read commands'),

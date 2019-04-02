@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Serial nonvolatile 1-Kbit EEPROM.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['sda2506']
+    outputs = []
     tags = ['IC', 'Memory']
     channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},

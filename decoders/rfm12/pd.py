@@ -27,7 +27,7 @@ class Decoder(srd.Decoder):
     desc = 'HopeRF RFM12 wireless transceiver control protocol.'
     license = 'gplv2+'
     inputs = ['spi']
-    outputs = ['rfm12']
+    outputs = []
     tags = ['Wireless/RF']
     annotations = (
         ('cmd', 'Command'),

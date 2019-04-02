@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
     desc = 'Aosong AM230x/DHTxx/RHTxx humidity/temperature sensor.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['am230x']
+    outputs = []
     tags = ['IC', 'Sensor']
     channels = (
         {'id': 'sda', 'name': 'SDA', 'desc': 'Single wire serial data line'},

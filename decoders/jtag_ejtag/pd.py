@@ -196,7 +196,7 @@ class Decoder(srd.Decoder):
     desc = 'MIPS EJTAG protocol.'
     license = 'gplv2+'
     inputs = ['jtag']
-    outputs = ['jtag_ejtag']
+    outputs = []
     tags = ['Debug/trace']
     annotations = (
         ('instruction', 'Instruction'),

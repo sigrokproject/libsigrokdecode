@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     desc = 'Field bus protocol for distributed realtime control.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['can']
+    outputs = []
     tags = ['Automotive']
     channels = (
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},

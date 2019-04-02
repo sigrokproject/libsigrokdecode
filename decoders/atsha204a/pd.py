@@ -88,7 +88,7 @@ class Decoder(srd.Decoder):
     desc = 'Microchip ATSHA204A crypto authentication protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['atsha204a']
+    outputs = []
     tags = ['Security/crypto', 'IC', 'Memory']
     annotations = (
         ('waddr', 'Word address'),
