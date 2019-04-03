@@ -29,6 +29,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['ook']
     outputs = ['ook']
+    tags = ['Encoding']
     annotations = (
         ('bit', 'Bit'),
         ('ref', 'Reference'),

@@ -62,6 +62,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['jtag']
+    tags = ['Debug/trace']
     channels = (
         {'id': 'tdi',  'name': 'TDI',  'desc': 'Test data input'},
         {'id': 'tdo',  'name': 'TDO',  'desc': 'Test data output'},

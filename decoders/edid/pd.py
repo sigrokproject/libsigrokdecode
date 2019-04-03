@@ -81,6 +81,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['edid']
+    tags = ['Display', 'Memory', 'PC']
     annotations = (
         ('fields', 'EDID structure fields'),
         ('sections', 'EDID structure sections'),

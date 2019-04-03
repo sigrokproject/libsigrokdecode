@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012 Bert Vermeulen <bert@biot.com>
+## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,18 +18,8 @@
 ##
 
 '''
-Extended Display Identification Data (EDID) 1.3 structure decoder.
-
-The three-character vendor ID as specified in the EDID standard refers to
-a Plug and Play ID (PNPID). The list of PNPID assignments is done by Microsoft.
-
-The 'pnpids.txt' file included with this protocol decoder is derived from
-the list of assignments downloadable from that page. It was retrieved in
-January 2012.
-
-Details:
-https://en.wikipedia.org/wiki/Extended_display_identification_data
-http://msdn.microsoft.com/en-us/windows/hardware/gg463195
+This decoder stacks on top of the 'onewire_network' PD and decodes the
+Maxim DS2408 1-Wire 8-channel addressable switch protocol.
 '''
 
 from .pd import Decoder

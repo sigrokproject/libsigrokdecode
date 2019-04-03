@@ -147,6 +147,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['jtag']
     outputs = ['jtag_stm32']
+    tags = ['Debug/trace']
     annotations = (
         ('item', 'Item'),
         ('field', 'Field'),

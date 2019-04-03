@@ -45,10 +45,11 @@ class Decoder(srd.Decoder):
     id = 'max7219'
     name = 'MAX7219'
     longname = 'Maxim MAX7219/MAX7221'
-    desc = '8-digit LED display driver.'
+    desc = 'Maxim MAX72xx series 8-digit LED display driver.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['max7219']
+    tags = ['Display']
     annotations = (
         ('register', 'Registers written to the device'),
         ('digit', 'Digits displayed on the device'),

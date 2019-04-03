@@ -32,6 +32,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['pan1321']
+    tags = ['Wireless/RF']
     annotations = (
         ('text-verbose', 'Human-readable text (verbose)'),
         ('text', 'Human-readable text'),

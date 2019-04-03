@@ -28,6 +28,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['rgb_led_spi']
+    tags = ['Display']
     annotations = (
         ('rgb', 'RGB values'),
     )

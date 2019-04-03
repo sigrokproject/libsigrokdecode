@@ -161,6 +161,9 @@ struct srd_decoder {
 	/** List of possible decoder output IDs. */
 	GSList *outputs;
 
+	/** List of tags associated with this decoder. */
+	GSList *tags;
+
 	/** List of channels required by this decoder. */
 	GSList *channels;
 

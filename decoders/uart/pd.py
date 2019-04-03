@@ -87,6 +87,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['uart']
+    tags = ['Embedded/industrial']
     optional_channels = (
         # Allow specifying only one of the signals, e.g. if only one data
         # direction exists (or is relevant).

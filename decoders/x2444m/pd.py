@@ -40,6 +40,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['x2444m']
+    tags = ['IC', 'Memory']
     annotations = (
         ('wrds', 'Write disable'),
         ('sto', 'Store RAM data in EEPROM'),

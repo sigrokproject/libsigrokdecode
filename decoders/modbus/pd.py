@@ -819,6 +819,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['uart']
     outputs = ['modbus']
+    tags = ['Embedded/industrial']
     annotations = (
         ('sc-server-id', ''),
         ('sc-function', ''),

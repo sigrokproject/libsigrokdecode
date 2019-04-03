@@ -18,7 +18,7 @@
 ##
 
 '''
-This decoder decodes the ST7735 TFT controller protocol.
+This decoder decodes the Sitronix ST7735 TFT controller protocol.
 
 Details:
 http://www.displayfuture.com/Display/datasheet/controller/ST7735.pdf

@@ -60,6 +60,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ac97']
+    tags = ['Audio', 'PC']
     channels = (
         {'id': 'sync', 'name': 'SYNC', 'desc': 'Frame synchronization'},
         {'id': 'clk', 'name': 'BIT_CLK', 'desc': 'Data bits clock'},

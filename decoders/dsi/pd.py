@@ -27,10 +27,11 @@ class Decoder(srd.Decoder):
     id = 'dsi'
     name = 'DSI'
     longname = 'Digital Serial Interface'
-    desc = 'DSI lighting control protocol.'
+    desc = 'Digital Serial Interface (DSI) lighting protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['dsi']
+    tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dsi', 'name': 'DSI', 'desc': 'DSI data line'},
     )

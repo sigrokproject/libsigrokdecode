@@ -32,6 +32,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ir_rc5']
+    tags = ['IR']
     channels = (
         {'id': 'ir', 'name': 'IR', 'desc': 'IR data line'},
     )

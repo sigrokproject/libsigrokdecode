@@ -62,11 +62,12 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'nrf24l01'
     name = 'nRF24L01(+)'
-    longname = 'Nordic Semiconductor nRF24L01/nRF24L01+'
-    desc = '2.4GHz transceiver chip.'
+    longname = 'Nordic Semiconductor nRF24L01(+)'
+    desc = '2.4GHz RF transceiver chip.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = ['nrf24l01']
+    tags = ['IC', 'Wireless/RF']
     options = (
         {'id': 'chip', 'desc': 'Chip type',
             'default': 'nrf24l01', 'values': ('nrf24l01', 'xn297')},

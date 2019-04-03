@@ -53,6 +53,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['qi']
+    tags = ['Embedded/industrial', 'Wireless/RF']
     channels = (
         {'id': 'qi', 'name': 'Qi', 'desc': 'Demodulated Qi data line'},
     )

@@ -67,6 +67,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['mxc6225xu']
+    tags = ['IC', 'Sensor']
     annotations = (
         ('text', 'Human-readable text'),
     )

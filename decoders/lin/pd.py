@@ -64,6 +64,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['lin']
+    tags = ['Automotive']
     options = (
         {'id': 'version', 'desc': 'Protocol version', 'default': 2, 'values': (1, 2)},
     )
@@ -150,7 +151,7 @@ class Decoder(srd.Decoder):
         checksum = self.lin_rsp.pop() if len(self.lin_rsp) else None
 
         if pid:
-            id = pid[2] & 0x3F
+            id_ = pid[2] & 0x3F
             parity = pid[2] >> 6
 
             expected_parity = self.calc_parity(pid[2])
@@ -161,8 +162,8 @@ class Decoder(srd.Decoder):
 
             ann_class = 0 if parity_valid else 3
             self.put(pid[0], pid[1], self.out_ann, [ann_class, [
-                'ID: %02X Parity: %d (%s)' % (id, parity, 'ok' if parity_valid else 'bad'),
-                'ID: 0x%02X' % id, 'I: %d' % id
+                'ID: %02X Parity: %d (%s)' % (id_, parity, 'ok' if parity_valid else 'bad'),
+                'ID: 0x%02X' % id_, 'I: %d' % id_
             ]])
 
         if len(self.lin_rsp):
@@ -188,9 +189,9 @@ class Decoder(srd.Decoder):
 
     def checksum_is_valid(self, pid, data, checksum):
         if self.lin_version == 2:
-            id = pid & 0x3F
+            id_ = pid & 0x3F
 
-            if id != 60 and id != 61:
+            if id_ != 60 and id_ != 61:
                 checksum += pid
 
         for d in data:
@@ -203,10 +204,10 @@ class Decoder(srd.Decoder):
 
     @staticmethod
     def calc_parity(pid):
-        id = [((pid & 0x3F) >> i) & 1 for i in range(8)]
+        id_ = [((pid & 0x3F) >> i) & 1 for i in range(8)]
 
-        p0 = id[0] ^ id[1] ^ id[2] ^ id[4]
-        p1 = not (id[1] ^ id[3] ^ id[4] ^ id[5])
+        p0 = id_[0] ^ id_[1] ^ id_[2] ^ id_[4]
+        p1 = not (id_[1] ^ id_[3] ^ id_[4] ^ id_[5])
 
         return (p0 << 0) | (p1 << 1)
 

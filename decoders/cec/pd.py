@@ -56,6 +56,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['cec']
+    tags = ['Display', 'PC']
     channels = (
         {'id': 'cec', 'name': 'CEC', 'desc': 'CEC bus data'},
     )
@@ -116,41 +117,41 @@ class Decoder(srd.Decoder):
             return
 
         i = 0
-        str = ''
+        string = ''
         while i < len(self.cmd_bytes):
-            str += '{:02x}'.format(self.cmd_bytes[i]['val'])
+            string += '{:02x}'.format(self.cmd_bytes[i]['val'])
             if i != (len(self.cmd_bytes) - 1):
-                str += ':'
+                string += ':'
             i += 1
 
-        self.put(self.frame_start, self.frame_end, self.out_ann, [7, [str]])
+        self.put(self.frame_start, self.frame_end, self.out_ann, [7, [string]])
 
         i = 0
         operands = 0
-        str = ''
+        string = ''
         while i < len(self.cmd_bytes):
             if i == 0: # Parse header
                 (src, dst) = decode_header(self.cmd_bytes[i]['val'])
-                str = 'HDR: ' + src + ', ' + dst
+                string = 'HDR: ' + src + ', ' + dst
             elif i == 1: # Parse opcode
-                str += ' | OPC: ' + opcodes.get(self.cmd_bytes[i]['val'], 'Invalid')
+                string += ' | OPC: ' + opcodes.get(self.cmd_bytes[i]['val'], 'Invalid')
             else: # Parse operands
                 if operands == 0:
-                    str += ' | OPS: '
+                    string += ' | OPS: '
                 operands += 1
-                str += '0x{:02x}'.format(self.cmd_bytes[i]['val'])
+                string += '0x{:02x}'.format(self.cmd_bytes[i]['val'])
                 if i != len(self.cmd_bytes) - 1:
-                    str += ', '
+                    string += ', '
             i += 1
 
         # Header only commands are PINGS
         if i == 1:
-            str += ' | OPC: PING' if self.eom else ' | OPC: NONE. Aborted cmd'
+            string += ' | OPC: PING' if self.eom else ' | OPC: NONE. Aborted cmd'
 
         # Add extra information (ack of the command from the destination)
-        str += ' | R: NACK' if is_nack else ' | R: ACK'
+        string += ' | R: NACK' if is_nack else ' | R: ACK'
 
-        self.put(self.frame_start, self.frame_end, self.out_ann, [8, [str]])
+        self.put(self.frame_start, self.frame_end, self.out_ann, [8, [string]])
 
     def process(self):
         zero_time = ((self.rise - self.fall_start) / self.samplerate) * 1000.0

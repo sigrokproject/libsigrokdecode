@@ -30,6 +30,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['tca6408a']
+    tags = ['Embedded/industrial', 'IC']
     annotations = (
         ('register', 'Register type'),
         ('value', 'Register value'),

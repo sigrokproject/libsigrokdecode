@@ -24,10 +24,11 @@ class Decoder(srd.Decoder):
     id = 'gpib'
     name = 'GPIB'
     longname = 'General Purpose Interface Bus'
-    desc = 'IEEE-488 GPIB / HPIB protocol.'
+    desc = 'IEEE-488 General Purpose Interface Bus (GPIB / HPIB).'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['gpib']
+    tags = ['PC']
     channels = (
         {'id': 'dio1' , 'name': 'DIO1', 'desc': 'Data I/O bit 1'},
         {'id': 'dio2' , 'name': 'DIO2', 'desc': 'Data I/O bit 2'},

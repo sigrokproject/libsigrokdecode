@@ -58,6 +58,7 @@ class Decoder(srd.Decoder):
     license = 'BSD'
     inputs = ['mdio']
     outputs = ['cfp']
+    tags = ['Networking']
     annotations = (
         ('register', 'Register'),
         ('decode', 'Decode'),

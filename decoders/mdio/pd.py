@@ -33,10 +33,11 @@ class Decoder(srd.Decoder):
     id = 'mdio'
     name = 'MDIO'
     longname = 'Management Data Input/Output'
-    desc = 'Half-duplex sync serial bus for MII management between MAC and PHY.'
+    desc = 'MII management bus between MAC and PHY.'
     license = 'bsd'
     inputs = ['logic']
     outputs = ['mdio']
+    tags = ['Networking']
     channels = (
         {'id': 'mdc', 'name': 'MDC', 'desc': 'Clock'},
         {'id': 'mdio', 'name': 'MDIO', 'desc': 'Data'},

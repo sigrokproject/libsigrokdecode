@@ -41,10 +41,11 @@ class Decoder(srd.Decoder):
     id = 'arm_itm'
     name = 'ARM ITM'
     longname = 'ARM Instrumentation Trace Macroblock'
-    desc = 'Trace data from Cortex-M / ARMv7m ITM module.'
+    desc = 'ARM Cortex-M / ARMv7m ITM trace protocol.'
     license = 'gplv2+'
     inputs = ['uart']
     outputs = ['arm_itm']
+    tags = ['Debug/trace']
     options = (
         {'id': 'objdump', 'desc': 'objdump path',
             'default': 'arm-none-eabi-objdump'},

@@ -19,7 +19,9 @@
 
 '''
 This decoder stacks on top of the 'spi' PD and decodes ADNS-5020 optical mouse
-sensor commands and data. Use MOSI for the SDIO shared line.
+sensor commands and data.
+
+Use MOSI for the SDIO shared line.
 '''
 
 from .pd import Decoder

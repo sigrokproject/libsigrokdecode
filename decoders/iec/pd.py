@@ -30,11 +30,12 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'iec'
     name = 'IEC'
-    longname = 'Commodore bus'
+    longname = 'Commodore IEC bus'
     desc = 'Commodore serial IEEE-488 (IEC) bus protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['gpib']
+    tags = ['PC', 'Retro computing']
     channels = (
         {'id': 'data', 'name': 'DATA', 'desc': 'Data I/O'},
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},

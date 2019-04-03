@@ -31,6 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv3+'
     inputs = ['i2c']
     outputs = ['i2c']
+    tags = ['Util']
     options = (
         {'id': 'address', 'desc': 'Address to filter out of the I²C stream',
             'default': 0},
