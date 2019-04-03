@@ -60,8 +60,8 @@ class Decoder(srd.Decoder):
         self.blocklen = 0
         self.read_buf = []
         self.cmd_str = ''
-        self.start_token_found = False # for CMD24
         self.is_cmd24 = False
+        self.cmd24_start_token_found = False
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -229,8 +229,7 @@ class Decoder(srd.Decoder):
     def handle_cmd24(self):
         # CMD24: WRITE_SINGLE_BLOCK
         self.putc(24, 'Write a block to address 0x%04x' % self.arg)
-        self.is_cmd24 = True # Reminder for handler of R1 to not switch
-        # to IDLE but to a specific function to handle the outgoing data.
+        self.is_cmd24 = True
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd49(self):
@@ -339,8 +338,6 @@ class Decoder(srd.Decoder):
 
         if self.is_cmd24:
             self.state = 'HANDLE DATA BLOCK CMD24'
-        else:
-            self.state = 'IDLE'
 
     def handle_response_r1b(self, res):
         # TODO
@@ -363,13 +360,16 @@ class Decoder(srd.Decoder):
         pass
 
     def handle_data_cmd24(self, mosi):
-        if self.start_token_found:
+        if self.cmd24_start_token_found:
             if len(self.read_buf) == 0:
                 self.ss_data = self.ss
+                if not self.blocklen:
+                    # Assume a fixed block size when inspection of the
+                    # previous traffic did not provide the respective
+                    # parameter value.
+                    # TODO Make the default block size a user adjustable option?
+                    self.blocklen = 512
             self.read_buf.append(mosi)
-            if self.blocklen == 0: # FIXME
-                print("warning: setting blocklength to 512")
-                self.blocklen = 512
             # Wait until block transfer completed.
             if len(self.read_buf) < self.blocklen:
                 return
@@ -379,11 +379,11 @@ class Decoder(srd.Decoder):
             self.state = 'DATA RESPONSE'
         elif mosi == 0xfe:
             self.put(self.ss, self.es, self.out_ann, [24, ['Data Start Token']])
-            self.start_token_found = True
+            self.cmd24_start_token_found = True
 
     def handle_data_response(self, miso):
-        miso &= 0x1F
-        if miso & 0x10 or not miso & 0x01:
+        miso &= 0x1f
+        if miso & 0x11 != 0x01:
             # This is not the byte we are waiting for.
             # Should we return to IDLE here?
             return
@@ -391,12 +391,16 @@ class Decoder(srd.Decoder):
         self.put(self.miso_bits[4][1], self.miso_bits[4][2], self.out_ann, [134, ['0']])
         if miso == 0x05:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data accepted']])
-        elif miso == 0x0B:
+        elif miso == 0x0b:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (CRC error)']])
-        elif miso == 0x0D:
+        elif miso == 0x0d:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (write error)']])
         self.put(self.miso_bits[0][1], self.miso_bits[0][2], self.out_ann, [134, ['1']])
-        self.put(self.ss, self.es, self.out_ann, [24, ['Data Response']]) # Assume cmd24 initiated the transfer.
+        ann_class = None
+        if self.is_cmd24:
+            ann_class = 24
+        if ann_class is not None:
+            self.put(self.ss, self.es, self.out_ann, [ann_class, ['Data Response']])
         self.state = 'IDLE'
 
     def decode(self, ss, es, data):
@@ -439,13 +443,13 @@ class Decoder(srd.Decoder):
             if miso == 0xff: # TODO?
                 return
             # Call the respective handler method for the response.
-            # The handler must set new state (IDLE in most cases)!
+            # Assume return to IDLE state, but allow response handlers
+            # to advance to some other state when applicable.
             s = 'handle_response_%s' % self.state[13:].lower()
             handle_response = getattr(self, s)
+            self.state = 'IDLE'
             handle_response(miso)
         elif self.state == 'HANDLE DATA BLOCK CMD24':
-            handle_data_cmd24 = getattr(self, 'handle_data_cmd24')
-            handle_data_cmd24(mosi)
+            self.handle_data_cmd24(mosi)
         elif self.state == 'DATA RESPONSE':
-            handle_data_response = getattr(self, 'handle_data_response')
-            handle_data_response(miso)
+            self.handle_data_response(miso)
