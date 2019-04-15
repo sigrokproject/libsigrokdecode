@@ -227,7 +227,7 @@ class Decoder(srd.Decoder):
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd24(self):
-        # CMD24: WRITE_SINGLE_BLOCK
+        # CMD24: WRITE_BLOCK
         self.putc(24, 'Write a block to address 0x%04x' % self.arg)
         self.is_cmd24 = True
         self.state = 'GET RESPONSE R1'
@@ -378,7 +378,7 @@ class Decoder(srd.Decoder):
             self.read_buf = []
             self.state = 'DATA RESPONSE'
         elif mosi == 0xfe:
-            self.put(self.ss, self.es, self.out_ann, [24, ['Data Start Token']])
+            self.put(self.ss, self.es, self.out_ann, [24, ['Start Block']])
             self.cmd24_start_token_found = True
 
     def handle_data_response(self, miso):
