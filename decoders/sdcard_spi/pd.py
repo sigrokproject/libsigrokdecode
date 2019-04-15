@@ -147,7 +147,6 @@ class Decoder(srd.Decoder):
 
         # Bits[0:0]: End bit (always 1)
         bit, self.ss_bit, self.es_bit = tb(0, 0)[0], tb(0, 0)[1], tb(0, 0)[2]
-        self.putb([134, ['End bit: %d' % bit]])
         if bit == 1:
             self.putb([134, ['End bit: %d' % bit]])
         else:
