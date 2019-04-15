@@ -382,20 +382,30 @@ class Decoder(srd.Decoder):
             self.cmd24_start_token_found = True
 
     def handle_data_response(self, miso):
+        # Data Response token (1 byte).
+        #
+        # Format:
+        #  - Bits[7:5]: Don't care.
+        #  - Bits[4:4]: Always 0.
+        #  - Bits[3:1]: Status.
+        #    - 010: Data accepted.
+        #    - 101: Data rejected due to a CRC error.
+        #    - 110: Data rejected due to a write error.
+        #  - Bits[0:0]: Always 1.
         miso &= 0x1f
         if miso & 0x11 != 0x01:
             # This is not the byte we are waiting for.
             # Should we return to IDLE here?
             return
-        self.put(self.miso_bits[7][1], self.miso_bits[5][2], self.out_ann, [134, ['don\'t care']])
-        self.put(self.miso_bits[4][1], self.miso_bits[4][2], self.out_ann, [134, ['0']])
+        self.put(self.miso_bits[7][1], self.miso_bits[5][2], self.out_ann, [134, ['Don\'t care']])
+        self.put(self.miso_bits[4][1], self.miso_bits[4][2], self.out_ann, [134, ['Always 0']])
         if miso == 0x05:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data accepted']])
         elif miso == 0x0b:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (CRC error)']])
         elif miso == 0x0d:
             self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (write error)']])
-        self.put(self.miso_bits[0][1], self.miso_bits[0][2], self.out_ann, [134, ['1']])
+        self.put(self.miso_bits[0][1], self.miso_bits[0][2], self.out_ann, [134, ['Always 1']])
         ann_class = None
         if self.is_cmd24:
             ann_class = 24
