@@ -397,15 +397,16 @@ class Decoder(srd.Decoder):
             # This is not the byte we are waiting for.
             # Should we return to IDLE here?
             return
-        self.put(self.miso_bits[7][1], self.miso_bits[5][2], self.out_ann, [134, ['Don\'t care']])
-        self.put(self.miso_bits[4][1], self.miso_bits[4][2], self.out_ann, [134, ['Always 0']])
+        m = self.miso_bits
+        self.put(m[7][1], m[5][2], self.out_ann, [134, ['Don\'t care']])
+        self.put(m[4][1], m[4][2], self.out_ann, [134, ['Always 0']])
         if miso == 0x05:
-            self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data accepted']])
+            self.put(m[3][1], m[1][2], self.out_ann, [134, ['Data accepted']])
         elif miso == 0x0b:
-            self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (CRC error)']])
+            self.put(m[3][1], m[1][2], self.out_ann, [134, ['Data rejected (CRC error)']])
         elif miso == 0x0d:
-            self.put(self.miso_bits[3][1], self.miso_bits[1][2], self.out_ann, [134, ['Data rejected (write error)']])
-        self.put(self.miso_bits[0][1], self.miso_bits[0][2], self.out_ann, [134, ['Always 1']])
+            self.put(m[3][1], m[1][2], self.out_ann, [134, ['Data rejected (write error)']])
+        self.put(m[0][1], m[0][2], self.out_ann, [134, ['Always 1']])
         ann_class = None
         if self.is_cmd24:
             ann_class = 24
