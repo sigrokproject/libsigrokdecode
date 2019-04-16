@@ -628,6 +628,29 @@ class Modbus_ADU_CS(Modbus_ADU):
             # Just a message saying we don't need to parse anymore this round.
             pass
 
+
+    def get_long_address(self, function, starting_address):
+        '''Get long form name for addresses.
+           Example: holding register 60 becomes 40061.'''
+        space = {1: 'COIL',
+                 2: 'INP_BIT',
+                 3: 'HOLD_REG',
+                 4: 'INP_REG',
+                 15: 'COIL',
+                 16: 'HOLD_REG',
+                 23: 'HOLD_REG'
+                }[function]
+
+        base_address = {'COIL': 0,
+                        'INP_BIT': 10000,
+                        'HOLD_REG': 40000,
+                        'INP_REG': 30000,
+                        }[space]
+
+        if starting_address > 9998:
+            base_address *= 10
+        return base_address + starting_address + 1
+
     def parse_read_data_command(self):
         '''Interpret a command to read x units of data starting at address, ie
         functions 1, 2, 3 and 4, and write the result to the annotations.'''
@@ -647,8 +670,8 @@ class Modbus_ADU_CS(Modbus_ADU):
         starting_address = self.half_word(2)
         # Some instruction manuals use a long form name for addresses, this is
         # listed here for convienience.
-        # Example: holding register 60 becomes 30061.
-        address_name = 10000 * function + 1 + starting_address
+        # Example: holding register 60 becomes 40061.
+        address_name = self.get_long_address(function, starting_address)
         self.puti(3, 'address',
             'Start at address 0x{:X} / {:d}'.format(starting_address,
                                                     address_name))
@@ -680,12 +703,10 @@ class Modbus_ADU_CS(Modbus_ADU):
             data_unit = 'Coils'
             max_outputs = 0x07B0
             ratio_bytes_data = 1/8
-            long_address_offset = 10001
         elif function == 16:
             data_unit = 'Registers'
             max_outputs = 0x007B
             ratio_bytes_data = 2
-            long_address_offset = 30001
 
         self.puti(1, 'function',
             'Function {}: Write Multiple {}'.format(function, data_unit))
@@ -693,7 +714,7 @@ class Modbus_ADU_CS(Modbus_ADU):
         starting_address = self.half_word(2)
         # Some instruction manuals use a long form name for addresses, this is
         # listed here for convienience.
-        address_name = long_address_offset + starting_address
+        address_name = self.get_long_address(function, starting_address)
         self.puti(3, 'address',
             'Start at address 0x{:X} / {:d}'.format(starting_address,
                                                     address_name))
@@ -779,8 +800,8 @@ class Modbus_ADU_CS(Modbus_ADU):
         starting_address = self.half_word(2)
         # Some instruction manuals use a long form name for addresses, this is
         # listed here for convienience.
-        # Example: holding register 60 becomes 30061.
-        address_name = 30001 + starting_address
+        # Example: holding register 60 becomes 40061.
+        address_name = self.get_long_address(23, starting_address)
         self.puti(3, 'address',
             'Read starting at address 0x{:X} / {:d}'.format(starting_address,
                                                             address_name))
