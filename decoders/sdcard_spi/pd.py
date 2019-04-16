@@ -62,6 +62,8 @@ class Decoder(srd.Decoder):
         self.cmd_str = ''
         self.is_cmd24 = False
         self.cmd24_start_token_found = False
+        self.is_cmd17 = False
+        self.cmd17_start_token_found = False
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -214,15 +216,7 @@ class Decoder(srd.Decoder):
     def handle_cmd17(self):
         # CMD17: READ_SINGLE_BLOCK
         self.putc(17, 'Read a block from address 0x%04x' % self.arg)
-        if len(self.read_buf) == 0:
-            self.ss_cmd = self.ss
-        self.read_buf.append(self.miso)
-        if len(self.read_buf) < self.blocklen + 2: # FIXME
-            return
-        self.es_cmd = self.es
-        self.read_buf = self.read_buf[2:] # FIXME
-        self.putx([17, ['Block data: %s' % self.read_buf]])
-        self.read_buf = []
+        self.is_cmd17 = True
         self.state = 'GET RESPONSE R1'
 
     def handle_cmd24(self):
@@ -335,6 +329,8 @@ class Decoder(srd.Decoder):
         # Bit 7: Always set to 0
         putbit(7, ['Bit 7 (always 0)'])
 
+        if self.is_cmd17:
+            self.state = 'HANDLE DATA BLOCK CMD17'
         if self.is_cmd24:
             self.state = 'HANDLE DATA BLOCK CMD24'
 
@@ -357,6 +353,36 @@ class Decoder(srd.Decoder):
     def handle_response_r7(self, res):
         # TODO
         pass
+
+    def handle_data_cmd17(self, miso):
+        # CMD17 returns one byte R1, then some bytes 0xff, then a Start Block
+        # (single byte 0xfe), then self.blocklen bytes of data, then always
+        # 2 bytes of CRC.
+        if self.cmd17_start_token_found:
+            if len(self.read_buf) == 0:
+                self.ss_data = self.ss
+                if not self.blocklen:
+                    # Assume a fixed block size when inspection of the previous
+                    # traffic did not provide the respective parameter value.
+                    # TODO: Make the default block size a PD option?
+                    self.blocklen = 512
+            self.read_buf.append(miso)
+            # Wait until block transfer completed.
+            if len(self.read_buf) < self.blocklen:
+                return
+            if len(self.read_buf) == self.blocklen:
+                self.es_data = self.es
+                self.put(self.ss_data, self.es_data, self.out_ann, [17, ['Block data: %s' % self.read_buf]])
+            elif len(self.read_buf) == (self.blocklen + 1):
+                self.ss_crc = self.ss
+            elif len(self.read_buf) == (self.blocklen + 2):
+                self.es_crc = self.es
+                # TODO: Check CRC.
+                self.put(self.ss_crc, self.es_crc, self.out_ann, [17, ['CRC']])
+                self.state = 'IDLE'
+        elif miso == 0xfe:
+            self.put(self.ss, self.es, self.out_ann, [17, ['Start Block']])
+            self.cmd17_start_token_found = True
 
     def handle_data_cmd24(self, mosi):
         if self.cmd24_start_token_found:
@@ -459,6 +485,8 @@ class Decoder(srd.Decoder):
             handle_response = getattr(self, s)
             self.state = 'IDLE'
             handle_response(miso)
+        elif self.state == 'HANDLE DATA BLOCK CMD17':
+            self.handle_data_cmd17(miso)
         elif self.state == 'HANDLE DATA BLOCK CMD24':
             self.handle_data_cmd24(mosi)
         elif self.state == 'DATA RESPONSE':
