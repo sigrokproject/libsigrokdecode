@@ -54,6 +54,7 @@ class Decoder(srd.Decoder):
         self.ss, self.es = 0, 0
         self.ss_bit, self.es_bit = 0, 0
         self.ss_cmd, self.es_cmd = 0, 0
+        self.ss_busy, self.es_busy = 0, 0
         self.cmd_token = []
         self.cmd_token_bits = []
         self.is_acmd = False # Indicates CMD vs. ACMD
@@ -64,6 +65,7 @@ class Decoder(srd.Decoder):
         self.cmd24_start_token_found = False
         self.is_cmd17 = False
         self.cmd17_start_token_found = False
+        self.busy_first_byte = False
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -437,7 +439,29 @@ class Decoder(srd.Decoder):
             ann_class = 24
         if ann_class is not None:
             self.put(self.ss, self.es, self.out_ann, [ann_class, ['Data Response']])
-        self.state = 'IDLE'
+        if self.is_cmd24:
+            # We just send a block of data to be written to the card,
+            # this takes some time.
+            self.state = 'WAIT WHILE CARD BUSY'
+            self.busy_first_byte = True
+        else:
+            self.state = 'IDLE'
+
+    def wait_while_busy(self, miso):
+        if miso != 0x00:
+            ann_class = None
+            if self.is_cmd24:
+                ann_class = 24
+            if ann_class is not None:
+                self.put(self.ss_busy, self.es_busy, self.out_ann, [24, ['Card is busy']])
+            self.state = 'IDLE'
+            return
+        else:
+            if self.busy_first_byte:
+                self.ss_busy = self.ss
+                self.busy_first_byte = False
+            else:
+                self.es_busy = self.es
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
@@ -491,3 +515,5 @@ class Decoder(srd.Decoder):
             self.handle_data_cmd24(mosi)
         elif self.state == 'DATA RESPONSE':
             self.handle_data_response(miso)
+        elif self.state == 'WAIT WHILE CARD BUSY':
+            self.wait_while_busy(miso)
