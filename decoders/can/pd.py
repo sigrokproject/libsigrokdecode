@@ -37,7 +37,8 @@ class Decoder(srd.Decoder):
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},
     )
     options = (
-        {'id': 'bitrate', 'desc': 'Bitrate (bits/s)', 'default': 1000000},
+        {'id': 'nominal_bitrate', 'desc': 'Nominal Bitrate (bits/s)', 'default': 1000000},
+        {'id': 'fast_bitrate', 'desc': 'Fast Bitrate (bits/s)', 'default': 2000000},
         {'id': 'sample_point', 'desc': 'Sample point (%)', 'default': 70.0},
     )
     annotations = (
@@ -82,7 +83,7 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-            self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
+            self.bit_width = float(self.samplerate) / float(self.options['nominal_bitrate'])
             self.sample_point = (self.bit_width / 100.0) * self.options['sample_point']
 
     # Generic helper for CAN bit annotations.
