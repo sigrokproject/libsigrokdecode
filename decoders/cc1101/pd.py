@@ -108,7 +108,7 @@ class Decoder(srd.Decoder):
 
         self.cmd, self.dat, self.min, self.max = c
 
-        if self.cmd in ('STROBE_CMD',):
+        if self.cmd == 'Strobe':
             self.putp(pos, ANN_STROBE, self.format_command())
         else:
             # Don't output anything now, the command is merged with
@@ -117,19 +117,11 @@ class Decoder(srd.Decoder):
 
     def format_command(self):
         '''Returns the label for the current command.'''
-        if self.cmd == 'SINGLE_READ':
-            return 'Read'
-        if self.cmd == 'BURST_READ':
-            return 'Burst read'
-        if self.cmd == 'SINGLE_WRITE':
-            return 'Write'
-        if self.cmd == 'BURST_WRITE':
-            return 'Burst write'
-        if self.cmd == 'STATUS_READ':
-            return 'Status read'
-        if self.cmd == 'STROBE_CMD':
+        if self.cmd in ('Read', 'Burst read', 'Write', 'Burst write', 'Status read'):
+            return self.cmd
+        if self.cmd == 'Strobe':
             reg = strobes.get(self.dat, 'unknown strobe')
-            return 'STROBE "{}"'.format(reg)
+            return '{} "{}"'.format(self.cmd, reg)
         else:
             return 'TODO Cmd {}'.format(self.cmd)
 
@@ -146,20 +138,20 @@ class Decoder(srd.Decoder):
         addr = b & 0x3F
         if (addr < 0x30) or (addr == 0x3E) or (addr == 0x3F):
             if (b & 0xC0) == 0x00:
-                return ('SINGLE_WRITE', addr, 1, 1)
+                return ('Write', addr, 1, 1)
             if (b & 0xC0) == 0x40:
-                return ('BURST_WRITE', addr, 1, 99999)
+                return ('Burst write', addr, 1, 99999)
             if (b & 0xC0) == 0x80:
-                return ('SINGLE_READ', addr, 1, 1)
+                return ('Read', addr, 1, 1)
             if (b & 0xC0) == 0xC0:
-                return ('BURST_READ', addr, 1, 99999)
+                return ('Burst read', addr, 1, 99999)
             else:
                 self.warn(pos, 'unknown address/command combination')
         else:
             if (b & 0x40) == 0x00:
-                return ('STROBE_CMD', addr, 0, 0)
+                return ('Strobe', addr, 0, 0)
             if (b & 0xC0) == 0xC0:
-                return ('STATUS_READ', addr, 1, 99999)
+                return ('Status read', addr, 1, 99999)
             else:
                 self.warn(pos, 'unknown address/command combination')
 
@@ -186,7 +178,7 @@ class Decoder(srd.Decoder):
             label = 'Status'
             self.decode_status_reg(pos, ann, data, label)
         else:
-            if self.cmd in ('SINGLE_WRITE', 'SINGLE_READ', 'STATUS_READ', 'BURST_READ', 'BURST_WRITE'):
+            if self.cmd in ('Write', 'Read', 'Status read', 'Burst read', 'Burst write'):
                 label = '{}: {}'.format(self.format_command(), name)
             else:
                 label = 'Reg ({}) {}'.format(self.cmd, name)
@@ -206,7 +198,7 @@ class Decoder(srd.Decoder):
         longtext_state = 'STATE is {}, '.format(status_reg_states[state])
         # bits 3:0 --> FIFO_BYTES_AVAILABLE
         fifo_bytes = status & 0x0F
-        if self.cmd in ('SINGLE_READ', 'STATUS_READ', 'BURST_READ'):
+        if self.cmd in ('Single read', 'Status read', 'Burst read'):
             longtext_fifo = '{} bytes available in RX FIFO'.format(fifo_bytes)
         else:
             longtext_fifo = '{} bytes free in TX FIFO'.format(fifo_bytes)
@@ -229,22 +221,22 @@ class Decoder(srd.Decoder):
     def finish_command(self, pos):
         '''Decodes the remaining data bytes at position 'pos'.'''
 
-        if self.cmd == 'SINGLE_WRITE':
+        if self.cmd == 'Write':
             self.decode_register(pos, ANN_SINGLE_WRITE,
                                  self.dat, self.mosi_bytes())
-        elif self.cmd == 'BURST_WRITE':
+        elif self.cmd == 'Burst write':
             self.decode_register(pos, ANN_BURST_WRITE,
                                 self.dat, self.mosi_bytes())
-        elif self.cmd == 'SINGLE_READ':
+        elif self.cmd == 'Read':
             self.decode_register(pos, ANN_SINGLE_READ,
                                  self.dat, self.miso_bytes())
-        elif self.cmd == 'BURST_READ':
+        elif self.cmd == 'Burst read':
             self.decode_register(pos, ANN_BURST_READ,
                                 self.dat, self.miso_bytes())
-        elif self.cmd == 'STROBE_CMD':
+        elif self.cmd == 'Strobe':
             self.decode_register(pos, ANN_STROBE,
                                  self.dat, self.mosi_bytes())
-        elif self.cmd == 'STATUS_READ':
+        elif self.cmd == 'Status read':
             self.decode_register(pos, ANN_STATUS_READ,
                                  self.dat, self.miso_bytes())
         else:
