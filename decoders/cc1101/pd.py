@@ -155,7 +155,7 @@ class Decoder(srd.Decoder):
             else:
                 self.warn(pos, 'unknown address/command combination')
 
-    def decode_register(self, pos, ann, regid, data):
+    def decode_reg(self, pos, ann, regid, data):
         '''Decodes a register.
 
         pos   -- start and end sample numbers of the register
@@ -222,23 +222,17 @@ class Decoder(srd.Decoder):
         '''Decodes the remaining data bytes at position 'pos'.'''
 
         if self.cmd == 'Write':
-            self.decode_register(pos, ANN_SINGLE_WRITE,
-                                 self.dat, self.mosi_bytes())
+            self.decode_reg(pos, ANN_SINGLE_WRITE, self.dat, self.mosi_bytes())
         elif self.cmd == 'Burst write':
-            self.decode_register(pos, ANN_BURST_WRITE,
-                                self.dat, self.mosi_bytes())
+            self.decode_reg(pos, ANN_BURST_WRITE, self.dat, self.mosi_bytes())
         elif self.cmd == 'Read':
-            self.decode_register(pos, ANN_SINGLE_READ,
-                                 self.dat, self.miso_bytes())
+            self.decode_reg(pos, ANN_SINGLE_READ, self.dat, self.miso_bytes())
         elif self.cmd == 'Burst read':
-            self.decode_register(pos, ANN_BURST_READ,
-                                self.dat, self.miso_bytes())
+            self.decode_reg(pos, ANN_BURST_READ, self.dat, self.miso_bytes())
         elif self.cmd == 'Strobe':
-            self.decode_register(pos, ANN_STROBE,
-                                 self.dat, self.mosi_bytes())
+            self.decode_reg(pos, ANN_STROBE, self.dat, self.mosi_bytes())
         elif self.cmd == 'Status read':
-            self.decode_register(pos, ANN_STATUS_READ,
-                                 self.dat, self.miso_bytes())
+            self.decode_reg(pos, ANN_STATUS_READ, self.dat, self.miso_bytes())
         else:
             self.warn(pos, 'unhandled command')
 
@@ -283,7 +277,7 @@ class Decoder(srd.Decoder):
                 # First MOSI byte is always the command.
                 self.decode_command(pos, mosi)
                 # First MISO byte is always the status register.
-                self.decode_register(pos, ANN_STATUS, 'STATUS', [miso])
+                self.decode_reg(pos, ANN_STATUS, 'STATUS', [miso])
             else:
                 if not self.cmd or len(self.mb) >= self.max:
                     self.warn(pos, 'excess byte')
