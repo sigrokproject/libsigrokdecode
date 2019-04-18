@@ -121,7 +121,7 @@ class Decoder(srd.Decoder):
             return self.cmd
         if self.cmd == 'Strobe':
             reg = strobes.get(self.dat, 'unknown strobe')
-            return '{} "{}"'.format(self.cmd, reg)
+            return '{} {}'.format(self.cmd, reg)
         else:
             return 'TODO Cmd {}'.format(self.cmd)
 
@@ -170,7 +170,7 @@ class Decoder(srd.Decoder):
             if regid not in regs:
                 self.warn(pos, 'unknown register')
                 return
-            name = '{} (0x{:02X})'.format(regs[regid], regid)
+            name = '{} ({:02X})'.format(regs[regid], regid)
         else:
             name = regid
 
@@ -203,7 +203,7 @@ class Decoder(srd.Decoder):
         else:
             longtext_fifo = '{} bytes free in TX FIFO'.format(fifo_bytes)
 
-        text = '{} = "0x{:02X}"'.format(label, status)
+        text = '{} = {:02X}'.format(label, status)
         longtext = ''.join([text, '; ', longtext_chiprdy, longtext_state, longtext_fifo])
         self.putp2(pos, ann, longtext, text)
 
@@ -215,7 +215,7 @@ class Decoder(srd.Decoder):
             return '{:02X}'.format(b)
 
         data = ' '.join([escape(b) for b in data])
-        text = '{} = "0x{}"'.format(label, data)
+        text = '{} = {}'.format(label, data)
         self.putp(pos, ann, text)
 
     def finish_command(self, pos):
