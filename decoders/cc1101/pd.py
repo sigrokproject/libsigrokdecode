@@ -20,6 +20,9 @@
 import sigrokdecode as srd
 from .lists import *
 
+ANN_STROBE, ANN_SINGLE_READ, ANN_SINGLE_WRITE, ANN_BURST_READ, \
+    ANN_BURST_WRITE, ANN_STATUS_READ, ANN_STATUS, ANN_WARN = range(8)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'cc1101'
@@ -39,19 +42,12 @@ class Decoder(srd.Decoder):
         ('status', 'Status register'),
         ('warning', 'Warning'),
     )
-    ann_strobe        = 0
-    ann_single_read   = 1
-    ann_single_write  = 2
-    ann_burst_read    = 3
-    ann_burst_write   = 4
-    ann_status_read   = 5
-    ann_status        = 6
-    ann_warn          = 7
     annotation_rows = (
-        ('cmd', 'Commands', (ann_strobe,)),
-        ('data', 'Data', (ann_single_read, ann_single_write, ann_burst_read, ann_burst_write, ann_status_read)),
-        ('status', 'Status register', (ann_status,)),
-        ('warnings', 'Warnings', (ann_warn,)),
+        ('cmd', 'Commands', (ANN_STROBE,)),
+        ('data', 'Data', (ANN_SINGLE_READ, ANN_SINGLE_WRITE, ANN_BURST_READ,
+                            ANN_BURST_WRITE, ANN_STATUS_READ)),
+        ('status', 'Status register', (ANN_STATUS,)),
+        ('warnings', 'Warnings', (ANN_WARN,)),
     )
 
     def __init__(self):
@@ -67,7 +63,7 @@ class Decoder(srd.Decoder):
 
     def warn(self, pos, msg):
         '''Put a warning message 'msg' at 'pos'.'''
-        self.put(pos[0], pos[1], self.out_ann, [self.ann_warn, [msg]])
+        self.put(pos[0], pos[1], self.out_ann, [ANN_WARN, [msg]])
 
     def putp(self, pos, ann, msg):
         '''Put an annotation message 'msg' at 'pos'.'''
@@ -113,7 +109,7 @@ class Decoder(srd.Decoder):
         self.cmd, self.dat, self.min, self.max = c
 
         if self.cmd in ('STROBE_CMD',):
-            self.putp(pos, self.ann_strobe, self.format_command())
+            self.putp(pos, ANN_STROBE, self.format_command())
         else:
             # Don't output anything now, the command is merged with
             # the data bytes following it.
@@ -191,7 +187,7 @@ class Decoder(srd.Decoder):
         else:
             name = regid
 
-        if regid == 'STATUS' and ann == self.ann_status:
+        if regid == 'STATUS' and ann == ANN_STATUS:
             label = 'Status'
             self.decode_status_reg(pos, ann, data, label)
         else:
@@ -239,22 +235,22 @@ class Decoder(srd.Decoder):
         '''Decodes the remaining data bytes at position 'pos'.'''
 
         if self.cmd == 'SINGLE_WRITE':
-            self.decode_register(pos, self.ann_single_write,
+            self.decode_register(pos, ANN_SINGLE_WRITE,
                                  self.dat, self.mosi_bytes())
         elif self.cmd == 'BURST_WRITE':
-            self.decode_register(pos, self.ann_burst_write,
+            self.decode_register(pos, ANN_BURST_WRITE,
                                 self.dat, self.mosi_bytes())
         elif self.cmd == 'SINGLE_READ':
-            self.decode_register(pos, self.ann_single_read,
+            self.decode_register(pos, ANN_SINGLE_READ,
                                  self.dat, self.miso_bytes())
         elif self.cmd == 'BURST_READ':
-            self.decode_register(pos, self.ann_burst_read,
+            self.decode_register(pos, ANN_BURST_READ,
                                 self.dat, self.miso_bytes())
         elif self.cmd == 'STROBE_CMD':
-            self.decode_register(pos, self.ann_strobe,
+            self.decode_register(pos, ANN_STROBE,
                                  self.dat, self.mosi_bytes())
         elif self.cmd == 'STATUS_READ':
-            self.decode_register(pos, self.ann_status_read,
+            self.decode_register(pos, ANN_STATUS_READ,
                                  self.dat, self.miso_bytes())
         else:
             self.warn(pos, 'unhandled command')
@@ -300,7 +296,7 @@ class Decoder(srd.Decoder):
                 # First MOSI byte is always the command.
                 self.decode_command(pos, mosi)
                 # First MISO byte is always the status register.
-                self.decode_register(pos, self.ann_status, 'STATUS', [miso])
+                self.decode_register(pos, ANN_STATUS, 'STATUS', [miso])
             else:
                 if not self.cmd or len(self.mb) >= self.max:
                     self.warn(pos, 'excess byte')
