@@ -118,22 +118,17 @@ class Decoder(srd.Decoder):
     def format_command(self):
         '''Returns the label for the current command.'''
         if self.cmd == 'SINGLE_READ':
-            reg = regs[self.dat] if self.dat in regs else 'unknown register'
             return 'Read'
         if self.cmd == 'BURST_READ':
-            reg = regs[self.dat] if self.dat in regs else 'unknown register'
             return 'Burst read'
         if self.cmd == 'SINGLE_WRITE':
-            reg = regs[self.dat] if self.dat in regs else 'unknown register'
             return 'Write'
         if self.cmd == 'BURST_WRITE':
-            reg = regs[self.dat] if self.dat in regs else 'unknown register'
             return 'Burst write'
         if self.cmd == 'STATUS_READ':
-            reg = regs[self.dat] if self.dat in regs else 'unknown register'
             return 'Status read'
         if self.cmd == 'STROBE_CMD':
-            reg = strobes[self.dat] if self.dat in strobes else 'unknown strobe'
+            reg = strobes.get(self.dat, 'unknown strobe')
             return 'STROBE "{}"'.format(reg)
         else:
             return 'TODO Cmd {}'.format(self.cmd)
