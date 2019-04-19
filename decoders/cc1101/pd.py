@@ -18,10 +18,14 @@
 ##
 
 import sigrokdecode as srd
+from collections import namedtuple
 from .lists import *
 
 ANN_STROBE, ANN_SINGLE_READ, ANN_SINGLE_WRITE, ANN_BURST_READ, \
     ANN_BURST_WRITE, ANN_STATUS_READ, ANN_STATUS, ANN_WARN = range(8)
+
+Pos = namedtuple('Pos', ['ss', 'es'])
+Data = namedtuple('Data', ['mosi', 'miso'])
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -63,15 +67,15 @@ class Decoder(srd.Decoder):
 
     def warn(self, pos, msg):
         '''Put a warning message 'msg' at 'pos'.'''
-        self.put(pos[0], pos[1], self.out_ann, [ANN_WARN, [msg]])
+        self.put(pos.ss, pos.es, self.out_ann, [ANN_WARN, [msg]])
 
     def putp(self, pos, ann, msg):
         '''Put an annotation message 'msg' at 'pos'.'''
-        self.put(pos[0], pos[1], self.out_ann, [ann, [msg]])
+        self.put(pos.ss, pos.es, self.out_ann, [ann, [msg]])
 
     def putp2(self, pos, ann, msg1, msg2):
         '''Put an annotation message 'msg' at 'pos'.'''
-        self.put(pos[0], pos[1], self.out_ann, [ann, [msg1, msg2]])
+        self.put(pos.ss, pos.es, self.out_ann, [ann, [msg1, msg2]])
 
     def next(self):
         '''Resets the decoder after a complete command was decoded.'''
@@ -92,11 +96,11 @@ class Decoder(srd.Decoder):
 
     def mosi_bytes(self):
         '''Returns the collected MOSI bytes of a multi byte command.'''
-        return [b[0] for b in self.mb]
+        return [b.mosi for b in self.mb]
 
     def miso_bytes(self):
         '''Returns the collected MISO bytes of a multi byte command.'''
-        return [b[1] for b in self.mb]
+        return [b.miso for b in self.mb]
 
     def decode_command(self, pos, b):
         '''Decodes the command byte 'b' at position 'pos' and prepares
@@ -113,7 +117,7 @@ class Decoder(srd.Decoder):
         else:
             # Don't output anything now, the command is merged with
             # the data bytes following it.
-            self.ss_mb = pos[0]
+            self.ss_mb = pos.ss
 
     def format_command(self):
         '''Returns the label for the current command.'''
@@ -259,14 +263,14 @@ class Decoder(srd.Decoder):
                     if len(self.mb) < self.min:
                         self.warn((ss, ss), 'missing data bytes')
                     elif self.mb:
-                        self.finish_command((self.ss_mb, self.es_mb))
+                        self.finish_command(Pos(self.ss_mb, self.es_mb))
 
                 self.next()
                 self.cs_was_released = True
 
         elif ptype == 'DATA' and self.cs_was_released:
             mosi, miso = data1, data2
-            pos = (ss, es)
+            pos = Pos(ss, es)
 
             if miso is None or mosi is None:
                 self.requirements_met = False
@@ -286,4 +290,4 @@ class Decoder(srd.Decoder):
                     if self.ss_mb == -1:
                         self.ss_mb = ss
                     self.es_mb = es
-                    self.mb.append((mosi, miso))
+                    self.mb.append(Data(mosi, miso))
