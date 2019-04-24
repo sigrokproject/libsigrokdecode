@@ -112,11 +112,11 @@ class Decoder(srd.Decoder):
         ('mosi-transfer', 'MOSI transfer'),
     )
     annotation_rows = (
-        ('miso-data', 'MISO data', (0,)),
         ('miso-bits', 'MISO bits', (2,)),
+        ('miso-data', 'MISO data', (0,)),
         ('miso-transfer', 'MISO transfer', (5,)),
-        ('mosi-data', 'MOSI data', (1,)),
         ('mosi-bits', 'MOSI bits', (3,)),
+        ('mosi-data', 'MOSI data', (1,)),
         ('mosi-transfer', 'MOSI transfer', (6,)),
         ('other', 'Other', (4,)),
     )
