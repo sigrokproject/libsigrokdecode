@@ -246,8 +246,8 @@ class Decoder(srd.Decoder):
         elif op == OPCODE_DERIVE_KEY:
             self.putz(s[0][0], s[31][1], [5, ['MAC: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_ECDH:
-                self.putz(s[0][0], s[31][1], [5, ['Pub X: %s' % ' '.join(format(i[2], '02x') for i in s[0:32])]])
-                self.putz(s[32][0], s[63][1], [5, ['Pub Y: %s' % ' '.join(format(i[2], '02x') for i in s[32:64])]])
+            self.putz(s[0][0], s[31][1], [5, ['Pub X: %s' % ' '.join(format(i[2], '02x') for i in s[0:32])]])
+            self.putz(s[32][0], s[63][1], [5, ['Pub Y: %s' % ' '.join(format(i[2], '02x') for i in s[32:64])]])
         elif op in (OPCODE_GEN_DIG, OPCODE_GEN_KEY):
             self.putz(s[0][0], s[3][1], [5, ['OtherData: %s' % ' '.join(format(i[2], '02x') for i in s)]])
         elif op == OPCODE_MAC:
@@ -309,7 +309,7 @@ class Decoder(srd.Decoder):
                 # responses to be displayed incorrectly.
                 self.opcode = -1
                 if len(self.bytes) > 0:
-                        self.output_rx_bytes()
+                    self.output_rx_bytes()
                 self.waddr = -1
                 self.bytes = []
                 self.state = 'IDLE'
@@ -321,4 +321,3 @@ class Decoder(srd.Decoder):
                 self.output_tx_bytes()
                 self.bytes = []
                 self.state = 'IDLE'
-
