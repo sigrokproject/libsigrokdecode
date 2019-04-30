@@ -97,7 +97,7 @@ class Decoder(srd.Decoder):
     id = 'atsha204a'
     name = 'ATSHA204A'
     longname = 'Microchip ATSHA204A'
-    desc = 'Microchip ATSHA204A crypto authentication protocol.'
+    desc = 'Microchip ATSHA204A family crypto authentication protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = []
