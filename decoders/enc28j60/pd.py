@@ -201,6 +201,7 @@ class Decoder(srd.Decoder):
     license = 'mit'
     inputs = ['spi']
     outputs = ['enc28j60']
+    tags = ['Embedded/industrial', 'Networking']
     annotations = (
         ('rcr', 'Read Control Register'),
         ('rbm', 'Read Buffer Memory'),
