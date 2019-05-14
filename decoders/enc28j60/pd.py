@@ -130,33 +130,18 @@ class Decoder(srd.Decoder):
 
         if reg_name is None:
             # We don't know the bank we're in yet.
-            self.putr([
-                     ANN_REG_ADDR,
-                     [
-                        'Reg Bank ? Addr 0x{0:02X}'.format(reg_addr),
-                        '?:{0:02X}'.format(reg_addr),
-                     ]])
-            self.putr([
-                     ANN_WARNING,
-                     [
-                        'Warning: Register bank not known yet.',
-                        'Warning',
-                     ]])
+            self.putr([ANN_REG_ADDR, [
+                'Reg Bank ? Addr 0x{0:02X}'.format(reg_addr),
+                '?:{0:02X}'.format(reg_addr)]])
+            self.putr([ANN_WARNING, ['Warning: Register bank not known yet.',
+                                     'Warning']])
         else:
-            self.putr([
-                     ANN_REG_ADDR,
-                     [
-                        'Reg {0}'.format(reg_name),
-                        '{0}'.format(reg_name),
-                     ]])
+            self.putr([ANN_REG_ADDR, ['Reg {0}'.format(reg_name),
+                                      '{0}'.format(reg_name)]])
 
             if (reg_name == '-') or (reg_name == 'Reserved'):
-                self.putr([
-                         ANN_WARNING,
-                         [
-                            'Warning: Invalid register accessed.',
-                            'Warning',
-                         ]])
+                self.putr([ANN_WARNING, ['Warning: Invalid register accessed.',
+                                         'Warning']])
 
     def _put_data_byte(self, data, byte_index, binary=False):
         self.range_ss = self.ranges[byte_index][0]
@@ -166,27 +151,14 @@ class Decoder(srd.Decoder):
             self.range_es = self.ranges[byte_index + 1][0]
 
         if binary:
-            self.putr([
-                     ANN_DATA,
-                     [
-                        'Data 0b{0:08b}'.format(data),
-                        '{0:08b}'.format(data),
-                     ]])
+            self.putr([ANN_DATA, ['Data 0b{0:08b}'.format(data),
+                                  '{0:08b}'.format(data)]])
         else:
-            self.putr([
-                     ANN_DATA,
-                     [
-                        'Data 0x{0:02X}'.format(data),
-                        '{0:02X}'.format(data),
-                     ]])
+            self.putr([ANN_DATA, ['Data 0x{0:02X}'.format(data),
+                                  '{0:02X}'.format(data)]])
 
     def _put_command_warning(self, reason):
-        self.putc([
-                 ANN_WARNING,
-                 [
-                    'Warning: {0}'.format(reason),
-                    'Warning',
-                 ]])
+        self.putc([ANN_WARNING, ['Warning: {0}'.format(reason), 'Warning']])
 
     def _process_rcr(self):
         self.putc([ANN_RCR, ['Read Control Register', 'RCR']])
@@ -217,12 +189,7 @@ class Decoder(srd.Decoder):
             self._put_data_byte(self.miso[1], 1)
         else:
             self.range_ss, self.range_es = self.ranges[1][0], self.ranges[2][0]
-            self.putr([
-                     ANN_DATA,
-                     [
-                        'Dummy Byte',
-                        'Dummy',
-                     ]])
+            self.putr([ANN_DATA, ['Dummy Byte', 'Dummy']])
             self._put_data_byte(self.miso[2], 2)
 
     def _process_rbm(self):
@@ -230,13 +197,8 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.putc([
-                 ANN_RBM,
-                 [
-                    'Read Buffer Memory: Length {0}'.format(
-                        len(self.mosi) - 1),
-                    'RBM',
-                 ]])
+        self.putc([ANN_RBM, ['Read Buffer Memory: Length {0}'.format(
+                             len(self.mosi) - 1), 'RBM']])
 
         for i in range(1, len(self.miso)):
             self._put_data_byte(self.miso[i], i)
@@ -260,13 +222,8 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.putc([
-                 ANN_WBM,
-                 [
-                    'Write Buffer Memory: Length {0}'.format(
-                        len(self.mosi) - 1),
-                    'WBM',
-                 ]])
+        self.putc([ANN_WBM, ['Write Buffer Memory: Length {0}'.format(
+                             len(self.mosi) - 1), 'WBM']])
 
         for i in range(1, len(self.mosi)):
             self._put_data_byte(self.mosi[i], i)
