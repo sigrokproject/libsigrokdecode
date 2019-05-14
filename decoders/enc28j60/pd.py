@@ -82,6 +82,8 @@ class Decoder(srd.Decoder):
         self.ranges = []
         self.cmd_ss = None
         self.cmd_es = None
+        self.range_ss = None
+        self.range_es = None
         self.active = False
         self.bsel0 = None
         self.bsel1 = None
@@ -91,6 +93,9 @@ class Decoder(srd.Decoder):
 
     def putc(self, data):
         self.put(self.cmd_ss, self.cmd_es, self.ann, data)
+
+    def putr(self, data):
+        self.put(self.range_ss, self.range_es, self.ann, data)
 
     def _process_command(self):
         if len(self.mosi) == 0:
@@ -121,24 +126,24 @@ class Decoder(srd.Decoder):
         reg_addr = self.mosi[0] & REG_ADDR_MASK
         reg_name = self._get_register_name(reg_addr)
 
-        ss, es = self.cmd_ss, self.ranges[1][0]
+        self.range_ss, self.range_es = self.cmd_ss, self.ranges[1][0]
 
         if reg_name is None:
             # We don't know the bank we're in yet.
-            self.put(ss, es, self.ann, [
+            self.putr([
                      ANN_REG_ADDR,
                      [
                         'Reg Bank ? Addr 0x{0:02X}'.format(reg_addr),
                         '?:{0:02X}'.format(reg_addr),
                      ]])
-            self.put(ss, es, self.ann, [
+            self.putr([
                      ANN_WARNING,
                      [
                         'Warning: Register bank not known yet.',
                         'Warning',
                      ]])
         else:
-            self.put(ss, es, self.ann, [
+            self.putr([
                      ANN_REG_ADDR,
                      [
                         'Reg {0}'.format(reg_name),
@@ -146,7 +151,7 @@ class Decoder(srd.Decoder):
                      ]])
 
             if (reg_name == '-') or (reg_name == 'Reserved'):
-                self.put(ss, es, self.ann, [
+                self.putr([
                          ANN_WARNING,
                          [
                             'Warning: Invalid register accessed.',
@@ -154,21 +159,21 @@ class Decoder(srd.Decoder):
                          ]])
 
     def _put_data_byte(self, data, byte_index, binary=False):
-        ss = self.ranges[byte_index][0]
+        self.range_ss = self.ranges[byte_index][0]
         if byte_index == len(self.mosi) - 1:
-            es = self.cmd_es
+            self.range_es = self.cmd_es
         else:
-            es = self.ranges[byte_index + 1][0]
+            self.range_es = self.ranges[byte_index + 1][0]
 
         if binary:
-            self.put(ss, es, self.ann, [
+            self.putr([
                      ANN_DATA,
                      [
                         'Data 0b{0:08b}'.format(data),
                         '{0:08b}'.format(data),
                      ]])
         else:
-            self.put(ss, es, self.ann, [
+            self.putr([
                      ANN_DATA,
                      [
                         'Data 0x{0:02X}'.format(data),
@@ -211,8 +216,8 @@ class Decoder(srd.Decoder):
         if len(self.mosi) == 2:
             self._put_data_byte(self.miso[1], 1)
         else:
-            ss, es = self.ranges[1][0], self.ranges[2][0]
-            self.put(ss, es, self.ann, [
+            self.range_ss, self.range_es = self.ranges[1][0], self.ranges[2][0]
+            self.putr([
                      ANN_DATA,
                      [
                         'Dummy Byte',
