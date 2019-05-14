@@ -89,6 +89,9 @@ class Decoder(srd.Decoder):
     def start(self):
         self.ann = self.register(srd.OUTPUT_ANN)
 
+    def putc(self, data):
+        self.put(self.cmd_ss, self.cmd_es, self.ann, data)
+
     def _process_command(self):
         if len(self.mosi) == 0:
             self.active = False
@@ -173,7 +176,7 @@ class Decoder(srd.Decoder):
                      ]])
 
     def _put_command_warning(self, reason):
-        self.put(self.cmd_ss, self.cmd_es, self.ann, [
+        self.putc([
                  ANN_WARNING,
                  [
                     'Warning: {0}'.format(reason),
@@ -181,8 +184,7 @@ class Decoder(srd.Decoder):
                  ]])
 
     def _process_rcr(self):
-        self.put(self.cmd_ss, self.cmd_es,
-                 self.ann, [ANN_RCR, ['Read Control Register', 'RCR']])
+        self.putc([ANN_RCR, ['Read Control Register', 'RCR']])
 
         if (len(self.mosi) != 2) and (len(self.mosi) != 3):
             self._put_command_warning('Invalid command length.')
@@ -223,7 +225,7 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.put(self.cmd_ss, self.cmd_es, self.ann, [
+        self.putc([
                  ANN_RBM,
                  [
                     'Read Buffer Memory: Length {0}'.format(
@@ -235,8 +237,7 @@ class Decoder(srd.Decoder):
             self._put_data_byte(self.miso[i], i)
 
     def _process_wcr(self):
-        self.put(self.cmd_ss, self.cmd_es,
-                 self.ann, [ANN_WCR, ['Write Control Register', 'WCR']])
+        self.putc([ANN_WCR, ['Write Control Register', 'WCR']])
 
         if len(self.mosi) != 2:
             self._put_command_warning('Invalid command length.')
@@ -254,7 +255,7 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.put(self.cmd_ss, self.cmd_es, self.ann, [
+        self.putc([
                  ANN_WBM,
                  [
                     'Write Buffer Memory: Length {0}'.format(
@@ -266,8 +267,7 @@ class Decoder(srd.Decoder):
             self._put_data_byte(self.mosi[i], i)
 
     def _process_bfc(self):
-        self.put(self.cmd_ss, self.cmd_es,
-                 self.ann, [ANN_BFC, ['Bit Field Clear', 'BFC']])
+        self.putc([ANN_BFC, ['Bit Field Clear', 'BFC']])
 
         if len(self.mosi) != 2:
             self._put_command_warning('Invalid command length.')
@@ -283,8 +283,7 @@ class Decoder(srd.Decoder):
                 self.bsel1 = 0
 
     def _process_bfs(self):
-        self.put(self.cmd_ss, self.cmd_es,
-                 self.ann, [ANN_BFS, ['Bit Field Set', 'BFS']])
+        self.putc([ANN_BFS, ['Bit Field Set', 'BFS']])
 
         if len(self.mosi) != 2:
             self._put_command_warning('Invalid command length.')
@@ -300,8 +299,7 @@ class Decoder(srd.Decoder):
                 self.bsel1 = 1
 
     def _process_src(self):
-        self.put(self.cmd_ss, self.cmd_es,
-                 self.ann, [ANN_SRC, ['System Reset Command', 'SRC']])
+        self.putc([ANN_SRC, ['System Reset Command', 'SRC']])
 
         if len(self.mosi) != 1:
             self._put_command_warning('Invalid command length.')
