@@ -80,8 +80,8 @@ class Decoder(srd.Decoder):
         self.mosi = []
         self.miso = []
         self.ranges = []
-        self.command_start = None
-        self.command_end = None
+        self.cmd_ss = None
+        self.cmd_es = None
         self.active = False
         self.bsel0 = None
         self.bsel1 = None
@@ -118,22 +118,24 @@ class Decoder(srd.Decoder):
         reg_addr = self.mosi[0] & REG_ADDR_MASK
         reg_name = self._get_register_name(reg_addr)
 
+        ss, es = self.cmd_ss, self.ranges[1][0]
+
         if reg_name is None:
             # We don't know the bank we're in yet.
-            self.put(self.command_start, self.ranges[1][0], self.ann, [
+            self.put(ss, es, self.ann, [
                      ANN_REG_ADDR,
                      [
                         'Reg Bank ? Addr 0x{0:02X}'.format(reg_addr),
                         '?:{0:02X}'.format(reg_addr),
                      ]])
-            self.put(self.command_start, self.ranges[1][0], self.ann, [
+            self.put(ss, es, self.ann, [
                      ANN_WARNING,
                      [
                         'Warning: Register bank not known yet.',
                         'Warning',
                      ]])
         else:
-            self.put(self.command_start, self.ranges[1][0], self.ann, [
+            self.put(ss, es, self.ann, [
                      ANN_REG_ADDR,
                      [
                         'Reg {0}'.format(reg_name),
@@ -141,7 +143,7 @@ class Decoder(srd.Decoder):
                      ]])
 
             if (reg_name == '-') or (reg_name == 'Reserved'):
-                self.put(self.command_start, self.ranges[1][0], self.ann, [
+                self.put(ss, es, self.ann, [
                          ANN_WARNING,
                          [
                             'Warning: Invalid register accessed.',
@@ -149,20 +151,21 @@ class Decoder(srd.Decoder):
                          ]])
 
     def _put_data_byte(self, data, byte_index, binary=False):
+        ss = self.ranges[byte_index][0]
         if byte_index == len(self.mosi) - 1:
-            end_sample = self.command_end
+            es = self.cmd_es
         else:
-            end_sample = self.ranges[byte_index + 1][0]
+            es = self.ranges[byte_index + 1][0]
 
         if binary:
-            self.put(self.ranges[byte_index][0], end_sample, self.ann, [
+            self.put(ss, es, self.ann, [
                      ANN_DATA,
                      [
                         'Data 0b{0:08b}'.format(data),
                         '{0:08b}'.format(data),
                      ]])
         else:
-            self.put(self.ranges[byte_index][0], end_sample, self.ann, [
+            self.put(ss, es, self.ann, [
                      ANN_DATA,
                      [
                         'Data 0x{0:02X}'.format(data),
@@ -170,7 +173,7 @@ class Decoder(srd.Decoder):
                      ]])
 
     def _put_command_warning(self, reason):
-        self.put(self.command_start, self.command_end, self.ann, [
+        self.put(self.cmd_ss, self.cmd_es, self.ann, [
                  ANN_WARNING,
                  [
                     'Warning: {0}'.format(reason),
@@ -178,7 +181,7 @@ class Decoder(srd.Decoder):
                  ]])
 
     def _process_rcr(self):
-        self.put(self.command_start, self.command_end,
+        self.put(self.cmd_ss, self.cmd_es,
                  self.ann, [ANN_RCR, ['Read Control Register', 'RCR']])
 
         if (len(self.mosi) != 2) and (len(self.mosi) != 3):
@@ -206,7 +209,8 @@ class Decoder(srd.Decoder):
         if len(self.mosi) == 2:
             self._put_data_byte(self.miso[1], 1)
         else:
-            self.put(self.ranges[1][0], self.ranges[2][0], self.ann, [
+            ss, es = self.ranges[1][0], self.ranges[2][0]
+            self.put(ss, es, self.ann, [
                      ANN_DATA,
                      [
                         'Dummy Byte',
@@ -219,7 +223,7 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.put(self.command_start, self.command_end, self.ann, [
+        self.put(self.cmd_ss, self.cmd_es, self.ann, [
                  ANN_RBM,
                  [
                     'Read Buffer Memory: Length {0}'.format(
@@ -231,7 +235,7 @@ class Decoder(srd.Decoder):
             self._put_data_byte(self.miso[i], i)
 
     def _process_wcr(self):
-        self.put(self.command_start, self.command_end,
+        self.put(self.cmd_ss, self.cmd_es,
                  self.ann, [ANN_WCR, ['Write Control Register', 'WCR']])
 
         if len(self.mosi) != 2:
@@ -250,7 +254,7 @@ class Decoder(srd.Decoder):
             self._put_command_warning('Invalid header byte.')
             return
 
-        self.put(self.command_start, self.command_end, self.ann, [
+        self.put(self.cmd_ss, self.cmd_es, self.ann, [
                  ANN_WBM,
                  [
                     'Write Buffer Memory: Length {0}'.format(
@@ -262,7 +266,7 @@ class Decoder(srd.Decoder):
             self._put_data_byte(self.mosi[i], i)
 
     def _process_bfc(self):
-        self.put(self.command_start, self.command_end,
+        self.put(self.cmd_ss, self.cmd_es,
                  self.ann, [ANN_BFC, ['Bit Field Clear', 'BFC']])
 
         if len(self.mosi) != 2:
@@ -279,7 +283,7 @@ class Decoder(srd.Decoder):
                 self.bsel1 = 0
 
     def _process_bfs(self):
-        self.put(self.command_start, self.command_end,
+        self.put(self.cmd_ss, self.cmd_es,
                  self.ann, [ANN_BFS, ['Bit Field Set', 'BFS']])
 
         if len(self.mosi) != 2:
@@ -296,7 +300,7 @@ class Decoder(srd.Decoder):
                 self.bsel1 = 1
 
     def _process_src(self):
-        self.put(self.command_start, self.command_end,
+        self.put(self.cmd_ss, self.cmd_es,
                  self.ann, [ANN_SRC, ['System Reset Command', 'SRC']])
 
         if len(self.mosi) != 1:
@@ -314,13 +318,13 @@ class Decoder(srd.Decoder):
 
             if new_cs == 0:
                 self.active = True
-                self.command_start = ss
+                self.cmd_ss = ss
                 self.mosi = []
                 self.miso = []
                 self.ranges = []
             elif new_cs == 1:
                 if self.active:
-                    self.command_end = es
+                    self.cmd_es = es
                     self._process_command()
         elif ptype == 'DATA':
             mosi, miso = data1, data2
