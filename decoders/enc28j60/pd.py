@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
     desc = 'Microchip ENC28J60 10Base-T Ethernet controller protocol.'
     license = 'mit'
     inputs = ['spi']
-    outputs = ['enc28j60']
+    outputs = []
     tags = ['Embedded/industrial', 'Networking']
     annotations = (
         ('rcr', 'Read Control Register'),
