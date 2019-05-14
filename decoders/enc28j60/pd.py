@@ -89,13 +89,13 @@ class Decoder(srd.Decoder):
         self.bsel1 = None
 
     def start(self):
-        self.ann = self.register(srd.OUTPUT_ANN)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putc(self, data):
-        self.put(self.cmd_ss, self.cmd_es, self.ann, data)
+        self.put(self.cmd_ss, self.cmd_es, self.out_ann, data)
 
     def putr(self, data):
-        self.put(self.range_ss, self.range_es, self.ann, data)
+        self.put(self.range_ss, self.range_es, self.out_ann, data)
 
     def _process_command(self):
         if len(self.mosi) == 0:
