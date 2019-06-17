@@ -129,7 +129,9 @@ class Decoder(srd.Decoder):
         ('errors', 'Unexpected packets'),
     )
     annotation_rows = (
-        ('request', 'USB requests', tuple(range(4))),
+        ('request-setup', 'USB SETUP', (0, 1)),
+        ('request-in', 'USB BULK IN', (2,)),
+        ('request-out', 'USB BULK OUT', (3,)),
         ('errors', 'Errors', (4,)),
     )
     binary = (
