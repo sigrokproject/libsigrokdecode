@@ -120,6 +120,10 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['usb_packet']
     outputs = ['usb_request']
+    options = (
+        {'id': 'in_request_start', 'desc': 'Start IN requests on',
+            'default': 'submit', 'values': ('submit', 'first-ack')},
+    )
     tags = ['PC']
     annotations = (
         ('request-setup-read', 'Setup: Device-to-host'),
@@ -180,6 +184,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.in_request_start = self.options['in_request_start']
 
     def handle_transfer(self):
         request_started = 0
@@ -197,7 +202,7 @@ class Decoder(srd.Decoder):
         if not (addr, ep) in self.request:
             self.request[(addr, ep)] = {'setup_data': [], 'data': [],
                 'type': None, 'ss': self.ss_transaction, 'es': None,
-                'id': self.request_id, 'addr': addr, 'ep': ep}
+                'ss_data': None, 'id': self.request_id, 'addr': addr, 'ep': ep}
             self.request_id += 1
             request_started = 1
         request = self.request[(addr,ep)]
@@ -209,6 +214,8 @@ class Decoder(srd.Decoder):
         # BULK or INTERRUPT transfer
         if request['type'] in (None, 'BULK IN') and self.transaction_type == 'IN':
             request['type'] = 'BULK IN'
+            if len(request['data']) == 0 and len(self.transaction_data) > 0:
+                request['ss_data'] = self.ss_transaction
             request['data'] += self.transaction_data
             self.handle_request(request_started, request_end)
         elif request['type'] in (None, 'BULK OUT') and self.transaction_type == 'OUT':
@@ -279,7 +286,9 @@ class Decoder(srd.Decoder):
         addr = self.transaction_addr
         request = self.request[(addr, ep)]
 
-        ss, es = request['ss'], request['es']
+        ss, es, ss_data = request['ss'], request['es'], request['ss_data']
+        if self.in_request_start == 'submit':
+            ss_data = ss
 
         if request_start == 1:
             # Issue PCAP 'SUBMIT' packet.
@@ -296,7 +305,7 @@ class Decoder(srd.Decoder):
             elif request['type'] == 'SETUP OUT':
                 self.putr(ss, es, [1, ['SETUP out: %s' % summary]])
             elif request['type'] == 'BULK IN':
-                self.putr(ss, es, [2, ['BULK in: %s' % summary]])
+                self.putr(ss_data, es, [2, ['BULK in: %s' % summary]])
             elif request['type'] == 'BULK OUT':
                 self.putr(ss, es, [3, ['BULK out: %s' % summary]])
 
