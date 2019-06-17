@@ -211,7 +211,8 @@ class Decoder(srd.Decoder):
             self.handle_request(request_started, request_end)
         elif request['type'] in (None, 'BULK OUT') and self.transaction_type == 'OUT':
             request['type'] = 'BULK OUT'
-            request['data'] += self.transaction_data
+            if self.handshake == 'ACK':
+                request['data'] += self.transaction_data
             self.handle_request(request_started, request_end)
 
         # CONTROL, SETUP stage
@@ -231,7 +232,8 @@ class Decoder(srd.Decoder):
             request['data'] += self.transaction_data
 
         elif request['type'] == 'SETUP OUT' and self.transaction_type == 'OUT':
-            request['data'] += self.transaction_data
+            if self.handshake == 'ACK':
+                request['data'] += self.transaction_data
             if request['wLength'] == len(request['data']):
                 self.handle_request(1, 0)
 
@@ -339,6 +341,8 @@ class Decoder(srd.Decoder):
             self.es_transaction = es
             self.transaction_state = 'TOKEN RECEIVED'
             self.transaction_ep = ep
+            if ep > 0 and pname == 'IN':
+                self.transaction_ep = ep + 0x80
             self.transaction_addr = addr
             self.transaction_type = pname # IN OUT SETUP
 
