@@ -136,6 +136,18 @@ static void annotation_row_free(void *data)
 	g_free(row);
 }
 
+static void logic_output_channel_free(void *data)
+{
+	struct srd_decoder_logic_output_channel *logic_out_ch = data;
+
+	if (!logic_out_ch)
+		return;
+
+	g_free(logic_out_ch->desc);
+	g_free(logic_out_ch->id);
+	g_free(logic_out_ch);
+}
+
 static void decoder_option_free(void *data)
 {
 	struct srd_decoder_option *opt = data;
@@ -606,6 +618,92 @@ err_out:
 	return SRD_ERR_PYTHON;
 }
 
+/* Convert logic_output_channels to GSList of 'struct srd_decoder_logic_output_channel'. */
+static int get_logic_output_channels(struct srd_decoder *dec)
+{
+	PyObject *py_logic_out_chs, *py_logic_out_ch, *py_samplerate, *py_item;
+	GSList *logic_out_chs;
+	struct srd_decoder_logic_output_channel *logic_out_ch;
+	ssize_t i;
+	PyGILState_STATE gstate;
+
+	gstate = PyGILState_Ensure();
+
+	if (!PyObject_HasAttrString(dec->py_dec, "logic_output_channels")) {
+		PyGILState_Release(gstate);
+		return SRD_OK;
+	}
+
+	logic_out_chs = NULL;
+
+	py_logic_out_chs = PyObject_GetAttrString(dec->py_dec, "logic_output_channels");
+	if (!py_logic_out_chs)
+		goto except_out;
+
+	if (!PyTuple_Check(py_logic_out_chs)) {
+		srd_err("Protocol decoder %s logic_output_channels "
+			"must be a tuple.", dec->name);
+		goto err_out;
+	}
+
+	for (i = PyTuple_Size(py_logic_out_chs) - 1; i >= 0; i--) {
+		py_logic_out_ch = PyTuple_GetItem(py_logic_out_chs, i);
+		if (!py_logic_out_ch)
+			goto except_out;
+
+		if (!PyTuple_Check(py_logic_out_ch) || PyTuple_Size(py_logic_out_ch) != 3) {
+			srd_err("Protocol decoder %s logic_output_channels "
+				"must contain only tuples of 3 elements.",
+				dec->name);
+			goto err_out;
+		}
+		logic_out_ch = g_malloc0(sizeof(*logic_out_ch));
+		/* Add to list right away so it doesn't get lost. */
+		logic_out_chs = g_slist_prepend(logic_out_chs, logic_out_ch);
+
+		py_item = PyTuple_GetItem(py_logic_out_ch, 0);
+		if (!py_item)
+			goto except_out;
+		if (py_str_as_str(py_item, &logic_out_ch->id) != SRD_OK)
+			goto err_out;
+
+		py_item = PyTuple_GetItem(py_logic_out_ch, 1);
+		if (!py_item)
+			goto except_out;
+		if (py_str_as_str(py_item, &logic_out_ch->desc) != SRD_OK)
+			goto err_out;
+
+		py_samplerate = PyTuple_GetItem(py_logic_out_ch, 2);
+		if (!py_samplerate)
+			goto except_out;
+
+		if (!PyLong_Check(py_samplerate)) {
+			srd_err("Protocol decoder %s logic_output_channels tuples "
+				"must have a number as 3rd element.",
+				dec->name);
+			goto err_out;
+		}
+
+		logic_out_ch->samplerate = PyLong_AsUnsignedLongLong(py_samplerate);
+	}
+	dec->logic_output_channels = logic_out_chs;
+	Py_DECREF(py_logic_out_chs);
+	PyGILState_Release(gstate);
+
+	return SRD_OK;
+
+except_out:
+	srd_exception_catch("Failed to get %s decoder logic output channels",
+			dec->name);
+
+err_out:
+	g_slist_free_full(logic_out_chs, &logic_output_channel_free);
+	Py_XDECREF(py_logic_out_chs);
+	PyGILState_Release(gstate);
+
+	return SRD_ERR_PYTHON;
+}
+
 /* Check whether the Decoder class defines the named method. */
 static int check_method(PyObject *py_dec, const char *mod_name,
 		const char *method_name)
@@ -941,6 +1039,11 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	if (contains_duplicate_ids(d->binary, d->binary)) {
 		fail_txt = "duplicate binary class IDs";
+		goto err_out;
+	}
+
+	if (get_logic_output_channels(d) != SRD_OK) {
+		fail_txt = "cannot get logic output channels";
 		goto err_out;
 	}
 

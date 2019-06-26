@@ -121,14 +121,15 @@ enum srd_loglevel {
 
 /*
  * When adding an output type, don't forget to...
- *   - expose it to PDs in controller.c:PyInit_sigrokdecode()
- *   - add a check in module_sigrokdecode.c:Decoder_put()
- *   - add a debug string in type_decoder.c:OUTPUT_TYPES
+ *   - expose it to PDs in module_sigrokdecode.c:PyInit_sigrokdecode()
+ *   - add a check in type_decoder.c:Decoder_put()
+ *   - add a debug string in type_decoder.c:output_type_name()
  */
 enum srd_output_type {
 	SRD_OUTPUT_ANN,
 	SRD_OUTPUT_PYTHON,
 	SRD_OUTPUT_BINARY,
+	SRD_OUTPUT_LOGIC,
 	SRD_OUTPUT_META,
 };
 
@@ -188,6 +189,11 @@ struct srd_decoder {
 	 */
 	GSList *binary;
 
+	/**
+	 * List of logic output channels (item: id, description, samplerate).
+	 */
+	GSList *logic_output_channels;
+
 	/** List of decoder options. */
 	GSList *options;
 
@@ -230,6 +236,12 @@ struct srd_decoder_annotation_row {
 	char *id;
 	char *desc;
 	GSList *ann_classes;
+};
+
+struct srd_decoder_logic_output_channel {
+	char *id;
+	char *desc;
+	uint64_t samplerate;
 };
 
 struct srd_decoder_inst {
@@ -311,6 +323,11 @@ struct srd_proto_data_annotation {
 };
 struct srd_proto_data_binary {
 	int bin_class; /* Index into "struct srd_decoder"->binary. */
+	uint64_t size;
+	const unsigned char *data;
+};
+struct srd_proto_data_logic {
+	int logic_class;
 	uint64_t size;
 	const unsigned char *data;
 };
