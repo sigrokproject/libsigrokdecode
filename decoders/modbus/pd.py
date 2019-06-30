@@ -848,7 +848,7 @@ class Decoder(srd.Decoder):
             'default': rxtx_channels[0], 'values': rxtx_channels},
         {'id': 'cschannel', 'desc': 'Client -> server channel',
             'default': rxtx_channels[1], 'values': rxtx_channels},
-        {'id': 'framegap', 'desc': 'Inter-frame bit gap', 'default': '28'},
+        {'id': 'framegap', 'desc': 'Inter-frame bit gap', 'default': 28},
     )
 
     def __init__(self):
@@ -912,7 +912,7 @@ class Decoder(srd.Decoder):
         # somewhere between seems fine.
         # A character is 11 bits long, so (3.5 + 1.5)/2 * 11 ~= 28
         # TODO: Display error for too short or too long.
-        if (ss - ADU.last_read) <= self.bitlength * int(self.options['framegap']):
+        if (ss - ADU.last_read) <= self.bitlength * self.options['framegap']:
             ADU.add_data(ss, es, data)
         else:
             # It's been too long since the last part of the ADU!
