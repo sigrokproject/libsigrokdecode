@@ -23,6 +23,12 @@ NUM_OUTPUT_CHANNELS = 8
 
 # TODO: Other I²C functions: general call / reset address, device ID address.
 
+def logic_channels(num_channels):
+    l = []
+    for i in range(num_channels):
+        l.append(tuple(['p%d' % i, 'P%d' % i, 100000]))
+    return tuple(l)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'pca9571'
@@ -38,6 +44,7 @@ class Decoder(srd.Decoder):
         ('value', 'Register value'),
         ('warning', 'Warning'),
     )
+    logic_output_channels = logic_channels(NUM_OUTPUT_CHANNELS)
     annotation_rows = (
         ('regs', 'Registers', (0, 1)),
         ('warnings', 'Warnings', (2,)),
@@ -48,13 +55,18 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.state = 'IDLE'
+        self.ss_logic = -1
         self.last_write = 0xFF # Chip port default state is high.
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_logic = self.register(srd.OUTPUT_LOGIC)
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
+
+    def putl(self, data):
+        self.put(self.ss_logic, self.ss_logic, self.out_logic, data)
 
     def handle_io(self, b):
         if self.state == 'READ DATA':
@@ -67,6 +79,10 @@ class Decoder(srd.Decoder):
             self.last_write = b
         self.putx([1, [operation[0] + ': %02X' % b,
                        operation[1] + ': %02X' % b]])
+        self.ss_logic = self.ss
+        for i in range(NUM_OUTPUT_CHANNELS):
+            bit = (b & (1 << i)) != 0
+            self.putl([i, bytes([bit])])
 
     def check_correct_chip(self, addr):
         if addr != 0x25:
