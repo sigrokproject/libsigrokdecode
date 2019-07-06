@@ -26,8 +26,8 @@ NUM_OUTPUT_CHANNELS = 8
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'pca9571'
-    name = 'NXP PCA9571'
-    longname = 'NXP Semiconductors PCA9571'
+    name = 'PCA9571'
+    longname = 'NXP PCA9571'
     desc = 'NXP PCA9571 8-bit I²C output expander.'
     license = 'gplv2+'
     inputs = ['i2c']
