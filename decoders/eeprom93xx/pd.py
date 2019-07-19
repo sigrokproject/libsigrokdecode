@@ -32,6 +32,7 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'addresssize', 'desc': 'Address size', 'default': 8},
         {'id': 'wordsize', 'desc': 'Word size', 'default': 16},
+        {'id': 'format', 'desc': 'Data format', 'default': 'hex', 'values': ('ascii', 'hex')},
     )
     annotations = (
         ('si-data', 'SI data'),
@@ -69,8 +70,20 @@ class Decoder(srd.Decoder):
             d = data[b].si if si else data[b].so
             word += (d << (len(data) - b - 1))
         idx = 0 if si else 1
-        self.put(data[0].ss, data[-1].es,
-                 self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
+
+        if self.options['format'] == "ascii":
+            word_str = ""
+            for s in range(0, len(data), 8):
+                c = 0xff & (word >> s)
+                if c in range(32, 126 + 1):
+                    word_str = chr(c) + word_str
+                else:
+                    word_str = "[{:02X}]".format(c) + word_str
+            self.put(data[0].ss, data[-1].es,
+                    self.out_ann, [idx, ['Data: %s' % word_str, '%s' % word_str]])
+        else:
+            self.put(data[0].ss, data[-1].es,
+                    self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
 
     def decode(self, ss, es, data):
         if len(data) < (2 + self.addresssize):
