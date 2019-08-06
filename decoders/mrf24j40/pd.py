@@ -40,6 +40,11 @@ class Decoder(srd.Decoder):
         ('warning', 'Warnings'),
         ('tx-frame', 'TX frame'),
         ('rx-frame', 'RX frame'),
+        ('tx-retry-1', '1x TX retry'),
+        ('tx-retry-2', '2x TX retry'),
+        ('tx-retry-3', '3x TX retry'),
+        ('tx-fail', 'TX fail (too many retries)'),
+        ('ccafail', 'CCAFAIL (channel busy)'),
     )
     annotation_rows = (
         ('read', 'Read', (0, 2)),
@@ -47,6 +52,11 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (4,)),
         ('tx-frames', 'TX frames', (5,)),
         ('rx-frames', 'RX frames', (6,)),
+        ('tx-retries-1', '1x TX retries', (7,)),
+        ('tx-retries-2', '2x TX retries', (8,)),
+        ('tx-retries-3', '3x TX retries', (9,)),
+        ('tx-fails', 'TX fails', (10,)),
+        ('ccafails', 'CCAFAILs', (11,)),
     )
 
     def __init__(self):
@@ -93,6 +103,16 @@ class Decoder(srd.Decoder):
             self.putx([1, ['%s: %#x' % (reg_desc, self.mosi_bytes[1])]])
         else:
             self.putx([0, ['%s: %#x' % (reg_desc, self.miso_bytes[1])]])
+            numretries = (self.miso_bytes[1] & 0xc0) >> 6
+            if reg_desc == 'TXSTAT' and numretries > 0:
+                txfail = 1 if ((self.miso_bytes[1] & (1 << 0)) != 0) else 0
+                idx = 6 + numretries + txfail
+                if txfail:
+                    self.putx([idx, ['TX fail (>= 4 retries)', 'TX fail']])
+                else:
+                    self.putx([idx, ['TX retries: %d' % numretries]])
+            if reg_desc == 'TXSTAT' and (self.miso_bytes[1] & (1 << 5)) != 0:
+                self.putx([11, ['CCAFAIL (channel busy)', 'CCAFAIL']])
 
     def handle_long(self):
         dword = self.mosi_bytes[0] << 8 | self.mosi_bytes[1]
