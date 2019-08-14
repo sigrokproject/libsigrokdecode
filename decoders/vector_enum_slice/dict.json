@@ -1,0 +1,10 @@
+{
+"idle"           : 0,
+"header"         : 1,
+"low address"    : 2,
+"high address"   : 3,
+"data 0"         : 4,
+"data 1"         : 5,
+"data 2"         : 6,
+"CS"             : 7
+}
