@@ -19,7 +19,16 @@
 
 '''
 This protocol decodes sliced data from vector_slicer and generates
-annotations in unsigned decimal, hexadecimal octal or binary format.
+fixed point annotations in decimal format. The point position is given by the user.
+
+Example:
+
+7 6 5 4 3 2 1 0
+1 1 0 0 0.1 0 0 (unsigned)
+
+point position = 3
+= 18.5 (decimal)
+
 '''
 
 from .pd import Decoder
