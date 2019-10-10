@@ -147,9 +147,9 @@ class Decoder(srd.Decoder):
     # Determine the position of the next desired bit's sample point.
     def get_sample_point(self, bitnum):
         samplenum = self.dom_edge_snum
-        samplenum += int(self.bit_width * (bitnum - self.dom_edge_bcount))
-        samplenum += int(self.sample_point)
-        return samplenum
+        samplenum += self.bit_width * (bitnum - self.dom_edge_bcount)
+        samplenum += self.sample_point
+        return int(samplenum)
 
     def is_stuff_bit(self):
         # CAN uses NRZ encoding and bit stuffing.
