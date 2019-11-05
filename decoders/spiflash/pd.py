@@ -73,9 +73,9 @@ def decode_status_reg(data):
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'spiflash'
-    name = 'SPI flash'
-    longname = 'SPI flash chips'
-    desc = 'xx25 series SPI (NOR) flash chip protocol.'
+    name = 'SPI flash/EEPROM'
+    longname = 'SPI flash/EEPROM chips'
+    desc = 'xx25 series SPI (NOR) flash/EEPROM chip protocol.'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = []
