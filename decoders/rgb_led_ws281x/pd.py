@@ -89,6 +89,7 @@ class Decoder(srd.Decoder):
             # Check RESET condition (manufacturer recommends 50 usec minimal,
             # but real minimum is ~10 usec).
             if not self.inreset and not pin and self.es is not None and \
+                    self.ss is not None and \
                     (self.samplenum - self.es) / self.samplerate > 50e-6:
 
                 # Decode last bit value.
