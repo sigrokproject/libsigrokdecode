@@ -88,10 +88,7 @@ class Decoder(srd.Decoder):
         self.put(ss_block, es_block, self.out_ann, data)
 
     def pins_to_hex(self, pins):
-        if pins in digits:
-            return digits[pins]
-        else:
-            return None
+        return digits.get(pins, None)
 
     def decode(self):
         oldpins = self.wait()
@@ -127,9 +124,8 @@ class Decoder(srd.Decoder):
                 dp = oldpins[7]
 
                 # Check if decimal point is present and active.
-                if self.have_dp:
-                    if dp == 1:
-                        digit = digit + '.'
+                if self.have_dp and dp == 1:
+                    digit += '.'
 
                 self.putb(lastpos, self.samplenum, [0, [digit]])
 
