@@ -44,6 +44,10 @@ class Decoder(srd.Decoder):
         ('data', 'Data', (0, 1)),
         ('warnings', 'Warnings', (2,)),
     )
+    binary = (
+        ('address', 'Address'),
+        ('data', 'Data'),
+    )
 
     def __init__(self):
         self.reset()
@@ -53,6 +57,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.addresssize = self.options['addresssize']
         self.wordsize = self.options['wordsize']
 
@@ -63,6 +68,7 @@ class Decoder(srd.Decoder):
             a += (data[b].si << (len(data) - b - 1))
         self.put(data[0].ss, data[-1].es, self.out_ann,
                  [0, ['Address: 0x%x' % a, 'Addr: 0x%x' % a, '0x%x' % a]])
+        self.put(data[0].ss, data[-1].es, self.out_binary, [0, bytes([a])])
 
     def put_word(self, si, data):
         # Decode word (MSb first).
@@ -81,10 +87,12 @@ class Decoder(srd.Decoder):
                 else:
                     word_str = '[{:02X}]'.format(c) + word_str
             self.put(data[0].ss, data[-1].es,
-                    self.out_ann, [idx, ['Data: %s' % word_str, '%s' % word_str]])
+                     self.out_ann, [idx, ['Data: %s' % word_str, '%s' % word_str]])
         else:
             self.put(data[0].ss, data[-1].es,
-                    self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
+                     self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
+            self.put(data[0].ss, data[-1].es, self.out_binary,
+                     [1, bytes([(word & 0xff00) >> 8, word & 0xff])])
 
     def decode(self, ss, es, data):
         if len(data) < (2 + self.addresssize):
