@@ -67,7 +67,7 @@ class Decoder(srd.Decoder):
         for b in range(len(data)):
             a += (data[b].si << (len(data) - b - 1))
         self.put(data[0].ss, data[-1].es, self.out_ann,
-                 [0, ['Address: 0x%x' % a, 'Addr: 0x%x' % a, '0x%x' % a]])
+                 [0, ['Address: 0x%04x' % a, 'Addr: 0x%04x' % a, '0x%04x' % a]])
         self.put(data[0].ss, data[-1].es, self.out_binary, [0, bytes([a])])
 
     def put_word(self, si, data):
@@ -90,7 +90,7 @@ class Decoder(srd.Decoder):
                      self.out_ann, [idx, ['Data: %s' % word_str, '%s' % word_str]])
         else:
             self.put(data[0].ss, data[-1].es,
-                     self.out_ann, [idx, ['Data: 0x%x' % word, '0x%x' % word]])
+                     self.out_ann, [idx, ['Data: 0x%04x' % word, '0x%04x' % word]])
             self.put(data[0].ss, data[-1].es, self.out_binary,
                      [1, bytes([(word & 0xff00) >> 8, word & 0xff])])
 
