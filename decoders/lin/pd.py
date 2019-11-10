@@ -41,6 +41,7 @@ class LinFsm:
 
     def reset(self):
         self.state = LinFsm.State.WaitForBreak
+        self.uart_idle_count = 0
 
     def __init__(self):
         a = dict()
@@ -53,6 +54,7 @@ class LinFsm:
         self.allowed_state = a
 
         self.state = None
+        self.uart_idle_count = 0
         self.reset()
 
 class Decoder(srd.Decoder):
@@ -112,6 +114,15 @@ class Decoder(srd.Decoder):
             return False
 
         return True
+
+    def handle_uart_idle(self):
+        if self.fsm.state not in (LinFsm.State.WaitForBreak, LinFsm.State.Error):
+            self.fsm.uart_idle_count += 1
+
+            if self.fsm.uart_idle_count == 2:
+                self.fsm.transit(LinFsm.State.Checksum)
+                self.handle_checksum()
+                self.fsm.reset()
 
     def handle_wait_for_break(self, value):
         self.wipe_break_null_byte(value)
@@ -217,6 +228,8 @@ class Decoder(srd.Decoder):
         self.ss_block, self.es_block = ss, es
 
         # Ignore all UART packets except the actual data packets or BREAK.
+        if ptype == 'IDLE':
+            self.handle_uart_idle()
         if ptype == 'BREAK':
             self.handle_break(pdata)
         if ptype != 'DATA':
