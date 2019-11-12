@@ -116,6 +116,8 @@ class Decoder(srd.Decoder):
             'default': -1},
         {'id': 'tx_packet_delimiter', 'desc': 'TX packet delimiter (decimal)',
             'default': -1},
+        {'id': 'rx_packet_len', 'desc': 'RX packet length', 'default': -1},
+        {'id': 'tx_packet_len', 'desc': 'TX packet length', 'default': -1},
     )
     annotations = (
         ('rx-data', 'RX data'),
@@ -261,16 +263,18 @@ class Decoder(srd.Decoder):
         self.state[rxtx] = 'GET DATA BITS'
 
     def handle_packet(self, rxtx):
-        opt = ('rx' if (rxtx == RX) else 'tx') + '_packet_delimiter'
-        delim = self.options[opt]
-        if delim == -1:
+        d = 'rx' if (rxtx == RX) else 'tx'
+        delim = self.options[d + '_packet_delimiter']
+        plen = self.options[d + '_packet_len']
+        if delim == -1 and plen == -1:
             return
 
-        # Cache data values until we see the delimiter.
+        # Cache data values until we see the delimiter and/or the specified
+        # packet length has been reached (whichever happens first).
         if len(self.packet_cache[rxtx]) == 0:
             self.ss_packet[rxtx] = self.startsample[rxtx]
         self.packet_cache[rxtx].append(self.datavalue[rxtx])
-        if self.datavalue[rxtx] == delim:
+        if self.datavalue[rxtx] == delim or len(self.packet_cache[rxtx]) == plen:
             self.es_packet[rxtx] = self.samplenum
             s = ''
             for b in self.packet_cache[rxtx]:
