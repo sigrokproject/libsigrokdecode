@@ -869,7 +869,7 @@ err_out:
 /**
  * Return a protocol decoder's docstring.
  *
- * @param dec The loaded protocol decoder.
+ * @param dec The loaded protocol decoder. Must not be NULL.
  *
  * @return A newly allocated buffer containing the protocol decoder's
  *         documentation. The caller is responsible for free'ing the buffer.
@@ -885,7 +885,7 @@ SRD_API char *srd_decoder_doc_get(const struct srd_decoder *dec)
 	if (!srd_check_init())
 		return NULL;
 
-	if (!dec)
+	if (!dec || !dec->py_mod)
 		return NULL;
 
 	gstate = PyGILState_Ensure();
