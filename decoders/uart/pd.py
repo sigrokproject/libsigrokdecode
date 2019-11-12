@@ -112,6 +112,10 @@ class Decoder(srd.Decoder):
             'values': ('yes', 'no')},
         {'id': 'invert_tx', 'desc': 'Invert TX?', 'default': 'no',
             'values': ('yes', 'no')},
+        {'id': 'rx_packet_delimiter', 'desc': 'RX packet delimiter (decimal)',
+            'default': -1},
+        {'id': 'tx_packet_delimiter', 'desc': 'TX packet delimiter (decimal)',
+            'default': -1},
     )
     annotations = (
         ('rx-data', 'RX data'),
@@ -130,16 +134,20 @@ class Decoder(srd.Decoder):
         ('tx-data-bits', 'TX data bits'),
         ('rx-break', 'RX break'),
         ('tx-break', 'TX break'),
+        ('rx-packet', 'RX packet'),
+        ('tx-packet', 'TX packet'),
     )
     annotation_rows = (
         ('rx-data', 'RX', (0, 2, 4, 6, 8)),
         ('rx-data-bits', 'RX bits', (12,)),
         ('rx-warnings', 'RX warnings', (10,)),
         ('rx-break', 'RX break', (14,)),
+        ('rx-packets', 'RX packets', (16,)),
         ('tx-data', 'TX', (1, 3, 5, 7, 9)),
         ('tx-data-bits', 'TX bits', (13,)),
         ('tx-warnings', 'TX warnings', (11,)),
         ('tx-break', 'TX break', (15,)),
+        ('tx-packets', 'TX packets', (17,)),
     )
     binary = (
         ('rx', 'RX dump'),
@@ -150,6 +158,10 @@ class Decoder(srd.Decoder):
 
     def putx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
+        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
+
+    def putx_packet(self, rxtx, data):
+        s, halfbit = self.ss_packet[rxtx], self.bit_width / 2.0
         self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
 
     def putpx(self, rxtx, data):
@@ -191,6 +203,8 @@ class Decoder(srd.Decoder):
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.databits = [[], []]
         self.break_start = [None, None]
+        self.packet_cache = [[], []]
+        self.ss_packet, self.es_packet = [None, None], [None, None]
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
@@ -246,6 +260,28 @@ class Decoder(srd.Decoder):
 
         self.state[rxtx] = 'GET DATA BITS'
 
+    def handle_packet(self, rxtx):
+        opt = ('rx' if (rxtx == RX) else 'tx') + '_packet_delimiter'
+        delim = self.options[opt]
+        if delim == -1:
+            return
+
+        # Cache data values until we see the delimiter.
+        if len(self.packet_cache[rxtx]) == 0:
+            self.ss_packet[rxtx] = self.startsample[rxtx]
+        self.packet_cache[rxtx].append(self.datavalue[rxtx])
+        if self.datavalue[rxtx] == delim:
+            self.es_packet[rxtx] = self.samplenum
+            s = ''
+            for b in self.packet_cache[rxtx]:
+                s += self.format_value(b)
+                if self.options['format'] != 'ascii':
+                    s += ' '
+            if self.options['format'] != 'ascii' and s[-1] == ' ':
+                s = s[:-1] # Drop trailing space.
+            self.putx_packet(rxtx, [16 + rxtx, [s]])
+            self.packet_cache[rxtx] = []
+
     def get_data_bits(self, rxtx, signal):
         # Save the sample number of the middle of the first data bit.
         if self.startsample[rxtx] == -1:
@@ -278,6 +314,8 @@ class Decoder(srd.Decoder):
         bdata = b.to_bytes(self.bw, byteorder='big')
         self.putbin(rxtx, [rxtx, bdata])
         self.putbin(rxtx, [2, bdata])
+
+        self.handle_packet(rxtx)
 
         self.databits[rxtx] = []
 
