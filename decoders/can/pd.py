@@ -188,7 +188,7 @@ class Decoder(srd.Decoder):
                 else:
                     crc_type = "CRC-21"
             else:
-                crc_type = "CRC" # TODO: CRC-15 (will break existing tests)
+                crc_type = "CRC-15"
 
             x = self.last_databit + 1
             crc_bits = self.bits[x:x + self.crc_len + 1]
