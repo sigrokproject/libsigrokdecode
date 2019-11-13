@@ -80,6 +80,16 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def set_bit_rate(self, bitrate):
+        self.bit_width = float(self.samplerate) / float(bitrate)
+        self.sample_point = (self.bit_width / 100.0) * self.options['sample_point']
+
+    def set_nominal_bitrate(self):
+        self.set_bit_rate(self.options['nominal_bitrate'])
+
+    def set_fast_bitrate(self):
+        self.set_bit_rate(self.options['fast_bitrate'])
+
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
@@ -204,6 +214,9 @@ class Decoder(srd.Decoder):
                             'CRC d: %d' % can_rx, 'CRC d']])
             if can_rx != 1:
                 self.putx([16, ['CRC delimiter must be a recessive bit']])
+
+            if self.fd:
+                self.set_nominal_bitrate()
 
         # ACK slot bit (dominant: ACK, recessive: NACK)
         elif bitnum == (self.last_databit + self.crc_len + 2):
@@ -407,6 +420,12 @@ class Decoder(srd.Decoder):
 
         # Get the index of the current CAN frame bit (without stuff bits).
         bitnum = len(self.bits) - 1
+
+        if self.fd and can_rx:
+            if bitnum == 16 and self.frame_type == 'standard' \
+                    or bitnum == 35 and self.frame_type == 'extended':
+                self.dom_edge_seen(force=True)
+                self.set_fast_bitrate()
 
         # If this is a stuff bit, remove it from self.bits and ignore it.
         if self.is_stuff_bit():
