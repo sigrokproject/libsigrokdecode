@@ -795,6 +795,7 @@ SRD_PRIV void condition_list_free(struct srd_decoder_inst *di)
 			g_slist_free_full(ll, g_free);
 	}
 
+	g_slist_free(di->condition_list);
 	di->condition_list = NULL;
 }
 
