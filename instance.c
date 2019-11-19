@@ -140,6 +140,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	Py_DECREF(py_di_options);
 	py_di_options = PyDict_New();
 	PyObject_SetAttrString(di->py_inst, "options", py_di_options);
+	Py_DECREF(py_di_options);
 
 	for (l = di->decoder->options; l; l = l->next) {
 		sdo = l->data;
@@ -675,7 +676,7 @@ SRD_API int srd_inst_initial_pins_set_all(struct srd_decoder_inst *di, GArray *i
 /** @private */
 SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 {
-	PyObject *py_res;
+	PyObject *py_res, *py_samplenum;
 	GSList *l;
 	struct srd_decoder_inst *next_di;
 	int ret;
@@ -695,7 +696,9 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	Py_DecRef(py_res);
 
 	/* Set self.samplenum to 0. */
-	PyObject_SetAttrString(di->py_inst, "samplenum", PyLong_FromLong(0));
+	py_samplenum = PyLong_FromLong(0);
+	PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
+	Py_DECREF(py_samplenum);
 
 	/* Set self.matched to None. */
 	PyObject_SetAttrString(di->py_inst, "matched", Py_None);

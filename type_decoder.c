@@ -850,7 +850,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 	unsigned int i;
 	gboolean found_match;
 	struct srd_decoder_inst *di;
-	PyObject *py_pinvalues, *py_matched;
+	PyObject *py_pinvalues, *py_matched, *py_samplenum;
 	PyGILState_STATE gstate;
 
 	if (!self || !args)
@@ -917,14 +917,16 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		/* If there's a match, set self.samplenum etc. and return. */
 		if (found_match) {
 			/* Set self.samplenum to the (absolute) sample number that matched. */
-			PyObject_SetAttrString(di->py_inst, "samplenum",
-				PyLong_FromLong(di->abs_cur_samplenum));
+			py_samplenum = PyLong_FromLong(di->abs_cur_samplenum);
+			PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
+			Py_DECREF(py_samplenum);
 
 			if (di->match_array && di->match_array->len > 0) {
 				py_matched = PyTuple_New(di->match_array->len);
 				for (i = 0; i < di->match_array->len; i++)
 					PyTuple_SetItem(py_matched, i, PyBool_FromLong(di->match_array->data[i]));
 				PyObject_SetAttrString(di->py_inst, "matched", py_matched);
+				Py_DECREF(py_matched);
 				match_array_free(di);
 			} else {
 				PyObject_SetAttrString(di->py_inst, "matched", Py_None);
