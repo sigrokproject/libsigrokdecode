@@ -22,7 +22,7 @@ from .lists import *
 
 L = len(cmds)
 
-# Don't forget to keep this in sync with 'cmds' is lists.py.
+# Don't forget to keep this in sync with 'cmds' in lists.py.
 class Ann:
     WRSR, PP, READ, WRDI, RDSR, WREN, FAST_READ, SE, RDSCUR, WRSCUR, \
     RDSR2, CE, ESRY, DSRY, WRITE1, WRITE2, REMS, RDID, RDP_RES, CP, ENSO, DP, \
