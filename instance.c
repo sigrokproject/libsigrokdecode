@@ -182,10 +182,13 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 				goto err_out;
 			}
 		}
-		if (PyDict_SetItemString(py_di_options, sdo->id, py_optval) == -1)
+		if (PyDict_SetItemString(py_di_options, sdo->id, py_optval) == -1) {
+			Py_XDECREF(py_optval);
 			goto err_out;
+		}
 		/* Not harmful even if we used the default. */
 		g_hash_table_remove(options, sdo->id);
+		Py_XDECREF(py_optval);
 	}
 	if (g_hash_table_size(options) != 0)
 		srd_warn("Unknown options specified for '%s'", di->inst_id);
@@ -193,7 +196,6 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 	ret = SRD_OK;
 
 err_out:
-	Py_XDECREF(py_optval);
 	if (PyErr_Occurred()) {
 		srd_exception_catch("Stray exception in srd_inst_option_set()");
 		ret = SRD_ERR_PYTHON;
