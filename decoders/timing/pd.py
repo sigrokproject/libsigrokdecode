@@ -3,6 +3,7 @@
 ##
 ## Copyright (C) 2014 Torsten Duwe <duwe@suse.de>
 ## Copyright (C) 2014 Sebastien Bourdelin <sebastien.bourdelin@savoirfairelinux.com>
+## Copyright (C) 2019 Benjamin Vernoux <bvernoux@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -49,7 +50,7 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'timing'
     name = 'Timing'
-    longname = 'Timing calculation with frequency and averaging'
+    longname = 'Timing calculation with time/frequency(configurable on data level) with also averaging and delta'
     desc = 'Calculate time between edges.'
     license = 'gplv2+'
     inputs = ['logic']
@@ -71,7 +72,10 @@ class Decoder(srd.Decoder):
     options = (
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },
         { 'id': 'edge', 'desc': 'Edges to check', 'default': 'any', 'values': ('any', 'rising', 'falling') },
+        { 'id': 'disp_time_data_level', 'desc': 'Display time on data level', 'default': 'both', 'values': ('both', '1', '0') },
+        { 'id': 'average', 'desc': 'Show average', 'default': 'no', 'values': ('yes', 'no') },
         { 'id': 'delta', 'desc': 'Show delta from last', 'default': 'no', 'values': ('yes', 'no') },
+
     )
 
     def __init__(self):
@@ -92,6 +96,7 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.edge = self.options['edge']
+        self.disp_time_data_level = self.options['disp_time_data_level']
 
     def decode(self):
         if not self.samplerate:
@@ -115,10 +120,18 @@ class Decoder(srd.Decoder):
             if len(self.last_n) > self.options['avg_period']:
                 self.last_n.popleft()
 
-            self.put(self.last_samplenum, self.samplenum, self.out_ann,
-                     [0, [normalize_time(t)]])
-            if self.options['avg_period'] > 0:
+            if self.disp_time_data_level == 'both':
                 self.put(self.last_samplenum, self.samplenum, self.out_ann,
+                     [0, [normalize_time(t)]])
+            elif self.disp_time_data_level == '1' and pin[0] == 0:
+                self.put(self.last_samplenum, self.samplenum, self.out_ann,
+                     [0, [normalize_time(t)]])
+            elif self.disp_time_data_level == '0' and pin[0] == 1:
+                self.put(self.last_samplenum, self.samplenum, self.out_ann,
+                     [0, [normalize_time(t)]])
+            if self.last_t and self.options['average'] == 'yes':
+                if self.options['avg_period'] > 0:
+                    self.put(self.last_samplenum, self.samplenum, self.out_ann,
                          [1, [normalize_time(sum(self.last_n) / len(self.last_n))]])
             if self.last_t and self.options['delta'] == 'yes':
                 self.put(self.last_samplenum, self.samplenum, self.out_ann,
