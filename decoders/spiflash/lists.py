@@ -75,9 +75,9 @@ chips = {
     'adesto_at45db161e': {
         'vendor': 'Adesto',
         'model': 'AT45DB161E',
-        'res_id': 0xff, # The chip doesn't emit an ID here.
-        'rems_id': 0xffff, # Not supported by the chip.
-        'rems2_id': 0xffff, # Not supported by the chip.
+        'res_id': None, # The chip doesn't emit an ID here.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
         'rdid_id': 0x1f26000100, # RDID and 2 extra "EDI" bytes.
         'page_size': 528, # Configurable, could also be 512 bytes.
         'sector_size': 128 * 1024,
@@ -87,10 +87,10 @@ chips = {
     'atmel_at25128': {
         'vendor': 'Atmel',
         'model': 'AT25128',
-        'res_id': 0xff, # Not supported by the chip.
-        'rems_id': 0xffff, # Not supported by the chip.
-        'rems2_id': 0xffff, # Not supported by the chip.
-        'rdid_id': 0xffffff, # Not supported by the chip.
+        'res_id': None, # Not supported by the chip.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
+        'rdid_id': None, # Not supported by the chip.
         'page_size': 64,
         'sector_size': None, # The chip doesn't have sectors.
         'block_size': None, # The chip doesn't have blocks.
@@ -98,10 +98,10 @@ chips = {
     'atmel_at25256': {
         'vendor': 'Atmel',
         'model': 'AT25256',
-        'res_id': 0xff, # Not supported by the chip.
-        'rems_id': 0xffff, # Not supported by the chip.
-        'rems2_id': 0xffff, # Not supported by the chip.
-        'rdid_id': 0xffffff, # Not supported by the chip.
+        'res_id': None, # Not supported by the chip.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
+        'rdid_id': None, # Not supported by the chip.
         'page_size': 64,
         'sector_size': None, # The chip doesn't have sectors.
         'block_size': None, # The chip doesn't have blocks.
@@ -158,7 +158,7 @@ chips = {
         'model': 'W25Q80DV',
         'res_id': 0x13,
         'rems_id': 0xef13,
-        'rems2_id': 0xffff, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
         'rdid_id': 0xef4014,
         'page_size': 256,
         'sector_size': 4 * 1024,
