@@ -87,24 +87,24 @@ chips = {
     'atmel_at25128': {
         'vendor': 'Atmel',
         'model': 'AT25128',
-        'res_id': 0xff, # The chip doesn't emit an ID.
+        'res_id': 0xff, # Not supported by the chip.
         'rems_id': 0xffff, # Not supported by the chip.
         'rems2_id': 0xffff, # Not supported by the chip.
         'rdid_id': 0xffffff, # Not supported by the chip.
         'page_size': 64,
-        'sector_size': 16 * 1024,
-        'block_size': 1,
+        'sector_size': None, # The chip doesn't have sectors.
+        'block_size': None, # The chip doesn't have blocks.
     },
     'atmel_at25256': {
         'vendor': 'Atmel',
         'model': 'AT25256',
-        'res_id': 0xff, # The chip doesn't emit an ID.
+        'res_id': 0xff, # Not supported by the chip.
         'rems_id': 0xffff, # Not supported by the chip.
         'rems2_id': 0xffff, # Not supported by the chip.
         'rdid_id': 0xffffff, # Not supported by the chip.
         'page_size': 64,
-        'sector_size': 32 * 1024,
-        'block_size': 1,
+        'sector_size': None, # The chip doesn't have sectors.
+        'block_size': None, # The chip doesn't have blocks.
     },
     # FIDELIX
     'fidelix_fm25q32': {
