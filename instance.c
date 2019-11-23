@@ -59,7 +59,8 @@ static void oldpins_array_seed(struct srd_decoder_inst *di)
 	count = di->dec_num_channels;
 	arr = g_array_sized_new(FALSE, TRUE, sizeof(uint8_t), count);
 	g_array_set_size(arr, count);
-	memset(arr->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0, count);
+	if (arr->data)
+		memset(arr->data, SRD_INITIAL_PIN_SAME_AS_SAMPLE0, count);
 	di->old_pins_array = arr;
 }
 
@@ -831,6 +832,8 @@ static void update_old_pins_array(struct srd_decoder_inst *di,
 
 	oldpins_array_seed(di);
 	for (i = 0; i < di->dec_num_channels; i++) {
+		if (di->dec_channelmap[i] == -1)
+			continue; /* Ignore unused optional channels. */
 		byte_offset = di->dec_channelmap[i] / 8;
 		bit_offset = di->dec_channelmap[i] % 8;
 		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
@@ -853,6 +856,8 @@ static void update_old_pins_array_initial_pins(struct srd_decoder_inst *di)
 	for (i = 0; i < di->dec_num_channels; i++) {
 		if (di->old_pins_array->data[i] != SRD_INITIAL_PIN_SAME_AS_SAMPLE0)
 			continue;
+		if (di->dec_channelmap[i] == -1)
+			continue; /* Ignore unused optional channels. */
 		byte_offset = di->dec_channelmap[i] / 8;
 		bit_offset = di->dec_channelmap[i] % 8;
 		sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
