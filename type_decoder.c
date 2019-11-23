@@ -753,14 +753,14 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		num_conditions = PyList_Size(py_conditionlist);
 		if (num_conditions == 0)
 			goto ret_9999; /* The PD invoked self.wait([]). */
-		Py_IncRef(py_conditionlist);
+		Py_INCREF(py_conditionlist);
 	} else if (PyDict_Check(py_conds)) {
 		/* 'py_conds' is a dict. */
 		if (PyDict_Size(py_conds) == 0)
 			goto ret_9999; /* The PD invoked self.wait({}). */
 		/* Make a list and put the dict in there for convenience. */
 		py_conditionlist = PyList_New(1);
-		Py_IncRef(py_conds);
+		Py_INCREF(py_conds);
 		PyList_SetItem(py_conditionlist, 0, py_conds);
 		num_conditions = 1;
 	} else {

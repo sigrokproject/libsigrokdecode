@@ -695,7 +695,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 		PyGILState_Release(gstate);
 		return SRD_ERR_PYTHON;
 	}
-	Py_DecRef(py_res);
+	Py_DECREF(py_res);
 
 	/* Set self.samplenum to 0. */
 	py_samplenum = PyLong_FromLong(0);
@@ -1046,7 +1046,7 @@ static gpointer di_thread(gpointer data)
 	 * Call self.decode(). Only returns if the PD throws an exception.
 	 * "Regular" termination of the decode() method is not expected.
 	 */
-	Py_IncRef(di->py_inst);
+	Py_INCREF(di->py_inst);
 	srd_dbg("%s: Calling decode().", di->inst_id);
 	py_res = PyObject_CallMethod(di->py_inst, "decode", NULL);
 	srd_dbg("%s: decode() terminated.", di->inst_id);
@@ -1102,7 +1102,7 @@ static gpointer di_thread(gpointer data)
 	 * decode() will re-start another thread transparently.
 	 */
 	srd_dbg("%s: decode() terminated (req %d).", di->inst_id, wanted_term);
-	Py_DecRef(py_res);
+	Py_DECREF(py_res);
 	PyErr_Clear();
 
 	PyGILState_Release(gstate);
@@ -1311,7 +1311,7 @@ SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di)
 	srd_inst_reset_state(di);
 
 	gstate = PyGILState_Ensure();
-	Py_DecRef(di->py_inst);
+	Py_DECREF(di->py_inst);
 	PyGILState_Release(gstate);
 
 	g_free(di->inst_id);
