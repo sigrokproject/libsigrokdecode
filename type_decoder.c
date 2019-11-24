@@ -677,7 +677,7 @@ static int create_term_list(struct srd_decoder_inst *di,
 			term->type = SRD_TERM_SKIP;
 			term->num_samples_to_skip = num_samples_to_skip;
 			term->num_samples_already_skipped = 0;
-			if (num_samples_to_skip < 1)
+			if (num_samples_to_skip < 0)
 				term->type = SRD_TERM_ALWAYS_FALSE;
 		} else {
 			srd_err("Term key is neither a string nor a number.");
