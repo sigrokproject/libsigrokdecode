@@ -42,6 +42,7 @@ class Decoder(srd.Decoder):
         {'id': 'edge', 'desc': 'Clock edge to sample on', 'default': 'rising', 'values': ('rising', 'falling') }
     )
     annotations = tuple(('ch%d' % i, 'Ch%d' % i) for i in range(MAX_CHANNELS))
+    annotation_rows = tuple(('ch%d' % i, 'Ch%d' % i, (i,)) for i in range(MAX_CHANNELS))
 
     def __init__(self):
         self.reset()
