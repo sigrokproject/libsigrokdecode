@@ -47,9 +47,6 @@ class Decoder(srd.Decoder):
         {'id': 'atn', 'name': 'ATN', 'desc': 'Attention'},
         {'id': 'ren', 'name': 'REN', 'desc': 'Remote enable'},
     )
-    options = (
-        {'id': 'sample_total', 'desc': 'Total number of samples', 'default': 0},
-    )
     annotations = (
         ('items', 'Items'),
         ('gpib', 'DAT/CMD'),
@@ -166,15 +163,9 @@ class Decoder(srd.Decoder):
 
         # Inspect samples at falling edge of DAV. But make sure to also
         # start inspection when the capture happens to start with low
-        # DAV level. Optionally enforce processing when a user specified
-        # sample number was reached.
+        # DAV level.
         waitcond = [{9: 'l'}]
-        lsn = self.options['sample_total']
-        if lsn:
-            waitcond.append({'skip': lsn})
         while True:
-            if lsn:
-                waitcond[1]['skip'] = lsn - self.samplenum - 1
             pins = self.wait(waitcond)
             self.handle_bits(pins)
             waitcond[0][9] = 'f'
