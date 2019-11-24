@@ -625,18 +625,20 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
  *
  * If there are no terms in the condition, 'term_list' will be NULL.
  *
+ * @param di The decoder instance to use. Must not be NULL.
  * @param py_dict A Python dict containing terms. Must not be NULL.
  * @param term_list Pointer to a GSList which will be set to the newly
  *                  created list of terms. Must not be NULL.
  *
  * @return SRD_OK upon success, a negative error code otherwise.
  */
-static int create_term_list(PyObject *py_dict, GSList **term_list)
+static int create_term_list(struct srd_decoder_inst *di,
+	PyObject *py_dict, GSList **term_list)
 {
 	Py_ssize_t pos = 0;
 	PyObject *py_key, *py_value;
 	struct srd_term *term;
-	uint64_t num_samples_to_skip;
+	int64_t num_samples_to_skip;
 	char *term_str;
 	PyGILState_STATE gstate;
 
@@ -653,7 +655,6 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 		/* Check whether the current key is a string or a number. */
 		if (PyLong_Check(py_key)) {
 			/* The key is a number. */
-			/* TODO: Check if the number is a valid channel. */
 			/* Get the value string. */
 			if ((py_pydictitem_as_str(py_dict, py_key, &term_str)) != SRD_OK) {
 				srd_err("Failed to get the value.");
@@ -662,10 +663,12 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 			term = g_malloc(sizeof(struct srd_term));
 			term->type = get_term_type(term_str);
 			term->channel = PyLong_AsLong(py_key);
+			if (term->channel < 0 || term->channel >= di->dec_num_channels)
+				term->type = SRD_TERM_ALWAYS_FALSE;
 			g_free(term_str);
 		} else if (PyUnicode_Check(py_key)) {
 			/* The key is a string. */
-			/* TODO: Check if it's "skip". */
+			/* TODO: Check if the key is "skip". */
 			if ((py_pydictitem_as_long(py_dict, py_key, &num_samples_to_skip)) != SRD_OK) {
 				srd_err("Failed to get number of samples to skip.");
 				goto err;
@@ -674,6 +677,8 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 			term->type = SRD_TERM_SKIP;
 			term->num_samples_to_skip = num_samples_to_skip;
 			term->num_samples_already_skipped = 0;
+			if (num_samples_to_skip < 1)
+				term->type = SRD_TERM_ALWAYS_FALSE;
 		} else {
 			srd_err("Term key is neither a string nor a number.");
 			goto err;
@@ -784,7 +789,7 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		}
 
 		/* Create the list of terms in this condition. */
-		if ((ret = create_term_list(py_dict, &term_list)) < 0)
+		if ((ret = create_term_list(di, py_dict, &term_list)) < 0)
 			break;
 
 		/* Add the new condition to the PD instance's condition list. */

@@ -895,6 +895,8 @@ static gboolean all_terms_match(const struct srd_decoder_inst *di,
 
 	for (l = cond; l; l = l->next) {
 		term = l->data;
+		if (term->type == SRD_TERM_ALWAYS_FALSE)
+			return FALSE;
 		if (!term_matches(di, term, sample_pos))
 			return FALSE;
 	}

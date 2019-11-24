@@ -303,7 +303,7 @@ err:
  *
  * @private
  */
-SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out)
+SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, int64_t *out)
 {
 	PyObject *py_value;
 	PyGILState_STATE gstate;
@@ -328,7 +328,7 @@ SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t 
 		goto err;
 	}
 
-	*out = PyLong_AsUnsignedLongLong(py_value);
+	*out = PyLong_AsLongLong(py_value);
 
 	PyGILState_Release(gstate);
 
