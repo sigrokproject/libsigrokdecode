@@ -24,7 +24,6 @@ from .lists import *
 L = len(cmds)
 RX = 0
 TX = 1
-rxtx_channels = ('RX', 'TX')
 
 # Don't forget to keep this in sync with 'cmds' is lists.py.
 class Ann:
@@ -59,9 +58,9 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'ms_chan', 'desc': 'Master -> slave channel',
-            'default': rxtx_channels[0], 'values': rxtx_channels},
+            'default': 'RX', 'values': ('RX', 'TX')},
         {'id': 'sm_chan', 'desc': 'Slave -> master channel',
-            'default': rxtx_channels[1], 'values': rxtx_channels},
+            'default': 'TX', 'values': ('RX', 'TX')},
     )
 
     def __init__(self):
