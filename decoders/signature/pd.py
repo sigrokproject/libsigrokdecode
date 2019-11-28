@@ -46,7 +46,7 @@ class Decoder(srd.Decoder):
     name = 'Signature'
     longname = 'Signature analysis'
     desc = 'Annotate signature of logic patterns.'
-    license = 'gplv3+'
+    license = 'gplv2+'
     inputs = ['logic']
     outputs = []
     tags = ['Debug/trace', 'Util', 'Encoding']
