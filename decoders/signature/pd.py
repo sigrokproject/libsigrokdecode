@@ -51,20 +51,20 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Debug/trace', 'Util', 'Encoding']
     channels = (
-        dict(id='start', name='START', desc='START channel'),
-        dict(id='stop', name='STOP', desc='STOP channel'),
-        dict(id='clk', name='CLOCK', desc='CLOCK channel'),
-        dict(id='data', name='DATA', desc='DATA channel')
+        {'id': 'start', 'name': 'START', 'desc': 'START channel'},
+        {'id': 'stop', 'name': 'STOP', 'desc': 'STOP channel'},
+        {'id': 'clk', 'name': 'CLOCK', 'desc': 'CLOCK channel'},
+        {'id': 'data', 'name': 'DATA', 'desc': 'DATA channel'},
     )
     options = (
-        dict(id='start_edge', desc='Edge-selection for START channel',
-             default='r', values=('r', 'f')),
-        dict(id='stop_edge', desc='Edge-selection for STOP channel',
-             default='r', values=('r', 'f')),
-        dict(id='clk_edge', desc='Edge-selection for CLOCK channel',
-             default='f', values=('r', 'f')),
-        dict(id='annbits', desc='Enable bit level annotation',
-             default='no', values=('yes', 'no'))
+        {'id': 'start_edge', 'desc': 'START edge polarity',
+            'default': 'r', 'values': ('r', 'f')},
+        {'id': 'stop_edge', 'desc': 'STOP edge polarity',
+            'default': 'r', 'values': ('r', 'f')},
+        {'id': 'clk_edge', 'desc': 'CLOCK edge polarity',
+            'default': 'f', 'values': ('r', 'f')},
+        {'id': 'annbits', 'desc': 'Enable bit level annotations',
+            'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
         ('bit0', 'Bit0'),
