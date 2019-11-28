@@ -58,11 +58,11 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'start_edge', 'desc': 'START edge polarity',
-            'default': 'r', 'values': ('r', 'f')},
+            'default': 'rising', 'values': ('rising', 'falling')},
         {'id': 'stop_edge', 'desc': 'STOP edge polarity',
-            'default': 'r', 'values': ('r', 'f')},
+            'default': 'rising', 'values': ('rising', 'falling')},
         {'id': 'clk_edge', 'desc': 'CLOCK edge polarity',
-            'default': 'f', 'values': ('r', 'f')},
+            'default': 'falling', 'values': ('rising', 'falling')},
         {'id': 'annbits', 'desc': 'Enable bit level annotations',
             'default': 'no', 'values': ('yes', 'no')},
     )
@@ -99,8 +99,8 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         opt = self.options
-        start_edge_mode_rising = opt['start_edge'] == 'r'
-        stop_edge_mode_rising = opt['stop_edge'] == 'r'
+        start_edge_mode_rising = opt['start_edge'] == 'rising'
+        stop_edge_mode_rising = opt['stop_edge'] == 'rising'
         annbits = opt['annbits'] == 'yes'
         gate_is_open = False
         sample_start = None
