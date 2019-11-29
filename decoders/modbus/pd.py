@@ -929,6 +929,10 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         ptype, rxtx, pdata = data
 
+        # Ignore unknown/unsupported ptypes.
+        if ptype not in ('STARTBIT', 'DATA', 'STOPBIT'):
+            return
+
         # Decide what ADU(s) we need this packet to go to.
         # Note that it's possible to go to both ADUs.
         if rxtx_channels[rxtx] == self.options['scchannel']:
