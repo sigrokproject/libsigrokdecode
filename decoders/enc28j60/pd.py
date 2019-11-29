@@ -67,9 +67,9 @@ class Decoder(srd.Decoder):
         ('warning', 'Warning'),
     )
     annotation_rows = (
+        ('fields', 'Fields', (ANN_DATA, ANN_REG_ADDR)),
         ('commands', 'Commands',
             (ANN_RCR, ANN_RBM, ANN_WCR, ANN_WBM, ANN_BFS, ANN_BFC, ANN_SRC)),
-        ('fields', 'Fields', (ANN_DATA, ANN_REG_ADDR)),
         ('warnings', 'Warnings', (ANN_WARNING,)),
     )
 

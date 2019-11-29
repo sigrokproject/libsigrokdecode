@@ -141,13 +141,13 @@ class Decoder(srd.Decoder):
         ('tx-packet', 'TX packet'),
     )
     annotation_rows = (
-        ('rx-data', 'RX', (0, 2, 4, 6, 8)),
         ('rx-data-bits', 'RX bits', (12,)),
+        ('rx-data', 'RX', (0, 2, 4, 6, 8)),
         ('rx-warnings', 'RX warnings', (10,)),
         ('rx-break', 'RX break', (14,)),
         ('rx-packets', 'RX packets', (16,)),
-        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
         ('tx-data-bits', 'TX bits', (13,)),
+        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
         ('tx-warnings', 'TX warnings', (11,)),
         ('tx-break', 'TX break', (15,)),
         ('tx-packets', 'TX packets', (17,)),

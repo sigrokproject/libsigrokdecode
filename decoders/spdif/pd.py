@@ -47,8 +47,8 @@ class Decoder(srd.Decoder):
         ('parity', 'Parity Bit'),
     )
     annotation_rows = (
-        ('info', 'Info', (0, 1, 3, 5, 6, 7, 8)),
         ('bits', 'Bits', (2,)),
+        ('info', 'Info', (0, 1, 3, 5, 6, 7, 8)),
         ('samples', 'Samples', (4,)),
     )
 

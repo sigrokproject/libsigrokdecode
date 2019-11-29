@@ -207,9 +207,9 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('instructions', 'Instructions', (0,)),
-        ('regs', 'Registers', regs_items['rows_range']),
         ('control_fields_in', 'Control fields in', (10,)),
         ('control_fields_out', 'Control fields out', (11,)),
+        ('regs', 'Registers', regs_items['rows_range']),
         ('pracc', 'PrAcc', (12,)),
     )
 

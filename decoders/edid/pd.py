@@ -87,8 +87,8 @@ class Decoder(srd.Decoder):
         ('sections', 'EDID structure sections'),
     )
     annotation_rows = (
-        ('sections', 'Sections', (1,)),
         ('fields', 'Fields', (0,)),
+        ('sections', 'Sections', (1,)),
     )
 
     def __init__(self):

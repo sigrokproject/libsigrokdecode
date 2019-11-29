@@ -46,9 +46,9 @@ class Decoder(srd.Decoder):
         ('error', 'Error'),
     )
     annotation_rows = (
-        ('name', 'Logical', (1, 2, 5, 6, 7, 8)),
-        ('data', 'Data', (9,)),
         ('bits', 'Bits', (0, 3, 4)),
+        ('data', 'Data', (9,)),
+        ('name', 'Logical', (1, 2, 5, 6, 7, 8)),
         ('errors', 'Errors', (10,)),
     )
 
