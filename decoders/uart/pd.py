@@ -58,6 +58,9 @@ TX = 1
 # 'none' is _not_ allowed as value for 'parity_type'.
 def parity_ok(parity_type, parity_bit, data, num_data_bits):
 
+    if parity_type == 'ignore':
+        return True
+
     # Handle easy cases first (parity bit is always 1 or 0).
     if parity_type == 'zero':
         return parity_bit == 0
@@ -100,9 +103,7 @@ class Decoder(srd.Decoder):
         {'id': 'num_data_bits', 'desc': 'Data bits', 'default': 8,
             'values': (5, 6, 7, 8, 9)},
         {'id': 'parity_type', 'desc': 'Parity type', 'default': 'none',
-            'values': ('none', 'odd', 'even', 'zero', 'one')},
-        {'id': 'parity_check', 'desc': 'Check parity?', 'default': 'yes',
-            'values': ('yes', 'no')},
+            'values': ('none', 'odd', 'even', 'zero', 'one', 'ignore')},
         {'id': 'num_stop_bits', 'desc': 'Stop bits', 'default': 1.0,
             'values': (0.0, 0.5, 1.0, 1.5)},
         {'id': 'bit_order', 'desc': 'Bit order', 'default': 'lsb-first',
