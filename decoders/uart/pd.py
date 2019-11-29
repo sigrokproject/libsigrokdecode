@@ -43,6 +43,7 @@ This is the list of <ptype>s and their respective <pdata> values:
  - 'FRAME': The data is always a tuple containing two items: The (integer)
    value of the UART data, and a boolean which reflects the validity of the
    UART frame.
+ - 'IDLE': The data is always 0.
 
 The <rxtx> field is 0 for RX packets, 1 for TX packets.
 '''
