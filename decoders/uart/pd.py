@@ -56,7 +56,7 @@ TX = 1
 # parity bit, the value of the data, and the length of the data (5-9 bits,
 # usually 8 bits) return True if the parity is correct, False otherwise.
 # 'none' is _not_ allowed as value for 'parity_type'.
-def parity_ok(parity_type, parity_bit, data, num_data_bits):
+def parity_ok(parity_type, parity_bit, data, data_bits):
 
     if parity_type == 'ignore':
         return True
@@ -100,11 +100,11 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'baudrate', 'desc': 'Baud rate', 'default': 115200},
-        {'id': 'num_data_bits', 'desc': 'Data bits', 'default': 8,
+        {'id': 'data_bits', 'desc': 'Data bits', 'default': 8,
             'values': (5, 6, 7, 8, 9)},
-        {'id': 'parity_type', 'desc': 'Parity type', 'default': 'none',
+        {'id': 'parity', 'desc': 'Parity', 'default': 'none',
             'values': ('none', 'odd', 'even', 'zero', 'one', 'ignore')},
-        {'id': 'num_stop_bits', 'desc': 'Stop bits', 'default': 1.0,
+        {'id': 'stop_bits', 'desc': 'Stop bits', 'default': 1.0,
             'values': (0.0, 0.5, 1.0, 1.5)},
         {'id': 'bit_order', 'desc': 'Bit order', 'default': 'lsb-first',
             'values': ('lsb-first', 'msb-first')},
@@ -114,9 +114,9 @@ class Decoder(srd.Decoder):
             'values': ('yes', 'no')},
         {'id': 'invert_tx', 'desc': 'Invert TX?', 'default': 'no',
             'values': ('yes', 'no')},
-        {'id': 'rx_packet_delimiter', 'desc': 'RX packet delimiter (decimal)',
+        {'id': 'rx_packet_delim', 'desc': 'RX packet delimiter (decimal)',
             'default': -1},
-        {'id': 'tx_packet_delimiter', 'desc': 'TX packet delimiter (decimal)',
+        {'id': 'tx_packet_delim', 'desc': 'TX packet delimiter (decimal)',
             'default': -1},
         {'id': 'rx_packet_len', 'desc': 'RX packet length', 'default': -1},
         {'id': 'tx_packet_len', 'desc': 'TX packet length', 'default': -1},
@@ -215,7 +215,7 @@ class Decoder(srd.Decoder):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.bw = (self.options['num_data_bits'] + 7) // 8
+        self.bw = (self.options['data_bits'] + 7) // 8
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -267,7 +267,7 @@ class Decoder(srd.Decoder):
 
     def handle_packet(self, rxtx):
         d = 'rx' if (rxtx == RX) else 'tx'
-        delim = self.options[d + '_packet_delimiter']
+        delim = self.options[d + '_packet_delim']
         plen = self.options[d + '_packet_len']
         if delim == -1 and plen == -1:
             return
@@ -302,7 +302,7 @@ class Decoder(srd.Decoder):
 
         # Return here, unless we already received all data bits.
         self.cur_data_bit[rxtx] += 1
-        if self.cur_data_bit[rxtx] < self.options['num_data_bits']:
+        if self.cur_data_bit[rxtx] < self.options['data_bits']:
             return
 
         # Convert accumulated data bits to a data value.
@@ -329,7 +329,7 @@ class Decoder(srd.Decoder):
         # Advance to either reception of the parity bit, or reception of
         # the STOP bits if parity is not applicable.
         self.state[rxtx] = 'GET PARITY BIT'
-        if self.options['parity_type'] == 'none':
+        if self.options['parity'] == 'none':
             self.state[rxtx] = 'GET STOP BITS'
 
     def format_value(self, v):
@@ -337,7 +337,7 @@ class Decoder(srd.Decoder):
         # Reflects the user selected kind of representation, as well as
         # the number of data bits in the UART frames.
 
-        fmt, bits = self.options['format'], self.options['num_data_bits']
+        fmt, bits = self.options['format'], self.options['data_bits']
 
         # Assume "is printable" for values from 32 to including 126,
         # below 32 is "control" and thus not printable, above 127 is
@@ -377,8 +377,8 @@ class Decoder(srd.Decoder):
     def get_parity_bit(self, rxtx, signal):
         self.paritybit[rxtx] = signal
 
-        if parity_ok(self.options['parity_type'], self.paritybit[rxtx],
-                     self.datavalue[rxtx], self.options['num_data_bits']):
+        if parity_ok(self.options['parity'], self.paritybit[rxtx],
+                     self.datavalue[rxtx], self.options['data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
             self.putg([rxtx + 4, ['Parity bit', 'Parity', 'P']])
         else:
@@ -429,10 +429,10 @@ class Decoder(srd.Decoder):
         elif state == 'GET DATA BITS':
             bitnum = 1 + self.cur_data_bit[rxtx]
         elif state == 'GET PARITY BIT':
-            bitnum = 1 + self.options['num_data_bits']
+            bitnum = 1 + self.options['data_bits']
         elif state == 'GET STOP BITS':
-            bitnum = 1 + self.options['num_data_bits']
-            bitnum += 0 if self.options['parity_type'] == 'none' else 1
+            bitnum = 1 + self.options['data_bits']
+            bitnum += 0 if self.options['parity'] == 'none' else 1
         want_num = ceil(self.get_sample_point(rxtx, bitnum))
         return {'skip': want_num - self.samplenum}
 
@@ -514,9 +514,9 @@ class Decoder(srd.Decoder):
         # Determine the number of samples for a complete frame's time span.
         # A period of low signal (at least) that long is a break condition.
         frame_samples = 1 # START
-        frame_samples += self.options['num_data_bits']
-        frame_samples += 0 if self.options['parity_type'] == 'none' else 1
-        frame_samples += self.options['num_stop_bits']
+        frame_samples += self.options['data_bits']
+        frame_samples += 0 if self.options['parity'] == 'none' else 1
+        frame_samples += self.options['stop_bits']
         frame_samples *= self.bit_width
         self.frame_len_sample_count = ceil(frame_samples)
         self.break_min_sample_count = self.frame_len_sample_count
