@@ -504,8 +504,8 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
 
         has_pin = [self.has_channel(ch) for ch in (RX, TX)]
-        if has_pin == [False, False]:
-            raise ChannelError('Either TX or RX (or both) pins required.')
+        if not True in has_pin:
+            raise ChannelError('Need at least one of TX or RX pins.')
 
         opt = self.options
         inv = [opt['invert_rx'] == 'yes', opt['invert_tx'] == 'yes']
