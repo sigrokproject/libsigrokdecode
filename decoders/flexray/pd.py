@@ -58,8 +58,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'channel_type', 'desc': 'Channel type', 'default': 'A',
             'values': ('A', 'B')},
-        {'id': 'bitrate', 'desc': 'Bitrate (Mbit/s)', 'default': '10.0',
-            'values': ('10.0', '5.0', '2.5')},
+        {'id': 'bitrate', 'desc': 'Bitrate (bit/s)', 'default': 10000000,
+            'values': (10000000, 5000000, 2500000)},
     )
     annotations = (
         ('data', 'FlexRay payload data'),
@@ -102,7 +102,7 @@ class Decoder(srd.Decoder):
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
-            bitrate = 1000000 * float(self.options['bitrate'])
+            bitrate = float(self.options['bitrate'])
             self.samplerate = value
             self.bit_width = float(self.samplerate) / bitrate
             self.sample_point = (self.bit_width / 100.0) * self.sample_point_percent
