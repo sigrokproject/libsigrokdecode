@@ -82,55 +82,56 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_ann, data)
 
     def handle_bit(self):
-        if len(self.bits) == 6:
-            if self.bits[0][2] == 8 and self.bits[0][3] == 1:
-                self.putb(self.bits[0], [1, ['Synchronisation', 'Sync']])
-            else:
-                return
-            if self.bits[1][3] == 1:
-                self.putb(self.bits[1], [2, ['Startbit', 'Start']])
-            else:
-                return
-            self.mode = sum([self.bits[2 + i][3] << (2 - i) for i in range(3)])
-            self.putbits(self.bits[2], self.bits[4], [3, ['Field: %d' % self.mode]])
-            self.putb(self.bits[5], [4, ['Toggle: %d' % self.bits[5][3]]])
+        if len(self.bits) != 6:
+            return
+        if self.bits[0][2] == 8 and self.bits[0][3] == 1:
+            self.putb(self.bits[0], [1, ['Synchronisation', 'Sync']])
+        else:
+            return
+        if self.bits[1][3] == 1:
+            self.putb(self.bits[1], [2, ['Startbit', 'Start']])
+        else:
+            return
+        self.mode = sum([self.bits[2 + i][3] << (2 - i) for i in range(3)])
+        self.putbits(self.bits[2], self.bits[4], [3, ['Field: %d' % self.mode]])
+        self.putb(self.bits[5], [4, ['Toggle: %d' % self.bits[5][3]]])
 
     def handle_package(self):
         # Sync and start bits have to be 1.
         if self.bits[0][3] == 0 or self.bits[1][3] == 0:
             return
-        if len(self.bits) > 6:
-            if self.mode == 0: # Mode 0 standard
-                if len(self.bits) == 22:
-                    value = sum([self.bits[6 + i][3] << (7 - i) for i in range(8)])
-                    self.putbits(self.bits[6], self.bits[13], [5, ['Address: %0.2X' % value]])
+        if len(self.bits) <= 6:
+            return
 
-                    value = sum([self.bits[14 + i][3] << (7 - i) for i in range(8)])
-                    self.putbits(self.bits[14], self.bits[21], [6, ['Data: %0.2X' % value]])
+        if self.mode == 0 and len(self.bits) == 22: # Mode 0 standard
+            value = sum([self.bits[6 + i][3] << (7 - i) for i in range(8)])
+            self.putbits(self.bits[6], self.bits[13], [5, ['Address: %0.2X' % value]])
 
-                    self.bits = []
+            value = sum([self.bits[14 + i][3] << (7 - i) for i in range(8)])
+            self.putbits(self.bits[14], self.bits[21], [6, ['Data: %0.2X' % value]])
 
-            if self.mode == 6: # Mode 6
-                if len(self.bits) >= 15:
-                    if self.bits[6][3] == 0: # Short addr, Mode 6A
-                        value = sum([self.bits[6 + i][3] << (7 - i) for i in range(8)])
-                        self.putbits(self.bits[6], self.bits[13], [5, ['Address: %0.2X' % value]])
+            self.bits = []
 
-                        num_data_bits = len(self.bits) - 14
-                        value = sum([self.bits[14 + i][3] << (num_data_bits - 1 - i) for i in range(num_data_bits)])
-                        self.putbits(self.bits[14], self.bits[-1], [6, ['Data: %X' % value]])
+        if self.mode == 6 and len(self.bits) >= 15: # Mode 6
+            if self.bits[6][3] == 0: # Short addr, Mode 6A
+                value = sum([self.bits[6 + i][3] << (7 - i) for i in range(8)])
+                self.putbits(self.bits[6], self.bits[13], [5, ['Address: %0.2X' % value]])
 
-                        self.bits = []
+                num_data_bits = len(self.bits) - 14
+                value = sum([self.bits[14 + i][3] << (num_data_bits - 1 - i) for i in range(num_data_bits)])
+                self.putbits(self.bits[14], self.bits[-1], [6, ['Data: %X' % value]])
 
-                    elif len(self.bits) >= 23: # Long addr, Mode 6B
-                        value = sum([self.bits[6 + i][3] << (15 - i) for i in range(16)])
-                        self.putbits(self.bits[6], self.bits[21], [5, ['Address: %0.2X' % value]])
+                self.bits = []
 
-                        num_data_bits = len(self.bits) - 22
-                        value = sum([self.bits[22 + i][3] << (num_data_bits - 1 - i) for i in range(num_data_bits)])
-                        self.putbits(self.bits[22], self.bits[-1], [6, ['Data: %X' % value]])
+            elif len(self.bits) >= 23: # Long addr, Mode 6B
+                value = sum([self.bits[6 + i][3] << (15 - i) for i in range(16)])
+                self.putbits(self.bits[6], self.bits[21], [5, ['Address: %0.2X' % value]])
 
-                        self.bits = []
+                num_data_bits = len(self.bits) - 22
+                value = sum([self.bits[22 + i][3] << (num_data_bits - 1 - i) for i in range(num_data_bits)])
+                self.putbits(self.bits[22], self.bits[-1], [6, ['Data: %X' % value]])
+
+                self.bits = []
 
     def decode(self):
         if not self.samplerate:
