@@ -114,6 +114,7 @@ class Decoder(srd.Decoder):
             'values': ('yes', 'no')},
         {'id': 'invert_tx', 'desc': 'Invert TX', 'default': 'no',
             'values': ('yes', 'no')},
+        {'id': 'sample_point', 'desc': 'Sample point (%)', 'default': 50},
         {'id': 'rx_packet_delim', 'desc': 'RX packet delimiter (decimal)',
             'default': -1},
         {'id': 'tx_packet_delim', 'desc': 'TX packet delimiter (decimal)',
@@ -224,12 +225,15 @@ class Decoder(srd.Decoder):
 
     def get_sample_point(self, rxtx, bitnum):
         # Determine absolute sample number of a bit slot's sample point.
-        # bitpos is the samplenumber which is in the middle of the
-        # specified UART bit (0 = start bit, 1..x = data, x+1 = parity bit
-        # (if used) or the first stop bit, and so on).
-        # The samples within bit are 0, 1, ..., (bit_width - 1), therefore
-        # index of the middle sample within bit window is (bit_width - 1) / 2.
-        bitpos = self.frame_start[rxtx] + (self.bit_width - 1) / 2.0
+        # Counts for UART bits start from 0 (0 = start bit, 1..x = data,
+        # x+1 = parity bit (if used) or the first stop bit, and so on).
+        # Accept a position in the range of 1.99% of the full bit width.
+        # Assume 50% for invalid input specs for backwards compatibility.
+        perc = self.options['sample_point'] or 50
+        if not perc or perc not in range(1, 100):
+            perc = 50
+        bitpos = (self.bit_width - 1) * perc / 100
+        bitpos += self.frame_start[rxtx]
         bitpos += bitnum * self.bit_width
         return bitpos
 
