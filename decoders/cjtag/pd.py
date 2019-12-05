@@ -2,6 +2,8 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2012-2015 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2019 Zhiyuan Wan <dv.xw@qq.com>
+## Copyright (C) 2019 Kongou Hikari <hikari@iloli.bid>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -55,9 +57,9 @@ jtag_states = [
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'jtag'
-    name = 'JTAG'
-    longname = 'Joint Test Action Group (IEEE 1149.1)'
+    id = 'cjtag'
+    name = 'cJTAG'
+    longname = 'Compact Joint Test Action Group (IEEE 1149.7)'
     desc = 'Protocol for testing, debugging, and flashing ICs.'
     license = 'gplv2+'
     inputs = ['logic']
@@ -79,12 +81,16 @@ class Decoder(srd.Decoder):
         ('bit-tdo', 'Bit (TDO)'),
         ('bitstring-tdi', 'Bitstring (TDI)'),
         ('bitstring-tdo', 'Bitstring (TDO)'),
+        ('bit-tms', 'Bit (TMS)'),
+        ('state-tapc', 'TAPC state'),
     )
     annotation_rows = (
         ('bits-tdi', 'Bits (TDI)', (16,)),
         ('bits-tdo', 'Bits (TDO)', (17,)),
         ('bitstrings-tdi', 'Bitstrings (TDI)', (18,)),
         ('bitstrings-tdo', 'Bitstrings (TDO)', (19,)),
+        ('bit-tms', 'Bit (TMS)', (20,)),
+        ('state-tapc', 'TAPC state', (21,)),
         ('states', 'States', tuple(range(15 + 1))),
     )
 
@@ -94,6 +100,13 @@ class Decoder(srd.Decoder):
     def reset(self):
         # self.state = 'TEST-LOGIC-RESET'
         self.state = 'RUN-TEST/IDLE'
+        self.cjtagstate = '4-WIRE'
+        self.oldcjtagstate = None
+        self.escape_edges = 0
+        self.oaclen = 0
+        self.oldtms = 0
+        self.oacp = 0
+        self.oscan1cycle = 0
         self.oldstate = None
         self.bits_tdi = []
         self.bits_tdo = []
@@ -123,6 +136,41 @@ class Decoder(srd.Decoder):
 
     def advance_state_machine(self, tms):
         self.oldstate = self.state
+
+        if self.cjtagstate.startswith('CJTAG-'):
+            self.oacp = self.oacp + 1
+            if (self.oacp > 4 and self.oaclen == 12):
+                self.cjtagstate = 'CJTAG-EC'
+
+            if (self.oacp == 8 and tms == 0):
+                self.oaclen = 36
+            if (self.oacp > 8 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-SPARE'
+            if (self.oacp > 13 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-TPDEL'
+            if (self.oacp > 16 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-TPREV'
+            if (self.oacp > 18 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-TPST'
+            if (self.oacp > 23 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-RDYC'
+            if (self.oacp > 25 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-DLYC'
+            if (self.oacp > 27 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-SCNFMT'
+
+            if (self.oacp > 8 and self.oaclen == 12):
+                self.cjtagstate = 'CJTAG-CP'
+            if (self.oacp > 32 and self.oaclen == 36):
+                self.cjtagstate = 'CJTAG-CP'
+
+            if (self.oacp > self.oaclen):
+                self.cjtagstate = 'OSCAN1'
+                self.oscan1cycle = 1
+                # Because Nuclei cJTAG device asserts a reset during cJTAG
+                # online activating.
+                self.state = 'TEST-LOGIC-RESET'
+            return
 
         # Intro "tree"
         if self.state == 'TEST-LOGIC-RESET':
@@ -162,8 +210,7 @@ class Decoder(srd.Decoder):
         elif self.state == 'UPDATE-IR':
             self.state = 'SELECT-DR-SCAN' if (tms) else 'RUN-TEST/IDLE'
 
-    def handle_rising_tck_edge(self, pins):
-        (tdi, tdo, tck, tms, trst, srst, rtck) = pins
+    def handle_rising_tck_edge(self, tdi, tdo, tck, tms, trst, srst, rtck):
 
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
@@ -178,6 +225,11 @@ class Decoder(srd.Decoder):
             # Output the old state (from last rising TCK edge to current one).
             self.putx([jtag_states.index(self.oldstate), [self.oldstate]])
             self.putp(['NEW STATE', self.state])
+
+            self.putx([21, [self.oldcjtagstate]])
+            if (self.oldcjtagstate.startswith('CJTAG-')):
+                self.putx([20, [str(self.oldtms)]])
+        self.oldtms = tms
 
         # Upon SHIFT-*/EXIT1-* collect the current TDI/TDO values.
         if self.oldstate.startswith('SHIFT-') or \
@@ -228,7 +280,50 @@ class Decoder(srd.Decoder):
 
         self.ss_item = self.samplenum
 
+    def handle_tms_edge(self, tck, tms):
+        self.escape_edges = self.escape_edges + 1
+
+    def handle_tapc_state(self, tck, tms):
+        self.oldcjtagstate = self.cjtagstate
+
+        if self.escape_edges >= 8:
+            self.cjtagstate = '4-WIRE'
+        if self.escape_edges == 6:
+            self.cjtagstate = 'CJTAG-OAC'
+            self.oacp = 0
+            self.oaclen = 12
+
+        self.escape_edges = 0
+
     def decode(self):
+        tdi_real = 0
+        tms_real = 0
+        tdo_real = 0
+
         while True:
             # Wait for a rising edge on TCK.
-            self.handle_rising_tck_edge(self.wait({2: 'r'}))
+            (tdi, tdo, tck, tms, trst, srst, rtck) = self.wait({2: 'r'})
+            self.handle_tapc_state(tck, tms)
+
+            if (self.cjtagstate == 'OSCAN1'):
+                if (self.oscan1cycle == 0): # nTDI
+                    if (tms == 0):
+                        tdi_real = 1
+                    else:
+                        tdi_real = 0
+                    self.oscan1cycle = 1
+                elif (self.oscan1cycle == 1): # TMS
+                    tms_real = tms
+                    self.oscan1cycle = 2
+                elif (self.oscan1cycle == 2): # TDO
+                    tdo_real = tms
+                    self.handle_rising_tck_edge(tdi_real, tdo_real, tck, tms_real, trst, srst, rtck)
+                    self.oscan1cycle = 0
+            else:
+                self.handle_rising_tck_edge(tdi, tdo, tck, tms, trst, srst, rtck)
+
+            while (tck == 1):
+                (tdi, tdo, tck, tms_n, trst, srst, rtck) = self.wait([{2: 'f'}, {3: 'e'}])
+                if (tms_n != tms):
+                    tms = tms_n
+                    self.handle_tms_edge(tck, tms)

@@ -25,6 +25,12 @@ and flashing various digital ICs.
 Details:
 https://en.wikipedia.org/wiki/Joint_Test_Action_Group
 http://focus.ti.com/lit/an/ssya002c/ssya002c.pdf
+
+This decoder handles a tiny part of IEEE 1149.7, the CJTAG OSCAN1 format.
+ZBS is currently not supported.
+
+Details:
+http://developers-club.com/posts/237885/
 '''
 
 from .pd import Decoder
