@@ -255,7 +255,7 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'ieee488'
     name = 'IEEE-488'
-    longname = 'General Purpose Interface Bus'
+    longname = 'IEEE-488 GPIB/HPIB/IEC'
     desc = 'IEEE-488 General Purpose Interface Bus (GPIB/HPIB or IEC).'
     license = 'gplv2+'
     inputs = ['logic']
