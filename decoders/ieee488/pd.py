@@ -145,10 +145,7 @@ def _is_msb_set(b):
 
 def _get_raw_byte(b, atn):
     # "Decorate" raw byte values for stacked decoders.
-    raw_byte = b
-    if atn:
-        raw_byte |= 0x100
-    return raw_byte
+    return b | 0x100 if atn else b
 
 def _get_raw_text(b, atn):
     return ['{leader}{data:02x}'.format(leader = '/' if atn else '', data = b)]
