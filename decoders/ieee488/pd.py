@@ -407,6 +407,7 @@ class Decoder(srd.Decoder):
         if ifc:
             self.last_talker = None
             self.last_listener = []
+            self.flush_bytes_text_accu()
 
     def handle_eoi_change(self, eoi):
         # Track EOI line for parallel and serial input.
