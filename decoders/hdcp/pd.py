@@ -39,6 +39,27 @@ msg_ids = {
     17: 'RepeaterAuth_Stream_Ready',
 }
 
+write_items = {
+    0x00: '1.4 Bksv - Receiver KSV',
+    0x08: '1.4 Ri\' - Link Verification',
+    0x0a: '1.4 Pj\' - Enhanced Link Verification',
+    0x10: '1.4 Aksv - Transmitter KSV',
+    0x15: '1.4 Ainfo - Transmitter KSV',
+    0x18: '1.4 An - Session random number',
+    0x20: '1.4 V\'H0',
+    0x24: '1.4 V\'H1',
+    0x28: '1.4 V\'H2',
+    0x2c: '1.4 V\'H3',
+    0x30: '1.4 V\'H4',
+    0x40: '1.4 Bcaps',
+    0x41: '1.4 Bstatus',
+    0x43: '1.4 KSV FIFO',
+    0x50: 'HDCP2Version',
+    0x60: 'Write_Message',
+    0x70: 'RxStatus',
+    0x80: 'Read_Message',
+}
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'hdcp'
@@ -98,7 +119,6 @@ class Decoder(srd.Decoder):
             elif cmd != 'START REPEAT':
                 return
             self.state = 'GET SLAVE ADDR'
-
         elif self.state == 'GET SLAVE ADDR':
             if cmd == 'ADDRESS READ':
                 self.state = 'BUFFER DATA'
@@ -108,59 +128,20 @@ class Decoder(srd.Decoder):
                 self.state = 'WRITE OFFSET'
                 if databyte != 0x3a:
                     self.state = 'IDLE'
-
         elif self.state == 'WRITE OFFSET':
             if cmd == 'DATA WRITE':
-                if databyte == 0x00:
-                    self.type = '1.4 Bksv - Receiver KSV'
-                elif databyte == 0x08:
-                    self.type = '1.4 Ri\' - Link Verification'
-                elif databyte == 0x0a:
-                    self.type = '1.4 Pj\' - Enhanced Link Verification'
-                elif databyte == 0x10:
-                    self.type = '1.4 Aksv - Transmitter KSV'
+                if databyte in write_items:
+                    self.type = write_items[databyte]
+                if databyte in (0x10, 0x15, 0x18, 0x60):
                     self.state = 'BUFFER DATA'
-                elif databyte == 0x15:
-                    self.type = '1.4 Ainfo- Transmitter KSV'
-                    self.state = 'BUFFER DATA'
-                elif databyte == 0x18:
-                    self.type = '1.4 An- Session random number'
-                    self.state = 'BUFFER DATA'
-                elif databyte == 0x20:
-                    self.type = '1.4 V\'H0'
-                elif databyte == 0x24:
-                    self.type = '1.4 V\'H1'
-                elif databyte == 0x28:
-                    self.type = '1.4 V\'H2'
-                elif databyte == 0x2c:
-                    self.type = '1.4 V\'H3'
-                elif databyte == 0x30:
-                    self.type = '1.4 V\'H4'
-                elif databyte == 0x40:
-                    self.type = '1.4 Bcaps'
-                elif databyte == 0x41:
-                    self.type = '1.4 Bstatus'
-                elif databyte == 0x43:
-                    self.type = '1.4 KSV FIFO'
-                elif databyte == 0x50:
-                    self.type = 'HDCP2Version'
-                elif databyte == 0x60:
-                    self.type = 'Write_Message'
-                    self.state = 'BUFFER DATA'
-                elif databyte == 0x70:
-                    self.type = 'RxStatus'
-                elif databyte == 0x80:
-                    self.type = 'Read_Message'
-
                 # If we are reading, then jump back to IDLE for a start repeat.
                 # If we are writing, then just continue onwards.
                 if self.state == 'BUFFER DATA':
-                    self.state = 'BUFFER DATA'
+                    pass
                 elif self.type != '':
                     self.state = 'IDLE'
-
         elif self.state == 'BUFFER DATA':
-            if (cmd == 'STOP') or (cmd == 'NACK'):
+            if cmd in ('STOP', 'NACK'):
                 self.es_block = es
                 self.state = 'IDLE'
                 if self.type != '':
