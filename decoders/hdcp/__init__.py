@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2018 Dave Craig<dcraig@brightsign.biz>
+## Copyright (C) 2018 Dave Craig <dcraig@brightsign.biz>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
