@@ -286,6 +286,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'iec_periph', 'desc': 'Decode Commodore IEC bus peripherals details',
             'default': 'no', 'values': ('no', 'yes')},
+        {'id': 'delim', 'desc': 'Payload data delimiter',
+            'default': 'eol', 'values': ('none', 'eol')},
     )
     annotations = (
         ('bit', 'IEC bit'),
@@ -374,6 +376,31 @@ class Decoder(srd.Decoder):
             self.accu_text = []
         self.ss_text = self.es_text = None
 
+    def check_extra_flush(self, b):
+        # Optionally flush previously accumulated runs of payload data
+        # according to user specified conditions.
+        if self.options['delim'] == 'none':
+            return
+        if not self.accu_bytes:
+            return
+
+        # This implementation exlusively handles "text lines", but adding
+        # support for more variants here is straight forward.
+        #
+        # Search for the first data byte _after_ a user specified text
+        # line termination sequence was seen. The termination sequence's
+        # alphabet may be variable, and the sequence may span multiple
+        # data bytes. We accept either CR or LF, and combine the CR+LF
+        # sequence to strive for maximum length annotations for improved
+        # readability at different zoom levels. It's acceptable that this
+        # implementation would also combine multiple line terminations
+        # like LF+LF.
+        term_chars = (10, 13)
+        is_eol = b in term_chars
+        had_eol = self.accu_bytes[-1] in term_chars
+        if had_eol and not is_eol:
+            self.flush_bytes_text_accu()
+
     def handle_ifc_change(self, ifc):
         # Track IFC line for parallel input.
         # Assertion of IFC de-selects all talkers and listeners.
@@ -446,6 +473,8 @@ class Decoder(srd.Decoder):
             # TODO Process data depending on peripheral type and channel?
 
     def handle_data_byte(self):
+        if not self.curr_atn:
+            self.check_extra_flush(self.curr_raw)
         b = self.curr_raw
         texts = _get_raw_text(b, self.curr_atn)
         self.emit_data_ann(self.ss_raw, self.es_raw, ANN_RAW_BYTE, texts)
