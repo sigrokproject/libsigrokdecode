@@ -195,7 +195,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.samplenum = 0
         self.frame_start = [-1, -1]
         self.frame_valid = [None, None]
         self.startbit = [-1, -1]

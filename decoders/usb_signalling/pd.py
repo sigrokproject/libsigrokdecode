@@ -142,7 +142,6 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_block = None
-        self.samplenum = 0
         self.bitrate = None
         self.bitwidth = None
         self.samplepos = None

@@ -58,7 +58,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.samplenum = None
         self.edges, self.deltas, self.bits = [], [], []
         self.state = 'IDLE'
         self.mode = 0

@@ -137,7 +137,6 @@ class Decoder(srd.Decoder):
         self.misobytes = []
         self.mosibytes = []
         self.ss_block = -1
-        self.samplenum = -1
         self.ss_transfer = -1
         self.cs_was_deasserted = False
         self.have_cs = self.have_miso = self.have_mosi = None

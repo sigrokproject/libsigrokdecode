@@ -142,7 +142,6 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.state = 'IDLE'
         self.oldlclk = -1
-        self.samplenum = 0
         self.lad = -1
         self.addr = 0
         self.cur_nibble = 0
