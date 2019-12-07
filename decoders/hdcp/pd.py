@@ -48,6 +48,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = ['hdcp']
+    tags = ['PC', 'Security/crypto']
     annotations = \
         tuple(('message-0x%02X' % i, 'Message 0x%02X' % i) for i in range(18)) + (
         ('summary', 'Summary'),
