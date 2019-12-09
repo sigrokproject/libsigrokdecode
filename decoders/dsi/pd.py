@@ -111,6 +111,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         bit = 0
         while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
             (self.dsi,) = self.wait()
             if self.options['polarity'] == 'active-high':
                 self.dsi ^= 1 # Invert.
