@@ -385,7 +385,7 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 
 /**
  * Convert a Python list of unicode strings to a C string vector.
- * On success, a pointer to a newly allocated NULL-terminated array of
+ * On success, a pointer to a newly allocated NUL-terminated array of
  * allocated C strings is written to @a out_strv. The caller must g_free()
  * each string and the array itself.
  *

@@ -171,8 +171,8 @@ struct srd_decoder {
 	GSList *opt_channels;
 
 	/**
-	 * List of NULL-terminated char[], containing descriptions of the
-	 * supported annotation output.
+	 * List of annotation classes. Each list item is a GSList itself, with
+	 * two NUL-terminated strings: name and description.
 	 */
 	GSList *annotations;
 
@@ -183,8 +183,8 @@ struct srd_decoder {
 	GSList *annotation_rows;
 
 	/**
-	 * List of NULL-terminated char[], containing descriptions of the
-	 * supported binary output.
+	 * List of binary classes. Each list item is a GSList itself, with
+	 * two NUL-terminated strings: name and description.
 	 */
 	GSList *binary;
 
@@ -306,11 +306,11 @@ struct srd_proto_data {
 	void *data;
 };
 struct srd_proto_data_annotation {
-	int ann_class;
+	int ann_class; /* Index into "struct srd_decoder"->annotations. */
 	char **ann_text;
 };
 struct srd_proto_data_binary {
-	int bin_class;
+	int bin_class; /* Index into "struct srd_decoder"->binary. */
 	uint64_t size;
 	const unsigned char *data;
 };
