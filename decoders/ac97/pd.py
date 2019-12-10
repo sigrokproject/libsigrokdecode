@@ -153,8 +153,6 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_binary, [cls, data])
 
     def __init__(self):
-        self.out_binary = None
-        self.out_ann = None
         self.reset()
 
     def reset(self):
@@ -168,10 +166,8 @@ class Decoder(srd.Decoder):
         }
 
     def start(self):
-        if not self.out_binary:
-            self.out_binary = self.register(srd.OUTPUT_BINARY)
-        if not self.out_ann:
-            self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
+        self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:

@@ -89,7 +89,6 @@ class Decoder(srd.Decoder):
         self.lin_header = []
         self.lin_rsp = []
         self.lin_version = None
-        self.out_ann = None
         self.ss_block = None
         self.es_block = None
 
