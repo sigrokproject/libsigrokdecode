@@ -1,3 +1,105 @@
+0.5.3 (2019-12-11)
+------------------
+
+Note: This release does NOT change the libsigrokdecode public C API in
+incompatible ways. This means existing frontends should not require any
+changes. However, individual PDs and their output changed, which may
+require some adaptations on the user's side in some cases.
+
+ * New supported protocol decoders:
+   - lin              Local Interconnect Network (LIN) protocol
+   - x2444m           Xicor X2444M/P nonvolatile static RAM protocol
+   - ds2408           1-Wire 8-channel addressable switch
+   - cc1101           Low-power sub-1GHz RF transceiver chip
+   - enc28j60         Microchip ENC28J60 10Base-T Ethernet controller protocol
+   - pca9571          NXP PCA9571 8-bit I²C output expander
+   - seven_segment    7-segment display protocol
+   - amulet_ascii     Amulet Technologies LCD controller ASCII protocol
+   - tdm_audio        TDM multi-channel audio protocol
+   - signature        Annotate signature of logic patterns
+   - nes_gamepad      NES gamepad button states
+   - flexray          Automotive network communications protocol
+   - ir_rc6           RC-6 infrared remote control protocol
+   - ieee488          IEEE-488 General Purpose Interface Bus (GPIB/HPIB or IEC)
+   - hdcp             HDCP protocol over HDMI
+ * Add a mandatory 'tags' decoder metadata field that can be used by frontends
+   for grouping various PDs together by topic, e.g. "Sensor", "Audio", etc.
+   The full list of currently used tags is documented in the HACKING file.
+ * All decoders must implement a reset() method now. It should reset all
+   PD-internal state and will be called when the decoder is restarted from
+   scratch (by frontends) with new data.
+ * Fix various memory leaks and bad memory accesses (e.g. bug #1374).
+ * Build system: Add support for Python 3.8 (bug #1438).
+ * Various compiler warning fixes.
+ * Slightly more detailed and easier to read log messages in some places.
+ * Fix incorrect decoder 'output' metadata.
+ * Improve annotation row ordering in various PDs.
+ * ook:
+   - Fix two typos causing decode issues.
+ * uart:
+   - Add support for break condition detection.
+   - Add 'FRAME' Python output type that communicates frame validity.
+   - Add '[rx|tx]_packet_delimiter' options.
+   - Add '[rx|tx]_packet_len' options.
+   - Communicate periods of idle frames to stacked decoders.
+   - Add 'ignore' parity type, remove unsupported 'check_parity' option.
+   - Shorten/rename various decoder option names.
+ * spiflash:
+   - Add support for Winbond W25Q80DV and Atmel AT25xxx.
+   - Add support for the chip erase commands (CE, CE2).
+   - Add support for write enable state tracking.
+   - Remember write protection latch from status registers.
+   - Fix WRSR incorrectly using MISO for register decodes.
+   - Add "EEPROM" to descriptions to increase discoverability in UIs.
+ * i2s:
+   - Fix incorrect channel assignment.
+   - Fix usage of the incorrect edge for the data sampling.
+ * ds1307:
+   - Fix incorrect unit for frequencies above 1Hz.
+   - Fix incorrect AM/PM flag handling.
+ * ir_rc5:
+   - Fix an incorrect command value.
+   - Massively improve performance via proper self.wait() usage.
+ * onewire_network:
+   - Add support for the 'Resume ROM' command.
+   - Add a 'Disable Test Mode' command for DS2408.
+ * sdcard_spi:
+   - Add support for CMD24 including payload data (bug #1365).
+   - Fix duplicated 'End bit' annotation emission.
+   - Fix incorrect handling of CMD17 (bug #1377).
+   - Add "Card is busy" annotations for CMD24 (bug #1376).
+ * spi:
+   - Add support for "transfer" annotations.
+ * atsha204a:
+   - Add support for ATECC508A.
+   - Display OtherData parameter correctly when Verify command is executed
+     in Validate mode.
+   - Only call output_tx_bytes() when the bytes buffer is not empty.
+ * usb_request:
+   - Append OUT data only if it has been ACK'd.
+   - Always keep IN and OUT transfers separate. In case the transfer is an
+     IN transfer, set the high bit as used in the endpoint descriptors (i.e.
+     0x81 is IN enpoint 1, 0x01 is OUT endpoint 1).
+   - Use separate annotation rows for IN, OUT and CONTROL (bug #1046).
+   - Allow configuration of BULK IN transfer display via an option.
+ * modbus:
+   - Make C->S and S->C configurable via options.
+   - Add a 'framegap' option.
+ * mrf24j40:
+   - Add RX/TX frame annotations.
+   - Add TX retries/fails and CCAFAIL support.
+ * eeprom93xx:
+   - Add ASCII format support.
+   - Add OUTPUT_BINARY support.
+ * can:
+   - Add CAN-FD support.
+   - Add new 'fast_bitrate' option.
+   - More robust sample point position for low sample rates.
+ * gpib, iec:
+   - Removed in favor of the new ieee488 decoder.
+ * ir_nec:
+   - Fix decoder when running it multiple times (bug #1243).
+
 0.5.2 (2018-09-12)
 ------------------
 
