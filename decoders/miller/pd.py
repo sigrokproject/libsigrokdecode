@@ -38,7 +38,8 @@ class Decoder(srd.Decoder):
     desc = 'Miller encoding protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['miller']
+    outputs = []
+    tags = ['Encoding']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data signal'},
     )
@@ -56,6 +57,9 @@ class Decoder(srd.Decoder):
     )
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.samplerate = None
 
     def metadata(self, key, value):

@@ -52,7 +52,8 @@ class Decoder(srd.Decoder):
     desc = 'Protocol used by Qi receiver.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['qi']
+    outputs = []
+    tags = ['Embedded/industrial', 'Wireless/RF']
     channels = (
         {'id': 'qi', 'name': 'Qi', 'desc': 'Demodulated Qi data line'},
     )

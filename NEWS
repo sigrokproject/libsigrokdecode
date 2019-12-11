@@ -309,7 +309,7 @@ means it is NOT backwards-compatible and frontends will need updates.
  * jitter:
    - Avoid Unicode string literals (bug #569).
  * jtag:
-   - Fix/enable OUT_PYTHON output.
+   - Fix/enable OUTPUT_PYTHON output.
    - Add more annotations, fix a SHIFT-IR/-DR issue.
  * jtag_stm32:
    - Fix incorrect handling of registers.
@@ -331,7 +331,7 @@ means it is NOT backwards-compatible and frontends will need updates.
  * pwm:
    - Avoid Unicode string literals (bug #569).
  * spi:
-   - OUT_PYTHON docs: Fix order of MISO/MOSI data items.
+   - OUTPUT_PYTHON docs: Fix order of MISO/MOSI data items.
    - Tell stacked decoders about missing CS# signal.
    - Add binary output facilities for MISO/MOSI (bug #424).
    - Don't decode data lines if CS# isn't asserted (bug #559).

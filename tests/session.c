@@ -148,10 +148,13 @@ static void conf_check_ok(struct srd_session *sess, int key, uint64_t x)
 static void conf_check_fail(struct srd_session *sess, int key, uint64_t x)
 {
 	int ret;
+	GVariant *value = g_variant_new_uint64(x);
 
-	ret = srd_session_metadata_set(sess, key, g_variant_new_uint64(x));
+	ret = srd_session_metadata_set(sess, key, value);
 	fail_unless(ret != SRD_OK, "srd_session_metadata_set(%p, %d, %"
 		PRIu64 ") worked.", sess, key, x);
+	if (ret != SRD_OK)
+		g_variant_unref(value);
 }
 
 static void conf_check_fail_null(struct srd_session *sess, int key)
@@ -166,10 +169,13 @@ static void conf_check_fail_null(struct srd_session *sess, int key)
 static void conf_check_fail_str(struct srd_session *sess, int key, const char *s)
 {
 	int ret;
+	GVariant *value = g_variant_new_string(s);
 
-	ret = srd_session_metadata_set(sess, key, g_variant_new_string(s));
+	ret = srd_session_metadata_set(sess, key, value);
 	fail_unless(ret != SRD_OK, "srd_session_metadata_set() for key %d "
 		"failed: %d.", key, ret);
+	if (ret != SRD_OK)
+		g_variant_unref(value);
 }
 
 /*

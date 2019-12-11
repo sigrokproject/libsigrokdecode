@@ -27,10 +27,11 @@ class Decoder(srd.Decoder):
     id = 'dsi'
     name = 'DSI'
     longname = 'Digital Serial Interface'
-    desc = 'DSI lighting control protocol.'
+    desc = 'Digital Serial Interface (DSI) lighting protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['dsi']
+    outputs = []
+    tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dsi', 'name': 'DSI', 'desc': 'DSI data line'},
     )
@@ -55,7 +56,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.samplenum = None
         self.edges, self.bits, self.ss_es_bits = [], [], []
         self.state = 'IDLE'
 
@@ -111,6 +111,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         bit = 0
         while True:
+            # TODO: Come up with more appropriate self.wait() conditions.
             (self.dsi,) = self.wait()
             if self.options['polarity'] == 'active-high':
                 self.dsi ^= 1 # Invert.

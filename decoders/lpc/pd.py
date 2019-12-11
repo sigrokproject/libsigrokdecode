@@ -98,11 +98,12 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'lpc'
     name = 'LPC'
-    longname = 'Low-Pin-Count'
+    longname = 'Low Pin Count'
     desc = 'Protocol for low-bandwidth devices on PC mainboards.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['lpc']
+    outputs = []
+    tags = ['PC']
     channels = (
         {'id': 'lframe', 'name': 'LFRAME#', 'desc': 'Frame'},
         {'id': 'lclk',   'name': 'LCLK',    'desc': 'Clock'},
@@ -141,7 +142,6 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.state = 'IDLE'
         self.oldlclk = -1
-        self.samplenum = 0
         self.lad = -1
         self.addr = 0
         self.cur_nibble = 0

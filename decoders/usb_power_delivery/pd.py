@@ -203,6 +203,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb_pd']
+    tags = ['PC']
     channels = (
         {'id': 'cc1', 'name': 'CC1', 'desc': 'Configuration Channel 1'},
     )
@@ -270,7 +271,7 @@ class Decoder(srd.Decoder):
         if pos in self.stored_pdos.keys():
             t_pdo = '#%d: %s' % (pos, self.stored_pdos[pos])
         else:
-            t_pdo = '#d' % (pos)
+            t_pdo = '#%d' % (pos)
 
         return '(PDO %s) %s%s' % (t_pdo, t_settings, t_flags)
 

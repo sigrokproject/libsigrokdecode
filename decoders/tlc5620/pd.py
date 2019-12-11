@@ -34,7 +34,8 @@ class Decoder(srd.Decoder):
     desc = 'Texas Instruments TLC5620 8-bit quad DAC.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['tlc5620']
+    outputs = []
+    tags = ['IC', 'Analog/digital']
     channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Serial interface clock'},
         {'id': 'data', 'name': 'DATA', 'desc': 'Serial interface data'},

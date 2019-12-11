@@ -80,14 +80,15 @@ class Decoder(srd.Decoder):
     desc = 'Data structure describing display device capabilities.'
     license = 'gplv3+'
     inputs = ['i2c']
-    outputs = ['edid']
+    outputs = []
+    tags = ['Display', 'Memory', 'PC']
     annotations = (
         ('fields', 'EDID structure fields'),
         ('sections', 'EDID structure sections'),
     )
     annotation_rows = (
-        ('sections', 'Sections', (1,)),
         ('fields', 'Fields', (0,)),
+        ('sections', 'Sections', (1,)),
     )
 
     def __init__(self):

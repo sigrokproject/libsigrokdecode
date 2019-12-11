@@ -30,7 +30,8 @@ class Decoder(srd.Decoder):
     desc = 'Serial bus for connecting digital audio devices.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['spdif']
+    outputs = []
+    tags = ['Audio', 'PC']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
@@ -46,8 +47,8 @@ class Decoder(srd.Decoder):
         ('parity', 'Parity Bit'),
     )
     annotation_rows = (
-        ('info', 'Info', (0, 1, 3, 5, 6, 7, 8)),
         ('bits', 'Bits', (2,)),
+        ('info', 'Info', (0, 1, 3, 5, 6, 7, 8)),
         ('samples', 'Samples', (4,)),
     )
 

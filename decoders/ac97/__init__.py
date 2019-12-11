@@ -18,9 +18,8 @@
 ##
 
 '''
-AC'97 (Audio Codec '97) was specifically designed by Intel for audio and
-modem I/O functionality in mainstream PC systems. See the specification in
-http://download.intel.com/support/motherboards/desktop/sb/ac97_r23.pdf
+AC'97 (Audio Codec '97) is a protocol for audio and modem I/O functionality
+in mainstream PC systems.
 
 AC'97 communicates full duplex data (SDATA_IN, SDATA_OUT), where bits
 are clocked by the BIT_CLK and frames are signalled by the SYNC signals.
@@ -31,6 +30,9 @@ each. One 16bit slot contains management information, twelve 20bit slots
 follow which carry data for three management and nine audio/modem channels.
 Optionally two slots of one frame can get combined for higher resolution
 on fewer channels, or double data rate.
+
+Details:
+http://download.intel.com/support/motherboards/desktop/sb/ac97_r23.pdf
 '''
 
 from .pd import Decoder

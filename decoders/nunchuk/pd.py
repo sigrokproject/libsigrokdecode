@@ -27,7 +27,8 @@ class Decoder(srd.Decoder):
     desc = 'Nintendo Wii Nunchuk controller protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['nunchuck']
+    outputs = []
+    tags = ['Sensor']
     annotations = \
         tuple(('reg-0x%02X' % i, 'Register 0x%02X' % i) for i in range(6)) + (
         ('bit-bz', 'BZ bit'),

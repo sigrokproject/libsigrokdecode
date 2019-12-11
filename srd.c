@@ -172,6 +172,7 @@ static int print_searchpaths(void)
 		py_path = PyList_GetItem(py_paths, i);
 		py_bytes = PyUnicode_AsUTF8String(py_path);
 		g_string_append_printf(s, " - %s\n", PyBytes_AsString(py_bytes));
+		Py_DECREF(py_bytes);
 	}
 	s->str[s->len - 1] = '\0';
 	srd_dbg("%s", s->str);
@@ -289,6 +290,12 @@ SRD_API int srd_init(const char *path)
 	return SRD_OK;
 }
 
+static void srd_session_destroy_cb(void *arg, void *ignored)
+{
+	(void)ignored; // Prevent unused warning
+	srd_session_destroy((struct srd_session *)arg);
+}
+
 /**
  * Shutdown libsigrokdecode.
  *
@@ -307,8 +314,9 @@ SRD_API int srd_exit(void)
 {
 	srd_dbg("Exiting libsigrokdecode.");
 
-	for (GSList *l = sessions; l; l = l->next)
-		srd_session_destroy(l->data);
+	g_slist_foreach(sessions, srd_session_destroy_cb, NULL);
+	g_slist_free(sessions);
+	sessions = NULL;
 
 	srd_decoder_unload_all();
 	g_slist_free_full(searchpaths, g_free);
@@ -347,8 +355,6 @@ SRD_API int srd_exit(void)
  * @return SRD_OK upon success, a (negative) error code otherwise.
  *
  * @private
- *
- * @since 0.1.0
  */
 SRD_PRIV int srd_decoder_searchpath_add(const char *path)
 {
@@ -396,7 +402,12 @@ err:
  */
 SRD_API GSList *srd_searchpaths_get(void)
 {
-	return g_slist_copy_deep(searchpaths, (GCopyFunc)g_strdup, NULL);
+	GSList *paths = NULL;
+
+	for (GSList *l = searchpaths; l; l = l->next)
+		paths = g_slist_append(paths, g_strdup(l->data));
+
+	return paths;
 }
 
 /** @} */

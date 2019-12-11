@@ -36,7 +36,8 @@ class Decoder(srd.Decoder):
     desc = 'Maple bus peripheral protocol for SEGA Dreamcast.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['maple_bus']
+    outputs = []
+    tags = ['Retro computing']
     channels = (
         {'id': 'sdcka', 'name': 'SDCKA', 'desc': 'Data/clock line A'},
         {'id': 'sdckb', 'name': 'SDCKB', 'desc': 'Data/clock line B'},

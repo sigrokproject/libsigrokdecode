@@ -50,6 +50,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['microwire']
+    tags = ['Embedded/industrial']
     channels = (
         {'id': 'cs', 'name': 'CS', 'desc': 'Chip select'},
         {'id': 'sk', 'name': 'SK', 'desc': 'Clock'},

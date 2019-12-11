@@ -54,6 +54,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ook']
+    tags = ['Encoding']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
@@ -189,7 +190,7 @@ class Decoder(srd.Decoder):
         # Filter incoming pulses to remove random noise.
         if self.state == 'DECODE_TIMEOUT':
             self.preamble = []
-            self.edge_count == 0
+            self.edge_count = 0
             self.word_first = self.samplenum
             self.sample_first = self.samplenum - self.samplenumber_last
             self.state = 'WAITING_FOR_PREAMBLE'
@@ -205,7 +206,7 @@ class Decoder(srd.Decoder):
                 self.preamble = [] # Clear buffer.
                 self.preamble.append([self.samplenumber_last,
                                      pre_samples, state])
-                self.edge_count == 0
+                self.edge_count = 0
                 self.samplenumber_last = self.samplenum
                 self.word_first = self.samplenum
             else:

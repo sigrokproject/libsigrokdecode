@@ -28,7 +28,8 @@ class Decoder(srd.Decoder):
     desc = 'Secure Digital card (SD mode) low-level protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['sdcard_sd']
+    outputs = []
+    tags = ['Memory']
     channels = (
         {'id': 'cmd',  'name': 'CMD',  'desc': 'Command'},
         {'id': 'clk',  'name': 'CLK',  'desc': 'Clock'},

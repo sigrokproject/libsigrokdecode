@@ -71,7 +71,8 @@ class Decoder(srd.Decoder):
     desc     = 'Zilog Z80 microprocessor disassembly.'
     license  = 'gplv3+'
     inputs   = ['logic']
-    outputs  = ['z80']
+    outputs  = []
+    tags     = ['Retro computing']
     channels = tuple({
             'id': 'd%d' % i,
             'name': 'D%d' % i,

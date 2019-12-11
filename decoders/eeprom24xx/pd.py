@@ -28,7 +28,8 @@ class Decoder(srd.Decoder):
     desc = '24xx series I²C EEPROM protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['eeprom24xx']
+    outputs = []
+    tags = ['IC', 'Memory']
     options = (
         {'id': 'chip', 'desc': 'Chip', 'default': 'generic',
             'values': tuple(chips.keys())},

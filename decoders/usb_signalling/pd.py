@@ -104,10 +104,11 @@ class Decoder(srd.Decoder):
     id = 'usb_signalling'
     name = 'USB signalling'
     longname = 'Universal Serial Bus (LS/FS) signalling'
-    desc = 'USB (low-speed and full-speed) signalling protocol.'
+    desc = 'USB (low-speed/full-speed) signalling protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['usb_signalling']
+    tags = ['PC']
     channels = (
         {'id': 'dp', 'name': 'D+', 'desc': 'USB D+ signal'},
         {'id': 'dm', 'name': 'D-', 'desc': 'USB D- signal'},
@@ -141,7 +142,6 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.oldsym = 'J' # The "idle" state is J.
         self.ss_block = None
-        self.samplenum = 0
         self.bitrate = None
         self.bitwidth = None
         self.samplepos = None
@@ -193,7 +193,7 @@ class Decoder(srd.Decoder):
         self.put(s, e, self.out_ann, data)
 
     def set_new_target_samplenum(self):
-        self.samplepos += self.bitwidth;
+        self.samplepos += self.bitwidth
         self.samplenum_target = int(self.samplepos)
         self.samplenum_lastedge = self.samplenum_edge
         self.samplenum_edge = int(self.samplepos - (self.bitwidth / 2))

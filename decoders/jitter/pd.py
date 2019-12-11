@@ -37,7 +37,8 @@ class Decoder(srd.Decoder):
     desc = 'Retrieves the timing jitter between two digital signals.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['jitter']
+    outputs = []
+    tags = ['Clock/timing', 'Util']
     channels = (
         {'id': 'clk', 'name': 'Clock', 'desc': 'Clock reference channel'},
         {'id': 'sig', 'name': 'Resulting signal', 'desc': 'Resulting signal controlled by the clock'},

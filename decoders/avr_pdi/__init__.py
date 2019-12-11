@@ -19,9 +19,10 @@
 
 '''
 PDI (Program and Debug Interface) is an Atmel proprietary interface for
-external programming and on-chip debugging of the device. See the Atmel
-Application Note AVR1612 "PDI programming driver" and the "Program and
-Debug Interface" section in the Xmega A manual for details.
+external programming and on-chip debugging of the device.
+
+See the Atmel Application Note AVR1612 "PDI programming driver" and the
+"Program and Debug Interface" section in the Xmega A manual for details.
 
 The protocol uses two pins: the RESET pin and one dedicated DATA pin.
 The RESET pin provides a clock, the DATA pin communicates serial frames

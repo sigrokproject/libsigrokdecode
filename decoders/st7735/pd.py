@@ -72,7 +72,8 @@ class Decoder(srd.Decoder):
     desc = 'Sitronix ST7735 TFT controller protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['st7735']
+    outputs = []
+    tags = ['Display', 'IC']
     channels = (
         {'id': 'cs', 'name': 'CS#', 'desc': 'Chip-select'},
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},

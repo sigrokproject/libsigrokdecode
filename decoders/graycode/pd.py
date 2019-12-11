@@ -77,10 +77,11 @@ class Decoder(srd.Decoder):
     id = 'graycode'
     name = 'Gray code'
     longname = 'Gray code and rotary encoder'
-    desc = 'Accumulate rotary encoder increments, provide timing statistics.'
+    desc = 'Accumulate rotary encoder increments, provide statistics.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['graycode']
+    outputs = []
+    tags = ['Encoding']
     optional_channels = tuple(
         {'id': 'd{}'.format(i), 'name': 'D{}'.format(i), 'desc': 'Data line {}'.format(i)}
         for i in range(MAX_CHANNELS)

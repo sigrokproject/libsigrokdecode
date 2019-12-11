@@ -82,6 +82,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['spi']
+    tags = ['Embedded/industrial']
     channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
     )
@@ -107,12 +108,16 @@ class Decoder(srd.Decoder):
         ('miso-bits', 'MISO bits'),
         ('mosi-bits', 'MOSI bits'),
         ('warnings', 'Human-readable warnings'),
+        ('miso-transfer', 'MISO transfer'),
+        ('mosi-transfer', 'MOSI transfer'),
     )
     annotation_rows = (
-        ('miso-data', 'MISO data', (0,)),
         ('miso-bits', 'MISO bits', (2,)),
-        ('mosi-data', 'MOSI data', (1,)),
+        ('miso-data', 'MISO data', (0,)),
+        ('miso-transfer', 'MISO transfer', (5,)),
         ('mosi-bits', 'MOSI bits', (3,)),
+        ('mosi-data', 'MOSI data', (1,)),
+        ('mosi-transfer', 'MOSI transfer', (6,)),
         ('other', 'Other', (4,)),
     )
     binary = (
@@ -132,7 +137,6 @@ class Decoder(srd.Decoder):
         self.misobytes = []
         self.mosibytes = []
         self.ss_block = -1
-        self.samplenum = -1
         self.ss_transfer = -1
         self.cs_was_deasserted = False
         self.have_cs = self.have_miso = self.have_mosi = None
@@ -274,7 +278,13 @@ class Decoder(srd.Decoder):
                 self.ss_transfer = self.samplenum
                 self.misobytes = []
                 self.mosibytes = []
-            else:
+            elif self.ss_transfer != -1:
+                if self.have_miso:
+                    self.put(self.ss_transfer, self.samplenum, self.out_ann,
+                        [5, [' '.join(format(x.val, '02X') for x in self.misobytes)]])
+                if self.have_mosi:
+                    self.put(self.ss_transfer, self.samplenum, self.out_ann,
+                        [6, [' '.join(format(x.val, '02X') for x in self.mosibytes)]])
                 self.put(self.ss_transfer, self.samplenum, self.out_python,
                     ['TRANSFER', self.mosibytes, self.misobytes])
 

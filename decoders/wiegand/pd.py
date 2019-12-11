@@ -30,7 +30,8 @@ class Decoder(srd.Decoder):
     desc = 'Wiegand interface for electronic entry systems.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['wiegand']
+    outputs = []
+    tags = ['Embedded/industrial', 'RFID']
     channels = (
         {'id': 'd0', 'name': 'D0', 'desc': 'Data 0 line'},
         {'id': 'd1', 'name': 'D1', 'desc': 'Data 1 line'},

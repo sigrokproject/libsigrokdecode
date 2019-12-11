@@ -31,7 +31,8 @@ class Decoder(srd.Decoder):
     desc = 'NEC infrared remote control protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['ir_nec']
+    outputs = []
+    tags = ['IR']
     channels = (
         {'id': 'ir', 'name': 'IR', 'desc': 'Data line'},
     )
@@ -110,7 +111,6 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.active = 0 if self.options['polarity'] == 'active-low' else 1
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -163,7 +163,9 @@ class Decoder(srd.Decoder):
         cd_count = None
         if self.options['cd_freq']:
             cd_count = int(self.samplerate / self.options['cd_freq']) + 1
-            prev_ir = None
+        prev_ir = None
+
+        self.active = 0 if self.options['polarity'] == 'active-low' else 1
 
         while True:
             # Detect changes in the presence of an active input signal.

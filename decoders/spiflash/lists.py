@@ -65,6 +65,9 @@ device_name = {
         0x15: 'MX25L3205D',
         0x16: 'MX25L6405D',
     },
+    'winbond': {
+        0x13: 'W25Q80DV',
+    },
 }
 
 chips = {
@@ -72,13 +75,36 @@ chips = {
     'adesto_at45db161e': {
         'vendor': 'Adesto',
         'model': 'AT45DB161E',
-        'res_id': 0xff, # The chip doesn't emit an ID here.
-        'rems_id': 0xffff, # Not supported by the chip.
-        'rems2_id': 0xffff, # Not supported by the chip.
+        'res_id': None, # The chip doesn't emit an ID here.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
         'rdid_id': 0x1f26000100, # RDID and 2 extra "EDI" bytes.
         'page_size': 528, # Configurable, could also be 512 bytes.
         'sector_size': 128 * 1024,
         'block_size': 4 * 1024,
+    },
+    # Atmel
+    'atmel_at25128': {
+        'vendor': 'Atmel',
+        'model': 'AT25128',
+        'res_id': None, # Not supported by the chip.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
+        'rdid_id': None, # Not supported by the chip.
+        'page_size': 64,
+        'sector_size': None, # The chip doesn't have sectors.
+        'block_size': None, # The chip doesn't have blocks.
+    },
+    'atmel_at25256': {
+        'vendor': 'Atmel',
+        'model': 'AT25256',
+        'res_id': None, # Not supported by the chip.
+        'rems_id': None, # Not supported by the chip.
+        'rems2_id': None, # Not supported by the chip.
+        'rdid_id': None, # Not supported by the chip.
+        'page_size': 64,
+        'sector_size': None, # The chip doesn't have sectors.
+        'block_size': None, # The chip doesn't have blocks.
     },
     # FIDELIX
     'fidelix_fm25q32': {
@@ -125,5 +151,17 @@ chips = {
         'page_size': 256,
         'sector_size': 4 * 1024,
         'block_size': 64 * 1024,
+    },
+    # Winbond
+    'winbond_w25q80dv': {
+        'vendor': 'Winbond',
+        'model': 'W25Q80DV',
+        'res_id': 0x13,
+        'rems_id': 0xef13,
+        'rems2_id': None, # Not supported by the chip.
+        'rdid_id': 0xef4014,
+        'page_size': 256,
+        'sector_size': 4 * 1024,
+        'block_size': 64 * 1024, # Configurable, could also be 32 * 1024 bytes.
     },
 }

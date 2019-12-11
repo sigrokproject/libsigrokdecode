@@ -146,7 +146,8 @@ class Decoder(srd.Decoder):
     desc = 'ST STM32-specific JTAG protocol.'
     license = 'gplv2+'
     inputs = ['jtag']
-    outputs = ['jtag_stm32']
+    outputs = []
+    tags = ['Debug/trace']
     annotations = (
         ('item', 'Item'),
         ('field', 'Field'),

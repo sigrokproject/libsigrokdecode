@@ -27,10 +27,11 @@ class Decoder(srd.Decoder):
     id = 'xfp'
     name = 'XFP'
     longname = '10 Gigabit Small Form Factor Pluggable Module (XFP)'
-    desc = 'Data structure describing display device capabilities.'
+    desc = 'XFP I²C management interface structures/protocol'
     license = 'gplv3+'
     inputs = ['i2c']
-    outputs = ['xfp']
+    outputs = []
+    tags = ['Networking']
     annotations = (
         ('fieldnames-and-values', 'XFP structure field names and values'),
         ('fields', 'XFP structure fields'),

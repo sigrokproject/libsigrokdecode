@@ -70,6 +70,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['i2c']
+    tags = ['Embedded/industrial']
     channels = (
         {'id': 'scl', 'name': 'SCL', 'desc': 'Serial clock line'},
         {'id': 'sda', 'name': 'SDA', 'desc': 'Serial data line'},

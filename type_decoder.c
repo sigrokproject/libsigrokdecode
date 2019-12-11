@@ -31,7 +31,7 @@ typedef struct {
 } srd_Decoder;
 
 /* This is only used for nicer srd_dbg() output. */
-static const char *output_type_name(unsigned int idx)
+SRD_PRIV const char *output_type_name(unsigned int idx)
 {
 	static const char names[][16] = {
 		"OUTPUT_ANN",
@@ -254,7 +254,7 @@ static inline struct srd_decoder_inst *srd_inst_find_by_obj(
 	sess = sessions->data;
 	di = sess->di_list->data;
 	if (di->py_inst == obj)
-		return di; 
+		return di;
 
 	di = NULL;
 	for (l = sessions; di == NULL && l != NULL; l = l->next) {
@@ -353,9 +353,13 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	}
 	pdo = l->data;
 
-	srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on oid %d.",
-		 di->inst_id, start_sample, end_sample,
-		 output_type_name(pdo->output_type), output_id);
+	/* Upon SRD_OUTPUT_PYTHON for stacked PDs, we have a nicer log message later. */
+	if (pdo->output_type != SRD_OUTPUT_PYTHON && di->next_di != NULL) {
+		srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s on "
+			 "oid %d (%s).", di->inst_id, start_sample, end_sample,
+			 output_type_name(pdo->output_type), output_id,
+			 pdo->proto_id);
+	}
 
 	pdata.start_sample = start_sample;
 	pdata.end_sample = end_sample;
@@ -381,8 +385,11 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	case SRD_OUTPUT_PYTHON:
 		for (l = di->next_di; l; l = l->next) {
 			next_di = l->data;
-			srd_spew("Sending %" PRIu64 "-%" PRIu64 " to instance %s",
-				 start_sample, end_sample, next_di->inst_id);
+			srd_spew("Instance %s put %" PRIu64 "-%" PRIu64 " %s "
+				 "on oid %d (%s) to instance %s.", di->inst_id,
+				 start_sample,
+				 end_sample, output_type_name(pdo->output_type),
+				 output_id, pdo->proto_id, next_di->inst_id);
 			if (!(py_res = PyObject_CallMethod(
 				next_di->py_inst, "decode", "KKO", start_sample,
 				end_sample, py_data))) {
@@ -514,9 +521,6 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 		return py_new_output_id;
 	}
 
-	srd_dbg("Instance %s creating new output type %d for %s.",
-		di->inst_id, output_type, proto_id);
-
 	pdo = g_malloc(sizeof(struct srd_pd_output));
 
 	/* pdo_id is just a simple index, nothing is deleted from this list anyway. */
@@ -535,6 +539,10 @@ static PyObject *Decoder_register(PyObject *self, PyObject *args,
 	py_new_output_id = Py_BuildValue("i", pdo->pdo_id);
 
 	PyGILState_Release(gstate);
+
+	srd_dbg("Instance %s creating new output type %s as oid %d (%s).",
+		di->inst_id, output_type_name(output_type), pdo->pdo_id,
+		proto_id);
 
 	return py_new_output_id;
 
@@ -617,18 +625,20 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
  *
  * If there are no terms in the condition, 'term_list' will be NULL.
  *
+ * @param di The decoder instance to use. Must not be NULL.
  * @param py_dict A Python dict containing terms. Must not be NULL.
  * @param term_list Pointer to a GSList which will be set to the newly
  *                  created list of terms. Must not be NULL.
  *
  * @return SRD_OK upon success, a negative error code otherwise.
  */
-static int create_term_list(PyObject *py_dict, GSList **term_list)
+static int create_term_list(struct srd_decoder_inst *di,
+	PyObject *py_dict, GSList **term_list)
 {
 	Py_ssize_t pos = 0;
 	PyObject *py_key, *py_value;
 	struct srd_term *term;
-	uint64_t num_samples_to_skip;
+	int64_t num_samples_to_skip;
 	char *term_str;
 	PyGILState_STATE gstate;
 
@@ -645,7 +655,6 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 		/* Check whether the current key is a string or a number. */
 		if (PyLong_Check(py_key)) {
 			/* The key is a number. */
-			/* TODO: Check if the number is a valid channel. */
 			/* Get the value string. */
 			if ((py_pydictitem_as_str(py_dict, py_key, &term_str)) != SRD_OK) {
 				srd_err("Failed to get the value.");
@@ -654,10 +663,12 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 			term = g_malloc(sizeof(struct srd_term));
 			term->type = get_term_type(term_str);
 			term->channel = PyLong_AsLong(py_key);
+			if (term->channel < 0 || term->channel >= di->dec_num_channels)
+				term->type = SRD_TERM_ALWAYS_FALSE;
 			g_free(term_str);
 		} else if (PyUnicode_Check(py_key)) {
 			/* The key is a string. */
-			/* TODO: Check if it's "skip". */
+			/* TODO: Check if the key is "skip". */
 			if ((py_pydictitem_as_long(py_dict, py_key, &num_samples_to_skip)) != SRD_OK) {
 				srd_err("Failed to get number of samples to skip.");
 				goto err;
@@ -666,6 +677,8 @@ static int create_term_list(PyObject *py_dict, GSList **term_list)
 			term->type = SRD_TERM_SKIP;
 			term->num_samples_to_skip = num_samples_to_skip;
 			term->num_samples_already_skipped = 0;
+			if (num_samples_to_skip < 0)
+				term->type = SRD_TERM_ALWAYS_FALSE;
 		} else {
 			srd_err("Term key is neither a string nor a number.");
 			goto err;
@@ -745,14 +758,14 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		num_conditions = PyList_Size(py_conditionlist);
 		if (num_conditions == 0)
 			goto ret_9999; /* The PD invoked self.wait([]). */
-		Py_IncRef(py_conditionlist);
+		Py_INCREF(py_conditionlist);
 	} else if (PyDict_Check(py_conds)) {
 		/* 'py_conds' is a dict. */
 		if (PyDict_Size(py_conds) == 0)
 			goto ret_9999; /* The PD invoked self.wait({}). */
 		/* Make a list and put the dict in there for convenience. */
 		py_conditionlist = PyList_New(1);
-		Py_IncRef(py_conds);
+		Py_INCREF(py_conds);
 		PyList_SetItem(py_conditionlist, 0, py_conds);
 		num_conditions = 1;
 	} else {
@@ -776,7 +789,7 @@ static int set_new_condition_list(PyObject *self, PyObject *args)
 		}
 
 		/* Create the list of terms in this condition. */
-		if ((ret = create_term_list(py_dict, &term_list)) < 0)
+		if ((ret = create_term_list(di, py_dict, &term_list)) < 0)
 			break;
 
 		/* Add the new condition to the PD instance's condition list. */
@@ -842,7 +855,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 	unsigned int i;
 	gboolean found_match;
 	struct srd_decoder_inst *di;
-	PyObject *py_pinvalues, *py_matched;
+	PyObject *py_pinvalues, *py_matched, *py_samplenum;
 	PyGILState_STATE gstate;
 
 	if (!self || !args)
@@ -909,14 +922,16 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		/* If there's a match, set self.samplenum etc. and return. */
 		if (found_match) {
 			/* Set self.samplenum to the (absolute) sample number that matched. */
-			PyObject_SetAttrString(di->py_inst, "samplenum",
-				PyLong_FromLong(di->abs_cur_samplenum));
+			py_samplenum = PyLong_FromLong(di->abs_cur_samplenum);
+			PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
+			Py_DECREF(py_samplenum);
 
 			if (di->match_array && di->match_array->len > 0) {
 				py_matched = PyTuple_New(di->match_array->len);
 				for (i = 0; i < di->match_array->len; i++)
 					PyTuple_SetItem(py_matched, i, PyBool_FromLong(di->match_array->data[i]));
 				PyObject_SetAttrString(di->py_inst, "matched", py_matched);
+				Py_DECREF(py_matched);
 				match_array_free(di);
 			} else {
 				PyObject_SetAttrString(di->py_inst, "matched", Py_None);

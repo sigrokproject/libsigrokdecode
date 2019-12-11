@@ -30,7 +30,8 @@ class Decoder(srd.Decoder):
     desc = 'T55xx 100-150kHz RFID protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['t55xx']
+    outputs = []
+    tags = ['IC', 'RFID']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )

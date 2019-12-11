@@ -31,7 +31,8 @@ class Decoder(srd.Decoder):
     desc = 'Bluetooth RF module with Serial Port Profile (SPP).'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = ['pan1321']
+    outputs = []
+    tags = ['Wireless/RF']
     annotations = (
         ('text-verbose', 'Human-readable text (verbose)'),
         ('text', 'Human-readable text'),

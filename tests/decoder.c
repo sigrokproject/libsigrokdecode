@@ -388,11 +388,14 @@ END_TEST
 START_TEST(test_doc_get)
 {
 	struct srd_decoder *dec;
+	char *doc;
 
 	srd_init(DECODERS_TESTDIR);
 	srd_decoder_load("uart");
 	dec = srd_decoder_get_by_id("uart");
-	fail_unless(srd_decoder_doc_get(dec) != NULL);
+	doc = srd_decoder_doc_get(dec);
+	fail_unless(doc != NULL);
+	g_free(doc);
 	srd_exit();
 }
 END_TEST
@@ -401,11 +404,19 @@ END_TEST
  * Check whether srd_decoder_doc_get() fails with NULL as argument.
  * If it returns a value != NULL (or segfaults) this test will fail.
  * See also: http://sigrok.org/bugzilla/show_bug.cgi?id=179
+ * Check whether srd_decoder_doc_get() fails with dec->py_mod == NULL.
+ * If it returns a value != NULL (or segfaults) this test will fail.
+ * See also: http://sigrok.org/bugzilla/show_bug.cgi?id=180
  */
 START_TEST(test_doc_get_null)
 {
+	struct srd_decoder dec;
+
+	dec.py_mod = NULL;
+
 	srd_init(DECODERS_TESTDIR);
 	fail_unless(srd_decoder_doc_get(NULL) == NULL);
+	fail_unless(srd_decoder_doc_get(&dec) == NULL);
 	srd_exit();
 }
 END_TEST

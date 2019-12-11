@@ -33,7 +33,8 @@ class Decoder(srd.Decoder):
     desc = 'PS/2 keyboard/mouse interface.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['ps2']
+    outputs = []
+    tags = ['PC']
     channels = (
         {'id': 'clk', 'name': 'Clock', 'desc': 'Clock line'},
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
@@ -57,7 +58,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.bits = []
-        self.samplenum = 0
         self.bitcount = 0
 
     def start(self):

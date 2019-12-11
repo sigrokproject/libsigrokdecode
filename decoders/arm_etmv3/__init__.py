@@ -18,7 +18,7 @@
 ##
 
 '''
-This decoder stacks on top of the 'uart' decoder and decodes packets of
+This decoder stacks on top of the 'uart' PD and decodes packets of
 the ARMv7m Embedded Trace Macroblock v3.x.
 '''
 

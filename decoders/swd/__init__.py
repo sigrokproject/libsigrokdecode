@@ -21,14 +21,14 @@
 This PD decodes the ARM SWD (version 1) protocol, as described in the
 "ARM Debug Interface v5.2" Architecture Specification.
 
-Details:
-http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ihi0031c/index.html
-(Registration required)
-
 Not supported:
  * Turnaround periods other than the default 1, as set in DLCR.TURNROUND
    (should be trivial to add)
  * SWD protocol version 2 (multi-drop support, etc.)
+
+Details:
+http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ihi0031c/index.html
+(Registration required)
 '''
 
 from .pd import Decoder

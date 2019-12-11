@@ -191,12 +191,13 @@ regs_items = {
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'jtag_ejtag'
-    name = 'JTAG / EJTAG (MIPS)'
+    name = 'JTAG / EJTAG'
     longname = 'Joint Test Action Group / EJTAG (MIPS)'
     desc = 'MIPS EJTAG protocol.'
     license = 'gplv2+'
     inputs = ['jtag']
-    outputs = ['jtag_ejtag']
+    outputs = []
+    tags = ['Debug/trace']
     annotations = (
         ('instruction', 'Instruction'),
     ) + regs_items['ann'] + (
@@ -206,9 +207,9 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('instructions', 'Instructions', (0,)),
-        ('regs', 'Registers', regs_items['rows_range']),
         ('control_fields_in', 'Control fields in', (10,)),
         ('control_fields_out', 'Control fields out', (11,)),
+        ('regs', 'Registers', regs_items['rows_range']),
         ('pracc', 'PrAcc', (12,)),
     )
 
@@ -223,7 +224,7 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def put_at(self, ss: int, es: int, data):
-        self.put(ss, es, self.out_ann, data);
+        self.put(ss, es, self.out_ann, data)
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -247,14 +248,14 @@ class Decoder(srd.Decoder):
         s += 'Store' if pracc_write else 'Load/Fetch'
 
         if pracc_write:
-            if self.pracc_state.address_out != None:
+            if self.pracc_state.address_out is not None:
                 s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
-            if self.pracc_state.data_out != None:
+            if self.pracc_state.data_out is not None:
                 s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_out)
         else:
-            if self.pracc_state.address_out != None:
+            if self.pracc_state.address_out is not None:
                 s += ', A:' + ' 0x{:08X}'.format(self.pracc_state.address_out)
-            if self.pracc_state.data_in != None:
+            if self.pracc_state.data_in is not None:
                 s += ', D:' + ' 0x{:08X}'.format(self.pracc_state.data_in)
 
         self.pracc_state.reset()
@@ -357,16 +358,16 @@ class Decoder(srd.Decoder):
 
     def handle_ir_tdi(self, val):
         code = bin2int(val[0])
-        hex = '0x{:02X}'.format(code)
+        hexval = '0x{:02X}'.format(code)
         if code in ejtag_insn:
             # Format instruction name.
             insn = ejtag_insn[code]
             s_short = insn[0]
-            s_long = insn[0] + ': ' + insn[1] + ' (' + hex + ')'
+            s_long = insn[0] + ': ' + insn[1] + ' (' + hexval + ')'
             # Display it and select data register.
             self.put_current([Ann.INSTRUCTION, [s_long, s_short]])
         else:
-            self.put_current([Ann.INSTRUCTION, [hex, 'IR TDI ({})'.format(hex)]])
+            self.put_current([Ann.INSTRUCTION, [hexval, 'IR TDI ({})'.format(hexval)]])
         self.select_reg(code)
 
     def handle_new_state(self, new_state):

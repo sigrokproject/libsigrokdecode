@@ -28,6 +28,7 @@
 #include "libsigrokdecode.h"
 
 enum {
+	SRD_TERM_ALWAYS_FALSE,
 	SRD_TERM_HIGH,
 	SRD_TERM_LOW,
 	SRD_TERM_RISING_EDGE,
@@ -108,6 +109,7 @@ SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d);
 
 /* type_decoder.c */
 SRD_PRIV PyObject *srd_Decoder_type_new(void);
+SRD_PRIV const char *output_type_name(unsigned int idx);
 
 /* type_logic.c */
 SRD_PRIV PyObject *srd_logic_type_new(void);
@@ -122,7 +124,7 @@ SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **out
 SRD_PRIV int py_dictitem_as_str(PyObject *py_obj, const char *key, char **outstr);
 SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx, char **outstr);
 SRD_PRIV int py_pydictitem_as_str(PyObject *py_obj, PyObject *py_key, char **outstr);
-SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out);
+SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, int64_t *out);
 SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr);
 SRD_PRIV int py_strseq_to_char(PyObject *py_strseq, char ***out_strv);
 SRD_PRIV GVariant *py_obj_to_variant(PyObject *py_obj);

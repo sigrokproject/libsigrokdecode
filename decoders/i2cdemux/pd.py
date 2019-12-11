@@ -28,6 +28,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = [] # TODO: Only known at run-time.
+    tags = ['Util']
 
     def __init__(self):
         self.reset()

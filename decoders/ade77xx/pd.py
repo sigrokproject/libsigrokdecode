@@ -33,7 +33,8 @@ class Decoder(srd.Decoder):
     desc = 'Poly phase multifunction energy metering IC protocol.'
     license = 'mit'
     inputs = ['spi']
-    outputs = ['ade77xx']
+    outputs = []
+    tags = ['Analog/digital', 'IC', 'Sensor']
     annotations = (
         ('read', 'Register read commands'),
         ('write', 'Register write commands'),

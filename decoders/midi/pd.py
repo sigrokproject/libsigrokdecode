@@ -32,7 +32,8 @@ class Decoder(srd.Decoder):
     desc = 'Musical Instrument Digital Interface (MIDI) protocol.'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = ['midi']
+    outputs = []
+    tags = ['Audio', 'PC']
     annotations = (
         ('text-verbose', 'Human-readable text (verbose)'),
         ('text-sysreal-verbose', 'Human-readable SysReal text (verbose)'),

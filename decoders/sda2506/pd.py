@@ -30,7 +30,8 @@ class Decoder(srd.Decoder):
     desc = 'Serial nonvolatile 1-Kbit EEPROM.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['sda2506']
+    outputs = []
+    tags = ['IC', 'Memory']
     channels = (
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock'},
         {'id': 'd', 'name': 'DATA', 'desc': 'Data'},
@@ -45,8 +46,8 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', (ann_cmdbit, ann_databit)),
-        ('commands', 'Commands', (ann_cmd,)),
         ('data', 'Data', (ann_data,)),
+        ('commands', 'Commands', (ann_cmd,)),
         ('warnings', 'Warnings', (ann_warning,)),
     )
 

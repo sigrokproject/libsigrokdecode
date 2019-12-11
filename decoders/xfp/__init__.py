@@ -31,9 +31,8 @@ module startup. Other table are either reserved for future expansion, or
 available for vendor-specific extensions. This decoder supports both lower
 memory and table 0x01.
 
-The XFP specification is available here:
-
-  ftp://ftp.seagate.com/sff/INF-8077.PDF
+Details:
+ftp://ftp.seagate.com/sff/INF-8077.PDF (XFP specification)
 '''
 
 from .pd import Decoder

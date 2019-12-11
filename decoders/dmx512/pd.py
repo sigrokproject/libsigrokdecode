@@ -24,10 +24,11 @@ class Decoder(srd.Decoder):
     id = 'dmx512'
     name = 'DMX512'
     longname = 'Digital MultipleX 512'
-    desc = 'Professional lighting control protocol.'
+    desc = 'Digital MultipleX 512 (DMX512) lighting protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['dmx512']
+    outputs = []
+    tags = ['Embedded/industrial', 'Lighting']
     channels = (
         {'id': 'dmx', 'name': 'DMX data', 'desc': 'Any DMX data line'},
     )
@@ -45,9 +46,9 @@ class Decoder(srd.Decoder):
         ('error', 'Error'),
     )
     annotation_rows = (
-        ('name', 'Logical', (1, 2, 5, 6, 7, 8)),
-        ('data', 'Data', (9,)),
         ('bits', 'Bits', (0, 3, 4)),
+        ('data', 'Data', (9,)),
+        ('name', 'Logical', (1, 2, 5, 6, 7, 8)),
         ('errors', 'Errors', (10,)),
     )
 

@@ -120,7 +120,8 @@ class Decoder(srd.Decoder):
     desc = 'Demodulated morse code protocol.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['morse']
+    outputs = []
+    tags = ['Encoding']
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )

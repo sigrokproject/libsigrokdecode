@@ -303,7 +303,7 @@ err:
  *
  * @private
  */
-SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t *out)
+SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, int64_t *out)
 {
 	PyObject *py_value;
 	PyGILState_STATE gstate;
@@ -328,7 +328,7 @@ SRD_PRIV int py_pydictitem_as_long(PyObject *py_obj, PyObject *py_key, uint64_t 
 		goto err;
 	}
 
-	*out = PyLong_AsUnsignedLongLong(py_value);
+	*out = PyLong_AsLongLong(py_value);
 
 	PyGILState_Release(gstate);
 
@@ -385,7 +385,7 @@ SRD_PRIV int py_str_as_str(PyObject *py_str, char **outstr)
 
 /**
  * Convert a Python list of unicode strings to a C string vector.
- * On success, a pointer to a newly allocated NULL-terminated array of
+ * On success, a pointer to a newly allocated NUL-terminated array of
  * allocated C strings is written to @a out_strv. The caller must g_free()
  * each string and the array itself.
  *

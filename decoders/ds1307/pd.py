@@ -39,9 +39,9 @@ bits = (
 
 rates = {
     0b00: '1Hz',
-    0b01: '4096kHz',
-    0b10: '8192kHz',
-    0b11: '32768kHz',
+    0b01: '4096Hz',
+    0b10: '8192Hz',
+    0b11: '32768Hz',
 }
 
 DS1307_I2C_ADDRESS = 0x68
@@ -56,10 +56,11 @@ class Decoder(srd.Decoder):
     id = 'ds1307'
     name = 'DS1307'
     longname = 'Dallas DS1307'
-    desc = 'Realtime clock module protocol.'
+    desc = 'Dallas DS1307 realtime clock module protocol.'
     license = 'gplv2+'
     inputs = ['i2c']
-    outputs = ['ds1307']
+    outputs = []
+    tags = ['Clock/timing', 'IC']
     annotations =  regs_and_bits() + (
         ('read-datetime', 'Read date/time'),
         ('write-datetime', 'Write date/time'),
@@ -121,7 +122,7 @@ class Decoder(srd.Decoder):
         ampm_mode = True if (b & (1 << 6)) else False
         if ampm_mode:
             self.putd(6, 6, [13, ['12-hour mode', '12h mode', '12h']])
-            a = 'AM' if (b & (1 << 6)) else 'PM'
+            a = 'PM' if (b & (1 << 5)) else 'AM'
             self.putd(5, 5, [14, [a, a[0]]])
             h = self.hours = bcd2int(b & 0x1f)
             self.putd(4, 0, [15, ['Hour: %d' % h, 'H: %d' % h, 'H']])
