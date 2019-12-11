@@ -22,9 +22,6 @@ require some adaptations on the user's side in some cases.
    - ir_rc6           RC-6 infrared remote control protocol
    - ieee488          IEEE-488 General Purpose Interface Bus (GPIB/HPIB or IEC)
    - hdcp             HDCP protocol over HDMI
- * Add a mandatory 'tags' decoder metadata field that can be used by frontends
-   for grouping various PDs together by topic, e.g. "Sensor", "Audio", etc.
-   The full list of currently used tags is documented in the HACKING file.
  * All decoders must implement a reset() method now. It should reset all
    PD-internal state and will be called when the decoder is restarted from
    scratch (by frontends) with new data.
