@@ -135,7 +135,7 @@ class Decoder(srd.Decoder):
                         started = False
                     else:
                         self.putb(last_samplenum, [data, [str(data)]])
-                incoming = (bin(shiftreg & 0b0000_0010_1001_0001).count('1') + data) & 1
+                incoming = (bin(shiftreg & 0x0291).count('1') + data) & 1
                 shiftreg = (incoming << 15) | (shiftreg >> 1)
             prev_start = start
             prev_stop = stop
