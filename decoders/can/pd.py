@@ -140,10 +140,6 @@ class Decoder(srd.Decoder):
         self.dom_edge_snum = self.samplenum
         self.dom_edge_bcount = self.curbit
 
-    def bit_sampled(self):
-        # EMPTY
-        pass
-
     # Determine the position of the next desired bit's sample point.
     def get_sample_point(self, bitnum):
         samplenum = self.dom_edge_snum
@@ -502,4 +498,3 @@ class Decoder(srd.Decoder):
                     self.dom_edge_seen()
                 if self.matched[0]:
                     self.handle_bit(can_rx)
-                    self.bit_sampled()
