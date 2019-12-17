@@ -227,12 +227,13 @@ class Decoder(srd.Decoder):
         # Determine absolute sample number of a bit slot's sample point.
         # Counts for UART bits start from 0 (0 = start bit, 1..x = data,
         # x+1 = parity bit (if used) or the first stop bit, and so on).
-        # Accept a position in the range of 1.99% of the full bit width.
+        # Accept a position in the range of 1-99% of the full bit width.
         # Assume 50% for invalid input specs for backwards compatibility.
         perc = self.options['sample_point'] or 50
         if not perc or perc not in range(1, 100):
             perc = 50
-        bitpos = (self.bit_width - 1) * perc / 100
+        perc /= 100.0
+        bitpos = (self.bit_width - 1) * perc
         bitpos += self.frame_start[rxtx]
         bitpos += bitnum * self.bit_width
         return bitpos
