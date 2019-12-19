@@ -19,14 +19,15 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
+# Modified from sd_card decoder/pd.py
+
 import sigrokdecode as srd
 from .lists import *
 from .sd_crc import crc7, crc16
-
-sample_ahead_str = 'Yes (to meet the timing)'
+import traceback
 
 class Decoder(srd.Decoder):
-    api_version = 2
+    api_version = 3
     id = 'sdio'
     name = 'SDIO'
     longname = 'Secure Digital I/O'
@@ -34,6 +35,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['sdio']
+    tags = ['Memory']
     channels = (
         {'id': 'cmd',  'name': 'CMD',  'desc': 'Command'},
         {'id': 'clk',  'name': 'CLK',  'desc': 'Clock'},
@@ -49,8 +51,6 @@ class Decoder(srd.Decoder):
             'values' : ('1-line', '4-line') },
         { 'id' : 'io_block_len', 'desc' : 'Block size of SDIO', 'default' : '512',
             'values' : ('128', '256','512','1024') },
-        { 'id' : 'sample_ahead', 'desc' : 'Sample 1 clk ahead', 'default' : 'No',
-            'values' : ('No', sample_ahead_str) },
         { 'id' : 'polarity', 'desc' : 'Sample edge', 'default' : 'risedge',
             'values' : ('risedge', 'falledge') },
     )
@@ -86,6 +86,7 @@ class Decoder(srd.Decoder):
         ('data-field', 'Data fields'),
         ('data-busy', 'Data busy'),
         ('data-field-error', 'Data fields (Error)'),
+        ('message', 'Messages'),
     )
     annotation_rows = (
         ('data', 'Data Line', tuple(range(137,141))),
@@ -94,13 +95,14 @@ class Decoder(srd.Decoder):
         ('decoded-fields', 'Decoded fields', (136,)),
         ('fields', 'Fields', tuple(range(129, 135))),
         ('cmd', 'Commands', tuple(range(128))),
+        ('msg', 'Messages', (141,)),
     )
     #supported commands
     cmd_list = (0, 2, 3, 5, 6, 7, 8, 9, 10, 13, 16, 52, 53, 55)
     acmd_list = (6, 13, 41, 51)
 
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.state = 'GET COMMAND TOKEN'
         self.token = []
         self.oldpins = None
@@ -118,7 +120,6 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.four_line = self.options['lines']=='4-line'
         self.rise_sample = self.options['polarity']=='risedge'
-        self.sample_ahead = self.options['sample_ahead']==sample_ahead_str
         self.io_block_len = int(self.options['io_block_len'])
 
     # draw data
@@ -161,6 +162,9 @@ class Decoder(srd.Decoder):
 
     def putr2(self, cmd, desc):
         self.putt2([cmd, ['Reply: %s' % desc]])
+
+    def putlog(self, msg):
+        self.put(self.samplenum, self.samplenum+100, self.out_ann, [141, [msg]])
 
     def reset(self):
         self.cmd, self.arg = None, None
@@ -659,117 +663,100 @@ class Decoder(srd.Decoder):
             return True
         return False
 
-    def decode(self, ss, es, data):
-        for (self.samplenum, pins) in data:
-            data.itercnt += 1
-            # Ignore identical samples early on (for performance reasons).
-            if self.oldpins == pins:
-                continue
-
-            (cmd, clk, dat0, dat1, dat2, dat3) = pins
-
-            # Wait for a rising CLK edge.
-            if self.oldclk == None:
-                risedge = False
-                negedge = False
-            else:
-                risedge = (self.oldclk == 0 and clk == 1)
-                negedge = (self.oldclk == 1 and clk == 0)
-
-            if not((risedge and self.rise_sample) or (negedge and not self.rise_sample)):
-                self.oldclk = clk
-                self.oldpins = pins
-                continue
-            self.oldclk = clk
-
-            if self.sample_ahead and self.oldpins != None:
-                pins, (cmd, clk, dat0, dat1, dat2, dat3) = self.oldpins, self.oldpins
-
-            self.oldpins = pins
-
-            #handle data lines
-            if self.data_state == 'IDLE' or self.data_state == 'WAIT_FOR_START':
-                self.get_data_start(pins)
-            elif self.data_state == 'DATA':
-                self.get_data_bytes(pins, self.data_bytes_required)
-            elif self.data_state == 'CRC':
-                self.get_crc_bytes(pins)
-            elif self.data_state == 'CARD_BUSY':
-                self.wait_card_busy(pins)
-
-
-            # State machine.
-            if self.state.startswith('GET RESPONSE'):
-                if len(self.token) == 0:
-                    # Wait for start bit (CMD = 0).
-                    if cmd != 0:
-                        continue
-                    if not self.get_token_bits(cmd, 2):
-                        continue
-                elif len(self.token) < 2:
-                    if not self.get_token_bits(cmd, 2):
-                        continue
-                    if self.token[1][2] == 1:
-                        #is a command rather than a respond, jump to cmd state
-                        self.state = 'GET COMMAND TOKEN'
-                        continue
+    def decode(self):
+        try:
+            while True:
+                if self.rise_sample:
+                    pins = self.wait({1: 'r'})
                 else:
-                    # Call the respective handler method for the response.
-                    s = 'handle_response_%s' % self.state[13:].lower()
-                    handle_response = getattr(self, s)
-                    handle_response(cmd)
-            else : #if self.state == 'GET COMMAND TOKEN':
-                if len(self.token) == 0:
-                    # Wait for start bit (CMD = 0).
-                    if cmd != 0:
+                    pins = self.wait({1: 'f'})
+
+                (cmd, clk, dat0, dat1, dat2, dat3) = pins
+
+                #handle data lines
+                if self.data_state == 'IDLE' or self.data_state == 'WAIT_FOR_START':
+                    self.get_data_start(pins)
+                elif self.data_state == 'DATA':
+                    self.get_data_bytes(pins, self.data_bytes_required)
+                elif self.data_state == 'CRC':
+                    self.get_crc_bytes(pins)
+                elif self.data_state == 'CARD_BUSY':
+                    self.wait_card_busy(pins)
+
+                # State machine.
+                if self.state.startswith('GET RESPONSE'):
+                    if len(self.token) == 0:
+                        # Wait for start bit (CMD = 0).
+                        if cmd != 0:
+                            continue
+                        if not self.get_token_bits(cmd, 2):
+                            continue
+                    elif len(self.token) < 2:
+                        if not self.get_token_bits(cmd, 2):
+                            continue
+                        if self.token[1][2] == 1:
+                            #is a command rather than a respond, jump to cmd state
+                            self.state = 'GET COMMAND TOKEN'
+                            continue
+                    else:
+                        # Call the respective handler method for the response.
+                        s = 'handle_response_%s' % self.state[13:].lower()
+                        handle_response = getattr(self, s)
+                        handle_response(cmd)
+                else : #if self.state == 'GET COMMAND TOKEN':
+                    if len(self.token) == 0:
+                        # Wait for start bit (CMD = 0).
+                        if cmd != 0:
+                            continue
+
+                    if not self.get_token_bits(cmd, 48):
                         continue
+                    # Command tokens (48 bits) are sent serially (MSB-first) by the host
+                    # (over the CMD line), either to one SD card or to multiple ones.
+                    #
+                    # Format:
+                    #  - Bits[47:47]: Start bit (always 0)
+                    #  - Bits[46:46]: Transmission bit (1 == host)
+                    #  - Bits[45:40]: Command index (BCD; valid: 0-63)
+                    #  - Bits[39:08]: Argument
+                    #  - Bits[07:01]: CRC7
+                    #  - Bits[00:00]: End bit (always 1)
+                    self.handle_common_token_fields()
 
-                if not self.get_token_bits(cmd, 48):
-                    continue
-                # Command tokens (48 bits) are sent serially (MSB-first) by the host
-                # (over the CMD line), either to one SD card or to multiple ones.
-                #
-                # Format:
-                #  - Bits[47:47]: Start bit (always 0)
-                #  - Bits[46:46]: Transmission bit (1 == host)
-                #  - Bits[45:40]: Command index (BCD; valid: 0-63)
-                #  - Bits[39:08]: Argument
-                #  - Bits[07:01]: CRC7
-                #  - Bits[00:00]: End bit (always 1)
-                self.handle_common_token_fields()
+                    # Handle command.
+                    self.cmd_str = 'CMD%d (%s)' % (self.cmd, self.cmd_name(self.cmd))
 
-                # Handle command.
-                self.cmd_str = 'CMD%d (%s)' % (self.cmd, self.cmd_name(self.cmd))
-
-                if not self.is_acmd:
-                    # normal command
-                    if self.cmd in self.cmd_list:
-                        self.state = 'HANDLE CMD%d' % self.cmd
-                        handle_cmd = getattr(self, 'handle_cmd' + str(self.cmd))
+                    if not self.is_acmd:
+                        # normal command
+                        if self.cmd in self.cmd_list:
+                            self.state = 'HANDLE CMD%d' % self.cmd
+                            handle_cmd = getattr(self, 'handle_cmd' + str(self.cmd))
+                        else:
+                            self.state = 'HANDLE CMD999'
+                            self.putc(self.cmd, 'CMD%d' % self.cmd)
+                            handle_cmd = getattr(self, 'handle_cmd999')
                     else:
-                        self.state = 'HANDLE CMD999'
-                        self.putc(self.cmd, 'CMD%d' % self.cmd)
-                        handle_cmd = getattr(self, 'handle_cmd999')
-                else:
-                    # ACMD
-                    self.cmd_str = 'A' + self.cmd_str
-                    if self.cmd in self.acmd_list:
-                        self.state = 'HANDLE ACMD%d' % self.cmd
-                        handle_cmd = getattr(self, 'handle_acmd' + str(self.cmd))
-                    else:
-                        self.state = 'HANDLE ACMD999'
-                        self.putc(self.cmd, 'ACMD%d' % self.cmd )
-                        handle_cmd = getattr(self, 'handle_acmd999')
+                        # ACMD
+                        self.cmd_str = 'A' + self.cmd_str
+                        if self.cmd in self.acmd_list:
+                            self.state = 'HANDLE ACMD%d' % self.cmd
+                            handle_cmd = getattr(self, 'handle_acmd' + str(self.cmd))
+                        else:
+                            self.state = 'HANDLE ACMD999'
+                            self.putc(self.cmd, 'ACMD%d' % self.cmd )
+                            handle_cmd = getattr(self, 'handle_acmd999')
 
-                self.data_state = 'WAIT_FOR_START'
-                self.data_received = []
-                self.data_bytes_required = 4  #default
-                self.data_crc_resp = False
-                self.cal_arg()
+                    self.data_state = 'WAIT_FOR_START'
+                    self.data_received = []
+                    self.data_bytes_required = 4  #default
+                    self.data_crc_resp = False
+                    self.cal_arg()
 
-                # Call the respective handler method for the command.
-                handle_cmd()
-                # Leave ACMD mode again after the first command after CMD55.
-                if self.is_acmd and not self.cmd in (55, 63):
-                    self.is_acmd = False
+                    # Call the respective handler method for the command.
+                    handle_cmd()
+                    # Leave ACMD mode again after the first command after CMD55.
+                    if self.is_acmd and not self.cmd in (55, 63):
+                        self.is_acmd = False
+        except:
+            self.putlog(traceback.format_exc())
 

@@ -19,7 +19,7 @@
 ##
 
 '''
-SD card (SD mode) low-level protocol decoder.
+SDIO low-level protocol decoder.
 '''
 
 from .pd import Decoder

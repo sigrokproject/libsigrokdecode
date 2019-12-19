@@ -18,8 +18,6 @@
 ## Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 ##
 
-import sysdcard_sds
-
 def BIT(data, n):
     return 1 if data & (1<<n) != 0 else 0
 
