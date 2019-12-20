@@ -665,13 +665,10 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         try:
+            wait_cond = {1: 'r'} if self.rise_sample else {1: 'f'}
             while True:
-                if self.rise_sample:
-                    pins = self.wait({1: 'r'})
-                else:
-                    pins = self.wait({1: 'f'})
-
-                (cmd, clk, dat0, dat1, dat2, dat3) = pins
+                (cmd, clk, dat0, dat1, dat2, dat3) = self.wait(wait_cond)
+                pins = (cmd, clk, dat0, dat1, dat2, dat3)
 
                 #handle data lines
                 if self.data_state == 'IDLE' or self.data_state == 'WAIT_FOR_START':
