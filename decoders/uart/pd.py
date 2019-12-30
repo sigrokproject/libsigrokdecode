@@ -82,6 +82,12 @@ class SamplerateError(Exception):
 class ChannelError(Exception):
     pass
 
+class Ann:
+    RX_DATA, TX_DATA, RX_START, TX_START, RX_PARITY_OK, TX_PARITY_OK, \
+    RX_PARITY_ERR, TX_PARITY_ERR, RX_STOP, TX_STOP, RX_WARN, TX_WARN, \
+    RX_DATA_BIT, TX_DATA_BIT, RX_BREAK, TX_BREAK, RX_PACKET, TX_PACKET = \
+    range(18)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'uart'
@@ -143,16 +149,16 @@ class Decoder(srd.Decoder):
         ('tx-packet', 'TX packet'),
     )
     annotation_rows = (
-        ('rx-data-bits', 'RX bits', (12,)),
-        ('rx-data', 'RX', (0, 2, 4, 6, 8)),
-        ('rx-warnings', 'RX warnings', (10,)),
-        ('rx-break', 'RX break', (14,)),
-        ('rx-packets', 'RX packets', (16,)),
-        ('tx-data-bits', 'TX bits', (13,)),
-        ('tx-data', 'TX', (1, 3, 5, 7, 9)),
-        ('tx-warnings', 'TX warnings', (11,)),
-        ('tx-break', 'TX break', (15,)),
-        ('tx-packets', 'TX packets', (17,)),
+        ('rx-data-bits', 'RX bits', (Ann.RX_DATA_BIT,)),
+        ('rx-data', 'RX', (Ann.RX_DATA, Ann.RX_START, Ann.RX_PARITY_OK, Ann.RX_PARITY_ERR, Ann.RX_STOP)),
+        ('rx-warnings', 'RX warnings', (Ann.RX_WARN,)),
+        ('rx-break', 'RX break', (Ann.RX_BREAK,)),
+        ('rx-packets', 'RX packets', (Ann.RX_PACKET,)),
+        ('tx-data-bits', 'TX bits', (Ann.TX_DATA_BIT,)),
+        ('tx-data', 'TX', (Ann.TX_DATA, Ann.TX_START, Ann.TX_PARITY_OK, Ann.TX_PARITY_ERR, Ann.TX_STOP)),
+        ('tx-warnings', 'TX warnings', (Ann.TX_WARN,)),
+        ('tx-break', 'TX break', (Ann.TX_BREAK,)),
+        ('tx-packets', 'TX packets', (Ann.TX_PACKET,)),
     )
     binary = (
         ('rx', 'RX dump'),
@@ -252,7 +258,7 @@ class Decoder(srd.Decoder):
         # for the next start bit (assuming this one was spurious).
         if self.startbit[rxtx] != 0:
             self.putp(['INVALID STARTBIT', rxtx, self.startbit[rxtx]])
-            self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
+            self.putg([Ann.RX_WARN + rxtx, ['Frame error', 'Frame err', 'FE']])
             self.frame_valid[rxtx] = False
             es = self.samplenum + ceil(self.bit_width / 2.0)
             self.putpse(self.frame_start[rxtx], es, ['FRAME', rxtx,
@@ -265,7 +271,7 @@ class Decoder(srd.Decoder):
         self.startsample[rxtx] = -1
 
         self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
-        self.putg([rxtx + 2, ['Start bit', 'Start', 'S']])
+        self.putg([Ann.RX_START + rxtx, ['Start bit', 'Start', 'S']])
 
         self.state[rxtx] = 'GET DATA BITS'
 
@@ -290,7 +296,7 @@ class Decoder(srd.Decoder):
                     s += ' '
             if self.options['format'] != 'ascii' and s[-1] == ' ':
                 s = s[:-1] # Drop trailing space.
-            self.putx_packet(rxtx, [16 + rxtx, [s]])
+            self.putx_packet(rxtx, [Ann.RX_PACKET + rxtx, [s]])
             self.packet_cache[rxtx] = []
 
     def get_data_bits(self, rxtx, signal):
@@ -298,7 +304,7 @@ class Decoder(srd.Decoder):
         if self.startsample[rxtx] == -1:
             self.startsample[rxtx] = self.samplenum
 
-        self.putg([rxtx + 12, ['%d' % signal]])
+        self.putg([Ann.RX_DATA_BIT + rxtx, ['%d' % signal]])
 
         # Store individual data bits and their start/end samplenumbers.
         s, halfbit = self.samplenum, int(self.bit_width / 2)
@@ -384,11 +390,11 @@ class Decoder(srd.Decoder):
         if parity_ok(self.options['parity'], self.paritybit[rxtx],
                      self.datavalue[rxtx], self.options['data_bits']):
             self.putp(['PARITYBIT', rxtx, self.paritybit[rxtx]])
-            self.putg([rxtx + 4, ['Parity bit', 'Parity', 'P']])
+            self.putg([Ann.RX_PARITY_OK + rxtx, ['Parity bit', 'Parity', 'P']])
         else:
             # TODO: Return expected/actual parity values.
             self.putp(['PARITY ERROR', rxtx, (0, 1)]) # FIXME: Dummy tuple...
-            self.putg([rxtx + 6, ['Parity error', 'Parity err', 'PE']])
+            self.putg([Ann.RX_PARITY_ERR + rxtx, ['Parity error', 'Parity err', 'PE']])
             self.frame_valid[rxtx] = False
 
         self.state[rxtx] = 'GET STOP BITS'
@@ -400,11 +406,11 @@ class Decoder(srd.Decoder):
         # Stop bits must be 1. If not, we report an error.
         if self.stopbit1[rxtx] != 1:
             self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
-            self.putg([rxtx + 10, ['Frame error', 'Frame err', 'FE']])
+            self.putg([Ann.RX_WARN + rxtx, ['Frame error', 'Frame err', 'FE']])
             self.frame_valid[rxtx] = False
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.putg([rxtx + 4, ['Stop bit', 'Stop', 'T']])
+        self.putg([Ann.RX_PARITY_OK + rxtx, ['Stop bit', 'Stop', 'T']])
 
         # Pass the complete UART frame to upper layers.
         es = self.samplenum + ceil(self.bit_width / 2.0)
@@ -418,7 +424,7 @@ class Decoder(srd.Decoder):
         self.putpse(self.frame_start[rxtx], self.samplenum,
                 ['BREAK', rxtx, 0])
         self.putgse(self.frame_start[rxtx], self.samplenum,
-                [rxtx + 14, ['Break condition', 'Break', 'Brk', 'B']])
+                [Ann.RX_BREAK + rxtx, ['Break condition', 'Break', 'Brk', 'B']])
         self.state[rxtx] = 'WAIT FOR START BIT'
 
     def get_wait_cond(self, rxtx, inv):
