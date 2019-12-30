@@ -34,9 +34,9 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Wireless/RF']
     annotations = (
-        ('text-verbose', 'Human-readable text (verbose)'),
-        ('text', 'Human-readable text'),
-        ('warnings', 'Human-readable warnings'),
+        ('text-verbose', 'Text (verbose)'),
+        ('text', 'Text'),
+        ('warning', 'Warning'),
     )
 
     def __init__(self):

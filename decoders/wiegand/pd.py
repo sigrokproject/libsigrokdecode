@@ -43,12 +43,12 @@ class Decoder(srd.Decoder):
          'default': 4, 'values': (1, 2, 4, 8, 16, 32)},
     )
     annotations = (
-        ('bits', 'Bits'),
+        ('bit', 'Bit'),
         ('state', 'State'),
     )
     annotation_rows = (
-        ('bits', 'Binary value', (0,)),
-        ('state', 'Stream state', (1,)),
+        ('bits', 'Bits', (0,)),
+        ('states', 'Stream states', (1,)),
     )
 
     def __init__(self):

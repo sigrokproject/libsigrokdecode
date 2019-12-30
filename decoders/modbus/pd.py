@@ -841,7 +841,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('sc', 'Server->client', (0, 1, 2, 3, 4, 5, 6)),
         ('cs', 'Client->server', (7, 8, 9, 10, 11, 12, 13)),
-        ('error-indicator', 'Errors in frame', (14,)),
+        ('error-indicators', 'Errors in frame', (14,)),
     )
     options = (
         {'id': 'scchannel', 'desc': 'Server -> client channel',

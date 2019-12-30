@@ -78,7 +78,7 @@ class Decoder(srd.Decoder):
         ('frame-crc', 'Frame CRC'),
         ('cid-delimiter', 'Channel idle delimiter'),
         ('bss', 'Byte start sequence'),
-        ('warnings', 'Human-readable warnings'),
+        ('warning', 'Warning'),
         ('bit', 'Bit'),
         ('cid', 'Channel idle delimiter'),
         ('dts', 'Dynamic trailing sequence'),

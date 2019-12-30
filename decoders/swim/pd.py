@@ -55,7 +55,7 @@ class Decoder(srd.Decoder):
         ('address', 'Address'),
         ('data-write', 'Data write'),
         ('data-read', 'Data read'),
-        ('debug', 'Debug'),
+        ('debug-msg', 'Debug message'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0,)),

@@ -37,7 +37,7 @@ class Decoder(srd.Decoder):
         ('break', 'Break'),
         ('mab', 'Mark after break'),
         ('startbit', 'Start bit'),
-        ('stopbits', 'Stop bit'),
+        ('stopbit', 'Stop bit'),
         ('startcode', 'Start code'),
         ('channel', 'Channel'),
         ('interframe', 'Interframe'),
@@ -47,8 +47,8 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 3, 4)),
-        ('data', 'Data', (9,)),
-        ('name', 'Logical', (1, 2, 5, 6, 7, 8)),
+        ('data-vals', 'Data', (9,)),
+        ('logical-vals', 'Logical', (1, 2, 5, 6, 7, 8)),
         ('errors', 'Errors', (10,)),
     )
 

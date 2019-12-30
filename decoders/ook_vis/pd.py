@@ -43,8 +43,8 @@ class Decoder(srd.Decoder):
         ('compare', 'Compare', (1,)),
         ('fields', 'Fields', (2,)),
         ('ref_fields', 'Ref fields', (3,)),
-        ('level2', 'L2', (4,)),
-        ('ref_level2', 'Ref L2', (5,)),
+        ('level2_vals', 'L2', (4,)),
+        ('ref_level2_vals', 'Ref L2', (5,)),
     )
     options = (
         {'id': 'displayas', 'desc': 'Display as', 'default': 'Nibble - Hex',

@@ -64,9 +64,9 @@ class Decoder(srd.Decoder):
         ('delta', 'Delta'),
     )
     annotation_rows = (
-        ('time', 'Time', (0,)),
-        ('average', 'Average', (1,)),
-        ('delta', 'Delta', (2,)),
+        ('times', 'Times', (0,)),
+        ('averages', 'Averages', (1,)),
+        ('deltas', 'Deltas', (2,)),
     )
     options = (
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },

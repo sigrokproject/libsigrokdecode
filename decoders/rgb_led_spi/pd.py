@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Display']
     annotations = (
-        ('rgb', 'RGB values'),
+        ('rgb', 'RGB value'),
     )
 
     def __init__(self):

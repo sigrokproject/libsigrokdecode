@@ -107,10 +107,10 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('bit', 'Bit'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
         ('reset', 'Reset'),
         ('presence', 'Presence'),
-        ('overdrive', 'Overdrive speed notifications'),
+        ('overdrive', 'Overdrive speed notification'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 2, 3)),

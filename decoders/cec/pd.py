@@ -66,11 +66,11 @@ class Decoder(srd.Decoder):
         ('eom-1', 'Message continued'),
         ('nack', 'ACK not set'),
         ('ack', 'ACK set'),
-        ('bits', 'Bits'),
-        ('bytes', 'Bytes'),
-        ('frames', 'Frames'),
-        ('sections', 'Sections'),
-        ('warnings', 'Warnings')
+        ('bit', 'Bit'),
+        ('byte', 'Byte'),
+        ('frame', 'Frame'),
+        ('section', 'Section'),
+        ('warning', 'Warning')
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3, 4, 5)),

@@ -94,12 +94,12 @@ class Decoder(srd.Decoder):
         ('phase', 'Phase'),
         ('increment', 'Increment'),
         ('count', 'Count'),
-        ('turns', 'Turns'),
+        ('turn', 'Turn'),
         ('interval', 'Interval'),
         ('average', 'Average'),
         ('rpm', 'Rate'),
     )
-    annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
+    annotation_rows = tuple((u + 's', v + 's', (i,)) for i, (u, v) in enumerate(annotations))
 
     def __init__(self):
         self.reset()

@@ -45,8 +45,8 @@ class Decoder(srd.Decoder):
         ('period', 'Period'),
     )
     annotation_rows = (
-         ('duty-cycle', 'Duty cycle', (0,)),
-         ('period', 'Period', (1,)),
+         ('duty-cycle-vals', 'Duty cycles', (0,)),
+         ('periods', 'Periods', (1,)),
     )
     binary = (
         ('raw', 'RAW file'),

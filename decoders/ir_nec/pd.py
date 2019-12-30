@@ -54,12 +54,12 @@ class Decoder(srd.Decoder):
         ('cmd-inv', 'Command#'),
         ('repeat-code', 'Repeat code'),
         ('remote', 'Remote'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3, 4)),
         ('fields', 'Fields', (5, 6, 7, 8, 9, 10)),
-        ('remote', 'Remote', (11,)),
+        ('remote-vals', 'Remote', (11,)),
         ('warnings', 'Warnings', (12,)),
     )
 

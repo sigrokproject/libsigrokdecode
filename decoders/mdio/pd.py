@@ -55,11 +55,11 @@ class Decoder(srd.Decoder):
         ('decode', 'Decode'),
     )
     annotation_rows = (
-        ('bit-val', 'Bit value', (0,)),
-        ('bit-num', 'Bit number', (1,)),
-        ('frame', 'Frame', (2, 3)),
-        ('frame-error', 'Frame error', (4,)),
-        ('decode', 'Decode', (5,)),
+        ('bit-vals', 'Bit values', (0,)),
+        ('bit-nums', 'Bit numbers', (1,)),
+        ('frames', 'Frames', (2, 3)),
+        ('frame-errors', 'Frame errors', (4,)),
+        ('decode-vals', 'Decode', (5,)),
     )
 
     def __init__(self):

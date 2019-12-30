@@ -43,8 +43,8 @@ class Decoder(srd.Decoder):
         ('position', 'Position')
     )
     annotation_rows = (
-        ('speed', 'Speed', (0,)),
-        ('position', 'Position', (1,)),
+        ('speeds', 'Speeds', (0,)),
+        ('positions', 'Positions', (1,)),
     )
 
     def __init__(self):

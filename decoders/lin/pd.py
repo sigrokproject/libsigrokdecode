@@ -73,12 +73,12 @@ class Decoder(srd.Decoder):
     annotations = (
         ('data', 'LIN data'),
         ('control', 'Protocol info'),
-        ('error', 'Error descriptions'),
-        ('inline_error', 'Protocol violations and errors'),
+        ('error', 'Error description'),
+        ('inline_error', 'Protocol violation or error'),
     )
     annotation_rows = (
-        ('data', 'Data', (0, 1, 3)),
-        ('error', 'Error', (2,)),
+        ('data_vals', 'Data', (0, 1, 3)),
+        ('errors', 'Errors', (2,)),
     )
 
     def __init__(self):

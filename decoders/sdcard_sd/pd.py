@@ -43,22 +43,22 @@ class Decoder(srd.Decoder):
     annotations = \
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \
         tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + ( \
-        ('bits', 'Bits'),
+        ('bit', 'Bit'),
         ('field-start', 'Start bit'),
         ('field-transmission', 'Transmission bit'),
         ('field-cmd', 'Command'),
         ('field-arg', 'Argument'),
         ('field-crc', 'CRC'),
         ('field-end', 'End bit'),
-        ('decoded-bits', 'Decoded bits'),
-        ('decoded-fields', 'Decoded fields'),
+        ('decoded-bit', 'Decoded bit'),
+        ('decoded-field', 'Decoded field'),
     )
     annotation_rows = (
         ('raw-bits', 'Raw bits', (128,)),
         ('decoded-bits', 'Decoded bits', (135,)),
         ('decoded-fields', 'Decoded fields', (136,)),
         ('fields', 'Fields', tuple(range(129, 135))),
-        ('cmd', 'Commands', tuple(range(128))),
+        ('commands', 'Commands', tuple(range(128))),
     )
 
     def __init__(self):

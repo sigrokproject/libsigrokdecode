@@ -51,7 +51,7 @@ class Decoder(srd.Decoder):
         ('bit', 'Bit'),
         ('bitstring', 'Bitstring'),
     )
-    annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
+    annotation_rows = tuple((u + 's', v + 's', (i,)) for i, (u, v) in enumerate(annotations))
     binary = (
         ('raw', 'Raw binary'),
     )

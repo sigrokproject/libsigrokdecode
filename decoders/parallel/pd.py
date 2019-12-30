@@ -86,8 +86,8 @@ class Decoder(srd.Decoder):
             'default': 'little', 'values': ('little', 'big')},
     )
     annotations = (
-        ('items', 'Items'),
-        ('words', 'Words'),
+        ('item', 'Item'),
+        ('word', 'Word'),
     )
     annotation_rows = (
         ('items', 'Items', (0,)),

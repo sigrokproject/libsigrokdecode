@@ -130,7 +130,7 @@ class Decoder(srd.Decoder):
         ('request-setup-write', 'Setup: Host-to-device'),
         ('request-bulk-read', 'Bulk: Device-to-host'),
         ('request-bulk-write', 'Bulk: Host-to-device'),
-        ('errors', 'Unexpected packets'),
+        ('error', 'Unexpected packet'),
     )
     annotation_rows = (
         ('request-setup', 'USB SETUP', (0, 1)),

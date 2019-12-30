@@ -71,11 +71,11 @@ class Decoder(srd.Decoder):
         ('bit1', 'Bit1'),
         ('start', 'START'),
         ('stop', 'STOP'),
-        ('sig', 'Sig')
+        ('signature', 'Signature')
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2, 3)),
-        ('sig', 'Sig', (4,))
+        ('signatures', 'Signatures', (4,))
     )
 
     def __init__(self):

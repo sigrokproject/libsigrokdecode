@@ -39,11 +39,11 @@ class Decoder(srd.Decoder):
         ('nunchuk-write', 'Nunchuk write'),
         ('cmd-init', 'Init command'),
         ('summary', 'Summary'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('regs', 'Registers', tuple(range(13))),
-        ('summary', 'Summary', (13,)),
+        ('summaries', 'Summaries', (13,)),
         ('warnings', 'Warnings', (14,)),
     )
 

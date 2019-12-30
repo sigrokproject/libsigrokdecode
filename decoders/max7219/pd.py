@@ -51,9 +51,9 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Display']
     annotations = (
-        ('register', 'Registers written to the device'),
-        ('digit', 'Digits displayed on the device'),
-        ('warnings', 'Human-readable warnings'),
+        ('register', 'Register write'),
+        ('digit', 'Digit displayed'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('commands', 'Commands', (ann_reg, ann_digit)),

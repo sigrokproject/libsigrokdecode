@@ -148,7 +148,7 @@ class Decoder(srd.Decoder):
             Ann.PARITY_ERR, Ann.STOP_OK, Ann.STOP_ERR, Ann.BREAK)),
         ('pdi_fields', 'PDI fields', (Ann.OPCODE, Ann.DATA_PROG, Ann.DATA_DEV,
             Ann.PDI_BREAK)),
-        ('pdi_cmds', 'PDI Cmds', (Ann.ENABLE, Ann.DISABLE, Ann.COMMAND)),
+        ('pdi_cmds', 'PDI commands', (Ann.ENABLE, Ann.DISABLE, Ann.COMMAND)),
     )
     binary = (
         ('bytes', 'PDI protocol bytes'),

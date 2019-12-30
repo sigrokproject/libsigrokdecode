@@ -105,19 +105,19 @@ class Decoder(srd.Decoder):
     annotations = (
         ('miso-data', 'MISO data'),
         ('mosi-data', 'MOSI data'),
-        ('miso-bits', 'MISO bits'),
-        ('mosi-bits', 'MOSI bits'),
-        ('warnings', 'Human-readable warnings'),
+        ('miso-bit', 'MISO bit'),
+        ('mosi-bit', 'MOSI bit'),
+        ('warning', 'Warning'),
         ('miso-transfer', 'MISO transfer'),
         ('mosi-transfer', 'MOSI transfer'),
     )
     annotation_rows = (
         ('miso-bits', 'MISO bits', (2,)),
-        ('miso-data', 'MISO data', (0,)),
-        ('miso-transfer', 'MISO transfer', (5,)),
+        ('miso-data-vals', 'MISO data', (0,)),
+        ('miso-transfers', 'MISO transfers', (5,)),
         ('mosi-bits', 'MOSI bits', (3,)),
-        ('mosi-data', 'MOSI data', (1,)),
-        ('mosi-transfer', 'MOSI transfer', (6,)),
+        ('mosi-data-vals', 'MOSI data', (1,)),
+        ('mosi-transfers', 'MOSI transfers', (6,)),
         ('other', 'Other', (4,)),
     )
     binary = (

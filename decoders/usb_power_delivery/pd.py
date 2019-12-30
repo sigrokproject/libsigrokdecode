@@ -223,7 +223,7 @@ class Decoder(srd.Decoder):
         ('crc', 'Checksum'),
         ('eop', 'End Of Packet'),
         ('sym', '4b5b symbols'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
         ('src', 'Source Message'),
         ('snk', 'Sink Message'),
         ('payload', 'Payload'),
@@ -231,11 +231,11 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
        ('4b5b', 'Symbols', (7,)),
-       ('phase', 'Parts', (1, 2, 3, 4, 5, 6)),
-       ('payload', 'Payload', (11,)),
-       ('type', 'Type', (0, 9, 10)),
+       ('parts', 'Parts', (1, 2, 3, 4, 5, 6)),
+       ('payloads', 'Payloads', (11,)),
+       ('types', 'Types', (0, 9, 10)),
        ('warnings', 'Warnings', (8,)),
-       ('text', 'Full text', (12,)),
+       ('texts', 'Full text', (12,)),
     )
     binary = (
         ('raw-data', 'RAW binary data'),

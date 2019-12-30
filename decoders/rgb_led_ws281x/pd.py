@@ -42,8 +42,8 @@ class Decoder(srd.Decoder):
         ('rgb', 'RGB'),
     )
     annotation_rows = (
-        ('bit', 'Bits', (0, 1)),
-        ('rgb', 'RGB', (2,)),
+        ('bits', 'Bits', (0, 1)),
+        ('rgb-vals', 'RGB values', (2,)),
     )
 
     def __init__(self):

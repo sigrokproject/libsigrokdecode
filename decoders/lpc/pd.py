@@ -122,7 +122,7 @@ class Decoder(srd.Decoder):
         {'id': 'lsmi',   'name': 'LSMI#',   'desc': 'System Management Interrupt'},
     )
     annotations = (
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
         ('start', 'Start'),
         ('cycle-type', 'Cycle-type/direction'),
         ('addr', 'Address'),
@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
         ('tar2', 'Turn-around cycle 2'),
     )
     annotation_rows = (
-        ('data', 'Data', (1, 2, 3, 4, 5, 6, 7)),
+        ('data-vals', 'Data', (1, 2, 3, 4, 5, 6, 7)),
         ('warnings', 'Warnings', (0,)),
     )
 

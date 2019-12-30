@@ -38,9 +38,9 @@ class Decoder(srd.Decoder):
     annotations = (
         ('bitrate', 'Bitrate / baudrate'),
         ('preamble', 'Preamble'),
-        ('bits', 'Bits'),
-        ('aux', 'Auxillary-audio-databits'),
-        ('samples', 'Audio Samples'),
+        ('bit', 'Bit'),
+        ('aux', 'Auxillary-audio-databit'),
+        ('sample', 'Audio Sample'),
         ('validity', 'Data Valid'),
         ('subcode', 'Subcode data'),
         ('chan_stat', 'Channnel Status'),

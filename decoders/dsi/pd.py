@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', (0,)),
-        ('raw', 'Raw data', (3,)),
+        ('raw-vals', 'Raw data', (3,)),
         ('fields', 'Fields', (1, 2)),
     )
 

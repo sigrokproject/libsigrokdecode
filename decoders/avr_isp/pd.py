@@ -41,14 +41,14 @@ class Decoder(srd.Decoder):
         ('rfb', 'Read fuse bits'),
         ('rhfb', 'Read high fuse bits'),
         ('refb', 'Read extended fuse bits'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
         ('dev', 'Device'),
     )
     annotation_rows = (
         ('bits', 'Bits', ()),
         ('commands', 'Commands', tuple(range(7 + 1))),
         ('warnings', 'Warnings', (8,)),
-        ('dev', 'Device', (9,)),
+        ('devs', 'Devices', (9,)),
     )
 
     def __init__(self):

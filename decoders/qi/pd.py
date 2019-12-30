@@ -58,14 +58,14 @@ class Decoder(srd.Decoder):
         {'id': 'qi', 'name': 'Qi', 'desc': 'Demodulated Qi data line'},
     )
     annotations = (
-        ('bits', 'Bits'),
-        ('bytes-errors', 'Bit errors'),
-        ('bytes-start', 'Start bits'),
-        ('bytes-info', 'Info bits'),
-        ('bytes-data', 'Data bytes'),
-        ('packets-data', 'Packet data'),
-        ('packets-checksum-ok', 'Packet checksum'),
-        ('packets-checksum-err', 'Packet checksum'),
+        ('bit', 'Bit'),
+        ('byte-error', 'Bit error'),
+        ('byte-start', 'Start bit'),
+        ('byte-info', 'Info bit'),
+        ('byte-data', 'Data byte'),
+        ('packet-data', 'Packet data'),
+        ('packet-checksum-ok', 'Packet checksum OK'),
+        ('packet-checksum-err', 'Packet checksum error'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0,)),

@@ -90,11 +90,11 @@ class Decoder(srd.Decoder):
         ('address-write', 'Address write'),
         ('data-read', 'Data read'),
         ('data-write', 'Data write'),
-        ('warnings', 'Human-readable warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (5,)),
-        ('addr-data', 'Address/Data', (0, 1, 2, 3, 4, 6, 7, 8, 9)),
+        ('addr-data', 'Address/data', (0, 1, 2, 3, 4, 6, 7, 8, 9)),
         ('warnings', 'Warnings', (10,)),
     )
     binary = (

@@ -36,7 +36,7 @@ class Decoder(srd.Decoder):
     annotations = (
         ('register', 'Register type'),
         ('value', 'Register value'),
-        ('warning', 'Warning messages'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('regs', 'Registers', (0, 1)),

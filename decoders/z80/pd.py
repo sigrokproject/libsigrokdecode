@@ -93,15 +93,15 @@ class Decoder(srd.Decoder):
         } for i in range(16)
     )
     annotations = (
-        ('addr',  'Memory or I/O address'),
+        ('addr', 'Memory or I/O address'),
         ('memrd', 'Byte read from memory'),
         ('memwr', 'Byte written to memory'),
-        ('iord',  'Byte read from I/O port'),
-        ('iowr',  'Byte written to I/O port'),
+        ('iord', 'Byte read from I/O port'),
+        ('iowr', 'Byte written to I/O port'),
         ('instr', 'Z80 CPU instruction'),
-        ('rop',   'Value of input operand'),
-        ('wop',   'Value of output operand'),
-        ('warn',  'Warning message'),
+        ('rop', 'Value of input operand'),
+        ('wop', 'Value of output operand'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('addrbus', 'Address bus', (Ann.ADDR,)),

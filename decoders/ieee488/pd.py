@@ -300,7 +300,7 @@ class Decoder(srd.Decoder):
         ('eoi', 'EOI'),
         ('text', 'Talker text'),
         ('periph', 'IEC bus peripherals'),
-        ('warn', 'Warning'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'IEC bits', (ANN_RAW_BIT,)),
@@ -309,7 +309,7 @@ class Decoder(srd.Decoder):
         ('eois', 'EOI', (ANN_EOI,)),
         ('texts', 'Talker texts', (ANN_TEXT,)),
         ('periphs', 'IEC peripherals', (ANN_IEC_PERIPH,)),
-        ('warns', 'Warnings', (ANN_WARN,)),
+        ('warnings', 'Warnings', (ANN_WARN,)),
     )
     binary = (
         ('raw', 'Raw bytes'),

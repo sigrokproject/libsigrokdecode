@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
         {'id': 'sample_point', 'desc': 'Sample point (%)', 'default': 70.0},
     )
     annotations = (
-        ('data', 'CAN payload data'),
+        ('data', 'Payload data'),
         ('sof', 'Start of frame'),
         ('eof', 'End of frame'),
         ('id', 'Identifier'),
@@ -61,7 +61,7 @@ class Decoder(srd.Decoder):
         ('ack-slot', 'ACK slot'),
         ('ack-delimiter', 'ACK delimiter'),
         ('stuff-bit', 'Stuff bit'),
-        ('warnings', 'Human-readable warnings'),
+        ('warning', 'Warning'),
         ('bit', 'Bit'),
     )
     annotation_rows = (

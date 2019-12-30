@@ -35,9 +35,9 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Audio', 'PC']
     annotations = (
-        ('text-verbose', 'Human-readable text (verbose)'),
-        ('text-sysreal-verbose', 'Human-readable SysReal text (verbose)'),
-        ('text-error', 'Human-readable Error text'),
+        ('text-verbose', 'Text (verbose)'),
+        ('text-sysreal-verbose', 'SysReal text (verbose)'),
+        ('text-error', 'Error text'),
     )
     annotation_rows = (
         ('normal', 'Normal', (0, 2)),

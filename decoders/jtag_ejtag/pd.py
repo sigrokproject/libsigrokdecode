@@ -210,7 +210,7 @@ class Decoder(srd.Decoder):
         ('control_fields_in', 'Control fields in', (10,)),
         ('control_fields_out', 'Control fields out', (11,)),
         ('regs', 'Registers', regs_items['rows_range']),
-        ('pracc', 'PrAcc', (12,)),
+        ('pracc-vals', 'PrAcc', (12,)),
     )
 
     def __init__(self):

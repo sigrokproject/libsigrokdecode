@@ -74,14 +74,14 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         # Sent from the host to the chip.
-        ('cmd', 'Commands sent to the device'),
-        ('tx-data', 'Payload sent to the device'),
+        ('cmd', 'Command'),
+        ('tx-data', 'Payload'),
 
         # Returned by the chip.
-        ('register', 'Registers read from the device'),
-        ('rx-data', 'Payload read from the device'),
+        ('register', 'Register read'),
+        ('rx-data', 'Payload read'),
 
-        ('warning', 'Warnings'),
+        ('warning', 'Warning'),
     )
     ann_cmd = 0
     ann_tx = 1

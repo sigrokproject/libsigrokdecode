@@ -63,16 +63,16 @@ class Decoder(srd.Decoder):
         ('info', 'Info'),
         ('1111', '1111'),
         ('1010', '1010'),
-        ('diffman', 'Diff Man'),
+        ('diffman', 'Diff man'),
         ('nrz', 'NRZ'),
     )
     annotation_rows = (
-        ('frame', 'Framing',(0,)),
-        ('info', 'Info', (1,)),
+        ('frames', 'Framing', (0,)),
+        ('info-vals', 'Info', (1,)),
         ('man1111', 'Man 1111', (2,)),
         ('man1010', 'Man 1010', (3,)),
-        ('diffman', 'Diff Man', (4,)),
-        ('nrz', 'NRZ', (5,)),
+        ('diffmans', 'Diff man', (4,)),
+        ('nrz-vals', 'NRZ', (5,)),
     )
     binary = (
         ('pulse-lengths', 'Pulse lengths'),

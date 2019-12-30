@@ -83,8 +83,8 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Display', 'Memory', 'PC']
     annotations = (
-        ('fields', 'EDID structure fields'),
-        ('sections', 'EDID structure sections'),
+        ('field', 'Field'),
+        ('section', 'Section'),
     )
     annotation_rows = (
         ('fields', 'Fields', (0,)),

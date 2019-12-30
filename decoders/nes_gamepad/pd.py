@@ -36,14 +36,14 @@ class Decoder(srd.Decoder):
             'default': 'Standard gamepad', 'values': ('Standard gamepad',)},
     )
     annotations = (
-        ('button', 'Button states'),
+        ('button', 'Button state'),
         ('no-press', 'No button press'),
         ('not-connected', 'Gamepad unconnected')
     )
     annotation_rows = (
         ('buttons', 'Button states', (0,)),
-        ('no-press', 'No button press', (1,)),
-        ('not-connected', 'Gamepad unconnected', (2,)),
+        ('no-presses', 'No button presses', (1,)),
+        ('not-connected-vals', 'Gamepad unconnected', (2,)),
     )
 
     def __init__(self):

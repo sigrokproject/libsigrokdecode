@@ -41,8 +41,8 @@ class Decoder(srd.Decoder):
         ('cmdbit', 'Command bit'),
         ('databit', 'Data bit'),
         ('cmd', 'Command'),
-        ('data', 'Data byte'),
-        ('warnings', 'Human-readable warnings'),
+        ('databyte', 'Data byte'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (ann_cmdbit, ann_databit)),

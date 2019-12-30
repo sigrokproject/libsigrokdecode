@@ -33,11 +33,11 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['IC', 'Wireless/RF']
     annotations = (
-        ('sread', 'Short register read commands'),
-        ('swrite', 'Short register write commands'),
-        ('lread', 'Long register read commands'),
-        ('lwrite', 'Long register write commands'),
-        ('warning', 'Warnings'),
+        ('sread', 'Short register read'),
+        ('swrite', 'Short register write'),
+        ('lread', 'Long register read'),
+        ('lwrite', 'Long register write'),
+        ('warning', 'Warning'),
         ('tx-frame', 'TX frame'),
         ('rx-frame', 'RX frame'),
         ('tx-retry-1', '1x TX retry'),
@@ -47,8 +47,8 @@ class Decoder(srd.Decoder):
         ('ccafail', 'CCAFAIL (channel busy)'),
     )
     annotation_rows = (
-        ('read', 'Read', (0, 2)),
-        ('write', 'Write', (1, 3)),
+        ('reads', 'Reads', (0, 2)),
+        ('writes', 'Writes', (1, 3)),
         ('warnings', 'Warnings', (4,)),
         ('tx-frames', 'TX frames', (5,)),
         ('rx-frames', 'RX frames', (6,)),

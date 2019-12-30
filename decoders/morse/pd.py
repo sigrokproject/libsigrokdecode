@@ -130,12 +130,12 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('time', 'Time'),
-        ('units', 'Units'),
+        ('unit', 'Unit'),
         ('symbol', 'Symbol'),
         ('letter', 'Letter'),
         ('word', 'Word'),
     )
-    annotation_rows = tuple((u, v, (i,)) for i, (u, v) in enumerate(annotations))
+    annotation_rows = tuple((u + 's', v + 's', (i,)) for i, (u, v) in enumerate(annotations))
 
     def __init__(self):
         self.reset()

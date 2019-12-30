@@ -48,7 +48,7 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', tuple(range(0, 8 + 1)) + (11, 12, 13)),
-        ('regs', 'Register access', (14, 15)),
+        ('regs', 'Register accesses', (14, 15)),
         ('date-time', 'Date/time', (9, 10)),
     )
 

@@ -114,8 +114,8 @@ class Decoder(srd.Decoder):
         ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('frame', 'Frame', (0, 1, 2, 3, 4, 5, 6)),
-        ('status', 'Status', (7,)),
+        ('frame', 'Frames', (0, 1, 2, 3, 4, 5, 6)),
+        ('status-vals', 'Status', (7,)),
         ('warnings', 'Warnings', (8,)),
     )
 

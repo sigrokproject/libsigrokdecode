@@ -44,7 +44,7 @@ class Decoder(srd.Decoder):
     outputs = ['onewire_network']
     tags = ['Embedded/industrial']
     annotations = (
-        ('text', 'Human-readable text'),
+        ('text', 'Text'),
     )
 
     def __init__(self):

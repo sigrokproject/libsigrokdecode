@@ -36,13 +36,13 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Analog/digital', 'IC', 'Sensor']
     annotations = (
-        ('read', 'Register read commands'),
-        ('write', 'Register write commands'),
-        ('warning', 'Warnings'),
+        ('read', 'Register read'),
+        ('write', 'Register write'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('read', 'Read', (0,)),
-        ('write', 'Write', (1,)),
+        ('reads', 'Reads', (0,)),
+        ('writes', 'Writes', (1,)),
         ('warnings', 'Warnings', (2,)),
     )
 

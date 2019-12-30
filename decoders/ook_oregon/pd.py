@@ -45,7 +45,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (0,)),
         ('fields', 'Fields', (1, 3, 4)),
-        ('l2', 'Level 2', (2,)),
+        ('l2vals', 'Level 2', (2,)),
     )
     binary = (
         ('data-hex', 'Hex data'),

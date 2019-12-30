@@ -71,8 +71,8 @@ class Decoder(srd.Decoder):
         {'id': 'rst', 'name': 'RESET#', 'desc': 'Reset line'},
     )
     annotations = (
-        ('bit-out', 'Output bits'),
-        ('bit-in', 'Input bits'),
+        ('bit-out', 'Output bit'),
+        ('bit-in', 'Input bit'),
         ('slot-out-raw', 'Output raw value'),
         ('slot-out-tag', 'Output TAG'),
         ('slot-out-cmd-addr', 'Output command address'),

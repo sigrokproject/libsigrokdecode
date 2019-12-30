@@ -83,8 +83,8 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits-tdi', 'Bits (TDI)', (16,)),
         ('bits-tdo', 'Bits (TDO)', (17,)),
-        ('bitstrings-tdi', 'Bitstring (TDI)', (18,)),
-        ('bitstrings-tdo', 'Bitstring (TDO)', (19,)),
+        ('bitstrings-tdi', 'Bitstrings (TDI)', (18,)),
+        ('bitstrings-tdo', 'Bitstrings (TDO)', (19,)),
         ('states', 'States', tuple(range(15 + 1))),
     )
 

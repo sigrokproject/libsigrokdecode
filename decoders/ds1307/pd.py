@@ -66,7 +66,7 @@ class Decoder(srd.Decoder):
         ('write-datetime', 'Write date/time'),
         ('reg-read', 'Register read'),
         ('reg-write', 'Register write'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', tuple(range(9, 24))),

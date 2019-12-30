@@ -31,16 +31,16 @@ class Decoder(srd.Decoder):
     tags = ['Wireless/RF']
     annotations = (
         ('cmd', 'Command'),
-        ('params', 'Command parameters'),
-        ('disabled', 'Disabled bits'),
-        ('return', 'Returned values'),
-        ('disabled_return', 'Disabled returned values'),
+        ('param', 'Command parameter'),
+        ('disabled', 'Disabled bit'),
+        ('return', 'Returned value'),
+        ('disabled_return', 'Disabled returned value'),
         ('interpretation', 'Interpretation'),
     )
     annotation_rows = (
         ('commands', 'Commands', (0, 1, 2)),
-        ('return', 'Return', (3, 4)),
-        ('interpretation', 'Interpretation', (5,)),
+        ('returns', 'Returns', (3, 4)),
+        ('interpretations', 'Interpretations', (5,)),
     )
 
     def __init__(self):

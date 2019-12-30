@@ -43,11 +43,11 @@ class Decoder(srd.Decoder):
         ('single_write', 'Single register write'),
         ('burst_read', 'Burst register read'),
         ('burst_write', 'Burst register write'),
-        ('status', 'Status register'),
+        ('status_reg', 'Status register'),
         ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('cmd', 'Commands', (ANN_STROBE,)),
+        ('cmds', 'Commands', (ANN_STROBE,)),
         ('data', 'Data', (ANN_SINGLE_READ, ANN_SINGLE_WRITE, ANN_BURST_READ,
                             ANN_BURST_WRITE, ANN_STATUS_READ)),
         ('status', 'Status register', (ANN_STATUS,)),

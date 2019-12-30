@@ -38,12 +38,12 @@ class Decoder(srd.Decoder):
         ('r2', 'R2 reply'),
         ('r3', 'R3 reply'),
         ('r7', 'R7 reply'),
-        ('bits', 'Bits'),
-        ('bit-warnings', 'Bit warnings'),
+        ('bit', 'Bit'),
+        ('bit-warning', 'Bit warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (133, 134)),
-        ('cmd-reply', 'Commands/replies', tuple(range(133))),
+        ('commands-replies', 'Commands/replies', tuple(range(133))),
     )
 
     def __init__(self):

@@ -73,11 +73,11 @@ class Decoder(srd.Decoder):
     annotations = \
         tuple(('message-0x%02X' % i, 'Message 0x%02X' % i) for i in range(18)) + (
         ('summary', 'Summary'),
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('messages', 'Messages', tuple(range(18))),
-        ('summary', 'Summary', (18,)),
+        ('summaries', 'Summaries', (18,)),
         ('warnings', 'Warnings', (19,)),
     )
 

@@ -89,7 +89,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (Ann.BITS,)),
         ('fields', 'Fields', (Ann.CMD, Ann.DATA)),
-        ('description', 'Description', (Ann.DESC,)),
+        ('descriptions', 'Descriptions', (Ann.DESC,)),
     )
 
     def __init__(self):
