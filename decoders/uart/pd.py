@@ -410,7 +410,7 @@ class Decoder(srd.Decoder):
             self.frame_valid[rxtx] = False
 
         self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
-        self.putg([Ann.RX_PARITY_OK + rxtx, ['Stop bit', 'Stop', 'T']])
+        self.putg([Ann.RX_STOP + rxtx, ['Stop bit', 'Stop', 'T']])
 
         # Pass the complete UART frame to upper layers.
         es = self.samplenum + ceil(self.bit_width / 2.0)
