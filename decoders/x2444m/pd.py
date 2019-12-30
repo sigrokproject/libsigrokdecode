@@ -28,7 +28,8 @@ registers = {
     0x84: ['WREN',  4, lambda _: ''],
     0x85: ['RCL',   5, lambda _: ''],
     0x86: ['READ',  6, lambda v: '0x%x' % v],
-    0x87: ['READ',  7, lambda v: '0x%x' % v],
+    0x87: ['READ',  6, lambda v: '0x%x' % v],
+    # 0x86/0x87 are both valid READ commands (bit 0 is "don't care").
 }
 
 class Decoder(srd.Decoder):
@@ -48,7 +49,6 @@ class Decoder(srd.Decoder):
         ('write', 'Write data into RAM'),
         ('wren', 'Write enable'),
         ('rcl', 'Recall EEPROM data into RAM'),
-        ('read', 'Data read from RAM'),
         ('read', 'Data read from RAM'),
     )
 
