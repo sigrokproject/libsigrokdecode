@@ -88,6 +88,9 @@ class Ann:
     RX_DATA_BIT, TX_DATA_BIT, RX_BREAK, TX_BREAK, RX_PACKET, TX_PACKET = \
     range(18)
 
+class Bin:
+    RX, TX, RXTX = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'uart'
@@ -329,8 +332,8 @@ class Decoder(srd.Decoder):
             self.putx(rxtx, [rxtx, [formatted]])
 
         bdata = b.to_bytes(self.bw, byteorder='big')
-        self.putbin(rxtx, [rxtx, bdata])
-        self.putbin(rxtx, [2, bdata])
+        self.putbin(rxtx, [Bin.RX + rxtx, bdata])
+        self.putbin(rxtx, [Bin.RXTX, bdata])
 
         self.handle_packet(rxtx)
 
