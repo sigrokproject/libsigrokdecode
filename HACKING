@@ -17,6 +17,12 @@ the Python PEP-8, which includes the convention of 4 spaces for indentation:
 
   http://www.python.org/dev/peps/pep-0008/
 
+Exceptions:
+
+ - All strings should use single quotes ('foo' instead of "foo").
+
+ - No double-newlines between methods (or anywhere else).
+
 
 Contributions
 -------------
@@ -141,7 +147,7 @@ Protocol decoder guidelines
 
  - Longer, multi-line descriptions should be placed in the protocol
    decoder's __init__.py file as docstring. It can be viewed (for a specific
-   protocol decoder, e.g., UART) via "sigrok-cli -a uart", or in various
+   protocol decoder, e.g., UART) via "sigrok-cli -P uart --show", or in various
    other places in GUIs.
 
  - Generally use strings for states (of the PD state machine), not integers.
