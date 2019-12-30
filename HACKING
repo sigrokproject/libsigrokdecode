@@ -150,6 +150,19 @@ Protocol decoder guidelines
    protocol decoder, e.g., UART) via "sigrok-cli -P uart --show", or in various
    other places in GUIs.
 
+ - Input IDs, output IDs, tags, channel IDs, option IDs, annotation class IDs,
+   annotation row IDs, and binary class IDs each must be unique.
+
+ - Annotation class IDs must not overlap with annotation row IDs.
+   For example, you cannot have an annotation row named "foo" if you already
+   have an annotation class named "foo". This avoids confusion for users
+   and simplifies e.g. command-line usage of decoders.
+
+ - Annotation class IDs should generally be singular, annotation row IDs
+   should generally be plural. Example: UART annotation classes could be
+   named "stop-bit" or "parity-bit" (singular), the annotation row containing
+   these annotation classes could be named "bits" (plural).
+
  - Generally use strings for states (of the PD state machine), not integers.
    This avoids having to keep a list of state definitions at the top of file.
    The performance overhead for this is negligible in practice.

@@ -668,6 +668,53 @@ SRD_PRIV long srd_decoder_apiver(const struct srd_decoder *d)
 	return apiver;
 }
 
+static gboolean contains_duplicates(GSList *list)
+{
+	for (GSList *l1 = list; l1; l1 = l1->next) {
+		for (GSList *l2 = l1->next; l2; l2 = l2->next)
+			if (!strcmp(l1->data, l2->data))
+				return TRUE;
+	}
+
+	return FALSE;
+}
+
+static gboolean contains_duplicate_ids(GSList *list1, GSList *list2)
+{
+	for (GSList *l1 = list1; l1; l1 = l1->next) {
+		unsigned int cnt = 0;
+		const char **s1 = l1->data;
+		for (GSList *l2 = list2; l2; l2 = l2->next) {
+			const char **s2 = l2->data;
+			if (!strcmp(s1[0], s2[0]))
+				cnt++;
+			if ((list1 == list2) && cnt > 1)
+				return TRUE;
+			if ((list1 != list2) && cnt > 0)
+				return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+static gboolean contains_duplicate_row_ids(GSList *list1, GSList *list2)
+{
+	for (GSList *l1 = list1; l1; l1 = l1->next) {
+		unsigned int cnt = 0;
+		const struct srd_decoder_annotation_row *r1 = l1->data;
+		for (GSList *l2 = list2; l2; l2 = l2->next) {
+			const struct srd_decoder_annotation_row *r2 = l2->data;
+			if (!strcmp(r1->id, r2->id))
+				cnt++;
+			if (cnt > 1)
+				return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 /**
  * Load a protocol decoder module into the embedded Python interpreter.
  *
@@ -839,6 +886,61 @@ SRD_API int srd_decoder_load(const char *module_name)
 
 	if (get_binary_classes(d) != SRD_OK) {
 		fail_txt = "cannot get binary classes";
+		goto err_out;
+	}
+
+	if (contains_duplicates(d->inputs)) {
+		fail_txt = "duplicate input IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicates(d->outputs)) {
+		fail_txt = "duplicate output IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicates(d->tags)) {
+		fail_txt = "duplicate tags";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->channels, d->channels)) {
+		fail_txt = "duplicate channel IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->opt_channels, d->opt_channels)) {
+		fail_txt = "duplicate optional channel IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->channels, d->opt_channels)) {
+		fail_txt = "channel and optional channel IDs contain duplicates";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->options, d->options)) {
+		fail_txt = "duplicate option IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->annotations, d->annotations)) {
+		fail_txt = "duplicate annotation class IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicate_row_ids(d->annotation_rows, d->annotation_rows)) {
+		fail_txt = "duplicate annotation row IDs";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->annotations, d->annotation_rows)) {
+		fail_txt = "annotation class/row IDs contain duplicates";
+		goto err_out;
+	}
+
+	if (contains_duplicate_ids(d->binary, d->binary)) {
+		fail_txt = "duplicate binary class IDs";
 		goto err_out;
 	}
 
