@@ -43,6 +43,7 @@ class Decoder(srd.Decoder):
         ('single_write', 'Single register write'),
         ('burst_read', 'Burst register read'),
         ('burst_write', 'Burst register write'),
+        ('status_read', 'Status read'),
         ('status_reg', 'Status register'),
         ('warning', 'Warning'),
     )
