@@ -53,7 +53,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (L + 0,)),
         ('fields', 'Fields', (L + 1,)),
-        ('commands', 'Commands', tuple(range(len(cmds)))),
+        ('commands', 'Commands', tuple(range(L))),
         ('warnings', 'Warnings', (L + 2,)),
     )
     options = (
