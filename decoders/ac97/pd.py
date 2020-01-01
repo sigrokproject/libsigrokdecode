@@ -24,32 +24,19 @@
 #   decoded register access).
 
 import sigrokdecode as srd
+from common.srdhelper import SrdIntEnum
 
 class ChannelError(Exception):
     pass
 
-class Pins:
-    (SYNC, BIT_CLK, SDATA_OUT, SDATA_IN, RESET) = range(5)
+Pins = SrdIntEnum.from_str('Pins', 'SYNC BIT_CLK SDATA_OUT SDATA_IN RESET')
 
-class Ann:
-    (
-        BITS_OUT, BITS_IN,
-        SLOT_OUT_RAW, SLOT_OUT_TAG, SLOT_OUT_ADDR, SLOT_OUT_DATA,
-        SLOT_OUT_03, SLOT_OUT_04, SLOT_OUT_05, SLOT_OUT_06,
-        SLOT_OUT_07, SLOT_OUT_08, SLOT_OUT_09, SLOT_OUT_10,
-        SLOT_OUT_11, SLOT_OUT_IO,
-        SLOT_IN_RAW, SLOT_IN_TAG, SLOT_IN_ADDR, SLOT_IN_DATA,
-        SLOT_IN_03, SLOT_IN_04, SLOT_IN_05, SLOT_IN_06,
-        SLOT_IN_07, SLOT_IN_08, SLOT_IN_09, SLOT_IN_10,
-        SLOT_IN_11, SLOT_IN_IO,
-        WARN, ERROR,
-    ) = range(32)
-    (
-        BIN_FRAME_OUT,
-        BIN_FRAME_IN,
-        BIN_SLOT_RAW_OUT,
-        BIN_SLOT_RAW_IN,
-    ) = range(4)
+slots = 'TAG ADDR DATA 03 04 05 06 07 08 09 10 11 IO'.split()
+a = 'BITS_OUT BITS_IN SLOT_RAW_OUT SLOT_RAW_IN WARN ERROR'.split() + \
+    ['SLOT_OUT_' + s for s in slots] + ['SLOT_IN_' + s for s in slots]
+Ann = SrdIntEnum.from_list('Ann', a)
+
+Bin = SrdIntEnum.from_str('Bin', 'FRAME_OUT FRAME_IN SLOT_RAW_OUT SLOT_RAW_IN')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -74,6 +61,9 @@ class Decoder(srd.Decoder):
         ('bit-out', 'Output bit'),
         ('bit-in', 'Input bit'),
         ('slot-out-raw', 'Output raw value'),
+        ('slot-in-raw', 'Input raw value'),
+        ('warning', 'Warning'),
+        ('error', 'Error'),
         ('slot-out-tag', 'Output TAG'),
         ('slot-out-cmd-addr', 'Output command address'),
         ('slot-out-cmd-data', 'Output command data'),
@@ -87,7 +77,6 @@ class Decoder(srd.Decoder):
         ('slot-out-10', 'Output slot 10'),
         ('slot-out-11', 'Output slot 11'),
         ('slot-out-io-ctrl', 'Output I/O control'),
-        ('slot-in-raw', 'Input raw value'),
         ('slot-in-tag', 'Input TAG'),
         ('slot-in-sts-addr', 'Input status address'),
         ('slot-in-sts-data', 'Input status data'),
@@ -106,24 +95,14 @@ class Decoder(srd.Decoder):
         # CMD ADDR: 'r/w', 'addr', 'unused'
         # CMD DATA: 'data', 'unused'
         # 3-11: 'data', 'unused', 'double data'
-        ('warning', 'Warning'),
-        ('error', 'Error'),
     )
     annotation_rows = (
         ('bits-out', 'Output bits', (Ann.BITS_OUT,)),
-        ('slots-out-raw', 'Output numbers', (Ann.SLOT_OUT_RAW,)),
-        ('slots-out', 'Output slots', (
-            Ann.SLOT_OUT_TAG, Ann.SLOT_OUT_ADDR, Ann.SLOT_OUT_DATA,
-            Ann.SLOT_OUT_03, Ann.SLOT_OUT_04, Ann.SLOT_OUT_05, Ann.SLOT_OUT_06,
-            Ann.SLOT_OUT_07, Ann.SLOT_OUT_08, Ann.SLOT_OUT_09, Ann.SLOT_OUT_10,
-            Ann.SLOT_OUT_11, Ann.SLOT_OUT_IO,)),
+        ('slots-out-raw', 'Output numbers', (Ann.SLOT_RAW_OUT,)),
+        ('slots-out', 'Output slots', Ann.prefixes('SLOT_OUT_')),
         ('bits-in', 'Input bits', (Ann.BITS_IN,)),
-        ('slots-in-raw', 'Input numbers', (Ann.SLOT_IN_RAW,)),
-        ('slots-in', 'Input slots', (
-            Ann.SLOT_IN_TAG, Ann.SLOT_IN_ADDR, Ann.SLOT_IN_DATA,
-            Ann.SLOT_IN_03, Ann.SLOT_IN_04, Ann.SLOT_IN_05, Ann.SLOT_IN_06,
-            Ann.SLOT_IN_07, Ann.SLOT_IN_08, Ann.SLOT_IN_09, Ann.SLOT_IN_10,
-            Ann.SLOT_IN_11, Ann.SLOT_IN_IO,)),
+        ('slots-in-raw', 'Input numbers', (Ann.SLOT_RAW_IN,)),
+        ('slots-in', 'Input slots', Ann.prefixes('SLOT_IN_')),
         ('warnings', 'Warnings', (Ann.WARN,)),
         ('errors', 'Errors', (Ann.ERROR,)),
     )
@@ -212,17 +191,15 @@ class Decoder(srd.Decoder):
 
     def flush_frame_bits(self):
         # Flush raw frame bits to binary annotation.
-        anncls = Ann.BIN_FRAME_OUT
         data = self.frame_bits_out[:]
         count = len(data)
         data = self.bits_to_bin_ann(data)
-        self.putb(0, count, anncls, data)
+        self.putb(0, count, Bin.FRAME_OUT, data)
 
-        anncls = Ann.BIN_FRAME_IN
         data = self.frame_bits_in[:]
         count = len(data)
         data = self.bits_to_bin_ann(data)
-        self.putb(0, count, anncls, data)
+        self.putb(0, count, Bin.FRAME_IN, data)
 
     def start_frame(self, ss):
         # Mark the start of a frame.
@@ -266,7 +243,7 @@ class Decoder(srd.Decoder):
         # that happens to be valid. For an improved implementation, it
         # either takes user provided specs or more smarts like observing
         # register access (if the capture includes it).
-        anncls = Ann.BIN_SLOT_RAW_OUT if is_out else Ann.BIN_SLOT_RAW_IN
+        anncls = Bin.SLOT_RAW_OUT if is_out else Bin.SLOT_RAW_IN
         data_bin = data >> 4
         data_bin &= 0xffff
         data_bin = data_bin.to_bytes(2, byteorder = 'big')
@@ -462,10 +439,10 @@ class Decoder(srd.Decoder):
         slot_es = self.frame_ss_list[have_len]
         if slot_data_out is not None:
             slot_text = self.int_to_nibble_text(slot_data_out, slot_len)
-            self.putx(slot_ss, slot_es, Ann.SLOT_OUT_RAW, [slot_text])
+            self.putx(slot_ss, slot_es, Ann.SLOT_RAW_OUT, [slot_text])
         if slot_data_in is not None:
             slot_text = self.int_to_nibble_text(slot_data_in, slot_len)
-            self.putx(slot_ss, slot_es, Ann.SLOT_IN_RAW, [slot_text])
+            self.putx(slot_ss, slot_es, Ann.SLOT_RAW_IN, [slot_text])
 
         self.handle_slot(slot_idx, slot_data_out, slot_data_in)
 
