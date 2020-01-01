@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2015 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2015-2020 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,7 +18,14 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import SrdStrEnum
 from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status, sd_status)
+
+s = ['GET_COMMAND_TOKEN', 'HANDLE_CMD999'] + \
+    ['HANDLE_CMD%d' % i for i in range(64)] + \
+    ['HANDLE_ACMD%d' % i for i in range(64)] + \
+    ['GET_RESPONSE_R%s' % r for r in ['1', '2', '3', '6', '7']]
+St = SrdStrEnum.from_list('St', s)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -65,7 +72,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.state = 'GET COMMAND TOKEN'
+        self.state = St.GET_COMMAND_TOKEN
         self.token = []
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.cmd = None
@@ -162,38 +169,38 @@ class Decoder(srd.Decoder):
         s = 'ACMD' if self.is_acmd else 'CMD'
         self.cmd_str = '%s%d (%s)' % (s, self.cmd, self.cmd_name(self.cmd))
         if self.cmd in (0, 2, 3, 6, 7, 8, 9, 10, 13, 41, 51, 55):
-            self.state = 'HANDLE CMD%d' % self.cmd
+            self.state = St['HANDLE_CMD%d' % self.cmd]
         else:
-            self.state = 'HANDLE CMD999'
+            self.state = St.HANDLE_CMD999
             self.putc(self.cmd, '%s%d' % (s, self.cmd))
 
     def handle_cmd0(self):
         # CMD0 (GO_IDLE_STATE) -> no response
         self.puta(0, 31, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(0, 'Reset all SD cards')
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_cmd2(self):
         # CMD2 (ALL_SEND_CID) -> R2
         self.puta(0, 31, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(2, 'Ask card for CID number')
-        self.token, self.state = [], 'GET RESPONSE R2'
+        self.token, self.state = [], St.GET_RESPONSE_R2
 
     def handle_cmd3(self):
         # CMD3 (SEND_RELATIVE_ADDR) -> R6
         self.puta(0, 31, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(3, 'Ask card for new relative card address (RCA)')
-        self.token, self.state = [], 'GET RESPONSE R6'
+        self.token, self.state = [], St.GET_RESPONSE_R6
 
     def handle_cmd6(self):
         # CMD6 (SWITCH_FUNC) -> R1
         self.putc(6, 'Switch/check card function')
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_cmd7(self):
         # CMD7 (SELECT/DESELECT_CARD) -> R1b
         self.putc(7, 'Select / deselect card')
-        self.token, self.state = [], 'GET RESPONSE R6'
+        self.token, self.state = [], St.GET_RESPONSE_R6
 
     def handle_cmd8(self):
         # CMD8 (SEND_IF_COND) -> R7
@@ -201,7 +208,7 @@ class Decoder(srd.Decoder):
         self.puta(8, 11, [136, ['Supply voltage', 'Voltage', 'VHS', 'V']])
         self.puta(0, 7, [136, ['Check pattern', 'Check pat', 'Check', 'C']])
         self.putc(8, 'Send interface condition to card')
-        self.token, self.state = [], 'GET RESPONSE R7'
+        self.token, self.state = [], St.GET_RESPONSE_R7
         # TODO: Handle case when card doesn't reply with R7 (no reply at all).
 
     def handle_cmd9(self):
@@ -209,27 +216,27 @@ class Decoder(srd.Decoder):
         self.puta(16, 31, [136, ['RCA', 'R']])
         self.puta(0, 15, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(9, 'Send card-specific data (CSD)')
-        self.token, self.state = [], 'GET RESPONSE R2'
+        self.token, self.state = [], St.GET_RESPONSE_R2
 
     def handle_cmd10(self):
         # CMD10 (SEND_CID) -> R2
         self.puta(16, 31, [136, ['RCA', 'R']])
         self.puta(0, 15, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(9, 'Send card identification data (CID)')
-        self.token, self.state = [], 'GET RESPONSE R2'
+        self.token, self.state = [], St.GET_RESPONSE_R2
 
     def handle_cmd13(self):
         # CMD13 (SEND_STATUS) -> R1
         self.puta(16, 31, [136, ['RCA', 'R']])
         self.puta(0, 15, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(13, 'Send card status register')
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_cmd16(self):
         # CMD16 (SET_BLOCKLEN) -> R1
         self.puta(0, 31, [136, ['Block length', 'Blocklen', 'BL', 'B']])
         self.putc(16, 'Set the block length to %d bytes' % self.arg)
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_cmd55(self):
         # CMD55 (APP_CMD) -> R1
@@ -237,18 +244,18 @@ class Decoder(srd.Decoder):
         self.puta(0, 15, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(55, 'Next command is an application-specific command')
         self.is_acmd = True
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_acmd6(self):
         # ACMD6 (SET_BUS_WIDTH) -> R1
         self.putc(64 + 6, 'Read SD config register (SCR)')
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_acmd13(self):
         # ACMD13 (SD_STATUS) -> R1
         self.puta(0, 31, [136, ['Stuff bits', 'Stuff', 'SB', 'S']])
         self.putc(64 + 13, 'Set SD status')
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_acmd41(self):
         # ACMD41 (SD_SEND_OP_COND) -> R3
@@ -261,18 +268,18 @@ class Decoder(srd.Decoder):
                                  'HCS', 'H']])
         self.puta(31, 31, [136, ['Reserved', 'Res', 'R']])
         self.putc(64 + 41, 'Send HCS info and activate the card init process')
-        self.token, self.state = [], 'GET RESPONSE R3'
+        self.token, self.state = [], St.GET_RESPONSE_R3
 
     def handle_acmd51(self):
         # ACMD51 (SEND_SCR) -> R1
         self.putc(64 + 51, 'Read SD config register (SCR)')
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_cmd999(self):
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     def handle_acmd999(self):
-        self.token, self.state = [], 'GET RESPONSE R1'
+        self.token, self.state = [], St.GET_RESPONSE_R1
 
     # Response tokens can have one of four formats (depends on content).
     # They can have a total length of 48 or 136 bits.
@@ -294,7 +301,7 @@ class Decoder(srd.Decoder):
         self.puta(0, 31, [136, ['Card status', 'Status', 'S']])
         for i in range(32):
             self.putbit(8 + i, [card_status[31 - i]])
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r1b(self, cmd):
         # R1b: Same as R1 with an optional busy signal (on the data line)
@@ -303,7 +310,7 @@ class Decoder(srd.Decoder):
         self.handle_common_token_fields()
         self.puta(0, 31, [136, ['Card status', 'Status', 'S']])
         self.putr('R1b')
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r2(self, cmd):
         # R2: CID/CSD register
@@ -325,7 +332,7 @@ class Decoder(srd.Decoder):
         self.putf(135, 135, [134, ['End bit', 'End', 'E']])
         self.putf(8, 134, [136, ['CID/CSD register', 'CID/CSD', 'C']])
         self.putf(0, 135, [55, ['R2']])
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r3(self, cmd):
         # R3: OCR register
@@ -349,7 +356,7 @@ class Decoder(srd.Decoder):
         self.putf(40, 46, [133, ['Reserved', 'Res', 'R']])
         self.putf(47, 47, [134, ['End bit', 'End', 'E']])
         self.puta(0, 31, [136, ['OCR register', 'OCR reg', 'OCR', 'O']])
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r6(self, cmd):
         # R6: Published RCA response
@@ -366,7 +373,7 @@ class Decoder(srd.Decoder):
         self.puta(0, 15, [136, ['Card status bits', 'Status', 'S']])
         self.puta(16, 31, [136, ['Relative card address', 'RCA', 'R']])
         self.putr('R6')
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r7(self, cmd):
         # R7: Card interface condition
@@ -395,7 +402,7 @@ class Decoder(srd.Decoder):
         # Arg[07:00]: Echo-back of check pattern
         self.puta(0, 7, [136, ['Echo-back of check pattern', 'Echo', 'E']])
 
-        self.token, self.state = [], 'GET COMMAND TOKEN'
+        self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def decode(self):
         while True:
@@ -403,26 +410,26 @@ class Decoder(srd.Decoder):
             (cmd, clk, dat0, dat1, dat2, dat3) = self.wait({1: 'r'})
 
             # State machine.
-            if self.state == 'GET COMMAND TOKEN':
+            if self.state == St.GET_COMMAND_TOKEN:
                 if len(self.token) == 0:
                     # Wait for start bit (CMD = 0).
                     if cmd != 0:
                         continue
                 self.get_command_token(cmd)
-            elif self.state.startswith('HANDLE CMD'):
+            elif self.state.value.startswith('HANDLE_CMD'):
                 # Call the respective handler method for the command.
-                a, cmdstr = 'a' if self.is_acmd else '', self.state[10:].lower()
+                a, cmdstr = 'a' if self.is_acmd else '', self.state.value[10:].lower()
                 handle_cmd = getattr(self, 'handle_%scmd%s' % (a, cmdstr))
                 handle_cmd()
                 # Leave ACMD mode again after the first command after CMD55.
                 if self.is_acmd and cmdstr not in ('55', '63'):
                     self.is_acmd = False
-            elif self.state.startswith('GET RESPONSE'):
+            elif self.state.value.startswith('GET_RESPONSE'):
                 if len(self.token) == 0:
                     # Wait for start bit (CMD = 0).
                     if cmd != 0:
                         continue
                 # Call the respective handler method for the response.
-                s = 'handle_response_%s' % self.state[13:].lower()
+                s = 'handle_response_%s' % self.state.value[13:].lower()
                 handle_response = getattr(self, s)
                 handle_response(cmd)
