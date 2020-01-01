@@ -19,18 +19,15 @@
 
 import sigrokdecode as srd
 from math import ceil
+from common.srdhelper import SrdIntEnum
 from .lists import *
 
 L = len(cmds)
 RX = 0
 TX = 1
 
-# Don't forget to keep this in sync with 'cmds' is lists.py.
-class Ann:
-    PAGE, GBV, GWV, GSV, GLV, GRPC, SBV, SWV, SSV, RPC, LINE, RECT, FRECT, \
-    PIXEL, GBVA, GWVA, SBVA, GBVR, GWVR, GSVR, GLVR, GRPCR, SBVR, SWVR, SSVR, \
-    RPCR, LINER, RECTR, FRECTR, PIXELR, GBVAR, GWVAR, SBVAR, ACK, NACK, SWVA, \
-    SWVAR, GCV, GCVR, SCV, SCVR, BIT, FIELD, WARN = range(L + 3)
+Ann = SrdIntEnum.from_list('Ann',
+    [c[0] for c in cmds.values()] + ['BIT', 'FIELD', 'WARN'])
 
 def cmd_annotation_classes():
     return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
