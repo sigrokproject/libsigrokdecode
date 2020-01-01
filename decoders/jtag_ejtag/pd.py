@@ -18,7 +18,7 @@
 ##
 
 import sigrokdecode as srd
-from common.srdhelper import bin2int
+from common.srdhelper import bin2int, SrdIntEnum
 
 class Instruction(object):
     IDCODE            = 0x01
@@ -53,7 +53,7 @@ class ControlReg(object):
     PRACC             = (1 << 18)
     PRNW              = (1 << 19)
 
-class Ann(object):
+class Ann(SrdIntEnum):
     INSTRUCTION       = 0
     REGISTER          = 1
     CONTROL_FIELD_IN  = 10
