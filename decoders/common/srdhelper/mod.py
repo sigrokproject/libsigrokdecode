@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2012-2014 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2012-2020 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,8 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-from enum import IntEnum, unique
+from enum import Enum, IntEnum, unique
 from itertools import chain
+import re
 
 # Return the specified BCD number (max. 8 bits) as integer.
 def bcd2int(b):
@@ -37,6 +38,18 @@ def bitunpack(num, minbits=0):
         num >>= 1
         minbits -= 1
     return tuple(res)
+
+@unique
+class SrdStrEnum(Enum):
+    @classmethod
+    def from_list(cls, name, l):
+        # Keys are limited/converted to [A-Z0-9_], values can be any string.
+        items = [(re.sub('[^A-Z0-9_]', '_', l[i]), l[i]) for i in range(len(l))]
+        return cls(name, items)
+
+    @classmethod
+    def from_str(cls, name, s):
+        return cls.from_list(name, s.split())
 
 @unique
 class SrdIntEnum(IntEnum):
