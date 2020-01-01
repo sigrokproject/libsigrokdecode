@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2015 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2015-2020 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ from collections import OrderedDict
 
 # OrderedDict which maps command IDs to their names and descriptions.
 # Please keep this sorted by command ID.
-# Don't forget to update 'Ann' in pd.py if you add/remove items here.
 cmds = OrderedDict([
     (0x01, ('WRSR', 'Write status register')),
     (0x02, ('PP', 'Page program')),

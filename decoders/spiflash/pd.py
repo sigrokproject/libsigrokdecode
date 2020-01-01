@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2011-2016 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2011-2020 Uwe Hermann <uwe@hermann-uwe.de>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,16 +18,14 @@
 ##
 
 import sigrokdecode as srd
+import re
+from common.srdhelper import SrdIntEnum
 from .lists import *
 
 L = len(cmds)
 
-# Don't forget to keep this in sync with 'cmds' in lists.py.
-class Ann:
-    WRSR, PP, READ, WRDI, RDSR, WREN, FAST_READ, SE, RDSCUR, WRSCUR, \
-    RDSR2, CE, ESRY, DSRY, WRITE1, WRITE2, REMS, RDID, RDP_RES, CP, ENSO, DP, \
-    READ2X, EXSO, CE2, STATUS, BE, REMS2, \
-    BIT, FIELD, WARN = range(L + 3)
+a = [re.sub('\/', '_', c[0]).replace('2READ', 'READ2X') for c in cmds.values()] + ['BIT', 'FIELD', 'WARN']
+Ann = SrdIntEnum.from_list('Ann', a)
 
 def cmd_annotation_classes():
     return tuple([tuple([cmd[0].lower(), cmd[1]]) for cmd in cmds.values()])
