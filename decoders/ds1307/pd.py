@@ -47,8 +47,8 @@ rates = {
 DS1307_I2C_ADDRESS = 0x68
 
 def regs_and_bits():
-    l = [('reg-' + r.lower(), r + ' register') for r in regs]
-    l += [('bit-' + re.sub('\/| ', '-', b).lower(), b + ' bit') for b in bits]
+    l = [('reg_' + r.lower(), r + ' register') for r in regs]
+    l += [('bit_' + re.sub('\/| ', '_', b).lower(), b + ' bit') for b in bits]
     return tuple(l)
 
 class Decoder(srd.Decoder):
@@ -62,16 +62,16 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Clock/timing', 'IC']
     annotations =  regs_and_bits() + (
-        ('read-datetime', 'Read date/time'),
-        ('write-datetime', 'Write date/time'),
-        ('reg-read', 'Register read'),
-        ('reg-write', 'Register write'),
+        ('read_date_time', 'Read date/time'),
+        ('write_date_time', 'Write date/time'),
+        ('reg_read', 'Register read'),
+        ('reg_write', 'Register write'),
         ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', tuple(range(9, 24))),
         ('regs', 'Registers', tuple(range(9))),
-        ('date-time', 'Date/time', (24, 25, 26, 27)),
+        ('date_time', 'Date/time', (24, 25, 26, 27)),
         ('warnings', 'Warnings', (28,)),
     )
 
