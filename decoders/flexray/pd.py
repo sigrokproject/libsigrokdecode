@@ -76,7 +76,7 @@ class Decoder(srd.Decoder):
         ('cycle', 'Cycle code'),
         ('data-byte', 'Data byte'),
         ('frame-crc', 'Frame CRC'),
-        ('cid-delimiter', 'Channel idle delimiter'),
+        ('fes', 'Frame end sequence'),
         ('bss', 'Byte start sequence'),
         ('warning', 'Warning'),
         ('bit', 'Bit'),
