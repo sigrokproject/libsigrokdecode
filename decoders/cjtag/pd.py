@@ -138,7 +138,7 @@ class Decoder(srd.Decoder):
         self.oldstate = self.state
 
         if self.cjtagstate.startswith('CJTAG-'):
-            self.oacp = self.oacp + 1
+            self.oacp += 1
             if self.oacp > 4 and self.oaclen == 12:
                 self.cjtagstate = 'CJTAG-EC'
 
@@ -281,7 +281,7 @@ class Decoder(srd.Decoder):
         self.ss_item = self.samplenum
 
     def handle_tms_edge(self, tck, tms):
-        self.escape_edges = self.escape_edges + 1
+        self.escape_edges += 1
 
     def handle_tapc_state(self, tck, tms):
         self.oldcjtagstate = self.cjtagstate
