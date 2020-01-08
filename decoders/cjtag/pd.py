@@ -55,6 +55,12 @@ jtag_states = [
         'SHIFT-IR', 'EXIT1-IR', 'EXIT2-IR',
 ]
 
+cjtag_states = [
+        'CJTAG-EC', 'CJTAG-SPARE', 'CJTAG-TPDEL', 'CJTAG-TPREV', 'CJTAG-TPST',
+        'CJTAG-RDYC', 'CJTAG-DLYC', 'CJTAG-SCNFMT', 'CJTAG-CP', 'CJTAG-OAC',
+        'OSCAN1', '4-WIRE',
+]
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'cjtag'
@@ -69,22 +75,24 @@ class Decoder(srd.Decoder):
         {'id': 'tckc', 'name': 'TCKC', 'desc': 'Test clock'},
         {'id': 'tmsc', 'name': 'TMSC', 'desc': 'Test mode select'},
     )
-    annotations = tuple([tuple([s.lower(), s]) for s in jtag_states]) + ( \
+    annotations = \
+        tuple([tuple([s.lower(), s]) for s in jtag_states]) + \
+        tuple([tuple([s.lower(), s]) for s in cjtag_states]) + ( \
         ('bit-tdi', 'Bit (TDI)'),
         ('bit-tdo', 'Bit (TDO)'),
         ('bitstring-tdi', 'Bitstring (TDI)'),
         ('bitstring-tdo', 'Bitstring (TDO)'),
         ('bit-tms', 'Bit (TMS)'),
-        ('state-tapc', 'TAPC state'),
     )
     annotation_rows = (
-        ('bits-tdi', 'Bits (TDI)', (16,)),
-        ('bits-tdo', 'Bits (TDO)', (17,)),
-        ('bitstrings-tdi', 'Bitstrings (TDI)', (18,)),
-        ('bitstrings-tdo', 'Bitstrings (TDO)', (19,)),
-        ('bits-tms', 'Bits (TMS)', (20,)),
-        ('states-tapc', 'TAPC states', (21,)),
-        ('states', 'States', tuple(range(15 + 1))),
+        ('bits-tdi', 'Bits (TDI)', (28,)),
+        ('bits-tdo', 'Bits (TDO)', (29,)),
+        ('bitstrings-tdi', 'Bitstrings (TDI)', (30,)),
+        ('bitstrings-tdo', 'Bitstrings (TDO)', (31,)),
+        ('bits-tms', 'Bits (TMS)', (32,)),
+        ('cjtag-states', 'CJTAG states',
+            tuple(range(len(jtag_states), len(jtag_states + cjtag_states)))),
+        ('jtag-states', 'JTAG states', tuple(range(len(jtag_states)))),
     )
 
     def __init__(self):
@@ -219,9 +227,10 @@ class Decoder(srd.Decoder):
             self.putx([jtag_states.index(self.oldstate), [self.oldstate]])
             self.putp(['NEW STATE', self.state])
 
-            self.putx([21, [self.oldcjtagstate]])
+            self.putx([len(jtag_states) + cjtag_states.index(self.oldcjtagstate),
+                      [self.oldcjtagstate]])
             if (self.oldcjtagstate.startswith('CJTAG-')):
-                self.putx([20, [str(self.oldtms)]])
+                self.putx([32, [str(self.oldtms)]])
         self.oldtms = tms
 
         # Upon SHIFT-*/EXIT1-* collect the current TDI/TDO values.
@@ -231,8 +240,8 @@ class Decoder(srd.Decoder):
                 self.ss_bitstring = self.samplenum
                 self.first_bit = False
             else:
-                self.putx([16, [str(self.bits_tdi[0])]])
-                self.putx([17, [str(self.bits_tdo[0])]])
+                self.putx([28, [str(self.bits_tdi[0])]])
+                self.putx([29, [str(self.bits_tdo[0])]])
                 # Use self.samplenum as ES of the previous bit.
                 self.bits_samplenums_tdi[0][1] = self.samplenum
                 self.bits_samplenums_tdo[0][1] = self.samplenum
@@ -253,7 +262,7 @@ class Decoder(srd.Decoder):
             b = ''.join(map(str, self.bits_tdi[1:]))
             h = ' (0x%x' % int('0b0' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi[1:])) + ' bits'
-            self.putx_bs([18, [s]])
+            self.putx_bs([30, [s]])
             self.putp_bs([t, [b, self.bits_samplenums_tdi[1:]]])
             self.bits_tdi = []
             self.bits_samplenums_tdi = []
@@ -262,7 +271,7 @@ class Decoder(srd.Decoder):
             b = ''.join(map(str, self.bits_tdo[1:]))
             h = ' (0x%x' % int('0b0' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo[1:])) + ' bits'
-            self.putx_bs([19, [s]])
+            self.putx_bs([31, [s]])
             self.putp_bs([t, [b, self.bits_samplenums_tdo[1:]]])
             self.bits_tdo = []
             self.bits_samplenums_tdo = []
