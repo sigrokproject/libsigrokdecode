@@ -273,10 +273,10 @@ class Decoder(srd.Decoder):
 
         self.ss_item = self.samplenum
 
-    def handle_tms_edge(self, tck, tms):
+    def handle_tms_edge(self):
         self.escape_edges += 1
 
-    def handle_tapc_state(self, tck, tms):
+    def handle_tapc_state(self):
         self.oldcjtagstate = self.cjtagstate
 
         if self.escape_edges >= 8:
@@ -296,7 +296,7 @@ class Decoder(srd.Decoder):
         while True:
             # Wait for a rising edge on TCK.
             tck, tms = self.wait({0: 'r'})
-            self.handle_tapc_state(tck, tms)
+            self.handle_tapc_state()
 
             if self.cjtagstate == 'OSCAN1':
                 if self.oscan1cycle == 0: # nTDI
@@ -316,4 +316,4 @@ class Decoder(srd.Decoder):
                 tck, tms_n = self.wait([{0: 'f'}, {1: 'e'}])
                 if tms_n != tms:
                     tms = tms_n
-                    self.handle_tms_edge(tck, tms)
+                    self.handle_tms_edge()
