@@ -298,9 +298,7 @@ class Decoder(srd.Decoder):
         self.escape_edges = 0
 
     def decode(self):
-        tdi_real = 0
-        tms_real = 0
-        tdo_real = 0
+        tdi = tms = tdo = 0
 
         while True:
             # Wait for a rising edge on TCKC.
@@ -309,14 +307,14 @@ class Decoder(srd.Decoder):
 
             if self.cjtagstate == 'OSCAN1':
                 if self.oscan1cycle == 0: # nTDI
-                    tdi_real = 1 if (tmsc == 0) else 0
+                    tdi = 1 if (tmsc == 0) else 0
                     self.oscan1cycle = 1
                 elif self.oscan1cycle == 1: # TMS
-                    tms_real = tmsc
+                    tms = tmsc
                     self.oscan1cycle = 2
                 elif self.oscan1cycle == 2: # TDO
-                    tdo_real = tmsc
-                    self.handle_rising_tckc_edge(tdi_real, tdo_real, tckc, tms_real)
+                    tdo = tmsc
+                    self.handle_rising_tckc_edge(tdi, tdo, tckc, tms)
                     self.oscan1cycle = 0
             else:
                 self.handle_rising_tckc_edge(None, None, tckc, tmsc)
