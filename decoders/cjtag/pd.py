@@ -89,8 +89,8 @@ class Decoder(srd.Decoder):
         ('bits-tdo', 'Bits (TDO)', (17,)),
         ('bitstrings-tdi', 'Bitstrings (TDI)', (18,)),
         ('bitstrings-tdo', 'Bitstrings (TDO)', (19,)),
-        ('bit-tms', 'Bit (TMS)', (20,)),
-        ('state-tapc', 'TAPC state', (21,)),
+        ('bits-tms', 'Bits (TMS)', (20,)),
+        ('states-tapc', 'TAPC states', (21,)),
         ('states', 'States', tuple(range(15 + 1))),
     )
 
