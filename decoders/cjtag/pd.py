@@ -139,32 +139,32 @@ class Decoder(srd.Decoder):
 
         if self.cjtagstate.startswith('CJTAG-'):
             self.oacp = self.oacp + 1
-            if (self.oacp > 4 and self.oaclen == 12):
+            if self.oacp > 4 and self.oaclen == 12:
                 self.cjtagstate = 'CJTAG-EC'
 
-            if (self.oacp == 8 and tms == 0):
+            if self.oacp == 8 and tms == 0:
                 self.oaclen = 36
-            if (self.oacp > 8 and self.oaclen == 36):
+            if self.oacp > 8 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-SPARE'
-            if (self.oacp > 13 and self.oaclen == 36):
+            if self.oacp > 13 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-TPDEL'
-            if (self.oacp > 16 and self.oaclen == 36):
+            if self.oacp > 16 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-TPREV'
-            if (self.oacp > 18 and self.oaclen == 36):
+            if self.oacp > 18 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-TPST'
-            if (self.oacp > 23 and self.oaclen == 36):
+            if self.oacp > 23 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-RDYC'
-            if (self.oacp > 25 and self.oaclen == 36):
+            if self.oacp > 25 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-DLYC'
-            if (self.oacp > 27 and self.oaclen == 36):
+            if self.oacp > 27 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-SCNFMT'
 
-            if (self.oacp > 8 and self.oaclen == 12):
+            if self.oacp > 8 and self.oaclen == 12:
                 self.cjtagstate = 'CJTAG-CP'
-            if (self.oacp > 32 and self.oaclen == 36):
+            if self.oacp > 32 and self.oaclen == 36:
                 self.cjtagstate = 'CJTAG-CP'
 
-            if (self.oacp > self.oaclen):
+            if self.oacp > self.oaclen:
                 self.cjtagstate = 'OSCAN1'
                 self.oscan1cycle = 1
                 # Because Nuclei cJTAG device asserts a reset during cJTAG
@@ -305,17 +305,17 @@ class Decoder(srd.Decoder):
             (tdi, tdo, tck, tms, trst, srst, rtck) = self.wait({2: 'r'})
             self.handle_tapc_state(tck, tms)
 
-            if (self.cjtagstate == 'OSCAN1'):
-                if (self.oscan1cycle == 0): # nTDI
-                    if (tms == 0):
+            if self.cjtagstate == 'OSCAN1':
+                if self.oscan1cycle == 0: # nTDI
+                    if tms == 0:
                         tdi_real = 1
                     else:
                         tdi_real = 0
                     self.oscan1cycle = 1
-                elif (self.oscan1cycle == 1): # TMS
+                elif self.oscan1cycle == 1: # TMS
                     tms_real = tms
                     self.oscan1cycle = 2
-                elif (self.oscan1cycle == 2): # TDO
+                elif self.oscan1cycle == 2: # TDO
                     tdo_real = tms
                     self.handle_rising_tck_edge(tdi_real, tdo_real, tck, tms_real, trst, srst, rtck)
                     self.oscan1cycle = 0
@@ -324,6 +324,6 @@ class Decoder(srd.Decoder):
 
             while (tck == 1):
                 (tdi, tdo, tck, tms_n, trst, srst, rtck) = self.wait([{2: 'f'}, {3: 'e'}])
-                if (tms_n != tms):
+                if tms_n != tms:
                     tms = tms_n
                     self.handle_tms_edge(tck, tms)
