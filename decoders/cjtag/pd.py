@@ -307,10 +307,7 @@ class Decoder(srd.Decoder):
 
             if self.cjtagstate == 'OSCAN1':
                 if self.oscan1cycle == 0: # nTDI
-                    if tms == 0:
-                        tdi_real = 1
-                    else:
-                        tdi_real = 0
+                    tdi_real = 1 if (tms == 0) else 0
                     self.oscan1cycle = 1
                 elif self.oscan1cycle == 1: # TMS
                     tms_real = tms
