@@ -66,15 +66,8 @@ class Decoder(srd.Decoder):
     outputs = ['jtag']
     tags = ['Debug/trace']
     channels = (
-        {'id': 'tdi',  'name': 'TDI',  'desc': 'Test data input'},
-        {'id': 'tdo',  'name': 'TDO',  'desc': 'Test data output'},
         {'id': 'tck',  'name': 'TCK',  'desc': 'Test clock'},
         {'id': 'tms',  'name': 'TMS',  'desc': 'Test mode select'},
-    )
-    optional_channels = (
-        {'id': 'trst', 'name': 'TRST#', 'desc': 'Test reset'},
-        {'id': 'srst', 'name': 'SRST#', 'desc': 'System reset'},
-        {'id': 'rtck', 'name': 'RTCK',  'desc': 'Return clock signal'},
     )
     annotations = tuple([tuple([s.lower(), s]) for s in jtag_states]) + ( \
         ('bit-tdi', 'Bit (TDI)'),
@@ -210,7 +203,7 @@ class Decoder(srd.Decoder):
         elif self.state == 'UPDATE-IR':
             self.state = 'SELECT-DR-SCAN' if (tms) else 'RUN-TEST/IDLE'
 
-    def handle_rising_tck_edge(self, tdi, tdo, tck, tms, trst, srst, rtck):
+    def handle_rising_tck_edge(self, tdi, tdo, tck, tms):
 
         # Rising TCK edges always advance the state machine.
         self.advance_state_machine(tms)
@@ -302,7 +295,7 @@ class Decoder(srd.Decoder):
 
         while True:
             # Wait for a rising edge on TCK.
-            (tdi, tdo, tck, tms, trst, srst, rtck) = self.wait({2: 'r'})
+            tck, tms = self.wait({0: 'r'})
             self.handle_tapc_state(tck, tms)
 
             if self.cjtagstate == 'OSCAN1':
@@ -314,13 +307,13 @@ class Decoder(srd.Decoder):
                     self.oscan1cycle = 2
                 elif self.oscan1cycle == 2: # TDO
                     tdo_real = tms
-                    self.handle_rising_tck_edge(tdi_real, tdo_real, tck, tms_real, trst, srst, rtck)
+                    self.handle_rising_tck_edge(tdi_real, tdo_real, tck, tms_real)
                     self.oscan1cycle = 0
             else:
-                self.handle_rising_tck_edge(tdi, tdo, tck, tms, trst, srst, rtck)
+                self.handle_rising_tck_edge(None, None, tck, tms)
 
             while (tck == 1):
-                (tdi, tdo, tck, tms_n, trst, srst, rtck) = self.wait([{2: 'f'}, {3: 'e'}])
+                tck, tms_n = self.wait([{0: 'f'}, {1: 'e'}])
                 if tms_n != tms:
                     tms = tms_n
                     self.handle_tms_edge(tck, tms)
