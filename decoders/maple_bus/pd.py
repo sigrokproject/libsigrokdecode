@@ -18,6 +18,9 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import SrdIntEnum
+
+Pin = SrdIntEnum.from_str('Pin', 'SDCKA SDCKB')
 
 ann = [
     ['Size', 'L'],
@@ -142,11 +145,11 @@ class Decoder(srd.Decoder):
         self.putx([7, ['Frame error', 'F error', 'FE']])
 
     def handle_start(self):
-        self.wait({0: 'l', 1: 'h'})
+        self.wait({Pin.SDCKA: 'l', Pin.SDCKB: 'h'})
         self.ss = self.samplenum
         count = 0
         while True:
-            sdcka, sdckb = self.wait([{1: 'f'}, {0: 'r'}])
+            sdcka, sdckb = self.wait([{Pin.SDCKB: 'f'}, {Pin.SDCKA: 'r'}])
             if self.matched[0]:
                 count = count + 1
             if self.matched[1]:
@@ -175,14 +178,15 @@ class Decoder(srd.Decoder):
         countb = 0
         self.data = 0
         while countb < 4:
-            sdcka, sdckb = self.wait([{0: 'f'}, {1: 'f'}])
+            sdcka, sdckb = self.wait([{Pin.SDCKA: 'f'}, {Pin.SDCKB: 'f'}])
             self.es = self.samplenum
             if self.matched[0]:
                 if counta == countb:
                     self.got_bit(sdckb)
                     counta = counta + 1
                 elif counta == 1 and countb == 0 and self.data == 0 and sdckb == 0:
-                    self.wait([{0: 'h', 1: 'h'}, {0: 'f'}, {1: 'f'}])
+                    self.wait([{Pin.SDCKA: 'h', Pin.SDCKB: 'h'},
+                               {Pin.SDCKA: 'f'}, {Pin.SDCKB: 'f'}])
                     self.es = self.samplenum
                     if self.matched[0]:
                         self.got_end()
@@ -202,7 +206,7 @@ class Decoder(srd.Decoder):
                 else:
                     self.frame_error()
                     return False
-        self.wait({0: 'h'})
+        self.wait({Pin.SDCKA: 'h'})
         self.es = self.samplenum
         self.got_byte()
         return True
