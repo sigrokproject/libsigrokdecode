@@ -437,11 +437,9 @@ class Decoder(srd.Decoder):
         elif miso == 0x0d:
             self.put(m[3][1], m[1][2], self.out_ann, [Ann.BIT, ['Data rejected (write error)']])
         self.put(m[0][1], m[0][2], self.out_ann, [Ann.BIT, ['Always 1']])
-        ann_class = None
-        if self.is_cmd24:
-            ann_class = Ann.CMD24
-        if ann_class is not None:
-            self.put(self.ss, self.es, self.out_ann, [ann_class, ['Data Response']])
+        cls = Ann.CMD24 if self.is_cmd24 else None
+        if cls is not None:
+            self.put(self.ss, self.es, self.out_ann, [cls, ['Data Response']])
         if self.is_cmd24:
             # We just send a block of data to be written to the card,
             # this takes some time.
@@ -452,11 +450,9 @@ class Decoder(srd.Decoder):
 
     def wait_while_busy(self, miso):
         if miso != 0x00:
-            ann_class = None
-            if self.is_cmd24:
-                ann_class = Ann.CMD24
-            if ann_class is not None:
-                self.put(self.ss_busy, self.es_busy, self.out_ann, [Ann.CMD24, ['Card is busy']])
+            cls = Ann.CMD24 if self.is_cmd24 else None
+            if cls is not None:
+                self.put(self.ss_busy, self.es_busy, self.out_ann, [cls, ['Card is busy']])
             self.state = 'IDLE'
             return
         else:
