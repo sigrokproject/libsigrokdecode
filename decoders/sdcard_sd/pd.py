@@ -23,6 +23,8 @@ from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status
 
 responses = '1 1b 2 3 6 7'.split()
 
+Pin = SrdIntEnum.from_str('Pin', 'CMD CLK DAT0 DAT1 DAT2 DAT3')
+
 a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['R' + r.upper() for r in responses] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
@@ -422,7 +424,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # Wait for a rising CLK edge.
-            (cmd, clk, dat0, dat1, dat2, dat3) = self.wait({1: 'r'})
+            (cmd, clk, dat0, dat1, dat2, dat3) = self.wait({Pin.CLK: 'r'})
 
             # State machine.
             if self.state == St.GET_COMMAND_TOKEN:
