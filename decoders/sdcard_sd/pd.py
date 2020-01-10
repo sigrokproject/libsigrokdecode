@@ -346,7 +346,7 @@ class Decoder(srd.Decoder):
         self.putf(8, 134, [Ann.F_ARG, ['Argument', 'Arg', 'A']])
         self.putf(135, 135, [Ann.F_END, ['End bit', 'End', 'E']])
         self.putf(8, 134, [Ann.DECODED_F, ['CID/CSD register', 'CID/CSD', 'C']])
-        self.putf(0, 135, [55, ['R2']])
+        self.putf(0, 135, [Ann.R2, ['R2']])
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r3(self, cmd):
