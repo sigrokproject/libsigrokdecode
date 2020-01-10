@@ -52,11 +52,11 @@ St = SrdStrEnum.from_str('St', s)
 
 jtag_states = [s.value for s in St]
 
-cjtag_states = [
-        'CJTAG-EC', 'CJTAG-SPARE', 'CJTAG-TPDEL', 'CJTAG-TPREV', 'CJTAG-TPST',
-        'CJTAG-RDYC', 'CJTAG-DLYC', 'CJTAG-SCNFMT', 'CJTAG-CP', 'CJTAG-OAC',
-        'OSCAN1', '4-WIRE',
-]
+s = 'EC SPARE TPDEL TPREV TPST RDYC DLYC SCNFMT CP OAC'.split()
+s = ['CJTAG_' + x for x in s] + ['OSCAN1', 'FOUR_WIRE']
+CSt = SrdStrEnum.from_list('CSt', s)
+
+cjtag_states = [s.value for s in CSt]
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -98,7 +98,7 @@ class Decoder(srd.Decoder):
     def reset(self):
         # self.state = St.TEST_LOGIC_RESET
         self.state = St.RUN_TEST_IDLE
-        self.cjtagstate = '4-WIRE'
+        self.cjtagstate = CSt.FOUR_WIRE
         self.oldcjtagstate = None
         self.escape_edges = 0
         self.oaclen = 0
@@ -135,35 +135,35 @@ class Decoder(srd.Decoder):
     def advance_state_machine(self, tms):
         self.oldstate = self.state
 
-        if self.cjtagstate.startswith('CJTAG-'):
+        if self.cjtagstate.value.startswith('CJTAG_'):
             self.oacp += 1
             if self.oacp > 4 and self.oaclen == 12:
-                self.cjtagstate = 'CJTAG-EC'
+                self.cjtagstate = CSt.CJTAG_EC
 
             if self.oacp == 8 and tms == 0:
                 self.oaclen = 36
             if self.oacp > 8 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-SPARE'
+                self.cjtagstate = CSt.CJTAG_SPARE
             if self.oacp > 13 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-TPDEL'
+                self.cjtagstate = CSt.CJTAG_TPDEL
             if self.oacp > 16 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-TPREV'
+                self.cjtagstate = CSt.CJTAG_TPREV
             if self.oacp > 18 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-TPST'
+                self.cjtagstate = CSt.CJTAG_TPST
             if self.oacp > 23 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-RDYC'
+                self.cjtagstate = CSt.CJTAG_RDYC
             if self.oacp > 25 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-DLYC'
+                self.cjtagstate = CSt.CJTAG_DLYC
             if self.oacp > 27 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-SCNFMT'
+                self.cjtagstate = CSt.CJTAG_SCNFMT
 
             if self.oacp > 8 and self.oaclen == 12:
-                self.cjtagstate = 'CJTAG-CP'
+                self.cjtagstate = CSt.CJTAG_CP
             if self.oacp > 32 and self.oaclen == 36:
-                self.cjtagstate = 'CJTAG-CP'
+                self.cjtagstate = CSt.CJTAG_CP
 
             if self.oacp > self.oaclen:
-                self.cjtagstate = 'OSCAN1'
+                self.cjtagstate = CSt.OSCAN1
                 self.oscan1cycle = 1
                 # Because Nuclei cJTAG device asserts a reset during cJTAG
                 # online activating.
@@ -224,9 +224,9 @@ class Decoder(srd.Decoder):
             self.putx([jtag_states.index(self.oldstate.value), [self.oldstate.value]])
             self.putp(['NEW STATE', self.state.value])
 
-            self.putx([len(jtag_states) + cjtag_states.index(self.oldcjtagstate),
-                      [self.oldcjtagstate]])
-            if (self.oldcjtagstate.startswith('CJTAG-')):
+            self.putx([len(jtag_states) + cjtag_states.index(self.oldcjtagstate.value),
+                      [self.oldcjtagstate.value]])
+            if (self.oldcjtagstate.value.startswith('CJTAG_')):
                 self.putx([32, [str(self.oldtms)]])
         self.oldtms = tms
 
@@ -286,9 +286,9 @@ class Decoder(srd.Decoder):
         self.oldcjtagstate = self.cjtagstate
 
         if self.escape_edges >= 8:
-            self.cjtagstate = '4-WIRE'
+            self.cjtagstate = CSt.FOUR_WIRE
         if self.escape_edges == 6:
-            self.cjtagstate = 'CJTAG-OAC'
+            self.cjtagstate = CSt.CJTAG_OAC
             self.oacp = 0
             self.oaclen = 12
 
@@ -302,7 +302,7 @@ class Decoder(srd.Decoder):
             tckc, tmsc = self.wait({0: 'r'})
             self.handle_tapc_state()
 
-            if self.cjtagstate == 'OSCAN1':
+            if self.cjtagstate == CSt.OSCAN1:
                 if self.oscan1cycle == 0: # nTDI
                     tdi = 1 if (tmsc == 0) else 0
                     self.oscan1cycle = 1
