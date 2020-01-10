@@ -37,6 +37,10 @@ s = ['GET_COMMAND_TOKEN', 'HANDLE_CMD999'] + \
     ['GET_RESPONSE_R%s' % r.upper() for r in responses]
 St = SrdStrEnum.from_list('St', s)
 
+class Bit:
+    def __init__(self, s, e, b):
+        self.ss, self.es, self.bit = s, e ,b
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'sdcard_sd'
@@ -94,17 +98,17 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putbit(self, b, data):
-        self.put(self.token[b][0], self.token[b][1], self.out_ann,
+        self.put(self.token[b].ss, self.token[b].es, self.out_ann,
             [Ann.DECODED_BIT, data])
 
     def putt(self, data):
-        self.put(self.token[0][0], self.token[47][1], self.out_ann, data)
+        self.put(self.token[0].ss, self.token[47].es, self.out_ann, data)
 
     def putf(self, s, e, data):
-        self.put(self.token[s][0], self.token[e][1], self.out_ann, data)
+        self.put(self.token[s].ss, self.token[e].es, self.out_ann, data)
 
     def puta(self, s, e, data):
-        self.put(self.token[47 - 8 - e][0], self.token[47 - 8 - s][1],
+        self.put(self.token[47 - 8 - e].ss, self.token[47 - 8 - s].es,
                  self.out_ann, data)
 
     def putc(self, desc):
@@ -122,12 +126,12 @@ class Decoder(srd.Decoder):
 
     def get_token_bits(self, cmd_pin, n):
         # Get a bit, return True if we already got 'n' bits, False otherwise.
-        self.token.append([self.samplenum, self.samplenum, cmd_pin])
+        self.token.append(Bit(self.samplenum, self.samplenum, cmd_pin))
         if len(self.token) > 0:
-            self.token[len(self.token) - 2][1] = self.samplenum
+            self.token[len(self.token) - 2].es = self.samplenum
         if len(self.token) < n:
             return False
-        self.token[n - 1][1] += self.token[n - 1][0] - self.token[n - 2][0]
+        self.token[n - 1].es += self.token[n - 1].ss - self.token[n - 2].ss
         return True
 
     def handle_common_token_fields(self):
@@ -135,27 +139,27 @@ class Decoder(srd.Decoder):
 
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % s[bit][2]]])
+            self.putf(bit, bit, [Ann.BIT, ['%d' % s[bit].bit]])
 
         # CMD[47:47]: Start bit (always 0)
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
 
         # CMD[46:46]: Transmission bit (1 == host)
-        t = 'host' if s[1][2] == 1 else 'card'
+        t = 'host' if s[1].bit == 1 else 'card'
         self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
 
         # CMD[45:40]: Command index (BCD; valid: 0-63)
-        self.cmd = int('0b' + ''.join([str(s[i][2]) for i in range(2, 8)]), 2)
+        self.cmd = int('0b' + ''.join([str(s[i].bit) for i in range(2, 8)]), 2)
         c = '%s (%d)' % (self.cmd_name(self.cmd), self.cmd)
         self.putf(2, 7, [Ann.F_CMD, ['Command: ' + c, 'Cmd: ' + c,
                                'CMD%d' % self.cmd, 'Cmd', 'C']])
 
         # CMD[39:08]: Argument
-        self.arg = int('0b' + ''.join([str(s[i][2]) for i in range(8, 40)]), 2)
+        self.arg = int('0b' + ''.join([str(s[i].bit) for i in range(8, 40)]), 2)
         self.putf(8, 39, [Ann.F_ARG, ['Argument: 0x%08x' % self.arg, 'Arg', 'A']])
 
         # CMD[07:01]: CRC7
-        self.crc = int('0b' + ''.join([str(s[i][2]) for i in range(40, 47)]), 2)
+        self.crc = int('0b' + ''.join([str(s[i].bit) for i in range(40, 47)]), 2)
         self.putf(40, 46, [Ann.F_CRC, ['CRC: 0x%x' % self.crc, 'CRC', 'C']])
 
         # CMD[00:00]: End bit (always 1)
@@ -338,9 +342,9 @@ class Decoder(srd.Decoder):
             return
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit][2]]])
+            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
-        t = 'host' if self.token[1][2] == 1 else 'card'
+        t = 'host' if self.token[1].bit == 1 else 'card'
         self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
         self.putf(2, 7, [Ann.F_CMD, ['Reserved', 'Res', 'R']])
         self.putf(8, 134, [Ann.F_ARG, ['Argument', 'Arg', 'A']])
@@ -362,9 +366,9 @@ class Decoder(srd.Decoder):
         self.putr(Ann.R3)
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit][2]]])
+            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
-        t = 'host' if self.token[1][2] == 1 else 'card'
+        t = 'host' if self.token[1].bit == 1 else 'card'
         self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
         self.putf(2, 7, [Ann.F_CMD, ['Reserved', 'Res', 'R']])
         self.putf(8, 39, [Ann.F_ARG, ['Argument', 'Arg', 'A']])
@@ -410,7 +414,7 @@ class Decoder(srd.Decoder):
         self.puta(12, 31, [Ann.DECODED_F, ['Reserved', 'Res', 'R']])
 
         # Arg[11:08]: Voltage accepted
-        v = ''.join(str(i[2]) for i in self.token[28:32])
+        v = ''.join(str(i.bit) for i in self.token[28:32])
         av = accepted_voltages.get(int('0b' + v, 2), 'Unknown')
         self.puta(8, 11, [Ann.DECODED_F,
             ['Voltage accepted: ' + av, 'Voltage', 'Volt', 'V']])
