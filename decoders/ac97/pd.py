@@ -29,7 +29,7 @@ from common.srdhelper import SrdIntEnum
 class ChannelError(Exception):
     pass
 
-Pins = SrdIntEnum.from_str('Pins', 'SYNC BIT_CLK SDATA_OUT SDATA_IN RESET')
+Pin = SrdIntEnum.from_str('Pin', 'SYNC BIT_CLK SDATA_OUT SDATA_IN RESET')
 
 slots = 'TAG ADDR DATA 03 04 05 06 07 08 09 10 11 IO'.split()
 a = 'BITS_OUT BITS_IN SLOT_RAW_OUT SLOT_RAW_IN WARN ERROR'.split() + \
@@ -447,11 +447,11 @@ class Decoder(srd.Decoder):
         self.handle_slot(slot_idx, slot_data_out, slot_data_in)
 
     def decode(self):
-        have_sdo = self.has_channel(Pins.SDATA_OUT)
-        have_sdi = self.has_channel(Pins.SDATA_IN)
+        have_sdo = self.has_channel(Pin.SDATA_OUT)
+        have_sdi = self.has_channel(Pin.SDATA_IN)
         if not have_sdo and not have_sdi:
             raise ChannelError('Either SDATA_OUT or SDATA_IN (or both) are required.')
-        have_reset = self.has_channel(Pins.RESET)
+        have_reset = self.has_channel(Pin.RESET)
 
         # Data is sampled at falling CLK edges. Annotations need to span
         # the period between rising edges. SYNC rises one cycle _before_
@@ -459,19 +459,19 @@ class Decoder(srd.Decoder):
         # and advance to the start of a bit time. Then keep getting the
         # samples and the end of all subsequent bit times.
         prev_sync = [None, None, None]
-        pins = self.wait({Pins.BIT_CLK: 'e'})
-        if pins[Pins.BIT_CLK] == 0:
-            prev_sync[-1] = pins[Pins.SYNC]
-            pins = self.wait({Pins.BIT_CLK: 'r'})
+        pins = self.wait({Pin.BIT_CLK: 'e'})
+        if pins[Pin.BIT_CLK] == 0:
+            prev_sync[-1] = pins[Pin.SYNC]
+            pins = self.wait({Pin.BIT_CLK: 'r'})
         bit_ss = self.samplenum
         while True:
-            pins = self.wait({Pins.BIT_CLK: 'f'})
+            pins = self.wait({Pin.BIT_CLK: 'f'})
             prev_sync.pop(0)
-            prev_sync.append(pins[Pins.SYNC])
-            self.wait({Pins.BIT_CLK: 'r'})
+            prev_sync.append(pins[Pin.SYNC])
+            self.wait({Pin.BIT_CLK: 'r'})
             if prev_sync[0] == 0 and prev_sync[1] == 1:
                 self.start_frame(bit_ss)
             self.handle_bits(bit_ss, self.samplenum,
-                    pins[Pins.SDATA_OUT] if have_sdo else None,
-                    pins[Pins.SDATA_IN] if have_sdi else None)
+                    pins[Pin.SDATA_OUT] if have_sdo else None,
+                    pins[Pin.SDATA_IN] if have_sdi else None)
             bit_ss = self.samplenum
