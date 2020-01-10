@@ -21,7 +21,10 @@ import sigrokdecode as srd
 from common.srdhelper import SrdIntEnum, SrdStrEnum
 from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status, sd_status)
 
+responses = '1 1b 2 3 6 7'.split()
+
 a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
+    ['R' + r.upper() for r in responses] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
     ['BIT', 'DECODED_BIT', 'DECODED_F']
 Ann = SrdIntEnum.from_list('Ann', a)
@@ -29,7 +32,7 @@ Ann = SrdIntEnum.from_list('Ann', a)
 s = ['GET_COMMAND_TOKEN', 'HANDLE_CMD999'] + \
     ['HANDLE_CMD%d' % i for i in range(64)] + \
     ['HANDLE_ACMD%d' % i for i in range(64)] + \
-    ['GET_RESPONSE_R%s' % r for r in ['1', '2', '3', '6', '7']]
+    ['GET_RESPONSE_R%s' % r.upper() for r in responses]
 St = SrdStrEnum.from_list('St', s)
 
 class Decoder(srd.Decoder):
@@ -54,7 +57,8 @@ class Decoder(srd.Decoder):
     )
     annotations = \
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \
-        tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + ( \
+        tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + \
+        tuple(('r%s' % r, 'R%s response' % r) for r in responses) + ( \
         ('field-start', 'Start bit'),
         ('field-transmission', 'Transmission bit'),
         ('field-cmd', 'Command'),
@@ -70,7 +74,7 @@ class Decoder(srd.Decoder):
         ('decoded-bits', 'Decoded bits', (Ann.DECODED_BIT,)),
         ('decoded-fields', 'Decoded fields', (Ann.DECODED_F,)),
         ('fields', 'Fields', Ann.prefixes('F_')),
-        ('commands', 'Commands', Ann.prefixes('CMD ACMD')),
+        ('commands', 'Commands', Ann.prefixes('CMD ACMD R')),
     )
 
     def __init__(self):
@@ -106,8 +110,8 @@ class Decoder(srd.Decoder):
         self.putt([cmd, ['%s: %s' % (self.cmd_str, desc), self.cmd_str,
                          self.cmd_str.split(' ')[0]]])
 
-    def putr(self, desc):
-        self.putt([self.last_cmd, ['Reply: %s' % desc]])
+    def putr(self, r):
+        self.putt([r, ['Response: %s' % r.name]])
 
     def cmd_name(self, cmd):
         c = acmd_names if self.is_acmd else cmd_names
@@ -305,7 +309,7 @@ class Decoder(srd.Decoder):
         if not self.get_token_bits(cmd, 48):
             return
         self.handle_common_token_fields()
-        self.putr('R1')
+        self.putr(Ann.R1)
         self.puta(0, 31, [Ann.DECODED_F, ['Card status', 'Status', 'S']])
         for i in range(32):
             self.putbit(8 + i, [card_status[31 - i]])
@@ -317,7 +321,7 @@ class Decoder(srd.Decoder):
             return
         self.handle_common_token_fields()
         self.puta(0, 31, [Ann.DECODED_F, ['Card status', 'Status', 'S']])
-        self.putr('R1b')
+        self.putr(Ann.R1B)
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r2(self, cmd):
@@ -352,7 +356,7 @@ class Decoder(srd.Decoder):
         #  - Bits[00:00]: End bit (always 1)
         if not self.get_token_bits(cmd, 48):
             return
-        self.putr('R3')
+        self.putr(Ann.R3)
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
             self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit][2]]])
@@ -380,7 +384,7 @@ class Decoder(srd.Decoder):
         self.handle_common_token_fields()
         self.puta(0, 15, [Ann.DECODED_F, ['Card status bits', 'Status', 'S']])
         self.puta(16, 31, [Ann.DECODED_F, ['Relative card address', 'RCA', 'R']])
-        self.putr('R6')
+        self.putr(Ann.R6)
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r7(self, cmd):
@@ -397,7 +401,7 @@ class Decoder(srd.Decoder):
             return
         self.handle_common_token_fields()
 
-        self.putr('R7')
+        self.putr(Ann.R7)
 
         # Arg[31:12]: Reserved bits (all-zero)
         self.puta(12, 31, [Ann.DECODED_F, ['Reserved', 'Res', 'R']])
