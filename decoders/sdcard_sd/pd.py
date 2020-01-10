@@ -120,9 +120,9 @@ class Decoder(srd.Decoder):
         c = acmd_names if self.is_acmd else cmd_names
         return c.get(cmd, 'Unknown')
 
-    def get_token_bits(self, cmd, n):
+    def get_token_bits(self, cmd_pin, n):
         # Get a bit, return True if we already got 'n' bits, False otherwise.
-        self.token.append([self.samplenum, self.samplenum, cmd])
+        self.token.append([self.samplenum, self.samplenum, cmd_pin])
         if len(self.token) > 0:
             self.token[len(self.token) - 2][1] = self.samplenum
         if len(self.token) < n:
@@ -161,7 +161,7 @@ class Decoder(srd.Decoder):
         # CMD[00:00]: End bit (always 1)
         self.putf(47, 47, [Ann.F_END, ['End bit', 'End', 'E']])
 
-    def get_command_token(self, cmd):
+    def get_command_token(self, cmd_pin):
         # Command tokens (48 bits) are sent serially (MSB-first) by the host
         # (over the CMD line), either to one SD card or to multiple ones.
         #
@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
         #  - Bits[07:01]: CRC7
         #  - Bits[00:00]: End bit (always 1)
 
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
 
         self.handle_common_token_fields()
@@ -301,7 +301,7 @@ class Decoder(srd.Decoder):
     # They're sent serially (MSB-first) by the card that the host
     # addressed previously, or (synchronously) by all connected cards.
 
-    def handle_response_r1(self, cmd):
+    def handle_response_r1(self, cmd_pin):
         # R1: Normal response command
         #  - Bits[47:47]: Start bit (always 0)
         #  - Bits[46:46]: Transmission bit (0 == card)
@@ -309,7 +309,7 @@ class Decoder(srd.Decoder):
         #  - Bits[39:08]: Card status
         #  - Bits[07:01]: CRC7
         #  - Bits[00:00]: End bit (always 1)
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
         self.handle_common_token_fields()
         self.putr(Ann.R1)
@@ -318,23 +318,23 @@ class Decoder(srd.Decoder):
             self.putbit(8 + i, [card_status[31 - i]])
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
-    def handle_response_r1b(self, cmd):
+    def handle_response_r1b(self, cmd_pin):
         # R1b: Same as R1 with an optional busy signal (on the data line)
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
         self.handle_common_token_fields()
         self.puta(0, 31, [Ann.DECODED_F, ['Card status', 'Status', 'S']])
         self.putr(Ann.R1B)
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
-    def handle_response_r2(self, cmd):
+    def handle_response_r2(self, cmd_pin):
         # R2: CID/CSD register
         #  - Bits[135:135]: Start bit (always 0)
         #  - Bits[134:134]: Transmission bit (0 == card)
         #  - Bits[133:128]: Reserved (always 0b111111)
         #  - Bits[127:001]: CID or CSD register including internal CRC7
         #  - Bits[000:000]: End bit (always 1)
-        if not self.get_token_bits(cmd, 136):
+        if not self.get_token_bits(cmd_pin, 136):
             return
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
@@ -349,7 +349,7 @@ class Decoder(srd.Decoder):
         self.putf(0, 135, [Ann.R2, ['R2']])
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
-    def handle_response_r3(self, cmd):
+    def handle_response_r3(self, cmd_pin):
         # R3: OCR register
         #  - Bits[47:47]: Start bit (always 0)
         #  - Bits[46:46]: Transmission bit (0 == card)
@@ -357,7 +357,7 @@ class Decoder(srd.Decoder):
         #  - Bits[39:08]: OCR register
         #  - Bits[07:01]: Reserved (always 0b111111)
         #  - Bits[00:00]: End bit (always 1)
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
         self.putr(Ann.R3)
         # Annotations for each individual bit.
@@ -373,7 +373,7 @@ class Decoder(srd.Decoder):
         self.puta(0, 31, [Ann.DECODED_F, ['OCR register', 'OCR reg', 'OCR', 'O']])
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
-    def handle_response_r6(self, cmd):
+    def handle_response_r6(self, cmd_pin):
         # R6: Published RCA response
         #  - Bits[47:47]: Start bit (always 0)
         #  - Bits[46:46]: Transmission bit (0 == card)
@@ -382,7 +382,7 @@ class Decoder(srd.Decoder):
         #  - Bits[23:08]: Argument[15:0]: Card status bits
         #  - Bits[07:01]: CRC7
         #  - Bits[00:00]: End bit (always 1)
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
         self.handle_common_token_fields()
         self.puta(0, 15, [Ann.DECODED_F, ['Card status bits', 'Status', 'S']])
@@ -390,7 +390,7 @@ class Decoder(srd.Decoder):
         self.putr(Ann.R6)
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
-    def handle_response_r7(self, cmd):
+    def handle_response_r7(self, cmd_pin):
         # R7: Card interface condition
         #  - Bits[47:47]: Start bit (always 0)
         #  - Bits[46:46]: Transmission bit (0 == card)
@@ -400,7 +400,7 @@ class Decoder(srd.Decoder):
         #  - Bits[15:08]: Echo-back of check pattern
         #  - Bits[07:01]: CRC7
         #  - Bits[00:00]: End bit (always 1)
-        if not self.get_token_bits(cmd, 48):
+        if not self.get_token_bits(cmd_pin, 48):
             return
         self.handle_common_token_fields()
 
@@ -424,15 +424,15 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # Wait for a rising CLK edge.
-            (cmd, clk, dat0, dat1, dat2, dat3) = self.wait({Pin.CLK: 'r'})
+            (cmd_pin, clk, dat0, dat1, dat2, dat3) = self.wait({Pin.CLK: 'r'})
 
             # State machine.
             if self.state == St.GET_COMMAND_TOKEN:
                 if len(self.token) == 0:
                     # Wait for start bit (CMD = 0).
-                    if cmd != 0:
+                    if cmd_pin != 0:
                         continue
-                self.get_command_token(cmd)
+                self.get_command_token(cmd_pin)
             elif self.state.value.startswith('HANDLE_CMD'):
                 # Call the respective handler method for the command.
                 a, cmdstr = 'a' if self.is_acmd else '', self.state.value[10:].lower()
@@ -444,9 +444,9 @@ class Decoder(srd.Decoder):
             elif self.state.value.startswith('GET_RESPONSE'):
                 if len(self.token) == 0:
                     # Wait for start bit (CMD = 0).
-                    if cmd != 0:
+                    if cmd_pin != 0:
                         continue
                 # Call the respective handler method for the response.
                 s = 'handle_response_%s' % self.state.value[13:].lower()
                 handle_response = getattr(self, s)
-                handle_response(cmd)
+                handle_response(cmd_pin)
