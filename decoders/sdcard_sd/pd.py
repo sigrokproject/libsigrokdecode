@@ -108,7 +108,7 @@ class Decoder(srd.Decoder):
                  self.out_ann, data)
 
     def putc(self, desc):
-        cmd = self.cmd + 64 if self.is_acmd else self.cmd
+        cmd = Ann.ACMD0 + self.cmd if self.is_acmd else self.cmd
         self.last_cmd = cmd
         self.putt([cmd, ['%s: %s' % (self.cmd_str, desc), self.cmd_str,
                          self.cmd_str.split(' ')[0]]])
