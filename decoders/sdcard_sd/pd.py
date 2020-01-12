@@ -19,9 +19,15 @@
 
 import sigrokdecode as srd
 from common.srdhelper import SrdIntEnum, SrdStrEnum
-from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status, sd_status)
+from common.sdcard import (cmd_names, acmd_names, accepted_voltages, sd_status)
 
 responses = '1 1b 2 3 6 7'.split()
+reg_card_status = 'OUT_OF_RANGE ADDRESS_ERROR BLOCK_LEN_ERROR ERASE_SEQ_ERROR \
+    ERASE_PARAM WP_VIOLATION CARD_IS_LOCKED LOCK_UNLOCK_FAILED COM_CRC_ERROR \
+    ILLEGAL_COMMAND CARD_ECC_FAILED CC_ERROR ERROR RSVD_DEFERRED_RESPONSE \
+    CSD_OVERWRITE WP_ERASE_SKIP CARD_ECC_DISABLED ERASE_RESET CURRENT_STATE \
+    READY_FOR_DATA RSVD FX_EVENT APP_CMD RSVD_SDIO AKE_SEQ_ERROR RSVD_APP_CMD \
+    RSVD_TESTMODE'.split()
 reg_cid = 'MID OID PNM PRV PSN RSVD MDT CRC ONE'.split()
 reg_csd = 'CSD_STRUCTURE RSVD TAAC NSAC TRAN_SPEED CCC READ_BL_LEN \
     READ_BL_PARTIAL WRITE_BLK_MISALIGN READ_BLK_MISALIGN DSR_IMP C_SIZE \
@@ -34,6 +40,7 @@ Pin = SrdIntEnum.from_str('Pin', 'CMD CLK DAT0 DAT1 DAT2 DAT3')
 
 a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['RESPONSE_R' + r.upper() for r in responses] + \
+    ['R_STATUS_' + r for r in reg_card_status] + \
     ['R_CID_' + r for r in reg_cid] + \
     ['R_CSD_' + r for r in reg_csd] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
@@ -74,6 +81,7 @@ class Decoder(srd.Decoder):
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \
         tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + \
         tuple(('response_r%s' % r, 'R%s' % r) for r in responses) + \
+        tuple(('reg_status_' + r.lower(), 'Status: ' + r) for r in reg_card_status) + \
         tuple(('reg_cid_' + r.lower(), 'CID: ' + r) for r in reg_cid) + \
         tuple(('reg_csd_' + r.lower(), 'CSD: ' + r) for r in reg_csd) + \
     ( \
@@ -108,10 +116,6 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-
-    def putbit(self, b, data):
-        self.put(self.token[b].ss, self.token[b].es, self.out_ann,
-            [Ann.DECODED_BIT, data])
 
     def putt(self, data):
         self.put(self.token[0].ss, self.token[47].es, self.out_ann, data)
@@ -312,6 +316,36 @@ class Decoder(srd.Decoder):
     def handle_acmd999(self):
         self.token, self.state = [], St.GET_RESPONSE_R1
 
+    def handle_reg_status(self):
+        self.putf(8, 8, [Ann.R_STATUS_OUT_OF_RANGE, ['OUT_OF_RANGE']])
+        self.putf(9, 9, [Ann.R_STATUS_ADDRESS_ERROR, ['ADDRESS_ERROR']])
+        self.putf(10, 10, [Ann.R_STATUS_BLOCK_LEN_ERROR, ['BLOCK_LEN_ERROR']])
+        self.putf(11, 11, [Ann.R_STATUS_ERASE_SEQ_ERROR, ['ERASE_SEQ_ERROR']])
+        self.putf(12, 12, [Ann.R_STATUS_ERASE_PARAM, ['ERASE_PARAM']])
+        self.putf(13, 13, [Ann.R_STATUS_WP_VIOLATION, ['WP_VIOLATION']])
+        self.putf(14, 14, [Ann.R_STATUS_CARD_IS_LOCKED, ['CARD_IS_LOCKED']])
+        self.putf(15, 15, [Ann.R_STATUS_LOCK_UNLOCK_FAILED, ['LOCK_UNLOCK_FAILED']])
+        self.putf(16, 16, [Ann.R_STATUS_COM_CRC_ERROR, ['COM_CRC_ERROR']])
+        self.putf(17, 17, [Ann.R_STATUS_ILLEGAL_COMMAND, ['ILLEGAL_COMMAND']])
+        self.putf(18, 18, [Ann.R_STATUS_CARD_ECC_FAILED, ['CARD_ECC_FAILED']])
+        self.putf(19, 19, [Ann.R_STATUS_CC_ERROR, ['CC_ERROR']])
+        self.putf(20, 20, [Ann.R_STATUS_ERROR, ['ERROR']])
+        self.putf(21, 21, [Ann.R_STATUS_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(22, 22, [Ann.R_STATUS_RSVD_DEFERRED_RESPONSE, ['Reserved for DEFERRED_RESPONSE', 'RSVD_DEFERRED_RESPONSE']])
+        self.putf(23, 23, [Ann.R_STATUS_CSD_OVERWRITE, ['CSD_OVERWRITE']])
+        self.putf(24, 24, [Ann.R_STATUS_WP_ERASE_SKIP, ['WP_ERASE_SKIP']])
+        self.putf(25, 25, [Ann.R_STATUS_CARD_ECC_DISABLED, ['CARD_ECC_DISABLED']])
+        self.putf(26, 26, [Ann.R_STATUS_ERASE_RESET, ['ERASE_RESET']])
+        self.putf(27, 30, [Ann.R_STATUS_CURRENT_STATE, ['CURRENT_STATE']])
+        self.putf(31, 31, [Ann.R_STATUS_READY_FOR_DATA, ['READY_FOR_DATA']])
+        self.putf(32, 32, [Ann.R_STATUS_RSVD, ['RSVD']])
+        self.putf(33, 33, [Ann.R_STATUS_FX_EVENT, ['FX_EVENT']])
+        self.putf(34, 34, [Ann.R_STATUS_APP_CMD, ['APP_CMD']])
+        self.putf(35, 35, [Ann.R_STATUS_RSVD_SDIO, ['Reserved for SDIO card', 'RSVD_SDIO']])
+        self.putf(36, 36, [Ann.R_STATUS_AKE_SEQ_ERROR, ['AKE_SEQ_ERROR']])
+        self.putf(37, 37, [Ann.R_STATUS_RSVD_APP_CMD, ['Reserved for application specific commands', 'RSVD_APP_CMD']])
+        self.putf(38, 39, [Ann.R_STATUS_RSVD_TESTMODE, ['Reserved for manufacturer test mode', 'RSVD_TESTMODE']])
+
     def handle_reg_cid(self):
         self.putf(8, 15, [Ann.R_CID_MID, ['Manufacturer ID', 'MID']])
         self.putf(16, 31, [Ann.R_CID_OID, ['OEM/application ID', 'OID']])
@@ -378,8 +412,8 @@ class Decoder(srd.Decoder):
         self.handle_common_token_fields()
         self.putr(Ann.RESPONSE_R1)
         self.puta(0, 31, [Ann.DECODED_F, ['Card status', 'Status', 'S']])
-        for i in range(32):
-            self.putbit(8 + i, [card_status[31 - i]])
+        self.handle_reg_status()
+        
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r1b(self, cmd_pin):
