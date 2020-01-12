@@ -23,12 +23,19 @@ from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status
 
 responses = '1 1b 2 3 6 7'.split()
 reg_cid = 'MID OID PNM PRV PSN RSVD MDT CRC ONE'.split()
+reg_csd = 'CSD_STRUCTURE RSVD TAAC NSAC TRAN_SPEED CCC READ_BL_LEN \
+    READ_BL_PARTIAL WRITE_BLK_MISALIGN READ_BLK_MISALIGN DSR_IMP C_SIZE \
+    VDD_R_CURR_MIN VDD_R_CURR_MAX VDD_W_CURR_MIN VDD_W_CURR_MAX C_SIZE_MULT \
+    ERASE_BLK_EN SECTOR_SIZE WP_GRP_SIZE WP_GRP_ENABLE R2W_FACTOR \
+    WRITE_BL_LEN WRITE_BL_PARTIAL FILE_FORMAT_GRP COPY PERM_WRITE_PROTECT \
+    TMP_WRITE_PROTECT FILE_FORMAT CRC ONE'.split()
 
 Pin = SrdIntEnum.from_str('Pin', 'CMD CLK DAT0 DAT1 DAT2 DAT3')
 
 a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['RESPONSE_R' + r.upper() for r in responses] + \
     ['R_CID_' + r for r in reg_cid] + \
+    ['R_CSD_' + r for r in reg_csd] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
     ['BIT', 'DECODED_BIT', 'DECODED_F']
 Ann = SrdIntEnum.from_list('Ann', a)
@@ -68,6 +75,7 @@ class Decoder(srd.Decoder):
         tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + \
         tuple(('response_r%s' % r, 'R%s' % r) for r in responses) + \
         tuple(('reg_cid_' + r.lower(), 'CID: ' + r) for r in reg_cid) + \
+        tuple(('reg_csd_' + r.lower(), 'CSD: ' + r) for r in reg_csd) + \
     ( \
         ('field-start', 'Start bit'),
         ('field-transmission', 'Transmission bit'),
@@ -315,6 +323,43 @@ class Decoder(srd.Decoder):
         self.putf(128, 134, [Ann.R_CID_CRC, ['CRC7 checksum', 'CRC']])
         self.putf(135, 135, [Ann.R_CID_ONE, ['Always 1', '1']])
 
+    def handle_reg_csd(self):
+        self.putf(8, 9, [Ann.R_CSD_CSD_STRUCTURE, ['CSD structure', 'CSD_STRUCTURE']])
+        self.putf(10, 15, [Ann.R_CSD_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(16, 23, [Ann.R_CSD_TAAC, ['Data read access-time - 1', 'TAAC']])
+        self.putf(24, 31, [Ann.R_CSD_NSAC, ['Data read access-time - 2 in CLK cycles (NSAC * 100)', 'NSAC']])
+        self.putf(32, 39, [Ann.R_CSD_TRAN_SPEED, ['Max. data transfer rate', 'TRAN_SPEED']])
+        self.putf(40, 51, [Ann.R_CSD_CCC, ['Card command classes', 'CCC']])
+        self.putf(52, 55, [Ann.R_CSD_READ_BL_LEN, ['Max. read data block length', 'READ_BL_LEN']])
+        self.putf(56, 56, [Ann.R_CSD_READ_BL_PARTIAL, ['Partial blocks for read allowed', 'READ_BL_PARTIAL']])
+        self.putf(57, 57, [Ann.R_CSD_WRITE_BLK_MISALIGN, ['Write block misalignment', 'WRITE_BLK_MISALIGN']])
+        self.putf(58, 58, [Ann.R_CSD_READ_BLK_MISALIGN, ['Read block misalignment', 'READ_BLK_MISALIGN']])
+        self.putf(59, 59, [Ann.R_CSD_DSR_IMP, ['DSR implemented', 'DSR_IMP']])
+        self.putf(60, 61, [Ann.R_CSD_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(62, 73, [Ann.R_CSD_C_SIZE, ['Device size', 'C_SIZE']])
+        self.putf(74, 76, [Ann.R_CSD_VDD_R_CURR_MIN, ['Max. read current @VDD min', 'VDD_R_CURR_MIN']])
+        self.putf(77, 79, [Ann.R_CSD_VDD_R_CURR_MAX, ['Max. read current @VDD max', 'VDD_R_CURR_MAX']])
+        self.putf(80, 82, [Ann.R_CSD_VDD_W_CURR_MIN, ['Max. write current @VDD min', 'VDD_W_CURR_MIN']])
+        self.putf(83, 85, [Ann.R_CSD_VDD_W_CURR_MAX, ['Max. write current @VDD max', 'VDD_W_CURR_MAX']])
+        self.putf(86, 88, [Ann.R_CSD_C_SIZE_MULT, ['Device size multiplier', 'C_SIZE_MULT']])
+        self.putf(89, 89, [Ann.R_CSD_ERASE_BLK_EN, ['Erase single block enable', 'ERASE_BLK_EN']])
+        self.putf(90, 96, [Ann.R_CSD_SECTOR_SIZE, ['Erase sector size', 'SECTOR_SIZE']])
+        self.putf(97, 103, [Ann.R_CSD_WP_GRP_SIZE, ['Write protect group size', 'WP_GRP_SIZE']])
+        self.putf(104, 104, [Ann.R_CSD_WP_GRP_ENABLE, ['Write protect group enable', 'WP_GRP_ENABLE']])
+        self.putf(105, 106, [Ann.R_CSD_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(107, 109, [Ann.R_CSD_R2W_FACTOR, ['Write speed factor', 'R2W_FACTOR']])
+        self.putf(110, 113, [Ann.R_CSD_WRITE_BL_LEN, ['Max. write data block length', 'WRITE_BL_LEN']])
+        self.putf(114, 114, [Ann.R_CSD_WRITE_BL_PARTIAL, ['Partial blocks for write allowed', 'WRITE_BL_PARTIAL']])
+        self.putf(115, 119, [Ann.R_CSD_RSVD, ['Reserved', 'RSVD']])
+        self.putf(120, 120, [Ann.R_CSD_FILE_FORMAT_GRP, ['File format group', 'FILE_FORMAT_GRP']])
+        self.putf(121, 121, [Ann.R_CSD_COPY, ['Copy flag', 'COPY']])
+        self.putf(122, 122, [Ann.R_CSD_PERM_WRITE_PROTECT, ['Permanent write protection', 'PERM_WRITE_PROTECT']])
+        self.putf(123, 123, [Ann.R_CSD_TMP_WRITE_PROTECT, ['Temporary write protection', 'TMP_WRITE_PROTECT']])
+        self.putf(124, 125, [Ann.R_CSD_FILE_FORMAT, ['File format', 'FILE_FORMAT']])
+        self.putf(126, 127, [Ann.R_CSD_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(128, 134, [Ann.R_CSD_CRC, ['CRC', 'CRC', 'C']])
+        self.putf(135, 135, [Ann.R_CSD_ONE, ['Always 1', '1']])
+
     # Response tokens can have one of four formats (depends on content).
     # They can have a total length of 48 or 136 bits.
     # They're sent serially (MSB-first) by the card that the host
@@ -369,6 +414,9 @@ class Decoder(srd.Decoder):
 
         if self.last_cmd in (Ann.CMD2, Ann.CMD10):
             self.handle_reg_cid()
+
+        if self.last_cmd == Ann.CMD9:
+            self.handle_reg_csd()
 
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
