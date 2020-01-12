@@ -43,8 +43,9 @@ a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['R_STATUS_' + r for r in reg_card_status] + \
     ['R_CID_' + r for r in reg_cid] + \
     ['R_CSD_' + r for r in reg_csd] + \
+    ['BIT_' + r for r in ('0', '1')] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
-    ['BIT', 'DECODED_BIT', 'DECODED_F']
+    ['DECODED_BIT', 'DECODED_F']
 Ann = SrdIntEnum.from_list('Ann', a)
 
 s = ['GET_COMMAND_TOKEN', 'HANDLE_CMD999'] + \
@@ -84,6 +85,7 @@ class Decoder(srd.Decoder):
         tuple(('reg_status_' + r.lower(), 'Status: ' + r) for r in reg_card_status) + \
         tuple(('reg_cid_' + r.lower(), 'CID: ' + r) for r in reg_cid) + \
         tuple(('reg_csd_' + r.lower(), 'CSD: ' + r) for r in reg_csd) + \
+        tuple(('bit_' + r, 'Bit ' + r) for r in ('0', '1')) + \
     ( \
         ('field-start', 'Start bit'),
         ('field-transmission', 'Transmission bit'),
@@ -91,12 +93,11 @@ class Decoder(srd.Decoder):
         ('field-arg', 'Argument'),
         ('field-crc', 'CRC'),
         ('field-end', 'End bit'),
-        ('bit', 'Bit'),
         ('decoded-bit', 'Decoded bit'),
         ('decoded-field', 'Decoded field'),
     )
     annotation_rows = (
-        ('raw-bits', 'Raw bits', (Ann.BIT,)),
+        ('raw-bits', 'Raw bits', Ann.prefixes('BIT_')),
         ('decoded-bits', 'Decoded bits', (Ann.DECODED_BIT,) + Ann.prefixes('R_')),
         ('decoded-fields', 'Decoded fields', (Ann.DECODED_F,)),
         ('fields', 'Fields', Ann.prefixes('F_')),
@@ -155,7 +156,7 @@ class Decoder(srd.Decoder):
 
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % s[bit].bit]])
+            self.putf(bit, bit, [Ann.BIT_0 + s[bit].bit, ['%d' % s[bit].bit]])
 
         # CMD[47:47]: Start bit (always 0)
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
@@ -436,7 +437,7 @@ class Decoder(srd.Decoder):
             return
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit].bit]])
+            self.putf(bit, bit, [Ann.BIT_0 + self.token[bit].bit, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
         t = 'host' if self.token[1].bit == 1 else 'card'
         self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
@@ -467,7 +468,7 @@ class Decoder(srd.Decoder):
         self.putr(Ann.RESPONSE_R3)
         # Annotations for each individual bit.
         for bit in range(len(self.token)):
-            self.putf(bit, bit, [Ann.BIT, ['%d' % self.token[bit].bit]])
+            self.putf(bit, bit, [Ann.BIT_0 + self.token[bit].bit, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
         t = 'host' if self.token[1].bit == 1 else 'card'
         self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
