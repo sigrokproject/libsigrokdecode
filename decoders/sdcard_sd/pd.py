@@ -22,11 +22,13 @@ from common.srdhelper import SrdIntEnum, SrdStrEnum
 from common.sdcard import (cmd_names, acmd_names, accepted_voltages, card_status, sd_status)
 
 responses = '1 1b 2 3 6 7'.split()
+reg_cid = 'MID OID PNM PRV PSN RSVD MDT CRC ONE'.split()
 
 Pin = SrdIntEnum.from_str('Pin', 'CMD CLK DAT0 DAT1 DAT2 DAT3')
 
 a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['RESPONSE_R' + r.upper() for r in responses] + \
+    ['R_CID_' + r for r in reg_cid] + \
     ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
     ['BIT', 'DECODED_BIT', 'DECODED_F']
 Ann = SrdIntEnum.from_list('Ann', a)
@@ -64,7 +66,9 @@ class Decoder(srd.Decoder):
     annotations = \
         tuple(('cmd%d' % i, 'CMD%d' % i) for i in range(64)) + \
         tuple(('acmd%d' % i, 'ACMD%d' % i) for i in range(64)) + \
-        tuple(('response_r%s' % r, 'R%s' % r) for r in responses) + ( \
+        tuple(('response_r%s' % r, 'R%s' % r) for r in responses) + \
+        tuple(('reg_cid_' + r.lower(), 'CID: ' + r) for r in reg_cid) + \
+    ( \
         ('field-start', 'Start bit'),
         ('field-transmission', 'Transmission bit'),
         ('field-cmd', 'Command'),
@@ -77,7 +81,7 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('raw-bits', 'Raw bits', (Ann.BIT,)),
-        ('decoded-bits', 'Decoded bits', (Ann.DECODED_BIT,)),
+        ('decoded-bits', 'Decoded bits', (Ann.DECODED_BIT,) + Ann.prefixes('R_')),
         ('decoded-fields', 'Decoded fields', (Ann.DECODED_F,)),
         ('fields', 'Fields', Ann.prefixes('F_')),
         ('commands', 'Commands', Ann.prefixes('CMD ACMD RESPONSE_')),
@@ -300,6 +304,17 @@ class Decoder(srd.Decoder):
     def handle_acmd999(self):
         self.token, self.state = [], St.GET_RESPONSE_R1
 
+    def handle_reg_cid(self):
+        self.putf(8, 15, [Ann.R_CID_MID, ['Manufacturer ID', 'MID']])
+        self.putf(16, 31, [Ann.R_CID_OID, ['OEM/application ID', 'OID']])
+        self.putf(32, 71, [Ann.R_CID_PNM, ['Product name', 'PNM']])
+        self.putf(72, 79, [Ann.R_CID_PRV, ['Product revision', 'PRV']])
+        self.putf(80, 111, [Ann.R_CID_PSN, ['Product serial number', 'PSN']])
+        self.putf(112, 115, [Ann.R_CID_RSVD, ['Reserved', 'RSVD', 'R']])
+        self.putf(116, 127, [Ann.R_CID_MDT, ['Manufacturing date', 'MDT']])
+        self.putf(128, 134, [Ann.R_CID_CRC, ['CRC7 checksum', 'CRC']])
+        self.putf(135, 135, [Ann.R_CID_ONE, ['Always 1', '1']])
+
     # Response tokens can have one of four formats (depends on content).
     # They can have a total length of 48 or 136 bits.
     # They're sent serially (MSB-first) by the card that the host
@@ -351,6 +366,10 @@ class Decoder(srd.Decoder):
         self.putf(135, 135, [Ann.F_END, ['End bit', 'End', 'E']])
         self.putf(8, 134, [Ann.DECODED_F, ['CID/CSD register', 'CID/CSD', 'C']])
         self.putf(0, 135, [Ann.RESPONSE_R2, ['Response: R2']])
+
+        if self.last_cmd in (Ann.CMD2, Ann.CMD10):
+            self.handle_reg_cid()
+
         self.token, self.state = [], St.GET_COMMAND_TOKEN
 
     def handle_response_r3(self, cmd_pin):
