@@ -22,6 +22,7 @@ from common.srdhelper import SrdIntEnum, SrdStrEnum
 from common.sdcard import (cmd_names, acmd_names, accepted_voltages, sd_status)
 
 responses = '1 1b 2 3 6 7'.split()
+token_fields = 'START TRANSMISSION CMD ARG CRC END'.split()
 reg_card_status = 'OUT_OF_RANGE ADDRESS_ERROR BLOCK_LEN_ERROR ERASE_SEQ_ERROR \
     ERASE_PARAM WP_VIOLATION CARD_IS_LOCKED LOCK_UNLOCK_FAILED COM_CRC_ERROR \
     ILLEGAL_COMMAND CARD_ECC_FAILED CC_ERROR ERROR RSVD_DEFERRED_RESPONSE \
@@ -44,7 +45,7 @@ a = ['CMD%d' % i for i in range(64)] + ['ACMD%d' % i for i in range(64)] + \
     ['R_CID_' + r for r in reg_cid] + \
     ['R_CSD_' + r for r in reg_csd] + \
     ['BIT_' + r for r in ('0', '1')] + \
-    ['F_' + f for f in 'START TRANSM CMD ARG CRC END'.split()] + \
+    ['F_' + f for f in token_fields] + \
     ['DECODED_BIT', 'DECODED_F']
 Ann = SrdIntEnum.from_list('Ann', a)
 
@@ -86,13 +87,8 @@ class Decoder(srd.Decoder):
         tuple(('reg_cid_' + r.lower(), 'CID: ' + r) for r in reg_cid) + \
         tuple(('reg_csd_' + r.lower(), 'CSD: ' + r) for r in reg_csd) + \
         tuple(('bit_' + r, 'Bit ' + r) for r in ('0', '1')) + \
+        tuple(('field-' + r.lower(), r) for r in token_fields) + \
     ( \
-        ('field-start', 'Start bit'),
-        ('field-transmission', 'Transmission bit'),
-        ('field-cmd', 'Command'),
-        ('field-arg', 'Argument'),
-        ('field-crc', 'CRC'),
-        ('field-end', 'End bit'),
         ('decoded-bit', 'Decoded bit'),
         ('decoded-field', 'Decoded field'),
     )
@@ -163,7 +159,7 @@ class Decoder(srd.Decoder):
 
         # CMD[46:46]: Transmission bit (1 == host)
         t = 'host' if s[1].bit == 1 else 'card'
-        self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
+        self.putf(1, 1, [Ann.F_TRANSMISSION, ['Transmission: ' + t, 'T: ' + t, 'T']])
 
         # CMD[45:40]: Command index (BCD; valid: 0-63)
         self.cmd = int('0b' + ''.join([str(s[i].bit) for i in range(2, 8)]), 2)
@@ -440,7 +436,7 @@ class Decoder(srd.Decoder):
             self.putf(bit, bit, [Ann.BIT_0 + self.token[bit].bit, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
         t = 'host' if self.token[1].bit == 1 else 'card'
-        self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
+        self.putf(1, 1, [Ann.F_TRANSMISSION, ['Transmission: ' + t, 'T: ' + t, 'T']])
         self.putf(2, 7, [Ann.F_CMD, ['Reserved', 'Res', 'R']])
         self.putf(8, 134, [Ann.F_ARG, ['Argument', 'Arg', 'A']])
         self.putf(135, 135, [Ann.F_END, ['End bit', 'End', 'E']])
@@ -471,7 +467,7 @@ class Decoder(srd.Decoder):
             self.putf(bit, bit, [Ann.BIT_0 + self.token[bit].bit, ['%d' % self.token[bit].bit]])
         self.putf(0, 0, [Ann.F_START, ['Start bit', 'Start', 'S']])
         t = 'host' if self.token[1].bit == 1 else 'card'
-        self.putf(1, 1, [Ann.F_TRANSM, ['Transmission: ' + t, 'T: ' + t, 'T']])
+        self.putf(1, 1, [Ann.F_TRANSMISSION, ['Transmission: ' + t, 'T: ' + t, 'T']])
         self.putf(2, 7, [Ann.F_CMD, ['Reserved', 'Res', 'R']])
         self.putf(8, 39, [Ann.F_ARG, ['Argument', 'Arg', 'A']])
         self.putf(40, 46, [Ann.F_CRC, ['Reserved', 'Res', 'R']])
