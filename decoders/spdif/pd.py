@@ -76,6 +76,14 @@ class Decoder(srd.Decoder):
         self.preamble = []
         self.seen_preamble = False
         self.last_preamble = 0
+        
+        self.bitrate_message_start = 0
+        self.bitrate_message_end = 0
+        self.frame_counter = 0
+        self.frame_start = 0
+        self.frame_length = 0
+        
+        self.sampleratetmp = 1
 
         self.first_one = True
         self.subframe = []
@@ -86,10 +94,8 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-
+            
     def get_pulse_type(self):
-        if self.range1 == 0 or self.range2 == 0:
-            return -1
         if self.pulse_width >= self.range2:
             return 2
         elif self.pulse_width >= self.range1:
@@ -101,32 +107,52 @@ class Decoder(srd.Decoder):
         if self.pulse_width != 0:
             self.clocks.append(self.pulse_width)
             self.state = 'GET SECOND PULSE WIDTH'
+            self.puty([2, ['Found width 1: %d' % (self.pulse_width), 'W1: %d' % (self.pulse_width)]])
+            self.ss_edge = self.samplenum
 
     def find_second_pulse_width(self):
         if self.pulse_width > (self.clocks[0] * 1.3) or \
-                self.pulse_width < (self.clocks[0] * 0.7):
+                self.pulse_width <= (self.clocks[0] * 0.75):
+            self.puty([2, ['Found width 2: %d' % (self.pulse_width), 'W2: %d' % (self.pulse_width)]])
             self.clocks.append(self.pulse_width)
             self.state = 'GET THIRD PULSE WIDTH'
+        else:
+            self.puty([2, ['Search Width 2: %d' % (self.pulse_width), 'SW2: %d' % (self.pulse_width)]])
+        self.ss_edge = self.samplenum
 
     def find_third_pulse_width(self):
         if not ((self.pulse_width > (self.clocks[0] * 1.3) or \
-                self.pulse_width < (self.clocks[0] * 0.7)) \
+                self.pulse_width <= (self.clocks[0] * 0.75)) \
                 and (self.pulse_width > (self.clocks[1] * 1.3) or \
-                self.pulse_width < (self.clocks[1] * 0.7))):
+                self.pulse_width <= (self.clocks[1] * 0.75))):
+            self.puty([2, ['Search Width 3: %d' % (self.pulse_width), 'SW3: %d' % (self.pulse_width)]])
+            self.ss_edge = self.samplenum
             return
-
+        else:
+            self.puty([2, ['Found width 3: %d' % (self.pulse_width), 'W3: %d' % (self.pulse_width)]])
+            self.ss_edge = self.samplenum
+            # The message of the calculated bitrate should start at this sample (right after the Synchronisation)
+            self.bitrate_message_start = self.samplenum
+            
         self.clocks.append(self.pulse_width)
         self.clocks.sort()
         self.range1 = (self.clocks[0] + self.clocks[1]) / 2
         self.range2 = (self.clocks[1] + self.clocks[2]) / 2
-        spdif_bitrate = int(self.samplerate / (self.clocks[2] / 1.5))
+        # Give some feedback during synchronisation and inform if sample rate is too low.
+        if self.clocks[0] <= 3:
+            self.putx(0, self.samplenum, [0, ['Short pulses detected. Increase sample rate!']])
+            raise SamplerateError('Short pulses detected')
+        else:
+            self.putx(0, self.samplenum, [0, ['Synchronisation']])        
         self.ss_edge = 0
 
-        self.puty([0, ['Signal Bitrate: %d Mbit/s (=> %d kHz)' % \
-                  (spdif_bitrate, (spdif_bitrate/ (2 * 32)))]])
-
-        clock_period_nsec = 1000000000 / spdif_bitrate
-
+        # Mostly, the synchronisation ends with a long pulse because they appear rarely.
+        # A skip of the next pulse will then prevent a 'M' frame to be labeled as 
+        # an unknown preamble for the first decoded frame
+        (data,) = self.wait({0: 'e'})
+        
+        self.pulse_width = self.samplenum - self.samplenum_prev_edge
+        self.samplenum_prev_edge = self.samplenum
         self.last_preamble = self.samplenum
 
         # We are done recovering the clock, now let's decode the data stream.
@@ -140,24 +166,37 @@ class Decoder(srd.Decoder):
             if pulse == 2:
                 self.preamble.append(self.get_pulse_type())
                 self.state = 'DECODE PREAMBLE'
-                self.ss_edge = self.samplenum - self.pulse_width - 1
+                self.ss_edge = self.samplenum - self.pulse_width
+                # Use the first ten frames to calculate bit rates
+                if self.frame_counter == 0:
+                    # This is the first preamble to be decoded. Measurement of bit rates starts here
+                    self.frame_start = self.samplenum
+                    # The bit rate message should end here
+                    self.bitrate_message_end = self.ss_edge
+                elif self.frame_counter == 10:
+                    self.frame_length = self.samplenum - self.frame_start
+                    # Use section between end of syncronisation and start of first preamble to show measured bit rates
+                    if self.samplerate:
+                        self.putx(self.bitrate_message_start, self.bitrate_message_end,\
+                            [0, ['Audio samplingrate: %6.2f kHz; Bit rate: %6.3f MBit/s' %\
+                            ((self.samplerate / 200 / self.frame_length), (self.samplerate / 200 * 64 / 1000 / self.frame_length))]])
+                    else:
+                        self.putx(self.bitrate_message_start, self.bitrate_message_end, [0, ['No sample rate given']])
+                self.frame_counter += 1
             return
 
         # We've seen a preamble.
         if pulse == 1 and self.first_one:
             self.first_one = False
-            self.subframe.append([pulse, self.samplenum - \
-                self.pulse_width - 1, self.samplenum])
+            self.subframe.append([pulse, self.samplenum - self.pulse_width, self.samplenum])
         elif pulse == 1 and not self.first_one:
             self.subframe[-1][2] = self.samplenum
             self.putx(self.subframe[-1][1], self.samplenum, [2, ['1']])
             self.bitcount += 1
             self.first_one = True
         else:
-            self.subframe.append([pulse, self.samplenum - \
-                self.pulse_width - 1, self.samplenum])
-            self.putx(self.samplenum - self.pulse_width - 1,
-                      self.samplenum, [2, ['0']])
+            self.subframe.append([pulse, self.samplenum - self.pulse_width, self.samplenum])
+            self.putx(self.samplenum - self.pulse_width, self.samplenum, [2, ['0']])
             self.bitcount += 1
 
         if self.bitcount == 28:
@@ -222,16 +261,25 @@ class Decoder(srd.Decoder):
         self.last_preamble = self.samplenum
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
+        #Set samplerate to 0 if it is not given. Decoding is still possible.
+        try:
+            if self.samplerate != 0:
+                pass
+        except:
+            self.samplerate = 0
 
-        # Throw away first detected edge as it might be mangled data.
+        # Throw away first two edges as it might be mangled data.
         self.wait({0: 'e'})
+        self.wait({0: 'e'})
+        self.ss_edge = 0
+        self.puty([2, ['Skip']])
+        self.ss_edge = self.samplenum
+        self.samplenum_prev_edge = self.samplenum
 
         while True:
             # Wait for any edge (rising or falling).
             (data,) = self.wait({0: 'e'})
-            self.pulse_width = self.samplenum - self.samplenum_prev_edge - 1
+            self.pulse_width = self.samplenum - self.samplenum_prev_edge
             self.samplenum_prev_edge = self.samplenum
 
             if self.state == 'GET FIRST PULSE WIDTH':
