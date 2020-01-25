@@ -1,0 +1,44 @@
+How to add the IRMP decoder to puleview/sigrock
+===============================================
+
+in the following "app directory " means either sigrock or pulseview main directory (where the exe is)
+
+1. copy the python files (__init__.py, pd.py, IrmpPythonWrap.py) of this directory to 
+   `share\libsigrokdecode\decoders\ir_irmp` subdirectory of app directory
+2. copy the irmp.dll (x64 or x86, depending on your sigrok/pulseview version) to the applications directory
+   (you may have to build them - prior to this - see below)
+3. since the ctypes module of the included python is not working out of the box, 
+   one of the folloing options are available to fix this:
+   1. according to https://sigrok.org/bugzilla/show_bug.cgi?id=1409 it may be sufficient 
+      to extract _ctypes.pyd from python34.zip and put it in the app directory
+   2. another option is to have local Python 3.4 installation that is present in Path.
+      In this case the local python dll and zip file can be removed
+   3. if a newer python version is present then the app's exe can be patched to load this
+      version instead of 3.4.  For this, just open the exe in an hex editor, 
+      search for python34.dll and overwrite the 4 by your minor version number.
+      Make sure your python is in path. The local python.dll/zip can be deleted.
+
+Remark: since the irmp lib holds internal states as global variables it is not 
+        possible to use multiple irmp decoders at the same time, 
+        since they interfere with each other if executed parallel.
+        However adding a second Decoder to recorded Data mostly works.
+
+
+You may use the containing ir_recording.sr to check if everything works.
+It should produce a similar result like shown in the screenhot.
+        
+Linux:
+in principle it should work similar, but it is not tested. The lib has to be named irmp.so or 
+the IrmpPythonWrap.py has to be adapted.
+
+compile irmp.dll by yourself
+========================
+0. goto subdirectory 'minIRMPlib' (see readme)
+1. adapt irmp-config 'irmpconfig.h' to your needs.
+   The one that was used to build the dll is included.
+   Best use 20kHz because it is a better divisor to most samplerates. 
+   Actual_samplerate has to be dividable by irmp_samplerate without rest. 
+2. build the 'irmp4sigrok.c' as a shared lib/dll. (see readme)
+   On win64 build also the WIN32 define has to be set.
+3. refer the project page for other detail.
+
