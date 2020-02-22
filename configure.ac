@@ -40,6 +40,8 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
+AC_C_CONST
+
 # Required for per-target flags or subdir-objects with C sources.
 AM_PROG_CC_C_O
 
