@@ -45,6 +45,11 @@ AC_C_CONST
 # Required for per-target flags or subdir-objects with C sources.
 AM_PROG_CC_C_O
 
+# Support building Windows DLLs.
+AC_LIBTOOL_WIN32_DLL
+AM_PROG_CC_STDC
+AM_PROG_LIBTOOL
+
 # Set the standard the C library headers should conform to.
 AH_VERBATIM([_POSIX_C_SOURCE], [/* The targeted POSIX standard. */
 #ifndef _POSIX_C_SOURCE
@@ -134,6 +139,17 @@ AC_SYS_LARGEFILE
 
 AC_C_BIGENDIAN
 
+#########################
+##  Optional features. ##
+#########################
+
+# Enable IRMP support by default. Accept user overrides.
+AC_ARG_ENABLE([irmp],
+	[AS_HELP_STRING([--enable-irmp], [enable IRMP shared object [default=yes]])],
+	[], [enable_irmp_so=yes])
+AM_CONDITIONAL([WITH_IRMP], [test "x$enable_irmp_so" = "xyes"])
+test -n "$enable_irmp_so" || enable_irmp_so=no
+
 ##############################
 ##  Finalize configuration  ##
 ##############################
@@ -177,4 +193,6 @@ Detected libraries (required):
 $srd_pkglibs_summary
 Detected libraries (optional):
 $srd_pkglibs_opt_summary
+Optional features:
+  - IRMP support library .......... $enable_irmp_so
 _EOF

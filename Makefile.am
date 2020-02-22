@@ -54,6 +54,19 @@ pkginclude_HEADERS = libsigrokdecode.h
 nodist_pkginclude_HEADERS = version.h
 noinst_HEADERS = libsigrokdecode-internal.h
 
+if WITH_IRMP
+lib_LTLIBRARIES += libirmp.la
+libirmp_la_SOURCES = \
+	irmp/irmp-main-sharedlib.c \
+	irmp/irmp-main-sharedlib.h \
+	irmp/irmp.h \
+	irmp/irmpconfig.h \
+	irmp/irmpsystem.h \
+	irmp/irmpprotocols.h
+noinst_HEADERS += irmp/irmp.c
+libirmp_la_LDFLAGS = -no-undefined -version-info 0:0:0
+endif
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsigrokdecode.pc
 
