@@ -1,4 +1,9 @@
 ##
+## This file is part of the libsigrokdecode project.
+##
+## Copyright (C) 2014 Gump Yang <gump.yang@gmail.com>
+## Copyright (C) 2019 Rene Staffen
+##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
 ## the Free Software Foundation; either version 2 of the License, or
@@ -13,11 +18,8 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+from . import irmp_library
 import sigrokdecode as srd
-
-#from .lists import *
-
-from .IrmpPythonWrap import IrmpWrap
 
 class SamplerateError(Exception):
     pass
@@ -26,8 +28,8 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'ir_irmp'
     name = 'IR IRMP'
-    longname = 'IR IRMP multi protocol decoder'
-    desc = 'IRMP - multi protocol infrared decoder with support for many IR protocols by Frank M. (ukw)'
+    longname = 'IR IRMP'
+    desc = 'IRMP infrared remote control multi protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = []
@@ -38,44 +40,38 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
-#
-#        {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
     )
     annotations = (
         ('packet', 'Packet'),
-        ('debug', 'Debug'),
     )
     annotation_rows = (
         ('packets', 'IR Packets', (0,)),
-        ('debug', 'Debug', (1,)),
     )
-    irmp = IrmpWrap()
 
-    def putIr(self, data):
-        ss     = data['start'] * self.subSample
-        es     = data['end']   * self.subSample
-        ad     = data['data']['address']
-        pr     = data['data']['protocol']
-        pn     = data['data']['protocolName']
-        cm     = data['data']['command']
-        repeat = data['data']['repeat']
-        
-        
-       # print(f" {self.samplenum}  {ss} - {es} ({data['start']} - {data['end']})")
-        self.put(ss, es, self.out_ann,
-                 [0, [ f"Protocol: {pn} ({pr}), Address 0x{ad:04x}, Command: 0x{cm:04x} {'repeated' if repeat else ''}",
-                       f"P: {pn} ({pr}), Ad: 0x{ad:x}, Cmd: 0x{cm:x} {'rep' if repeat else ''}",
-                       f"P: {pr}  A: 0x{ad:x} C: 0x{cm:x} {'rep' if repeat else ''}",
-                       f"C:{cm:x} A:{ad:x} {'r' if repeat else ''}",
-                       f"C:{cm:x}",
-                     ]])
+    def putframe(self, data):
+        nr = data['proto_nr']
+        name = data['proto_name']
+        addr = data['address']
+        cmd = data['command']
+        repeat = data['repeat']
+        rep = ['repeat', 'rep', 'r'] if repeat else ['', '', '']
+        ss = data['start'] * self.rate_factor
+        es = data['end'] * self.rate_factor
+        self.put(ss, es, self.out_ann, [0, [
+            'Protocol: {nr} ({name}), Address 0x{addr:04x}, Command: 0x{cmd:04x} {rep[0]}'.format(**locals()),
+            'P: {name} ({nr}), Addr: 0x{addr:x}, Cmd: 0x{cmd:x} {rep[1]}'.format(**locals()),
+            'P: {nr} A: 0x{addr:x} C: 0x{cmd:x} {rep[1]}'.format(**locals()),
+            'C:{cmd:x} A:{addr:x} {rep[2]}'.format(**locals()),
+            'C:{cmd:x}'.format(**locals()),
+        ]])
 
     def __init__(self):
-        self.irmp = Decoder.irmp
+        self.irmp = irmp_library.IrmpLibrary()
+        self.lib_rate = self.irmp.get_sample_rate()
         self.reset()
 
     def reset(self):
-        self.irmp.Reset()
+        self.irmp.reset_state()
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -84,66 +80,19 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+        if self.samplerate % self.lib_rate:
+            raise SamplerateError('capture samplerate must be multiple of library samplerate ({})'.format(self.lib_rate))
+        self.rate_factor = int(self.samplerate / self.lib_rate)
 
-        
-        if (self.samplerate % self.irmp.GetSampleRate()) != 0:
-            raise SamplerateError(f'samplerate has to be multple of {self.irmp.GetSampleRate()}' )
-            
-        self.subSample  = int(self.samplerate / self.irmp.GetSampleRate())
-        sampleSkip = self.subSample
-        #self.reset()
-        #print (f" startdecode: samplenum {self.samplenum} rate: {self.samplerate} subsample {self.subSample}")
-        # cd_count = None
-        # if self.options['cd_freq']:
-        #     cd_count = int(self.samplerate / self.options['cd_freq']) + 1
-        
         self.active = 0 if self.options['polarity'] == 'active-low' else 1
-
-        (ir,) = self.wait([{'skip' : sampleSkip}])
-        i = 0
-
+        ir, = self.wait()
         while True:
-            ##### todo: check if ir carrier frequency detection can be used
-            #
-            # Detect changes in the presence of an active input signal.
-            # The decoder can either be fed an already filtered RX signal
-            # or optionally can detect the presence of a carrier. Periods
-            # of inactivity (signal changes slower than the carrier freq,
-            # if specified) pass on the most recently sampled level. This
-            # approach works for filtered and unfiltered input alike, and
-            # only slightly extends the active phase of input signals with
-            # carriers included by one period of the carrier frequency.
-            # IR based communication protocols can cope with this slight
-            # inaccuracy just fine by design. Enabling carrier detection
-            # on already filtered signals will keep the length of their
-            # active period, but will shift their signal changes by one
-            # carrier period before they get passed to decoding logic.
-            #   if cd_count:
-            #       (cur_ir,) = self.wait([{0: 'e'}, {'skip': cd_count}])
-            #       if self.matched[0]:
-            #           cur_ir = self.active
-            #       if cur_ir == prev_ir:
-            #           continue
-            #       prev_ir = cur_ir
-            #       self.ir = cur_ir
-            #   else:
-            #       (self.ir,) = self.wait({0: 'e'})
-            #   
-            #print (f"samplenum {self.samplenum}")
-            #if i%100 == 0:
-            #    self.put(self.samplenum, self.samplenum+10, self.out_ann,
-            #             [1, [ f"{self.samplenum}  - {i}",]])
-
             if self.active == 1:
                 ir = 1 - ir
-                
-            if self.irmp.AddSample(ir):
-                data = self.irmp.GetData()
-                self.putIr(data)
-            i = i + 1
-            (ir,) = self.wait([{'skip' : sampleSkip}])
-
+            if self.irmp.add_one_sample(ir):
+                data = self.irmp.get_result_data()
+                self.putframe(data)
+            ir, = self.wait([{'skip': self.rate_factor}])

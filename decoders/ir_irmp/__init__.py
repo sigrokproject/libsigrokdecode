@@ -1,4 +1,8 @@
 ##
+## This file is part of the libsigrokdecode project.
+##
+## Copyright (C) 2019 Rene Staffen
+##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
 ## the Free Software Foundation; either version 2 of the License, or
@@ -14,12 +18,8 @@
 ##
 
 '''
-IRMP is a multi protocol infrared remote protocol decoder
-intiated and maintained by Frank M. (ukw)
-
-https://www.mikrocontroller.net/articles/IRMP
-
-irmp wrapper by René Staffen
+IRMP is a multi protocol infrared remote protocol decoder. See
+https://www.mikrocontroller.net/articles/IRMP for details.
 '''
 
 from .pd import Decoder
