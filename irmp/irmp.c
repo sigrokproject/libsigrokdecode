@@ -3333,7 +3333,7 @@ irmp_ISR (void)
 #ifdef ANALYZE
                         ANALYZE_PRINTF ("protocol = NIKON, start bit timings: pulse: %3d - %3d, pause: %3d - %3d\n",
                                         NIKON_START_BIT_PULSE_LEN_MIN, NIKON_START_BIT_PULSE_LEN_MAX,
-                                        NIKON_START_BIT_PAUSE_LEN_MIN, NIKON_START_BIT_PAUSE_LEN_MAX);
+                                        (int)NIKON_START_BIT_PAUSE_LEN_MIN, (int)NIKON_START_BIT_PAUSE_LEN_MAX);
 #endif // ANALYZE
                         irmp_param_p = (IRMP_PARAMETER *) &nikon_param;
                     }
@@ -4343,7 +4343,7 @@ irmp_ISR (void)
                                 {
 #ifdef ANALYZE
                                     ANALYZE_PRINTF ("ignoring NEC repetition frame: timeout occured, key_repetition_len = %d > %d\n",
-                                                    key_repetition_len, NEC_FRAME_REPEAT_PAUSE_LEN_MAX);
+                                                    (int)key_repetition_len, (int)NEC_FRAME_REPEAT_PAUSE_LEN_MAX);
 #endif // ANALYZE
                                     irmp_ir_detected = FALSE;
                                 }
@@ -5189,7 +5189,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
                 {
 #ifdef ANALYZE
                     ANALYZE_PRINTF ("code skipped: SIRCS auto repetition frame #%d, counter = %d, auto repetition len = %d\n",
-                                    repetition_frame_number + 1, key_repetition_len, AUTO_FRAME_REPETITION_LEN);
+                                    repetition_frame_number + 1, (int)key_repetition_len, (int)AUTO_FRAME_REPETITION_LEN);
 #endif // ANALYZE
                     key_repetition_len = 0;
                 }
@@ -5241,7 +5241,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
                 {
 #ifdef ANALYZE
                     ANALYZE_PRINTF ("code skipped: NUBERT auto repetition frame #%d, counter = %d, auto repetition len = %d\n",
-                                    repetition_frame_number + 1, key_repetition_len, AUTO_FRAME_REPETITION_LEN);
+                                    repetition_frame_number + 1, (int)key_repetition_len, (int)AUTO_FRAME_REPETITION_LEN);
 #endif // ANALYZE
                     key_repetition_len = 0;
                 }
@@ -5254,7 +5254,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
                 {
 #ifdef ANALYZE
                     ANALYZE_PRINTF ("code skipped: SPEAKER auto repetition frame #%d, counter = %d, auto repetition len = %d\n",
-                                    repetition_frame_number + 1, key_repetition_len, AUTO_FRAME_REPETITION_LEN);
+                                    repetition_frame_number + 1, (int)key_repetition_len, (int)AUTO_FRAME_REPETITION_LEN);
 #endif // ANALYZE
                     key_repetition_len = 0;
                 }
@@ -5331,7 +5331,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
                             if (key_repetition_len < NEC_FRAME_REPEAT_PAUSE_LEN_MAX)
                             {
 #ifdef ANALYZE
-                                ANALYZE_PRINTF ("Detected NEC repetition frame, key_repetition_len = %d\n", key_repetition_len);
+                                ANALYZE_PRINTF ("Detected NEC repetition frame, key_repetition_len = %d\n", (int)key_repetition_len);
                                 ANALYZE_ONLY_NORMAL_PRINTF("REPETETION FRAME                ");
 #endif // ANALYZE
                                 irmp_tmp_address = last_irmp_address;                   // address is last address
@@ -5343,7 +5343,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
                             {
 #ifdef ANALYZE
                                 ANALYZE_PRINTF ("Detected NEC repetition frame, ignoring it: timeout occured, key_repetition_len = %d > %d\n",
-                                                key_repetition_len, NEC_FRAME_REPEAT_PAUSE_LEN_MAX);
+                                                (int)key_repetition_len, (int)NEC_FRAME_REPEAT_PAUSE_LEN_MAX);
 #endif // ANALYZE
                                 irmp_ir_detected = FALSE;
                             }
