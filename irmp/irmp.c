@@ -5870,7 +5870,7 @@ next_tick (void)
             {
                 if (irmp_data.protocol != expected_protocol ||
                     irmp_data.address  != expected_address  ||
-                    irmp_data.command  != expected_command)
+                    (int)irmp_data.command  != expected_command)
                 {
                     printf ("\nerror 7: expected values differ: p=%2d (%s), a=0x%04x, c=0x%04x\n",
                             expected_protocol, irmp_protocol_names[expected_protocol], expected_address, expected_command);
