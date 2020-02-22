@@ -627,15 +627,13 @@ static int                                      silent;
 static int                                      time_counter;
 static int                                      verbose;
 
-/*******************************                not every PIC compiler knows variadic macros :-(
-#else
+#elif 0 /* not every PIC compiler knows variadic macros :-( */
 #  define ANALYZE_PUTCHAR(a)
 #  define ANALYZE_ONLY_NORMAL_PUTCHAR(a)
 #  define ANALYZE_PRINTF(...)
 #  define ANALYZE_ONLY_NORMAL_PRINTF(...)
-#  endif
 #  define ANALYZE_NEWLINE()
-*********************************/
+
 #endif
 
 #if IRMP_USE_CALLBACK == 1
