@@ -111,6 +111,19 @@ IRMP_DLLEXPORT void irmp_reset_state(void)
 	s_startBitSample = 0;
 	s_curSample = 0;
 	s_end_sample = 0;
+
+	/*
+	 * TODO This is not the most appropriate location to control the
+	 * core logic's verbosity. But out of the public set of library
+	 * routines this call is closest to some initialization routine.
+	 * The query for compile time parameter values is optional, the
+	 * state reset is not. Multiple verbosity setup activities in
+	 * the same program lifetime won't harm. This HACK is clearly
+	 * preferrable over more fiddling with core logic innards, or
+	 * the introduction of yet another DLL routine.
+	 */
+	silent = 1;
+	verbose = 0;
 }
 
 IRMP_DLLEXPORT int irmp_add_one_sample(int sample)
