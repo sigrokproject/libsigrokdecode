@@ -23,7 +23,18 @@
  * Include the IRMP core logic. This approach is required because of
  * static variables which hold internal state. The core logic started
  * as an MCU project where resources are severely constrained.
+ *
+ * This libsigrokdecode incarnation of IRMP will always be used in the
+ * UNIX_OR_WINDOWS configuration. But libtool(1) breaks the upstream
+ * logic's platform detection. Check reliably available conditions here
+ * and provide expected symbols to the library, to reduce changes to the
+ * upstream project.
  */
+#if defined _WIN32
+#  define WIN32
+#else
+#  define unix
+#endif
 #include "irmp.h"
 #include "irmp.c"
 
