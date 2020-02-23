@@ -5554,6 +5554,7 @@ printf ("fm: %d %d\n", irmp_pulse_time * 1000000 / F_INTERRUPTS, RCII_BIT_LEN * 
  *---------------------------------------------------------------------------------------------------------------------------------------------------
  */
 
+void print_spectrum (char * text, int * buf, int is_pulse);
 void
 print_spectrum (char * text, int * buf, int is_pulse)
 {
