@@ -3,6 +3,19 @@
 ##
 ## Copyright (C) 2020 Maxim Korzhavin <litlager@mail.ru>
 ##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, see <http://www.gnu.org/licenses/>.
+##
 
 import sigrokdecode as srd
 from functools import reduce
@@ -14,13 +27,36 @@ class SamplerateError(Exception):
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'mil-std-1553'
-    name = 'mil std 1553'
-    longname = 'MKIO decoder'
-    desc = 'MKIO DECODER.'
+    name = 'mil-std-1553'
+    longname = 'mil std 1553 decoder'
+    desc = 'Asynchronous.'
     license = 'gplv3+'
     inputs = ['logic']
     outputs = []
     tags = ['Embedded/industrial']
+
+    channels = (
+        {'id': 'DP', 'name': 'PD', 'desc': 'Data positive signal'},
+    )
+    options = (
+        {'id': 'language', 'desc': 'Language', 'default': 'ru',
+            'values': ('ru', 'en')},
+        {'id': 'device_type', 'desc': 'Type of device', 'default': 'master',
+            'values': ('master', 'slave')},
+    )
+    annotations = (
+        ('cw', 'CW'),
+        ('dw', 'DW'),
+        ('warning', 'WARNING'),
+        ('error', 'ERROR'),
+        ('cw_details', 'CW DETAILS'),
+        ('dw_details', 'DW DETAILS'),
+        ('aw_details', 'AW DETAILS'),
+    )
+    annotation_rows = (
+        ('data', 'Data', (0,1,2)),
+        ('details', 'Details', (3,4,5,6,)),
+    )
 
     e_parity = ['parity error', 'ошибка паритета']
     e_count = ['error bit count', 'ошибка числа бит']
@@ -60,30 +96,6 @@ class Decoder(srd.Decoder):
     s_faults = [' subscriber is fault.',' неисправность абонента.']
     s_intmanacc = [' interface management accepted.',' принято управление интерфейсом.']
     s_faultdev = [' device is fault.', ' неисправность ОУ.']
-    
-
-    channels = (
-        {'id': 'DP', 'name': 'PD', 'desc': 'Data positive signal'},
-    )
-    options = (
-        {'id': 'language', 'desc': 'Language', 'default': 'ru',
-            'values': ('ru', 'en')},
-        {'id': 'device_type', 'desc': 'Type of device', 'default': 'master',
-            'values': ('master', 'slave')},
-    )
-    annotations = (
-        ('107','cw', 'CW'),
-        ('109','dw', 'DW'),
-        ('0','warning', 'WARNING'),
-        ('1000','error', 'ERROR'),
-        ('107','cw_details', 'CW DETAILS'),
-        ('109','dw_details', 'DW DETAILS'),
-        ('3','aw_details', 'AW DETAILS'),
-    )
-    annotation_rows = (
-        ('data', 'Data', (0,1,2)),
-        ('details', 'Details', (3,4,5,6,)),
-    )
 
     def __init__(self):
         self.reset()
