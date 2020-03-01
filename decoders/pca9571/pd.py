@@ -23,10 +23,10 @@ NUM_OUTPUT_CHANNELS = 8
 
 # TODO: Other I²C functions: general call / reset address, device ID address.
 
-def logic_channels(num_channels):
+def logic_channels(num_channels, samplerate):
     l = []
     for i in range(num_channels):
-        l.append(tuple(['p%d' % i, 'P%d' % i, 100000]))
+        l.append(tuple(['p%d' % i, 'P%d' % i]))
     return tuple(l)
 
 class Decoder(srd.Decoder):

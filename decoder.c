@@ -621,7 +621,7 @@ err_out:
 /* Convert logic_output_channels to GSList of 'struct srd_decoder_logic_output_channel'. */
 static int get_logic_output_channels(struct srd_decoder *dec)
 {
-	PyObject *py_logic_out_chs, *py_logic_out_ch, *py_samplerate, *py_item;
+	PyObject *py_logic_out_chs, *py_logic_out_ch, *py_item;
 	GSList *logic_out_chs;
 	struct srd_decoder_logic_output_channel *logic_out_ch;
 	ssize_t i;
@@ -651,9 +651,9 @@ static int get_logic_output_channels(struct srd_decoder *dec)
 		if (!py_logic_out_ch)
 			goto except_out;
 
-		if (!PyTuple_Check(py_logic_out_ch) || PyTuple_Size(py_logic_out_ch) != 3) {
+		if (!PyTuple_Check(py_logic_out_ch) || PyTuple_Size(py_logic_out_ch) != 2) {
 			srd_err("Protocol decoder %s logic_output_channels "
-				"must contain only tuples of 3 elements.",
+				"must contain only tuples of 2 elements.",
 				dec->name);
 			goto err_out;
 		}
@@ -672,19 +672,6 @@ static int get_logic_output_channels(struct srd_decoder *dec)
 			goto except_out;
 		if (py_str_as_str(py_item, &logic_out_ch->desc) != SRD_OK)
 			goto err_out;
-
-		py_samplerate = PyTuple_GetItem(py_logic_out_ch, 2);
-		if (!py_samplerate)
-			goto except_out;
-
-		if (!PyLong_Check(py_samplerate)) {
-			srd_err("Protocol decoder %s logic_output_channels tuples "
-				"must have a number as 3rd element.",
-				dec->name);
-			goto err_out;
-		}
-
-		logic_out_ch->samplerate = PyLong_AsUnsignedLongLong(py_samplerate);
 	}
 	dec->logic_output_channels = logic_out_chs;
 	Py_DECREF(py_logic_out_chs);

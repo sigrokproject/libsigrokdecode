@@ -190,7 +190,7 @@ struct srd_decoder {
 	GSList *binary;
 
 	/**
-	 * List of logic output channels (item: id, description, samplerate).
+	 * List of logic output channels (item: id, description).
 	 */
 	GSList *logic_output_channels;
 
@@ -241,7 +241,6 @@ struct srd_decoder_annotation_row {
 struct srd_decoder_logic_output_channel {
 	char *id;
 	char *desc;
-	uint64_t samplerate;
 };
 
 struct srd_decoder_inst {

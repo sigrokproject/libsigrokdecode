@@ -26,7 +26,7 @@ NUM_OUTPUT_CHANNELS = 8
 def logic_channels(num_channels):
     l = []
     for i in range(num_channels):
-        l.append(tuple(['p%d' % i, 'P-port input/output %d' % i, 100000]))
+        l.append(tuple(['p%d' % i, 'P-port input/output %d' % i]))
     return tuple(l)
 
 class Decoder(srd.Decoder):
