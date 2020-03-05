@@ -81,12 +81,15 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def putpb(self, data):
+        """Output Python data"""
         self.put(self.ss_block, self.samplenum, self.out_python, data)
 
     def putbin(self, data):
+        """Output binary data"""
         self.put(self.ss_block, self.samplenum, self.out_binary, data)
 
     def putb(self, data):
+        """Output annotations"""
         self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def report(self):
@@ -130,6 +133,7 @@ class Decoder(srd.Decoder):
             # Wait for a rising edge on the SCK pin.
             sck, ws, sd = self.wait({0: 'r'})
 
+            # Shift the data in, one SCK at a time
             self.data = (self.data << 1) | sd
             self.bitcount += 1
 
