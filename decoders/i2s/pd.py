@@ -148,14 +148,17 @@ class Decoder(srd.Decoder):
 
                 self.wait({0: 'f'})
 
-                idx = 0 if not self.oldws else 1
                 c1 = 'Left channel' if not self.oldws else 'Right channel'
                 c2 = 'Left' if not self.oldws else 'Right'
                 c3 = 'L' if not self.oldws else 'R'
                 v = '%08x' % self.data
                 self.putpb(['DATA', [c3, self.data]])
-                self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
-                                 '%s: %s' % (c3, v), c3]])
+
+                idx = 0 if not self.oldws else 1
+                self.putb([idx, ['%s: %s' % (c1, v),
+                                 '%s: %s' % (c2, v),
+                                 '%s: %s' % (c3, v),
+                                 c3]])
                 self.putbin([0, self.wav_sample(self.data)])
 
                 # Check that the data word was the correct length.
