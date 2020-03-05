@@ -162,7 +162,7 @@ class Decoder(srd.Decoder):
                 self.putpb(['DATA', [c3, self.data]])
 
                 idx = 0 if not self.oldws else 1
-                self.putb([idx, ['%s: %s' % (c1, v),
+                self.putb([idx, ['%s: 0x%s' % (c1, v),  # Hex hint
                                  '%s: %s' % (c2, v),
                                  '%s: %s' % (c3, v),
                                  c3]])
