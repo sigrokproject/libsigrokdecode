@@ -146,7 +146,7 @@ class Decoder(srd.Decoder):
 
                 self.samplesreceived += 1
 
-                sck = self.wait({0: 'f'})
+                self.wait({0: 'f'})
 
                 idx = 0 if not self.oldws else 1
                 c1 = 'Left channel' if not self.oldws else 'Right channel'
@@ -165,7 +165,7 @@ class Decoder(srd.Decoder):
 
                 self.wordlength = self.bitcount
             else:
-                sck = self.wait({0: 'f'})
+                self.wait({0: 'f'})
 
             # Reset decoder state.
             self.data = 0
