@@ -37,10 +37,10 @@ class Decoder(srd.Decoder):
             'values': ('unsigned', 'signed')},
     )
     annotations = (
-        ('value', 'value'),
+        ('fixedpoint-value', 'fixedpoint interpretation of vector'),
     )
     annotation_rows = (
-        ('value', 'value', (0,)),
+        ('values', 'values', (0,)),
     )
 
     def reset(self):

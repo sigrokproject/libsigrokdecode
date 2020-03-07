@@ -31,10 +31,10 @@ class Decoder(srd.Decoder):
     tags = ['VectorSlicer']
     options = ()
     annotations = (
-        ('value', 'slice value'),
+        ('signed-value', 'signed interpretation of vector'),
     )
     annotation_rows = (
-        ('value', 'value', (0,)),
+        ('values', 'values', (0,)),
     )
 
     def reset(self):
