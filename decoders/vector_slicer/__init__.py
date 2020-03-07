@@ -33,6 +33,7 @@ One can configure the base in the input vector and the length of the slice.
 Currently the following decoders are available to annotate slices:
     - unsigned slice: annotate slice as unsigned integer
     - signed slice: annotate slice as signed integer
+    - fixedpoint slice: annotate slice as fixedpoint number
     - enum slice: annotate slice as enumerated type
 '''
 
