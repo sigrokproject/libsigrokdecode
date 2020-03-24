@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
     desc = 'Field bus protocol for distributed realtime control.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = []
+    outputs = ['can']
     tags = ['Automotive']
     channels = (
         {'id': 'can_rx', 'name': 'CAN RX', 'desc': 'CAN bus line'},
@@ -79,6 +79,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
 
     def set_bit_rate(self, bitrate):
         self.bit_width = float(self.samplerate) / float(bitrate)
@@ -117,6 +118,9 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.putg(self.ss_block, self.samplenum, data)
 
+    def putpp(self, data):
+        self.put(self.ss_packet, self.es_packet, self.out_python, data)
+
     def reset_variables(self):
         self.state = 'IDLE'
         self.sof = self.frame_type = self.dlc = None
@@ -128,6 +132,8 @@ class Decoder(srd.Decoder):
         self.ss_bit12 = None
         self.ss_bit32 = None
         self.ss_databytebits = []
+        self.bytes = []
+        self.rtr_type = None
         self.fd = False
         self.rtr = None
 
@@ -235,6 +241,8 @@ class Decoder(srd.Decoder):
             self.putb([2, ['End of frame', 'EOF', 'E']])
             if self.rawbits[-7:] != [1, 1, 1, 1, 1, 1, 1]:
                 self.putb([16, ['End of frame (EOF) must be 7 recessive bits']])
+            self.es_packet = self.samplenum
+            self.putpp((self.frame_type, self.fullid, self.rtr_type, self.dlc, self.bytes))
             self.reset_variables()
             return True
 
@@ -263,9 +271,9 @@ class Decoder(srd.Decoder):
                 # Bit 12: Remote transmission request (RTR) bit
                 # Data frame: dominant, remote frame: recessive
                 # Remote frames do not contain a data field.
-                rtr = 'remote' if self.bits[12] == 1 else 'data'
-                self.put12([8, ['Remote transmission request: %s frame' % rtr,
-                                'RTR: %s frame' % rtr, 'RTR']])
+                self.rtr_type = 'remote' if self.bits[12] == 1 else 'data'
+                self.put12([8, ['Remote transmission request: %s frame' % self.rtr_type,
+                                'RTR: %s frame' % self.rtr_type, 'RTR']])
                 self.dlc_start = 15
 
         if bitnum == 15 and self.fd:
@@ -301,6 +309,7 @@ class Decoder(srd.Decoder):
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
+                self.bytes[i] = b
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
                 self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b),
@@ -347,9 +356,9 @@ class Decoder(srd.Decoder):
             self.rtr = can_rx
 
             if not self.fd:
-               rtr = 'remote' if can_rx == 1 else 'data'
-               self.putx([8, ['Remote transmission request: %s frame' % rtr,
-                              'RTR: %s frame' % rtr, 'RTR']])
+               self.rtr_type = 'remote' if can_rx == 1 else 'data'
+               self.putx([8, ['Remote transmission request: %s frame' % self.rtr_type,
+                              'RTR: %s frame' % self.rtr_type, 'RTR']])
 
         # Bit 33: RB1 (reserved bit)
         elif bitnum == 33:
@@ -399,6 +408,7 @@ class Decoder(srd.Decoder):
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
+                self.bytes.append(b)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
                 self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b),
@@ -433,6 +443,7 @@ class Decoder(srd.Decoder):
 
         # Bit 0: Start of frame (SOF) bit
         if bitnum == 0:
+            self.ss_packet = self.samplenum
             self.putx([1, ['Start of frame', 'SOF', 'S']])
             if can_rx != 0:
                 self.putx([16, ['Start of frame (SOF) must be a dominant bit']])
@@ -445,6 +456,7 @@ class Decoder(srd.Decoder):
         # The bits ID[10..4] must NOT be all recessive.
         elif bitnum == 11:
             self.id = int(''.join(str(d) for d in self.bits[1:]), 2)
+            self.fullid = self.id
             s = '%d (0x%x)' % (self.id, self.id),
             self.putb([3, ['Identifier: %s' % s, 'ID: %s' % s, 'ID']])
             if (self.id & 0x7f0) == 0x7f0:
