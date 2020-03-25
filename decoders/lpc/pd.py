@@ -315,13 +315,9 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def decode(self):
+        conditions = [{i: 'e'} for i in range(6)]
         while True:
-            # TODO: Come up with more appropriate self.wait() conditions.
-            pins = self.wait()
-
-            # If none of the pins changed, there's nothing to do.
-            if self.oldpins == pins:
-                continue
+            pins = self.wait(conditions)
 
             # Store current pin values for the next round.
             self.oldpins = pins
