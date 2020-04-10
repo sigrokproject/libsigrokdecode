@@ -43,9 +43,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def put_data(self, pos, data):
-        self.put(pos[0], pos[1], self.out_ann, [0, [str(data) + 'V']])
-
     def decode(self, ss, es, data):
         ptype = data[0]
 
@@ -54,7 +51,7 @@ class Decoder(srd.Decoder):
             if cs_old is not None and cs_old == 0 and cs_new == 1:
                 self.data >>= 1
                 self.data /= 1000
-                self.put_data([self.ss, es], self.data)
+                self.put(self.ss, es, self.out_ann, [0, ['%.3fV' % self.data]])
                 self.data = 0
             elif cs_old is not None and cs_old == 1 and cs_new == 0:
                 self.ss = ss
