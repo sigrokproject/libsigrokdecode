@@ -30,7 +30,7 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['IC', 'Analog/digital']
     annotations = (
-        ('data', 'Data'),
+        ('voltage', 'Voltage'),
     )
 
     def __init__(self,):
