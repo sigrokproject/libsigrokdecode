@@ -41,7 +41,7 @@ class Decoder(srd.Decoder):
         ('input', 'Input voltage', (1,)),
     )
     options = (
-        {'id': 'ref', 'desc': 'Reference voltage', 'default': 1.5},
+        {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
     )
 
     def __init__(self):
@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
     def handle_input_voltage(self, data):
         input_voltage = data & 0x3FFFFF
         input_voltage = -(2**21 - input_voltage)
-        input_voltage = (input_voltage / 0xfffff) * self.options['ref']
+        input_voltage = (input_voltage / 0xfffff) * self.options['vref']
         ann = []
         for format in input_voltage_format:
             ann.append(format % input_voltage)
