@@ -60,6 +60,8 @@ class Bit():
 
 Ann = SrdIntEnum.from_str('Ann', 'READ WRITE MB REG_ADDRESS REG_DATA WARNING')
 
+St = SrdIntEnum.from_str('St', 'IDLE ADDRESS_BYTE DATA')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'adxl345'
@@ -92,7 +94,7 @@ class Decoder(srd.Decoder):
         self.operation = None
         self.address = 0
         self.data = -1
-        self.state = 'IDLE'
+        self.state = St.IDLE
         self.ss, self.es = -1, -1
         self.samples_per_bit = 0
 
@@ -376,9 +378,9 @@ class Decoder(srd.Decoder):
             cs_old, cs_new = data[1:]
             if cs_old is not None and cs_old == 1 and cs_new == 0:
                 self.ss, self.es = ss, es
-                self.state = 'ADDRESS-BYTE'
+                self.state = St.ADDRESS_BYTE
             else:
-                self.state = 'IDLE'
+                self.state = St.IDLE
 
         elif ptype == 'BITS':
             if data[1] is not None:
@@ -389,7 +391,7 @@ class Decoder(srd.Decoder):
             if self.mosi is None and self.miso is None:
                 return
 
-            if self.state == 'ADDRESS-BYTE':
+            if self.state == St.ADDRESS_BYTE:
                 # OPERATION BIT
                 op_bit = self.get_bit(Channel.MOSI)
                 self.put(op_bit[1], op_bit[2], self.out_ann,
@@ -412,9 +414,9 @@ class Decoder(srd.Decoder):
                     [Ann.REG_ADDRESS, ['ADDRESS: 0x%02X' % self.address, 'ADDR: 0x%02X'
                     % self.address, '0x%02X' % self.address]])
                 self.ss = -1
-                self.state = 'DATA'
+                self.state = St.DATA
 
-            elif self.state == 'DATA':
+            elif self.state == St.DATA:
                 self.reg.extend(self.mosi if self.operation == Operation.WRITE else self.miso)
 
                 self.mosi, self.miso = [], []
