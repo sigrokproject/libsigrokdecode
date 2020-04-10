@@ -31,7 +31,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['spi']
     outputs = []
-    tags = ['Display']
+    tags = ['IC', 'Analog/digital']
     annotations = (
         ('channel', 'Channel'),
         ('input', 'Input voltage'),
