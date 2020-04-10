@@ -54,7 +54,7 @@ class Decoder(srd.Decoder):
         ('data_validation', 'Data validation', (2,)),
     )
     options = (
-        {'id': 'ref', 'desc': 'Reference voltage', 'default': 1.5},
+        {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
     )
 
     def __init__(self,):
@@ -108,7 +108,7 @@ class Decoder(srd.Decoder):
                             self.put_validation([self.start_sample, es], 'complete')
                         elif nb_bits < 16:
                             self.put_validation([self.start_sample, es], 'incomplete')
-                        vin = (self.data / ((2**12) - 1)) * self.options['ref']
+                        vin = (self.data / ((2**12) - 1)) * self.options['vref']
                         self.put_data([self.start_sample, es], vin)
                 elif nb_bits < 10:
                     self.put_mode([self.start_sample, es], 1)
