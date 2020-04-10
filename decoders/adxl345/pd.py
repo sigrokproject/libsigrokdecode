@@ -160,14 +160,14 @@ class Decoder(srd.Decoder):
         else:
             self.putx([Ann.REG_DATA, [str(data)]])
 
-    def handle_reg_0x1D(self, data):
+    def handle_reg_0x1d(self, data):
         self.handle_reg_with_scaling_factor(data, 62.5, 'Threshold', 'g',
             error_messages['undesirable'])
 
-    def handle_reg_0x1E(self, data):
+    def handle_reg_0x1e(self, data):
         self.handle_reg_with_scaling_factor(data, 15.6, 'OFSX', 'g', None)
 
-    def handle_reg_0x1F(self, data):
+    def handle_reg_0x1f(self, data):
         self.handle_reg_with_scaling_factor(data, 15.6, 'OFSY', 'g', None)
 
     def handle_reg_0x20(self, data):
@@ -190,7 +190,7 @@ class Decoder(srd.Decoder):
             error_messages['undesirable'])
 
     def handle_reg_0x25(self, data):
-        self.handle_reg_0x1D(data)
+        self.handle_reg_0x1d(data)
 
     def handle_reg_0x26(self, data):
         self.handle_reg_with_scaling_factor(data, 1000, 'Time', 's',
@@ -208,13 +208,13 @@ class Decoder(srd.Decoder):
         self.interpret_bits(data, bits)
 
     def handle_reg_0x28(self, data):
-        self.handle_reg_0x1D(data)
+        self.handle_reg_0x1d(data)
 
     def handle_reg_0x29(self, data):
         self.handle_reg_with_scaling_factor(data, 5, 'Time', 's',
             error_messages['undesirable'])
 
-    def handle_reg_0x2A(self, data):
+    def handle_reg_0x2a(self, data):
         bits = [Bit('', BitType.UNUSED),
                 Bit('', BitType.UNUSED),
                 Bit('', BitType.UNUSED),
@@ -226,7 +226,7 @@ class Decoder(srd.Decoder):
                 Bit('TAP_Z', BitType.ENABLE)]
         self.interpret_bits(data, bits)
 
-    def handle_reg_0x2B(self, data):
+    def handle_reg_0x2b(self, data):
         bits = [Bit('', BitType.UNUSED),
                 Bit('ACT_X', BitType.SOURCE),
                 Bit('ACT_Y', BitType.SOURCE),
@@ -238,7 +238,7 @@ class Decoder(srd.Decoder):
                 Bit('TAP_Z', BitType.SOURCE)]
         self.interpret_bits(data, bits)
 
-    def handle_reg_0x2C(self, data):
+    def handle_reg_0x2c(self, data):
         bits = [Bit('', BitType.UNUSED),
                 Bit('', BitType.UNUSED),
                 Bit('', BitType.UNUSED),
@@ -249,7 +249,7 @@ class Decoder(srd.Decoder):
         rate = self.get_decimal_number(bits_values, start_index, start_index)
         self.putbs([Ann.REG_DATA, ['%f' % rate_code[rate]]], stop_index, start_index)
 
-    def handle_reg_0x2D(self, data):
+    def handle_reg_0x2d(self, data):
         bits = [Bit('', BitType.UNUSED),
                 Bit('', BitType.UNUSED),
                 Bit('', BitType.OTHER, {1: ['Link'], 0: ['Unlink'], }),
@@ -263,7 +263,7 @@ class Decoder(srd.Decoder):
         frequency = 2 ** (~wakeup & 0x03)
         self.putbs([Ann.REG_DATA, ['%d Hz' % frequency]], stop_index, start_index)
 
-    def handle_reg_0x2E(self, data):
+    def handle_reg_0x2e(self, data):
         bits = [Bit('DATA_READY', BitType.ENABLE),
                 Bit('SINGLE_TAP', BitType.ENABLE),
                 Bit('DOUBLE_TAP', BitType.ENABLE),
@@ -274,7 +274,7 @@ class Decoder(srd.Decoder):
                 Bit('Overrun', BitType.ENABLE)]
         self.interpret_bits(data, bits)
 
-    def handle_reg_0x2F(self, data):
+    def handle_reg_0x2f(self, data):
         bits = [Bit('DATA_READY', BitType.INTERRUPT),
                 Bit('SINGLE_TAP', BitType.INTERRUPT),
                 Bit('DOUBLE_TAP', BitType.INTERRUPT),
@@ -446,7 +446,7 @@ class Decoder(srd.Decoder):
                         self.put(self.ss, reg_bit[2], self.out_ann, [Ann.REG_DATA, [str(reg_value)]])
                     else:
                         self.put(self.ss, reg_bit[2], self.out_ann, [Ann.REG_ADDRESS, registers[self.address]])
-                        handle_reg = getattr(self, 'handle_reg_0x%02X' % self.address)
+                        handle_reg = getattr(self, 'handle_reg_0x%02x' % self.address)
                         handle_reg(reg_value)
 
                     self.reg = []
