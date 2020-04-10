@@ -32,9 +32,6 @@ class Decoder(srd.Decoder):
     annotations = (
         ('data', 'Data'),
     )
-    annotation_rows = (
-        ('data', 'Data', (0,)),
-    )
 
     def __init__(self,):
         self.reset()
