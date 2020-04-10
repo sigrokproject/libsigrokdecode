@@ -19,7 +19,7 @@
 
 import sigrokdecode as srd
 
-input_voltage_format = ['%fV', '%fV', '%.6fV', '%.2fV']
+input_voltage_format = ['%.6fV', '%.2fV']
 
 class Decoder(srd.Decoder):
     api_version = 3
