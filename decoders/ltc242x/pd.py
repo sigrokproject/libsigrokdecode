@@ -37,8 +37,8 @@ class Decoder(srd.Decoder):
         ('input', 'Input voltage'),
     )
     annotation_rows = (
-        ('channel', 'Channel', (0,)),
-        ('input', 'Input voltage', (1,)),
+        ('channels', 'Channels', (0,)),
+        ('inputs', 'Input voltages', (1,)),
     )
     options = (
         {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
