@@ -60,7 +60,13 @@ class Decoder(srd.Decoder):
         ('slave_addr', 'Slave address'),
         ('command', 'Command'),
         ('address', 'Address'),
-        ('data', '2 byte data'),
+        ('dac_a_voltage', 'DAC A voltage'),
+        ('dac_b_voltage', 'DAC B voltage'),
+    )
+    annotation_rows = (
+        ('addr_cmd', 'Address/command', (0, 1, 2)),
+        ('dac_a_voltages', 'DAC A voltages', (3,)),
+        ('dac_b_voltages', 'DAC B voltages', (4,)),
     )
 
     def __init__(self):
@@ -70,6 +76,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         self.ss = -1
         self.data = 0x00
+        self.dac_val = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -113,11 +120,11 @@ class Decoder(srd.Decoder):
 
     def handle_cmd_addr(self, data):
         cmd_val = (data >> 4) & 0x0F
-        dac_val = (data & 0x0F)
+        self.dac_val = (data & 0x0F)
         sm = (self.ss + self.es) // 2
 
         self.put(self.ss, sm, self.out_ann, [1, commands[cmd_val]])
-        self.put(sm, self.es, self.out_ann, [2, addresses[dac_val]])
+        self.put(sm, self.es, self.out_ann, [2, addresses[self.dac_val]])
 
     def handle_data(self, data):
         self.data = (self.data << 8) & 0xFF00
@@ -135,7 +142,11 @@ class Decoder(srd.Decoder):
             ann.append(format % self.data)
         self.data = 0
 
-        self.put(self.ss, self.es, self.out_ann, [3, ann])
+        if self.dac_val == 0x0F: # All DACs (A and B).
+            self.put(self.ss, self.es, self.out_ann, [3 + 0, ann])
+            self.put(self.ss, self.es, self.out_ann, [3 + 1, ann])
+        else:
+            self.put(self.ss, self.es, self.out_ann, [3 + self.dac_val, ann])
 
     def decode(self, ss, es, data):
         cmd, databyte = data
