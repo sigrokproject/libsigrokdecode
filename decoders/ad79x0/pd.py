@@ -25,7 +25,7 @@ modes = {
     2: ['Power Up Mode', 'Power Up', 'PU'],
 }
 
-input_voltage_format = ['%fV', '%fV', '%.6fV', '%.2fV']
+input_voltage_format = ['%.6fV', '%.2fV']
 
 validation = {
     'invalid': ['Invalid data', 'Invalid', 'N/A'],
