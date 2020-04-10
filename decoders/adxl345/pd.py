@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import SrdIntEnum
 from .lists import *
 
 WORD_SIZE = 8
@@ -57,6 +58,8 @@ class Bit():
                 annotation[index] = str(annotation[index] % self.name)
         return annotation
 
+Ann = SrdIntEnum.from_str('Ann', 'READ WRITE MB REG_ADDRESS REG_DATA WARNING')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'adxl345'
@@ -76,8 +79,8 @@ class Decoder(srd.Decoder):
         ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('reg', 'Registers', (0, 1, 2, 3)),
-        ('data', 'Data', (4, 5)),
+        ('reg', 'Registers', (Ann.READ, Ann.WRITE, Ann.MB, Ann.REG_ADDRESS)),
+        ('data', 'Data', (Ann.REG_DATA, Ann.WARNING)),
     )
 
     def __init__(self):
@@ -112,13 +115,13 @@ class Decoder(srd.Decoder):
 
     def handle_reg_with_scaling_factor(self, data, factor, name, unit, error_msg):
         if data == 0 and error_msg is not None:
-            self.putx([5, error_msg])
+            self.putx([Ann.WARNING, error_msg])
         else:
             result = (data * factor) / 1000
-            self.putx([4, ['%s: %f %s' % (name, result, unit), '%f %s' % (result, unit)]])
+            self.putx([Ann.REG_DATA, ['%s: %f %s' % (name, result, unit), '%f %s' % (result, unit)]])
 
     def handle_reg_bit_msg(self, bit, index, en_msg, dis_msg):
-        self.putb([4, [en_msg if bit else dis_msg]], index)
+        self.putb([Ann.REG_DATA, [en_msg if bit else dis_msg]], index)
 
     def interpret_bits(self, data, bits):
         bits_values = []
@@ -130,7 +133,7 @@ class Decoder(srd.Decoder):
                 continue
             bit = bits[index]
             bit.set_value(bits_values[index])
-            self.putb([4, bit.get_bit_annotation()], index)
+            self.putb([Ann.REG_DATA, bit.get_bit_annotation()], index)
 
         return list(reversed(bits_values))
 
@@ -150,10 +153,10 @@ class Decoder(srd.Decoder):
             data <<= 8
             self.data |= data
             self.put(self.start_index, self.es, self.out_ann,
-                [4, ['%s: 0x%04X' % (axis, self.data), str(data)]])
+                [Ann.REG_DATA, ['%s: 0x%04X' % (axis, self.data), str(data)]])
             self.data = -1
         else:
-            self.putx([4, [str(data)]])
+            self.putx([Ann.REG_DATA, [str(data)]])
 
     def handle_reg_0x1D(self, data):
         self.handle_reg_with_scaling_factor(data, 62.5, 'Threshold', 'g',
@@ -242,7 +245,7 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 0, 3
         rate = self.get_decimal_number(bits_values, start_index, start_index)
-        self.putbs([4, ['%f' % rate_code[rate]]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, ['%f' % rate_code[rate]]], stop_index, start_index)
 
     def handle_reg_0x2D(self, data):
         bits = [Bit('', BitType.UNUSED),
@@ -256,7 +259,7 @@ class Decoder(srd.Decoder):
         start_index, stop_index = 0, 1
         wakeup = self.get_decimal_number(bits_values, start_index, stop_index)
         frequency = 2 ** (~wakeup & 0x03)
-        self.putbs([4, ['%d Hz' % frequency]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, ['%d Hz' % frequency]], stop_index, start_index)
 
     def handle_reg_0x2E(self, data):
         bits = [Bit('DATA_READY', BitType.ENABLE),
@@ -303,11 +306,11 @@ class Decoder(srd.Decoder):
         start_index, stop_index = 0, 1
         range_g = self.get_decimal_number(bits_values, start_index, stop_index)
         result = 2 ** (range_g + 1)
-        self.putbs([4, ['+/-%d g' % result]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, ['+/-%d g' % result]], stop_index, start_index)
 
     def handle_reg_0x32(self, data):
         self.data = data
-        self.putx([4, [str(data)]])
+        self.putx([Ann.REG_DATA, [str(data)]])
 
     def handle_reg_0x33(self, data):
         self.get_axis_value(data, 'X')
@@ -332,11 +335,11 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 6, 7
         fifo = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, [fifo_modes[fifo]]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, [fifo_modes[fifo]]], stop_index, start_index)
 
         start_index, stop_index = 0, 4
         samples = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, ['Samples: %d' % samples, '%d' % samples]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, ['Samples: %d' % samples, '%d' % samples]], stop_index, start_index)
 
     def handle_reg_0x39(self, data):
         bits = [Bit('', BitType.OTHER, {1: ['Triggered', 'Trigg'], 0: ['Not triggered', 'Not trigg'],}),
@@ -345,7 +348,7 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 0, 5
         entries = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, ['Entries: %d' % entries, '%d' % entries]], stop_index, start_index)
+        self.putbs([Ann.REG_DATA, ['Entries: %d' % entries, '%d' % entries]], stop_index, start_index)
 
     def get_bit(self, channel):
         if (channel == Channel.MOSI and self.mosi is None) or \
@@ -390,11 +393,11 @@ class Decoder(srd.Decoder):
                 # OPERATION BIT
                 op_bit = self.get_bit(Channel.MOSI)
                 self.put(op_bit[1], op_bit[2], self.out_ann,
-                    [0 if op_bit[0] else 1, operations[op_bit[0]]])
+                    [Ann.READ if op_bit[0] else Ann.WRITE, operations[op_bit[0]]])
                 self.operation = Operation.READ if op_bit[0] else Operation.WRITE
                 # MULTIPLE-BYTE BIT
                 mb_bit = self.get_bit(Channel.MOSI)
-                self.put(mb_bit[1], mb_bit[2], self.out_ann, [2, number_bytes[mb_bit[0]]])
+                self.put(mb_bit[1], mb_bit[2], self.out_ann, [Ann.MB, number_bytes[mb_bit[0]]])
 
                 # REGISTER 6-BIT ADDRESS
                 self.address = 0
@@ -406,7 +409,7 @@ class Decoder(srd.Decoder):
                     self.address <<= 1
                 self.address >>= 1
                 self.put(start_sample, addr_bit[2], self.out_ann,
-                    [3, ['ADDRESS: 0x%02X' % self.address, 'ADDR: 0x%02X'
+                    [Ann.REG_ADDRESS, ['ADDRESS: 0x%02X' % self.address, 'ADDR: 0x%02X'
                     % self.address, '0x%02X' % self.address]])
                 self.ss = -1
                 self.state = 'DATA'
@@ -437,10 +440,10 @@ class Decoder(srd.Decoder):
                         self.start_index = self.ss
 
                     if 0x1D > self.address >= 0x00:
-                        self.put(self.ss, reg_bit[2], self.out_ann, [3, [str(self.address)]])
-                        self.put(self.ss, reg_bit[2], self.out_ann, [4, [str(reg_value)]])
+                        self.put(self.ss, reg_bit[2], self.out_ann, [Ann.REG_ADDRESS, [str(self.address)]])
+                        self.put(self.ss, reg_bit[2], self.out_ann, [Ann.REG_DATA, [str(reg_value)]])
                     else:
-                        self.put(self.ss, reg_bit[2], self.out_ann, [3, registers[self.address]])
+                        self.put(self.ss, reg_bit[2], self.out_ann, [Ann.REG_ADDRESS, registers[self.address]])
                         handle_reg = getattr(self, 'handle_reg_0x%02X' % self.address)
                         handle_reg(reg_value)
 
