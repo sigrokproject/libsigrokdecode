@@ -19,7 +19,6 @@
 
 import sigrokdecode as srd
 
-channel_format = ['Channel %d', 'Ch %d', '%d']
 input_voltage_format = ['%fV', '%fV', '%.6fV', '%.2fV']
 
 class Decoder(srd.Decoder):
@@ -33,12 +32,12 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['IC', 'Analog/digital']
     annotations = (
-        ('channel', 'Channel'),
-        ('input', 'Input voltage'),
+        ('ch0_voltage', 'CH0 voltage'),
+        ('ch1_voltage', 'CH1 voltage'),
     )
     annotation_rows = (
-        ('channels', 'Channels', (0,)),
-        ('inputs', 'Input voltages', (1,)),
+        ('ch0_voltages', 'CH0 voltages', (0,)),
+        ('ch1_voltages', 'CH1 voltages', (1,)),
     )
     options = (
         {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
@@ -54,14 +53,6 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def handle_channel(self, data):
-        channel = (data & (1 << 22)) >> 22
-        ann = []
-        for format in channel_format:
-            ann.append(format % channel)
-
-        self.put(self.ss, self.es, self.out_ann, [0, ann])
-
     def handle_input_voltage(self, data):
         input_voltage = data & 0x3FFFFF
         input_voltage = -(2**21 - input_voltage)
@@ -70,7 +61,8 @@ class Decoder(srd.Decoder):
         for format in input_voltage_format:
             ann.append(format % input_voltage)
 
-        self.put(self.ss, self.es, self.out_ann, [1, ann])
+        channel = (data & (1 << 22)) >> 22
+        self.put(self.ss, self.es, self.out_ann, [channel, ann])
 
     def decode(self, ss, es, data):
         ptype = data[0]
@@ -80,7 +72,6 @@ class Decoder(srd.Decoder):
             if cs_old is not None and cs_old == 0 and cs_new == 1:
                 self.es = es
                 self.data >>= 1
-                self.handle_channel(self.data)
                 self.handle_input_voltage(self.data)
 
                 self.data = 0
