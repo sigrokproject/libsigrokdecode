@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
             error_messages['dis_single_double'])
 
     def handle_reg_0x22(self, data):
-        self.handle_reg_with_scaling_factor(data, 62.5, 'Latent', 's',
+        self.handle_reg_with_scaling_factor(data, 1.25, 'Latent', 's',
             error_messages['dis_double'])
 
     def handle_reg_0x23(self, data):
