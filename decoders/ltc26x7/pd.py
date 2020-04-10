@@ -52,9 +52,9 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['IC', 'Analog/digital']
     options = (
-        {'id': 'part', 'desc': 'Part', 'default': 'ltc26x7',
+        {'id': 'chip', 'desc': 'Chip', 'default': 'ltc26x7',
             'values': ('ltc2607', 'ltc2617', 'ltc2627')},
-        {'id': 'ref', 'desc': 'Reference voltage', 'default': 1.5},
+        {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
     )
     annotations = (
         ('slave_addr', 'Slave address'),
@@ -122,14 +122,14 @@ class Decoder(srd.Decoder):
     def handle_data(self, data):
         self.data = (self.data << 8) & 0xFF00
         self.data += data
-        if self.options['part'] == 'ltc2617':
+        if self.options['chip'] == 'ltc2617':
             self.data = (self.data >> 2)
-            self.data = (self.options['ref'] * self.data) / 0x3FFF
-        elif self.options['part'] == 'ltc2627':
+            self.data = (self.options['vref'] * self.data) / 0x3FFF
+        elif self.options['chip'] == 'ltc2627':
             self.data = (self.data >> 4)
-            self.data = (self.options['ref'] * self.data) / 0x0FFF
+            self.data = (self.options['vref'] * self.data) / 0x0FFF
         else:
-            self.data = (self.options['ref'] * self.data) / 0xFFFF
+            self.data = (self.options['vref'] * self.data) / 0xFFFF
         ann = []
         for format in input_voltage_format:
             ann.append(format % self.data)
