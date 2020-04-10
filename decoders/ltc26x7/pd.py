@@ -52,7 +52,7 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['IC', 'Analog/digital']
     options = (
-        {'id': 'chip', 'desc': 'Chip', 'default': 'ltc26x7',
+        {'id': 'chip', 'desc': 'Chip', 'default': 'ltc2607',
             'values': ('ltc2607', 'ltc2617', 'ltc2627')},
         {'id': 'vref', 'desc': 'Reference voltage (V)', 'default': 1.5},
     )
