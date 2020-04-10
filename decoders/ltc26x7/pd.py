@@ -62,9 +62,6 @@ class Decoder(srd.Decoder):
         ('address', 'Address'),
         ('data', '2 byte data'),
     )
-    annotation_rows = (
-        ('ltc26x7', 'LTC26x7 data', (0, 1, 2, 3)),
-    )
 
     def __init__(self):
         self.reset()
