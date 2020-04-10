@@ -23,12 +23,10 @@ from .lists import *
 WORD_SIZE = 8
 
 class Channel():
-    MISO = 0
-    MOSI = 1
+    MISO, MOSI = range(2)
 
 class Operation():
-    READ = 0
-    WRITE = 1
+    READ, WRITE = range(2)
 
 class BitType():
     ENABLE = {1: ['Enable %s', 'En %s', '%s '], 0: ['Disable %s', 'Dis %s', '!%s '],}
@@ -86,15 +84,13 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.mosi = []
-        self.miso = []
+        self.mosi, self.miso = [], []
         self.reg = []
         self.operation = None
         self.address = 0
         self.data = -1
         self.state = 'IDLE'
-        self.ss = -1
-        self.es = -1
+        self.ss, self.es = -1, -1
         self.samples_per_bit = 0
 
     def start(self):
@@ -117,14 +113,10 @@ class Decoder(srd.Decoder):
             self.putx([5, error_msg])
         else:
             result = (data * factor) / 1000
-            ann = ['%s: %f %s' % (name, result, unit), '%f %s' % (result, unit)]
-            self.putx([4, ann])
+            self.putx([4, ['%s: %f %s' % (name, result, unit), '%f %s' % (result, unit)]])
 
     def handle_reg_bit_msg(self, bit, index, en_msg, dis_msg):
-        if bit:
-            self.putb([4, [en_msg]], index)
-        else:
-            self.putb([4, [dis_msg]], index)
+        self.putb([4, [en_msg if bit else dis_msg]], index)
 
     def interpret_bits(self, data, bits):
         bits_values = []
@@ -136,8 +128,7 @@ class Decoder(srd.Decoder):
                 continue
             bit = bits[index]
             bit.set_value(bits_values[index])
-            bit_annotation = bit.get_bit_annotation()
-            self.putb([4, bit_annotation], index)
+            self.putb([4, bit.get_bit_annotation()], index)
 
         return list(reversed(bits_values))
 
@@ -247,8 +238,7 @@ class Decoder(srd.Decoder):
                 Bit('', BitType.OTHER, {1: ['Reduce power', 'Reduce pw', 'Red pw'], 0: ['Normal operation', 'Normal op', 'Norm op'],})]
         bits_values = self.interpret_bits(data, bits)
 
-        start_index = 0
-        stop_index = 3
+        start_index, stop_index = 0, 3
         rate = self.get_decimal_number(bits_values, start_index, start_index)
         self.putbs([4, ['%f' % rate_code[rate]]],
             self.reverse_bit_index(stop_index, WORD_SIZE),
@@ -263,8 +253,7 @@ class Decoder(srd.Decoder):
                 Bit('', BitType.OTHER, {1: ['Sleep mode', 'Sleep', 'Slp'], 0: ['Normal mode', 'Normal', 'Nrm'],})]
         bits_values = self.interpret_bits(data, bits)
 
-        start_index = 0
-        stop_index = 1
+        start_index, stop_index = 0, 1
         wakeup = self.get_decimal_number(bits_values, start_index, stop_index)
         frequency = 2 ** (~wakeup & 0x03)
         self.putbs([4, ['%d Hz' % frequency]],
@@ -313,8 +302,7 @@ class Decoder(srd.Decoder):
                 Bit('', BitType.OTHER, {1: ['MSB mode', 'MSB'], 0: ['LSB mode', 'LSB'],})]
         bits_values = self.interpret_bits(data, bits)
 
-        start_index = 0
-        stop_index = 1
+        start_index, stop_index = 0, 1
         range_g = self.get_decimal_number(bits_values, start_index, stop_index)
         result = 2 ** (range_g + 1)
         self.putbs([4, ['+/-%d g' % result]],
@@ -346,15 +334,13 @@ class Decoder(srd.Decoder):
                 Bit('', BitType.OTHER, {1: ['Trig-INT2', 'INT2'], 0: ['Trig-INT1', 'INT1'], })]
         bits_values = self.interpret_bits(data, bits)
 
-        start_index = 6
-        stop_index = 7
+        start_index, stop_index = 6, 7
         fifo = self.get_decimal_number(bits_values, start_index, stop_index)
         self.putbs([4, [fifo_modes[fifo]]],
             self.reverse_bit_index(stop_index, WORD_SIZE),
             self.reverse_bit_index(start_index, WORD_SIZE))
 
-        start_index = 0
-        stop_index = 4
+        start_index, stop_index = 0, 4
         samples = self.get_decimal_number(bits_values, start_index, stop_index)
         self.putbs([4, ['Samples: %d' % samples, '%d' % samples]],
             self.reverse_bit_index(stop_index, WORD_SIZE),
@@ -365,8 +351,7 @@ class Decoder(srd.Decoder):
                 Bit('', BitType.UNUSED)]
         bits_values = self.interpret_bits(data, bits)
 
-        start_index = 0
-        stop_index = 5
+        start_index, stop_index = 0, 5
         entries = self.get_decimal_number(bits_values, start_index, stop_index)
         self.putbs([4, ['Entries: %d' % entries, '%d' % entries]],
             self.reverse_bit_index(stop_index, WORD_SIZE),
@@ -397,8 +382,7 @@ class Decoder(srd.Decoder):
         if ptype == 'CS-CHANGE':
             cs_old, cs_new = data[1:]
             if cs_old is not None and cs_old == 1 and cs_new == 0:
-                self.ss = ss
-                self.es = es
+                self.ss, self.es = ss, es
                 self.state = 'ADDRESS-BYTE'
             else:
                 self.state = 'IDLE'
@@ -415,13 +399,9 @@ class Decoder(srd.Decoder):
             if self.state == 'ADDRESS-BYTE':
                 # OPERATION BIT
                 op_bit = self.get_bit(Channel.MOSI)
-                if op_bit[0]:
-                    self.put(op_bit[1], op_bit[2], self.out_ann, [0, operations[op_bit[0]]])
-                    self.operation = Operation.READ
-                else:
-                    self.put(op_bit[1], op_bit[2], self.out_ann, [1, operations[op_bit[0]]])
-                    self.operation = Operation.WRITE
-
+                self.put(op_bit[1], op_bit[2], self.out_ann,
+                    [0 if op_bit[0] else 1, operations[op_bit[0]]])
+                self.operation = Operation.READ if op_bit[0] else Operation.WRITE
                 # MULTIPLE-BYTE BIT
                 mb_bit = self.get_bit(Channel.MOSI)
                 self.put(mb_bit[1], mb_bit[2], self.out_ann, [2, number_bytes[mb_bit[0]]])
@@ -442,16 +422,11 @@ class Decoder(srd.Decoder):
                 self.state = 'DATA'
 
             elif self.state == 'DATA':
-                if self.operation == Operation.WRITE:
-                    self.reg.extend(self.mosi)
-                elif self.operation == Operation.READ:
-                    self.reg.extend(self.miso)
+                self.reg.extend(self.mosi if self.operation == Operation.WRITE else self.miso)
 
-                self.mosi = []
-                self.miso = []
+                self.mosi, self.miso = [], []
                 if self.ss == -1:
-                    self.ss = self.reg[0][1]
-                    self.es = es
+                    self.ss, self.es = self.reg[0][1], es
                     self.samples_per_bit = self.reg[0][2] - self.ss
 
                 if len(self.reg) < 8:
