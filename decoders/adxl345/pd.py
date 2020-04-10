@@ -104,6 +104,8 @@ class Decoder(srd.Decoder):
         self.put(start, start + self.samples_per_bit, self.out_ann, data)
 
     def putbs(self, data, start_index, stop_index):
+        start_index = self.reverse_bit_index(start_index, WORD_SIZE)
+        stop_index = self.reverse_bit_index(stop_index, WORD_SIZE)
         start = self.ss + (self.samples_per_bit * start_index)
         stop = start + (self.samples_per_bit * (stop_index - start_index + 1))
         self.put(start, stop, self.out_ann, data)
@@ -240,9 +242,7 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 0, 3
         rate = self.get_decimal_number(bits_values, start_index, start_index)
-        self.putbs([4, ['%f' % rate_code[rate]]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, ['%f' % rate_code[rate]]], stop_index, start_index)
 
     def handle_reg_0x2D(self, data):
         bits = [Bit('', BitType.UNUSED),
@@ -256,9 +256,7 @@ class Decoder(srd.Decoder):
         start_index, stop_index = 0, 1
         wakeup = self.get_decimal_number(bits_values, start_index, stop_index)
         frequency = 2 ** (~wakeup & 0x03)
-        self.putbs([4, ['%d Hz' % frequency]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, ['%d Hz' % frequency]], stop_index, start_index)
 
     def handle_reg_0x2E(self, data):
         bits = [Bit('DATA_READY', BitType.ENABLE),
@@ -305,9 +303,7 @@ class Decoder(srd.Decoder):
         start_index, stop_index = 0, 1
         range_g = self.get_decimal_number(bits_values, start_index, stop_index)
         result = 2 ** (range_g + 1)
-        self.putbs([4, ['+/-%d g' % result]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, ['+/-%d g' % result]], stop_index, start_index)
 
     def handle_reg_0x32(self, data):
         self.data = data
@@ -336,15 +332,11 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 6, 7
         fifo = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, [fifo_modes[fifo]]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, [fifo_modes[fifo]]], stop_index, start_index)
 
         start_index, stop_index = 0, 4
         samples = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, ['Samples: %d' % samples, '%d' % samples]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, ['Samples: %d' % samples, '%d' % samples]], stop_index, start_index)
 
     def handle_reg_0x39(self, data):
         bits = [Bit('', BitType.OTHER, {1: ['Triggered', 'Trigg'], 0: ['Not triggered', 'Not trigg'],}),
@@ -353,9 +345,7 @@ class Decoder(srd.Decoder):
 
         start_index, stop_index = 0, 5
         entries = self.get_decimal_number(bits_values, start_index, stop_index)
-        self.putbs([4, ['Entries: %d' % entries, '%d' % entries]],
-            self.reverse_bit_index(stop_index, WORD_SIZE),
-            self.reverse_bit_index(start_index, WORD_SIZE))
+        self.putbs([4, ['Entries: %d' % entries, '%d' % entries]], stop_index, start_index)
 
     def get_bit(self, channel):
         if (channel == Channel.MOSI and self.mosi is None) or \
