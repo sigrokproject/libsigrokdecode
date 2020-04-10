@@ -45,12 +45,12 @@ class Decoder(srd.Decoder):
     tags = ['Display']
     annotations = (
         ('mode', 'Mode'),
-        ('data', 'Data'),
+        ('voltage', 'Voltage'),
         ('validation', 'Validation'),
     )
     annotation_rows = (
-        ('mode', 'Mode', (0,)),
-        ('data', 'Converted data', (1,)),
+        ('modes', 'Modes', (0,)),
+        ('voltages', 'Voltages', (1,)),
         ('data_validation', 'Data validation', (2,)),
     )
     options = (
