@@ -50,7 +50,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = []
-    tags = ['Display']
+    tags = ['IC', 'Analog/digital']
     options = (
         {'id': 'part', 'desc': 'Part', 'default': 'ltc26x7',
             'values': ('ltc2607', 'ltc2617', 'ltc2627')},
