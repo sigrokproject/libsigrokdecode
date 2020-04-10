@@ -39,7 +39,7 @@ addresses = {
     0x0F: ['All DACs', 'All'],
 }
 
-input_voltage_format = ['%fV', '%fV', '%.6fV', '%.2fV']
+input_voltage_format = ['%.6fV', '%.2fV']
 
 class Decoder(srd.Decoder):
     api_version = 3
