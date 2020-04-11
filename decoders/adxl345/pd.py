@@ -246,7 +246,7 @@ class Decoder(srd.Decoder):
         bits_values = self.interpret_bits(data, bits)
 
         start_index, stop_index = 0, 3
-        rate = self.get_decimal_number(bits_values, start_index, start_index)
+        rate = self.get_decimal_number(bits_values, start_index, stop_index)
         self.putbs([Ann.REG_DATA, ['%f' % rate_code[rate]]], stop_index, start_index)
 
     def handle_reg_0x2d(self, data):
