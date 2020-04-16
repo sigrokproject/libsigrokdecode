@@ -122,7 +122,7 @@ class Decoder(srd.Decoder):
     def isparity(self):
         bitsvalue = self.bits
         tmpparity = 0
-        for i in range(0,16):
+        for i in range(0,17):
             tmpparity = tmpparity + bitsvalue % 2
             bitsvalue = bitsvalue >> 1
         if tmpparity%2 == 1:
