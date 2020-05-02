@@ -37,6 +37,11 @@ def normalize_time(t):
     else:
         return '%f' % t
 
+class Ann:
+    ANN_TIME, \
+    ANN_RAW, ANN_SOF, ANN_IFS, ANN_DATA, \
+    ANN_PACKET = range(6)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'sae_j1850_vpw'
@@ -59,10 +64,10 @@ class Decoder(srd.Decoder):
         ('packet', 'Packet'),
     )
     annotation_rows = (
-        ('packets', 'Packets', (5,)),
-        ('bytes', 'Bytes', (4,)),
-        ('raws', 'Raws', (1,2,3,)),
-        ('times', 'Times', (0,)),
+        ('packets', 'Packets', (Ann.ANN_PACKET,)),
+        ('bytes', 'Bytes', (Ann.ANN_DATA,)),
+        ('raws', 'Raws', (Ann.ANN_RAW, Ann.ANN_SOF, Ann.ANN_IFS,)),
+        ('times', 'Times', (Ann.ANN_TIME,)),
     )
 
     def __init__(self):
@@ -97,25 +102,25 @@ class Decoder(srd.Decoder):
 
     def handle_bit(self, ss, es, b):
         self.data |= (b << 7-self.count) # MSB-first
-        self.put(ss, es, self.out_ann, [1, ["%d" % b]])
+        self.put(ss, es, self.out_ann, [Ann.ANN_RAW, ["%d" % b]])
         if self.count == 0:
             self.datastart = ss
         if self.count == 7:
             self.csa = self.datastart # for CS
             self.csb = self.samplenum # for CS
-            self.put(self.datastart, self.samplenum, self.out_ann, [4, ["%02X" % self.data]])
+            self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_DATA, ["%02X" % self.data]])
             # add protocol parsing here
             if self.byte == 0:
-                self.put(self.datastart, self.samplenum, self.out_ann, [5, ['Priority','Prio','P']])
+                self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_PACKET, ['Priority','Prio','P']])
             elif self.byte == 1:
-                self.put(self.datastart, self.samplenum, self.out_ann, [5, ['Destination','Dest','D']])
+                self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_PACKET, ['Destination','Dest','D']])
             elif self.byte == 2:
-                self.put(self.datastart, self.samplenum, self.out_ann, [5, ['Source','Src','S']])
+                self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_PACKET, ['Source','Src','S']])
             elif self.byte == 3:
-                self.put(self.datastart, self.samplenum, self.out_ann, [5, ['Mode','M']])
+                self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_PACKET, ['Mode','M']])
                 self.mode = self.data
             elif self.mode == 1 and self.byte == 4: # mode 1 payload
-                self.put(self.datastart, self.samplenum, self.out_ann, [5, ['Pid','P']])
+                self.put(self.datastart, self.samplenum, self.out_ann, [Ann.ANN_PACKET, ['Pid','P']])
 
             # prepare for next byte
             self.count = -1
@@ -143,17 +148,17 @@ class Decoder(srd.Decoder):
 
             samples = es - ss
             txt = normalize_time(samples / self.samplerate)
-            self.put(ss, es, self.out_ann, [0, [txt]])
+            self.put(ss, es, self.out_ann, [Ann.ANN_TIME, [txt]])
             t = timeuf(samples / self.samplerate)
             if self.state == 'IDLE': # detect and set speed from the size of sof
                 if pin == self.active and t in range(self.sofl , self.sofh):
-                    self.put(ss, es, self.out_ann, [1, ['1X SOF', 'S1', 'S']])
+                    self.put(ss, es, self.out_ann, [Ann.ANN_RAW, ['1X SOF', 'S1', 'S']])
                     self.spd = 1
                     self.data = 0
                     self.count = 0
                     self.state = 'DATA'
                 elif pin == self.active and t in range(int(self.sofl / 4) , int(self.sofh / 4)):
-                    self.put(ss, es, self.out_ann, [1, ['4X SOF', 'S4', '4']])
+                    self.put(ss, es, self.out_ann, [Ann.ANN_RAW, ['4X SOF', 'S4', '4']])
                     self.spd = 4
                     self.data = 0
                     self.count = 0
@@ -162,8 +167,8 @@ class Decoder(srd.Decoder):
             elif self.state == 'DATA':
                 if t >= int(self.ifs / self.spd):
                     self.state = 'IDLE'
-                    self.put(ss, es, self.out_ann, [1, ["EOF/IFS", "E"]]) # EOF=239-280 IFS=281+
-                    self.put(self.csa, self.csb, self.out_ann, [5, ['Checksum','CS','C']]) # retrospective print of CS
+                    self.put(ss, es, self.out_ann, [Ann.ANN_RAW, ["EOF/IFS", "E"]]) # EOF=239-280 IFS=281+
+                    self.put(self.csa, self.csb, self.out_ann, [Ann.ANN_PACKET, ['Checksum','CS','C']]) # retrospective print of CS
                     self.byte = 0 # reset packet offset
                 elif t in range(int(self.shortl / self.spd), int(self.shorth / self.spd)):
                     if pin == self.active:
