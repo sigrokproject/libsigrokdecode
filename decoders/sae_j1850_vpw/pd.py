@@ -25,22 +25,9 @@ class SamplerateError(Exception):
 def timeuf(t):
     return int (t * 1000.0 * 1000.0)
 
-def normalize_time(t):
-    if t >= 1.0:
-        return '%d s' % t
-    elif t >= 0.001:
-        return '%d ms' % (t * 1000.0)
-    elif t >= 0.000001:
-        return '%d μs' % (t * 1000.0 * 1000.0)
-    elif t >= 0.000000001:
-        return '%d ns' % (t * 1000.0 * 1000.0 * 1000.0)
-    else:
-        return '%f' % t
-
 class Ann:
-    ANN_TIME, \
     ANN_RAW, ANN_SOF, ANN_IFS, ANN_DATA, \
-    ANN_PACKET = range(6)
+    ANN_PACKET = range(5)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -56,7 +43,6 @@ class Decoder(srd.Decoder):
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
     annotations = (
-        ('time', 'Time'),
         ('raw', 'Raw'),
         ('sof', 'SOF'),
         ('ifs', 'EOF/IFS'),
@@ -64,10 +50,9 @@ class Decoder(srd.Decoder):
         ('packet', 'Packet'),
     )
     annotation_rows = (
-        ('packets', 'Packets', (Ann.ANN_PACKET,)),
-        ('bytes', 'Bytes', (Ann.ANN_DATA,)),
         ('raws', 'Raws', (Ann.ANN_RAW, Ann.ANN_SOF, Ann.ANN_IFS,)),
-        ('times', 'Times', (Ann.ANN_TIME,)),
+        ('bytes', 'Bytes', (Ann.ANN_DATA,)),
+        ('packets', 'Packets', (Ann.ANN_PACKET,)),
     )
 
     def __init__(self):
@@ -147,8 +132,6 @@ class Decoder(srd.Decoder):
             es = self.samplenum
 
             samples = es - ss
-            txt = normalize_time(samples / self.samplerate)
-            self.put(ss, es, self.out_ann, [Ann.ANN_TIME, [txt]])
             t = timeuf(samples / self.samplerate)
             if self.state == 'IDLE': # detect and set speed from the size of sof
                 if pin == self.active and t in range(self.sofl , self.sofh):
