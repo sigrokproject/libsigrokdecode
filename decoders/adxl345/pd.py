@@ -174,20 +174,19 @@ class Decoder(srd.Decoder):
         self.handle_reg_with_scaling_factor(data, 15.6, 'OFSZ', 'g', None)
 
     def handle_reg_0x21(self, data):
-        self.handle_reg_with_scaling_factor(data, 0.625, 'Time', 's',
+        self.handle_reg_with_scaling_factor(data, 0.625, 'Duration', 's',
             error_messages['dis_single_double'])
 
     def handle_reg_0x22(self, data):
-        self.handle_reg_with_scaling_factor(data, 1.25, 'Latent', 's',
+        self.handle_reg_with_scaling_factor(data, 1.25, 'Latency', 's',
             error_messages['dis_double'])
 
     def handle_reg_0x23(self, data):
-        self.handle_reg_with_scaling_factor(data, 1.25, 'Latent', 's',
+        self.handle_reg_with_scaling_factor(data, 1.25, 'Window', 's',
             error_messages['dis_double'])
 
     def handle_reg_0x24(self, data):
-        self.handle_reg_with_scaling_factor(data, 62.5, 'Latent', 's',
-            error_messages['undesirable'])
+        self.handle_reg_0x1d(data)
 
     def handle_reg_0x25(self, data):
         self.handle_reg_0x1d(data)
