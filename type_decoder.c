@@ -1037,7 +1037,7 @@ err:
 static PyMethodDef Decoder_methods[] = {
 	{ "put", Decoder_put, METH_VARARGS,
 	  "Accepts a dictionary with the following keys: startsample, endsample, data" },
-	{ "register", (PyCFunction)Decoder_register, METH_VARARGS|METH_KEYWORDS,
+	{ "register", (PyCFunction)(void(*)(void))Decoder_register, METH_VARARGS|METH_KEYWORDS,
 			"Register a new output stream" },
 	{ "wait", Decoder_wait, METH_VARARGS,
 			"Wait for one or more conditions to occur" },
