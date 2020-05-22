@@ -167,7 +167,7 @@ SRD_API int srd_inst_option_set(struct srd_decoder_inst *di,
 			}
 		} else if (g_variant_is_of_type(value, G_VARIANT_TYPE_INT64)) {
 			val_int = g_variant_get_int64(value);
-			if (!(py_optval = PyLong_FromLong(val_int))) {
+			if (!(py_optval = PyLong_FromLongLong(val_int))) {
 				/* ValueError Exception */
 				PyErr_Clear();
 				srd_err("Option '%s' has invalid integer value.", sdo->id);
@@ -699,7 +699,7 @@ SRD_PRIV int srd_inst_start(struct srd_decoder_inst *di)
 	Py_DECREF(py_res);
 
 	/* Set self.samplenum to 0. */
-	py_samplenum = PyLong_FromLong(0);
+	py_samplenum = PyLong_FromUnsignedLongLong(0);
 	PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
 	Py_DECREF(py_samplenum);
 

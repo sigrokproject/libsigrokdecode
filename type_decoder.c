@@ -605,13 +605,13 @@ static PyObject *get_current_pinvalues(const struct srd_decoder_inst *di)
 		/* A channelmap value of -1 means "unused optional channel". */
 		if (di->dec_channelmap[i] == -1) {
 			/* Value of unused channel is 0xff, instead of 0 or 1. */
-			PyTuple_SetItem(py_pinvalues, i, PyLong_FromLong(0xff));
+			PyTuple_SetItem(py_pinvalues, i, PyLong_FromUnsignedLong(0xff));
 		} else {
 			sample_pos = di->inbuf + ((di->abs_cur_samplenum - di->abs_start_samplenum) * di->data_unitsize);
 			byte_offset = di->dec_channelmap[i] / 8;
 			bit_offset = di->dec_channelmap[i] % 8;
 			sample = *(sample_pos + byte_offset) & (1 << bit_offset) ? 1 : 0;
-			PyTuple_SetItem(py_pinvalues, i, PyLong_FromLong(sample));
+			PyTuple_SetItem(py_pinvalues, i, PyLong_FromUnsignedLong(sample));
 		}
 	}
 
@@ -922,7 +922,7 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		/* If there's a match, set self.samplenum etc. and return. */
 		if (found_match) {
 			/* Set self.samplenum to the (absolute) sample number that matched. */
-			py_samplenum = PyLong_FromLong(di->abs_cur_samplenum);
+			py_samplenum = PyLong_FromUnsignedLongLong(di->abs_cur_samplenum);
 			PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
 			Py_DECREF(py_samplenum);
 
