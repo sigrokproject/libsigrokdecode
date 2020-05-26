@@ -111,14 +111,14 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (ann_warn,))
     )
 
-    def reset_data(self):
-        self.mosi_bytes, self.miso_bytes = [], []
-        self.cmd_samples = {'ss': 0, 'es': 0}
-
     def __init__(self):
         self.ss_cmd, self.es_cmd = 0, 0
         self.cs_asserted = False
-        self.reset_data()
+        self.reset()
+
+    def reset(self):
+        self.mosi_bytes, self.miso_bytes = [], []
+        self.cmd_samples = {'ss': 0, 'es': 0}
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -338,7 +338,7 @@ class Decoder(srd.Decoder):
                 self.set_cs_status(ss, False)
                 if len(self.mosi_bytes):
                     self.process_cmd()
-                    self.reset_data()
+                    self.reset()
 
         elif ptype == 'DATA':
             # Ignore traffic if CS is not asserted.
