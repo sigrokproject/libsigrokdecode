@@ -167,8 +167,6 @@ class Decoder(srd.Decoder):
             reg_addr = i + addr
             if reg_addr <= 9:
                 self.parse_config_register(reg_addr, registers[i], is_write)
-            else:
-                print('INVALID REGISTER ADDR ' + hex(reg_addr))
             i += 1
 
     def dump_cmd_bytes(self, prefix, cmd_bytes, ann):
@@ -182,14 +180,12 @@ class Decoder(srd.Decoder):
     def handle_WC(self):
         start_addr = self.mosi_bytes[0][0] & 0x0F
         if start_addr > 9:
-            print('ERROR: WRONG OFFSET')
             return
         self.parse_config_registers(start_addr, self.mosi_bytes[1:], True)
 
     def handle_RC(self):
         start_addr = self.mosi_bytes[0][0] & 0x0F
         if start_addr > 9:
-            print('ERROR: WRONG OFFSET')
             return
         self.parse_config_registers(start_addr, self.miso_bytes[1:], False)
 
