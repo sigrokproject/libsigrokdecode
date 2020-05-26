@@ -120,10 +120,8 @@ class Decoder(srd.Decoder):
     def extract_bits(self, byte, start_bit, num_bits):
         begin = 7 - start_bit
         end = begin + num_bits
-
         if begin < 0 or end > 8:
             return 0
-
         binary = format(byte, '08b')[begin:end]
         return int(binary, 2)
 
@@ -131,22 +129,18 @@ class Decoder(srd.Decoder):
         # Iterate all vars on current register.
         data = ''
         for var in reg_vars:
-            var_value = self.extract_bits(reg_value, var['stbit'],
-                                          var['nbits'])
+            var_value = self.extract_bits(reg_value, var['stbit'], var['nbits'])
             data += var['name'] + ' = ' + str(var_value)
             opt = ''
 
             # If var has options, just add the option meaning.
             if 'opts' in var:
-                if var_value in var['opts']:
-                    opt = var['opts'][var_value]
-                else:
-                    opt = 'unknown'
+                opt = var['opts'].get(var_value, 'unknown')
                 data += ' (' + opt + ')'
 
             # Add var separator.
             if reg_vars.index(var) != len(reg_vars) - 1:
-                data = data + ' | '
+                data += ' | '
         return data
 
     def parse_config_register(self, addr, value, is_write):
@@ -178,27 +172,22 @@ class Decoder(srd.Decoder):
             i += 1
 
     def dump_cmd_bytes(self, prefix, cmd_bytes, ann):
-        ss = cmd_bytes[1][1]
-        es = 0
+        ss, es = cmd_bytes[1][1], 0
         data = ''
         for byte in cmd_bytes[1:]:
             data += '0x' + format(byte[0], '02x') + ' '
             es = byte[2]
-
         self.put(ss, es, self.out_ann, [ann, [prefix + data]])
 
     def handle_WC(self):
         start_addr = self.mosi_bytes[0][0] & 0x0F
-
         if start_addr > 9:
             print('ERROR: WRONG OFFSET')
             return
-
         self.parse_config_registers(start_addr, self.mosi_bytes[1:], True)
 
     def handle_RC(self):
         start_addr = self.mosi_bytes[0][0] & 0x0F
-
         if start_addr > 9:
             print('ERROR: WRONG OFFSET')
             return
@@ -220,15 +209,10 @@ class Decoder(srd.Decoder):
         self.dump_cmd_bytes('Read RX payload: ', self.miso_bytes, Ann.RX)
 
     def handle_CC(self):
-        cmd = self.mosi_bytes[0]
-        dta = self.mosi_bytes[1]
-
-        channel = (cmd[0] & 0x01) << 8
-        channel = channel + dta[0]
-
+        cmd, dta = self.mosi_bytes[0], self.mosi_bytes[1]
+        channel = ((cmd[0] & 0x01) << 8) + dta
         data = self.extract_vars(CHN_CFG, cmd[0])
-
-        data = data + '| CHN = ' + str(channel)
+        data += '| CHN = ' + str(channel)
         self.put(self.mosi_bytes[0][1], self.mosi_bytes[1][2],
                  self.out_ann, [Ann.REG_WR, [data]])
 
@@ -238,9 +222,7 @@ class Decoder(srd.Decoder):
                  self.out_ann, [Ann.REG_RD, [status]])
 
     def process_cmd(self):
-        cmd = ''
-        cmd_name = ''
-        cmd_hnd = None
+        cmd, cmd_name, cmd_hnd = '', '', None
 
         for byte in self.mosi_bytes:
             cmd += hex(byte[0]) + ' '
@@ -248,36 +230,21 @@ class Decoder(srd.Decoder):
         cmd = self.mosi_bytes[0][0]
 
         if (cmd & 0xF0) == 0x00:
-            cmd_name = 'CMD: W_CONFIG (WC)'
-            cmd_hnd = self.handle_WC
-
+            cmd_name, cmd_hnd = 'CMD: W_CONFIG (WC)', self.handle_WC
         elif (cmd & 0xF0) == 0x10:
-            cmd_name = 'CMD: R_CONFIG (RC)'
-            cmd_hnd = self.handle_RC
-
+            cmd_name, cmd_hnd = 'CMD: R_CONFIG (RC)', self.handle_RC
         elif cmd == 0x20:
-            cmd_name = 'CMD: W_TX_PAYLOAD (WTP)'
-            cmd_hnd = self.handle_WTP
-
+            cmd_name, cmd_hnd = 'CMD: W_TX_PAYLOAD (WTP)', self.handle_WTP
         elif cmd == 0x21:
-            cmd_name = 'CMD: R_TX_PAYLOAD (RTP)'
-            cmd_hnd = self.handle_RTP
-
+            cmd_name, cmd_hnd = 'CMD: R_TX_PAYLOAD (RTP)', self.handle_RTP
         elif cmd == 0x22:
-            cmd_name = 'CMD: W_TX_ADDRESS (WTA)'
-            cmd_hnd = self.handle_WTA
-
+            cmd_name, cmd_hnd = 'CMD: W_TX_ADDRESS (WTA)', self.handle_WTA
         elif cmd == 0x23:
-            cmd_name = 'CMD: R_TX_ADDRESS (RTA)'
-            cmd_hnd = self.handle_RTA
-
+            cmd_name, cmd_hnd = 'CMD: R_TX_ADDRESS (RTA)', self.handle_RTA
         elif cmd == 0x24:
-            cmd_name = 'CMD: R_RX_PAYLOAD (RRP)'
-            cmd_hnd = self.handle_RRP
-
+            cmd_name, cmd_hnd = 'CMD: R_RX_PAYLOAD (RRP)', self.handle_RRP
         elif (cmd & 0xF0 == 0x80):
-            cmd_name = 'CMD: CHANNEL_CONFIG (CC)'
-            cmd_hnd = self.handle_CC
+            cmd_name, cmd_hnd = 'CMD: CHANNEL_CONFIG (CC)', self.handle_CC
 
         # Report command name.
         self.put(self.cmd_samples['ss'], self.cmd_samples['es'],
