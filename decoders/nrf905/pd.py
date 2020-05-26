@@ -173,7 +173,7 @@ class Decoder(srd.Decoder):
         ss, es = cmd_bytes[1][1], 0
         data = ''
         for byte in cmd_bytes[1:]:
-            data += '0x' + format(byte[0], '02x') + ' '
+            data += format(byte[0], '02X') + ' '
             es = byte[2]
         self.put(ss, es, self.out_ann, [ann, [prefix + data]])
 
