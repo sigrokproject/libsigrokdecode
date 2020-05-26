@@ -83,7 +83,7 @@ class Decoder(srd.Decoder):
     license = 'mit'
     inputs = ['spi']
     outputs = ['nrf905']
-
+    tags = ['IC', 'Wireless/RF']
     annotations = (
         ('cmd', 'Command sent to the device'),
         ('reg-write', 'Config register written to the device'),
