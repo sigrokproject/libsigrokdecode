@@ -85,7 +85,7 @@ class Decoder(srd.Decoder):
     desc = '433/868/933MHz transceiver chip.'
     license = 'mit'
     inputs = ['spi']
-    outputs = ['nrf905']
+    outputs = []
     tags = ['IC', 'Wireless/RF']
     annotations = (
         ('cmd', 'Command sent to the device'),
