@@ -22,6 +22,7 @@
 ## SOFTWARE.
 
 import sigrokdecode as srd
+from common.srdhelper import SrdIntEnum
 
 CFG_REGS = {
     0: [{'name': 'CH_NO', 'stbit': 7, 'nbits': 8}],
@@ -74,6 +75,8 @@ STAT_REG = [
     {'name': 'DR', 'stbit': 5, 'nbits': 1},
 ]
 
+Ann = SrdIntEnum.from_str('Ann', 'CMD REG_WR REG_RD TX RX RESP WARN')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'nrf905'
@@ -91,24 +94,15 @@ class Decoder(srd.Decoder):
         ('tx-data', 'Payload sent to the device'),
         ('rx-data', 'Payload read from the device'),
         ('resp', 'Response to commands received from the device'),
-        ('warning', 'Warning')
+        ('warning', 'Warning'),
     )
-
-    ann_cmd = 0
-    ann_reg_wr = 1
-    ann_reg_rd = 2
-    ann_tx = 3
-    ann_rx = 4
-    ann_resp = 5
-    ann_warn = 6
-
     annotation_rows = (
-        ('commands', 'Commands', (ann_cmd,)),
-        ('responses', 'Responses', (ann_resp,)),
-        ('registers', 'Registers', (ann_reg_wr, ann_reg_rd)),
-        ('tx', 'Transmitted data', (ann_tx,)),
-        ('rx', 'Received data', (ann_rx,)),
-        ('warnings', 'Warnings', (ann_warn,))
+        ('commands', 'Commands', (Ann.CMD,)),
+        ('responses', 'Responses', (Ann.RESP,)),
+        ('registers', 'Registers', (Ann.REG_WR, Ann.REG_RD)),
+        ('tx', 'Transmitted data', (Ann.TX,)),
+        ('rx', 'Received data', (Ann.RX,)),
+        ('warnings', 'Warnings', (Ann.WARN,)),
     )
 
     def __init__(self):
@@ -165,16 +159,12 @@ class Decoder(srd.Decoder):
         else:
             # Invalid register address.
             self.put(value[1], value[2],
-                     self.out_ann, [self.ann_warn, ['Invalid reg. addr']])
+                     self.out_ann, [Ann.WARN, ['Invalid reg. addr']])
             return
 
         data += self.extract_vars(reg_vars, reg_value)
 
-        if is_write:
-            ann = self.ann_reg_wr
-        else:
-            ann = self.ann_reg_rd
-
+        ann = Ann.REG_WR if is_write else Ann.REG_RD
         self.put(value[1], value[2], self.out_ann, [ann, [data]])
 
     def parse_config_registers(self, addr, registers, is_write):
@@ -215,24 +205,19 @@ class Decoder(srd.Decoder):
         self.parse_config_registers(start_addr, self.miso_bytes[1:], False)
 
     def handle_WTP(self):
-        self.dump_cmd_bytes('Write TX payload.: ',
-                            self.mosi_bytes, self.ann_tx)
+        self.dump_cmd_bytes('Write TX payload.: ', self.mosi_bytes, Ann.TX)
 
     def handle_RTP(self):
-        self.dump_cmd_bytes('Read TX payload: ',
-                            self.miso_bytes, self.ann_resp)
+        self.dump_cmd_bytes('Read TX payload: ', self.miso_bytes, Ann.RESP)
 
     def handle_WTA(self):
-        self.dump_cmd_bytes('Write TX addr: ',
-                            self.mosi_bytes, self.ann_reg_wr)
+        self.dump_cmd_bytes('Write TX addr: ', self.mosi_bytes, Ann.REG_WR)
 
     def handle_RTA(self):
-        self.dump_cmd_bytes('Read TX addr: ',
-                            self.miso_bytes, self.ann_resp)
+        self.dump_cmd_bytes('Read TX addr: ', self.miso_bytes, Ann.RESP)
 
     def handle_RRP(self):
-        self.dump_cmd_bytes('Read RX payload: ',
-                            self.miso_bytes, self.ann_rx)
+        self.dump_cmd_bytes('Read RX payload: ', self.miso_bytes, Ann.RX)
 
     def handle_CC(self):
         cmd = self.mosi_bytes[0]
@@ -245,12 +230,12 @@ class Decoder(srd.Decoder):
 
         data = data + '| CHN = ' + str(channel)
         self.put(self.mosi_bytes[0][1], self.mosi_bytes[1][2],
-                 self.out_ann, [self.ann_reg_wr, [data]])
+                 self.out_ann, [Ann.REG_WR, [data]])
 
     def handle_STAT(self):
         status = 'STAT = ' + self.extract_vars(STAT_REG, self.miso_bytes[0][0])
         self.put(self.miso_bytes[0][1], self.miso_bytes[0][2],
-                 self.out_ann, [self.ann_reg_rd, [status]])
+                 self.out_ann, [Ann.REG_RD, [status]])
 
     def process_cmd(self):
         cmd = ''
@@ -296,7 +281,7 @@ class Decoder(srd.Decoder):
 
         # Report command name.
         self.put(self.cmd_samples['ss'], self.cmd_samples['es'],
-                 self.out_ann, [self.ann_cmd, [cmd_name]])
+                 self.out_ann, [Ann.CMD, [cmd_name]])
 
         # Handle status byte.
         self.handle_STAT()
