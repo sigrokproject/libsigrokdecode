@@ -45,6 +45,10 @@ class Decoder(srd.Decoder):
         ('bits', 'Bits', (0, 1)),
         ('rgb-vals', 'RGB values', (2,)),
     )
+    options = (
+        {'id': 'type', 'desc': 'RGB or RGBW', 'default': 'RGB',
+         'values': ('RGB', 'RGBW')},
+    )
 
     def __init__(self):
         self.reset()
@@ -66,13 +70,22 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def handle_bits(self, samplenum):
-        if len(self.bits) == 24:
-            grb = reduce(lambda a, b: (a << 1) | b, self.bits)
-            rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
-            self.put(self.ss_packet, samplenum, self.out_ann,
-                     [2, ['#%06x' % rgb]])
-            self.bits = []
-            self.ss_packet = None
+        if self.options['type'] == 'RGB':
+            if len(self.bits) == 24:
+                grb = reduce(lambda a, b: (a << 1) | b, self.bits)
+                rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
+                self.put(self.ss_packet, samplenum, self.out_ann,
+                         [2, ['#%06x' % rgb]])
+                self.bits = []
+                self.ss_packet = None
+        else:
+            if len(self.bits) == 32:
+                grb = reduce(lambda a, b: (a << 1) | b, self.bits)
+                rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
+                self.put(self.ss_packet, samplenum, self.out_ann,
+                         [2, ['#%08x' % rgb]])
+                self.bits = []
+                self.ss_packet = None
 
     def decode(self):
         if not self.samplerate:
