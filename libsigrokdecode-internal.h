@@ -82,6 +82,7 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
 SRD_PRIV int process_samples_until_condition_match(struct srd_decoder_inst *di, gboolean *found_match);
+SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di);
 SRD_PRIV int srd_inst_terminate_reset(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free(struct srd_decoder_inst *di);
 SRD_PRIV void srd_inst_free_all(struct srd_session *sess);

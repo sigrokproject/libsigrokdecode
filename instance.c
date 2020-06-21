@@ -1234,10 +1234,51 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
 	g_mutex_unlock(&di->data_mutex);
 
+	/* Flush all PDs in the stack that can be flushed */
+	srd_inst_flush(di);
+
 	if (di->want_wait_terminate)
 		return SRD_ERR_TERM_REQ;
 
 	return SRD_OK;
+}
+
+
+/**
+ * Flush all data that is pending, bottom decoder first up to the top of the stack.
+ *
+ * @param di The decoder instance to call. Must not be NULL.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @private
+ */
+SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di)
+{
+	PyGILState_STATE gstate;
+	PyObject *py_ret;
+	GSList *l;
+	int ret;
+
+	if (!di)
+		return SRD_ERR_ARG;
+
+	gstate = PyGILState_Ensure();
+	if (PyObject_HasAttrString(di->py_inst, "flush")) {
+		srd_dbg("Calling flush() of instance %s", di->inst_id);
+		py_ret = PyObject_CallMethod(di->py_inst, "flush", NULL);
+		Py_XDECREF(py_ret);
+	}
+	PyGILState_Release(gstate);
+
+	/* Pass the "flush" request to all stacked decoders. */
+	for (l = di->next_di; l; l = l->next) {
+		ret = srd_inst_flush(l->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
+
+	return di->decoder_state;
 }
 
 /**

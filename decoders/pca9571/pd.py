@@ -62,8 +62,8 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_logic = self.register(srd.OUTPUT_LOGIC)
 
-#    def flush(self):
-#        self.put_logic_states()
+    def flush(self):
+        self.put_logic_states()
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
@@ -82,7 +82,7 @@ class Decoder(srd.Decoder):
                                '(%02X) are different' % self.last_write]])
         else:
             operation = ['Outputs set', 'W']
-#            self.put_logic_states()
+            self.put_logic_states()
             self.last_write = b
 
         self.putx([1, [operation[0] + ': %02X' % b,
@@ -98,8 +98,6 @@ class Decoder(srd.Decoder):
     def decode(self, ss, es, data):
         cmd, databyte = data
         self.ss, self.es = ss, es
-
-        self.put_logic_states()
 
         # State machine.
         if cmd in ('ACK', 'BITS'): # Discard 'ACK' and 'BITS'.

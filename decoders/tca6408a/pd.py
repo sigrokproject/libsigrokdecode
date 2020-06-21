@@ -64,6 +64,9 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_logic = self.register(srd.OUTPUT_LOGIC)
 
+    def flush(self):
+        self.put_logic_states()
+
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
@@ -78,6 +81,7 @@ class Decoder(srd.Decoder):
         # TODO
 
     def handle_reg_0x01(self, b):
+        self.put_logic_states()
         self.putx([1, ['Outputs set: %02X' % b]])
         self.logic_value = b
 
@@ -108,8 +112,6 @@ class Decoder(srd.Decoder):
 
         # Store the start/end samples of this I²C packet.
         self.ss, self.es = ss, es
-
-        self.put_logic_states()
 
         # State machine.
         if self.state == 'IDLE':
