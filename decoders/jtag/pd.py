@@ -183,18 +183,18 @@ class Decoder(srd.Decoder):
                 self.ss_bitstring = self.samplenum
                 self.first_bit = False
             else:
-                self.putx([16, [str(self.bits_tdi[0])]])
-                self.putx([17, [str(self.bits_tdo[0])]])
+                self.putx([16, [str(self.bits_tdi[-1])]])
+                self.putx([17, [str(self.bits_tdo[-1])]])
                 # Use self.samplenum as ES of the previous bit.
-                self.bits_samplenums_tdi[0][1] = self.samplenum
-                self.bits_samplenums_tdo[0][1] = self.samplenum
+                self.bits_samplenums_tdi[-1][1] = self.samplenum
+                self.bits_samplenums_tdo[-1][1] = self.samplenum
 
-            self.bits_tdi.insert(0, tdi)
-            self.bits_tdo.insert(0, tdo)
+            self.bits_tdi.append(tdi)
+            self.bits_tdo.append(tdo)
 
             # Use self.samplenum as SS of the current bit.
-            self.bits_samplenums_tdi.insert(0, [self.samplenum, -1])
-            self.bits_samplenums_tdo.insert(0, [self.samplenum, -1])
+            self.bits_samplenums_tdi.append([self.samplenum, -1])
+            self.bits_samplenums_tdo.append([self.samplenum, -1])
 
         # Output all TDI/TDO bits if we just switched to UPDATE-*.
         if self.state.value.startswith('UPDATE-'):
@@ -202,6 +202,8 @@ class Decoder(srd.Decoder):
             self.es_bitstring = self.samplenum
 
             t = self.state.value[-2:] + ' TDI'
+            self.bits_tdi.reverse()
+            self.bits_samplenums_tdi.reverse()
             b = ''.join(map(str, self.bits_tdi[1:]))
             h = ' (0x%x' % int('0b0' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdi[1:])) + ' bits'
@@ -211,6 +213,8 @@ class Decoder(srd.Decoder):
             self.bits_samplenums_tdi = []
 
             t = self.state.value[-2:] + ' TDO'
+            self.bits_tdo.reverse()
+            self.bits_samplenums_tdo.reverse()
             b = ''.join(map(str, self.bits_tdo[1:]))
             h = ' (0x%x' % int('0b0' + b, 2) + ')'
             s = t + ': ' + b + h + ', ' + str(len(self.bits_tdo[1:])) + ' bits'
