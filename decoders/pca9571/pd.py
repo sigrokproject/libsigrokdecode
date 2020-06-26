@@ -56,24 +56,23 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.state = 'IDLE'
         self.last_write = 0xFF # Chip port default state is high.
-
-        self.logic_es = 1
-        self.logic_data = []
-        for i in range(NUM_OUTPUT_CHANNELS):
-            self.logic_data.append(bytes([1]))
+        self.last_write_es = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_logic = self.register(srd.OUTPUT_LOGIC)
 
+#    def flush(self):
+#        self.put_logic_states()
+
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def put_logic_states(self):
-        if (self.es > self.logic_es):
-            for i in range(NUM_OUTPUT_CHANNELS):
-                self.put(self.logic_es, self.es, self.out_logic, [i, self.logic_data[i]])
-            self.logic_es = self.es
+        if (self.es > self.last_write_es):
+            data = bytes([self.last_write])
+            self.put(self.last_write_es, self.es, self.out_logic, [0, data])
+            self.last_write_es = self.es
 
     def handle_io(self, b):
         if self.state == 'READ DATA':
@@ -83,13 +82,11 @@ class Decoder(srd.Decoder):
                                '(%02X) are different' % self.last_write]])
         else:
             operation = ['Outputs set', 'W']
+#            self.put_logic_states()
             self.last_write = b
+
         self.putx([1, [operation[0] + ': %02X' % b,
                        operation[1] + ': %02X' % b]])
-
-        for i in range(NUM_OUTPUT_CHANNELS):
-            bit = (b & (1 << i)) != 0
-            self.logic_data[i] = bytes([bit])
 
     def check_correct_chip(self, addr):
         if addr != 0x25:

@@ -137,13 +137,13 @@ static int convert_logic(struct srd_decoder_inst *di, PyObject *obj,
 	struct srd_proto_data_logic *pdl;
 	PyObject *py_tmp;
 	Py_ssize_t size;
-	int logic_class;
-	char *class_name, *buf;
+	int logic_group;
+	char *group_name, *buf;
 	PyGILState_STATE gstate;
 
 	gstate = PyGILState_Ensure();
 
-	/* Should be a list of [logic class, bytes]. */
+	/* Should be a list of [logic group, bytes]. */
 	if (!PyList_Check(obj)) {
 		srd_err("Protocol decoder %s submitted non-list for SRD_OUTPUT_LOGIC.",
 			di->decoder->name);
@@ -165,10 +165,10 @@ static int convert_logic(struct srd_decoder_inst *di, PyObject *obj,
 			"but first element was not an integer.", di->decoder->name);
 		goto err;
 	}
-	logic_class = PyLong_AsLong(py_tmp);
-	if (!(class_name = g_slist_nth_data(di->decoder->logic_output_channels, logic_class))) {
+	logic_group = PyLong_AsLong(py_tmp);
+	if (!(group_name = g_slist_nth_data(di->decoder->logic_output_channels, logic_group))) {
 		srd_err("Protocol decoder %s submitted SRD_OUTPUT_LOGIC with "
-			"unregistered logic class %d.", di->decoder->name, logic_class);
+			"unregistered logic group %d.", di->decoder->name, logic_group);
 		goto err;
 	}
 
@@ -193,11 +193,11 @@ static int convert_logic(struct srd_decoder_inst *di, PyObject *obj,
 	PyGILState_Release(gstate);
 
 	pdl = pdata->data;
-	pdl->logic_class = logic_class;
-	pdl->size = size;
-	if (!(pdl->data = g_try_malloc(pdl->size)))
+	pdl->logic_group = logic_group;
+	/* pdl->repeat_count is set by the caller as it depends on the sample range */
+	if (!(pdl->data = g_try_malloc(size)))
 		return SRD_ERR_MALLOC;
-	memcpy((void *)pdl->data, (const void *)buf, pdl->size);
+	memcpy((void *)pdl->data, (const void *)buf, size);
 
 	return SRD_OK;
 
@@ -405,6 +405,7 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 	struct srd_proto_data pdata;
 	struct srd_proto_data_annotation pda;
 	struct srd_proto_data_binary pdb;
+	struct srd_proto_data_logic pdl;
 	uint64_t start_sample, end_sample;
 	int output_id;
 	struct srd_pd_callback *cb;
@@ -507,12 +508,17 @@ static PyObject *Decoder_put(PyObject *self, PyObject *args)
 		break;
 	case SRD_OUTPUT_LOGIC:
 		if ((cb = srd_pd_output_callback_find(di->sess, pdo->output_type))) {
-			pdata.data = &pdb;
+			pdata.data = &pdl;
 			/* Convert from PyDict to srd_proto_data_logic. */
 			if (convert_logic(di, py_data, &pdata) != SRD_OK) {
 				/* An error was already logged. */
 				break;
 			}
+			if (end_sample <= start_sample) {
+				srd_err("Ignored SRD_OUTPUT_LOGIC with invalid sample range.");
+				break;
+			}
+			pdl.repeat_count = (end_sample - start_sample) - 1;
 			Py_BEGIN_ALLOW_THREADS
 			cb->cb(&pdata, cb->cb_data);
 			Py_END_ALLOW_THREADS

@@ -326,9 +326,9 @@ struct srd_proto_data_binary {
 	const unsigned char *data;
 };
 struct srd_proto_data_logic {
-	int logic_class;
-	uint64_t size;
-	const unsigned char *data;
+	int logic_group;
+	uint64_t repeat_count; /* Number of times the value in data was repeated. */
+	const unsigned char *data; /* Bitfield containing the states of the logic outputs */
 };
 
 typedef void (*srd_pd_output_callback)(struct srd_proto_data *pdata,

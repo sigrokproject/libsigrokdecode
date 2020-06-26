@@ -57,10 +57,8 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         self.chip = -1
 
-        self.logic_es = 1
-        self.logic_data = []
-        for i in range(NUM_OUTPUT_CHANNELS):
-            self.logic_data.append(bytes([1]))
+        self.logic_output_es = 0
+        self.logic_value = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -70,10 +68,10 @@ class Decoder(srd.Decoder):
         self.put(self.ss, self.es, self.out_ann, data)
 
     def put_logic_states(self):
-        if (self.es > self.logic_es):
-            for i in range(NUM_OUTPUT_CHANNELS):
-                self.put(self.logic_es, self.es, self.out_logic, [i, self.logic_data[i]])
-            self.logic_es = self.es
+        if (self.es > self.logic_output_es):
+            data = bytes([self.logic_value])
+            self.put(self.logic_output_es, self.es, self.out_logic, [0, data])
+            self.logic_output_es = self.es
 
     def handle_reg_0x00(self, b):
         self.putx([1, ['State of inputs: %02X' % b]])
@@ -81,9 +79,7 @@ class Decoder(srd.Decoder):
 
     def handle_reg_0x01(self, b):
         self.putx([1, ['Outputs set: %02X' % b]])
-        for i in range(NUM_OUTPUT_CHANNELS):
-            bit = (b & (1 << i)) != 0
-            self.logic_data[i] = bytes([bit])
+        self.logic_value = b
 
     def handle_reg_0x02(self, b):
         self.putx([1, ['Polarity inverted: %02X' % b]])
