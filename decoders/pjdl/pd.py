@@ -119,7 +119,7 @@ class Decoder(srd.Decoder):
     desc = 'PJDL, a single wire serial link layer for PJON.'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['pjon-link']
+    outputs = ['pjon_link']
     tags = ['Embedded']
     channels = (
         {'id': 'data' , 'name': 'DATA', 'desc': 'Single wire data'},

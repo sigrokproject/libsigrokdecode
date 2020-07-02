@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
     longname = 'PJON'
     desc = 'The PJON protocol.'
     license = 'gplv2+'
-    inputs = ['pjon-link']
+    inputs = ['pjon_link']
     outputs = []
     tags = ['Embedded']
     annotations = (
