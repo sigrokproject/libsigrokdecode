@@ -387,7 +387,9 @@ class Decoder(srd.Decoder):
         # for bit widths (tolerance margin).
 
         # Get times in microseconds.
-        self.data_width, self.pad_width = self.mode_times[self.options['mode']]
+        mode_times = self.mode_times[self.options['mode']]
+        mode_times = [t * 1.0 for t in mode_times]
+        self.data_width, self.pad_width = mode_times
         self.byte_width = self.pad_width + 9 * self.data_width
         self.add_idle_width = self.options['idle_add_us']
         self.idle_width = self.byte_width + self.add_idle_width
