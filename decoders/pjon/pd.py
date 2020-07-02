@@ -22,11 +22,6 @@
 # specification, which can use different link layers.
 
 # TODO
-# - Handle RX and TX identifiers in separate routines, including the
-#   optional bus identifers. Track those addresses, add formatters for
-#   them, and emit "communication relation" details.
-# - Check for correct endianess in variable width fields. The spec says
-#   "network order", that's what this implementation uses.
 # - Check for the correct order of optional fields (the spec is not as
 #   explicit on these details as I'd expect).
 # - Check decoder's robustness, completeness, and correctness when more
@@ -111,7 +106,13 @@ class Decoder(srd.Decoder):
         self.reset_frame()
 
     def reset_frame(self):
+        self.frame_ss = None
+        self.frame_es = None
+        self.frame_rx_id = None
+        self.frame_tx_id = None
+        self.frame_payload_text = None
         self.frame_bytes = None
+        self.frame_has_ack = None
         self.ack_bytes = None
         self.ann_ss = None
         self.ann_es = None
@@ -125,7 +126,22 @@ class Decoder(srd.Decoder):
     def frame_flush(self):
         if not self.frame_bytes:
             return
-        # TODO Emit "communication relation" details here?
+        if not self.frame_ss or not self.frame_es:
+            return
+
+        # Emit "communication relation" details.
+        text = []
+        if self.frame_rx_id is not None:
+            text.append("RX {}".format(self.frame_rx_id[-1]))
+        if self.frame_tx_id is not None:
+            text.append("TX {}".format(self.frame_tx_id[-1]))
+        if self.frame_payload_text is not None:
+            text.append("DATA {}".format(self.frame_payload_text))
+        if self.frame_has_ack is not None:
+            text.append("ACK {:02x}".format(self.frame_has_ack))
+        if text:
+            text = " - ".join(text)
+            self.putg(self.frame_ss, self.frame_es, ANN_RELATION, [text])
 
     def handle_field_get_desc(self, idx = None):
         '''Lookup description of a PJON frame field.'''
@@ -164,20 +180,19 @@ class Decoder(srd.Decoder):
         self.field_desc_idx = 0
         self.field_desc_got = 0
 
+        self.frame_ss = None
+        self.frame_es = None
         self.frame_rx_id = None
         self.frame_is_broadcast = None
         self.frame_tx_id = None
         self.frame_payload = None
+        self.frame_payload_text = None
         self.frame_has_ack = None
 
     def handle_field_rx_id(self, b):
         '''Process receiver ID field of a PJON frame.'''
 
         b = b[0]
-
-        # Track RX info for communication relation emission.
-        self.frame_rx_id = b
-        self.frame_is_broadcast = b == 0
 
         # Provide text presentation, caller emits frame field annotation.
         if b == 255: # "not assigned"
@@ -190,6 +205,11 @@ class Decoder(srd.Decoder):
             'RX_ID {}'.format(id_txt),
             '{}'.format(id_txt),
         ]
+
+        # Track RX info for communication relation emission.
+        self.frame_rx_id = (b, id_txt)
+        self.frame_is_broadcast = b == 0
+
         return texts
 
     def handle_field_config(self, b):
@@ -240,6 +260,7 @@ class Decoder(srd.Decoder):
         u16_fmt = '>H'
         u32_fmt = '>L'
         len_fmt = u16_fmt if self.cfg_len16 else u8_fmt
+        bus_fmt = '>4B'
         crc_fmt = u32_fmt if self.cfg_crc32 else u8_fmt
         self.cfg_overhead = 0
         self.cfg_overhead += struct.calcsize(u8_fmt) # receiver ID
@@ -277,13 +298,13 @@ class Decoder(srd.Decoder):
         # condition checks, and raise awareness for incomplete sequences
         # during maintenance.
         self.handle_field_add_desc(len_fmt, self.handle_field_pkt_len, ANN_PKT_LEN)
-        self.handle_field_add_desc(u8_fmt, self.handle_field_init_crc, ANN_META_CRC)
+        self.handle_field_add_desc(u8_fmt, self.handle_field_meta_crc, ANN_META_CRC)
         if self.cfg_shared:
-            self.handle_field_add_desc(u32_fmt, ['RX_BUS {:08x}', '{:08x}'], ANN_ANON_DATA)
+            self.handle_field_add_desc(bus_fmt, self.handle_field_rx_bus, ANN_ANON_DATA)
         if self.cfg_tx_info:
             if self.cfg_shared:
-                self.handle_field_add_desc(u32_fmt, ['TX_BUS {:08x}', '{:08x}'], ANN_ANON_DATA)
-            self.handle_field_add_desc(u8_fmt, ['TX_ID {:d}', '{:d}'], ANN_ANON_DATA)
+                self.handle_field_add_desc(bus_fmt, self.handle_field_tx_bus, ANN_ANON_DATA)
+            self.handle_field_add_desc(u8_fmt, self.handle_field_tx_id, ANN_ANON_DATA)
         if self.cfg_port:
             self.handle_field_add_desc(u16_fmt, ['PORT {:d}', '{:d}'], ANN_ANON_DATA)
         if self.cfg_pkt_id:
@@ -383,7 +404,7 @@ class Decoder(srd.Decoder):
         ]
         return texts
 
-    def handle_field_init_crc(self, b):
+    def handle_field_meta_crc(self, b):
         '''Process initial CRC (meta) field of a PJON frame.'''
         # Caller provides a list of values. We want a single scalar.
         b = b[0]
@@ -395,12 +416,72 @@ class Decoder(srd.Decoder):
         b = b[0]
         return self.handle_field_common_crc(b, False)
 
+    def handle_field_common_bus(self, b):
+        '''Common handling of bus ID details. Used for RX and TX.'''
+        bus_id = b[:4]
+        bus_num = struct.unpack('>L', bytearray(bus_id))
+        bus_txt = '.'.join(['{:d}'.format(b) for b in bus_id])
+        return bus_num, bus_txt
+
+    def handle_field_rx_bus(self, b):
+        '''Process receiver bus ID field of a PJON frame.'''
+
+        # When we get here, there always should be an RX ID already.
+        bus_num, bus_txt = self.handle_field_common_bus(b[:4])
+        rx_txt = "{} {}".format(bus_txt, self.frame_rx_id[-1])
+        self.frame_rx_id = (bus_num, self.frame_rx_id[0], rx_txt)
+
+        # Provide text representation for frame field, caller emits
+        # the annotation.
+        texts = [
+            'RX_BUS {}'.format(bus_txt),
+            bus_txt,
+        ]
+        return texts
+
+    def handle_field_tx_bus(self, b):
+        '''Process transmitter bus ID field of a PJON frame.'''
+
+        # The TX ID field is optional, as is the use of bus ID fields.
+        # In the TX info case the TX bus ID is seen before the TX ID.
+        bus_num, bus_txt = self.handle_field_common_bus(b[:4])
+        self.frame_tx_id = (bus_num, None, bus_txt)
+
+        # Provide text representation for frame field, caller emits
+        # the annotation.
+        texts = [
+            'TX_BUS {}'.format(bus_txt),
+            bus_txt,
+        ]
+        return texts
+
+    def handle_field_tx_id(self, b):
+        '''Process transmitter ID field of a PJON frame.'''
+
+        b = b[0]
+
+        id_txt = "{:d}".format(b)
+        if self.frame_tx_id is None:
+            self.frame_tx_id = (b, id_txt)
+        else:
+            tx_txt = "{} {}".format(self.frame_tx_id[-1], id_txt)
+            self.frame_tx_id = (self.frame_tx_id[0], b, tx_txt)
+
+        # Provide text representation for frame field, caller emits
+        # the annotation.
+        texts = [
+            'TX_ID {}'.format(id_txt),
+            id_txt,
+        ]
+        return texts
+
     def handle_field_payload(self, b):
         '''Process payload data field of a PJON frame.'''
 
-        self.frame_payload = b[:]
-
         text = ' '.join(['{:02x}'.format(v) for v in b])
+        self.frame_payload = b[:]
+        self.frame_payload_text = text
+
         texts = [
             'PAYLOAD {}'.format(text),
             text,
@@ -428,6 +509,8 @@ class Decoder(srd.Decoder):
             self.reset_frame()
             self.frame_bytes = []
             self.handle_field_seed_desc()
+            self.frame_ss = ss
+            self.frame_es = es
             return
 
         # Use IDLE as another (earlier) trigger to flush frames. Also
@@ -452,6 +535,7 @@ class Decoder(srd.Decoder):
         # which corresponds to its most recently seen leader.
         if ptype == 'DATA_BYTE':
             b = pdata
+            self.frame_es = es
 
             # Are we collecting response bytes (ACK)?
             if self.ack_bytes is not None:
