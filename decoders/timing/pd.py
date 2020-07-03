@@ -45,6 +45,12 @@ def normalize_time(t):
     else:
         return '%f' % t
 
+class Pin:
+    (DATA,) = range(1)
+
+class Ann:
+    (TIME, AVG, DELTA,) = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'timing'
@@ -64,9 +70,9 @@ class Decoder(srd.Decoder):
         ('delta', 'Delta'),
     )
     annotation_rows = (
-        ('times', 'Times', (0,)),
-        ('averages', 'Averages', (1,)),
-        ('deltas', 'Deltas', (2,)),
+        ('times', 'Times', (Ann.TIME,)),
+        ('averages', 'Averages', (Ann.AVG,)),
+        ('deltas', 'Deltas', (Ann.DELTA,)),
     )
     options = (
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },
@@ -81,8 +87,6 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.last_samplenum = None
         self.last_n = deque()
-        self.chunks = 0
-        self.level_changed = False
         self.last_t = None
 
     def metadata(self, key, value):
@@ -98,11 +102,11 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         while True:
             if self.edge == 'rising':
-                pin = self.wait({0: 'r'})
+                pin = self.wait({Pin.DATA: 'r'})
             elif self.edge == 'falling':
-                pin = self.wait({0: 'f'})
+                pin = self.wait({Pin.DATA: 'f'})
             else:
-                pin = self.wait({0: 'e'})
+                pin = self.wait({Pin.DATA: 'e'})
 
             if not self.last_samplenum:
                 self.last_samplenum = self.samplenum
@@ -116,13 +120,13 @@ class Decoder(srd.Decoder):
                 self.last_n.popleft()
 
             self.put(self.last_samplenum, self.samplenum, self.out_ann,
-                     [0, [normalize_time(t)]])
+                     [Ann.TIME, [normalize_time(t)]])
             if self.options['avg_period'] > 0:
                 self.put(self.last_samplenum, self.samplenum, self.out_ann,
-                         [1, [normalize_time(sum(self.last_n) / len(self.last_n))]])
+                         [Ann.AVG, [normalize_time(sum(self.last_n) / len(self.last_n))]])
             if self.last_t and self.options['delta'] == 'yes':
                 self.put(self.last_samplenum, self.samplenum, self.out_ann,
-                         [2, [normalize_time(t - self.last_t)]])
+                         [Ann.DELTA, [normalize_time(t - self.last_t)]])
 
             self.last_t = t
             self.last_samplenum = self.samplenum
