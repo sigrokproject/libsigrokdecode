@@ -115,6 +115,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         edge = self.options['edge']
         avg_period = self.options['avg_period']
+        delta = self.options['delta'] == 'yes'
         terse = self.options['terse'] == 'yes'
         ss = None
         last_n = deque()
@@ -134,21 +135,23 @@ class Decoder(srd.Decoder):
             samples = es - ss
             t = samples / self.samplerate
 
-            if t > 0:
-                last_n.append(t)
-            if len(last_n) > avg_period:
-                last_n.popleft()
-
             if terse:
-                self.put(ss, es, self.out_ann, [Ann.TERSE, terse_times(t)])
+                cls, txt = Ann.TERSE, terse_times(t)
+                self.put(ss, es, self.out_ann, [cls, txt])
             else:
-                self.put(ss, es, self.out_ann, [Ann.TIME, [normalize_time(t)]])
+                cls, txt = Ann.TIME, [normalize_time(t)]
+                self.put(ss, es, self.out_ann, [cls, txt])
             if avg_period > 0:
-                self.put(ss, es, self.out_ann,
-                         [Ann.AVG, [normalize_time(sum(last_n) / len(last_n))]])
-            if last_t and self.options['delta'] == 'yes':
-                self.put(ss, es, self.out_ann,
-                         [Ann.DELTA, [normalize_time(t - last_t)]])
+                if t > 0:
+                    last_n.append(t)
+                if len(last_n) > avg_period:
+                    last_n.popleft()
+                average = sum(last_n) / len(last_n)
+                cls, txt = Ann.AVG, normalize_time(average)
+                self.put(ss, es, self.out_ann, [cls, [txt]])
+            if last_t and delta:
+                cls, txt = Ann.DELTA, normalize_time(t - last_t)
+                self.put(ss, es, self.out_ann, [cls, [txt]])
 
             last_t = t
             ss = es
