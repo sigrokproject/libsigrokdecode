@@ -92,9 +92,12 @@ class Decoder(srd.Decoder):
     )
     options = (
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },
-        { 'id': 'edge', 'desc': 'Edges to check', 'default': 'any', 'values': ('any', 'rising', 'falling') },
-        { 'id': 'delta', 'desc': 'Show delta from last', 'default': 'no', 'values': ('yes', 'no') },
-        { 'id': 'terse', 'desc': 'Show periods in terse format', 'default': 'no', 'values': ('yes', 'no') },
+        { 'id': 'edge', 'desc': 'Edges to check',
+          'default': 'any', 'values': ('any', 'rising', 'falling') },
+        { 'id': 'delta', 'desc': 'Show delta from last',
+          'default': 'no', 'values': ('yes', 'no') },
+        { 'id': 'terse', 'desc': 'Show periods in terse format',
+          'default': 'no', 'values': ('yes', 'no') },
     )
 
     def __init__(self):
@@ -132,8 +135,8 @@ class Decoder(srd.Decoder):
                 ss = self.samplenum
                 continue
             es = self.samplenum
-            samples = es - ss
-            t = samples / self.samplerate
+            sa = es - ss
+            t = sa / self.samplerate
 
             if terse:
                 cls, txt = Ann.TERSE, terse_times(t)
@@ -141,6 +144,7 @@ class Decoder(srd.Decoder):
             else:
                 cls, txt = Ann.TIME, [normalize_time(t)]
                 self.put(ss, es, self.out_ann, [cls, txt])
+
             if avg_period > 0:
                 if t > 0:
                     last_n.append(t)
