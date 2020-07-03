@@ -45,11 +45,26 @@ def normalize_time(t):
     else:
         return '%f' % t
 
+def terse_times(t):
+    if abs(t) >= 1e0:
+        t *= 1e0
+        return ['{:.0f}s'.format(t), '{:.0f}'.format(t)]
+    if abs(t) >= 1e-3:
+        t *= 1e3
+        return ['{:.0f}ms'.format(t), '{:.0f}'.format(t)]
+    if abs(t) >= 1e-6:
+        t *= 1e6
+        return ['{:.0f}us'.format(t), '{:.0f}'.format(t)]
+    if abs(t) >= 1e-9:
+        t *= 1e9
+        return ['{:.0f}ns'.format(t), '{:.0f}'.format(t)]
+    return ['{:f}'.format(t = t)]
+
 class Pin:
     (DATA,) = range(1)
 
 class Ann:
-    (TIME, AVG, DELTA,) = range(3)
+    (TIME, TERSE, AVG, DELTA,) = range(4)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -66,11 +81,12 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('time', 'Time'),
+        ('terse', 'Terse'),
         ('average', 'Average'),
         ('delta', 'Delta'),
     )
     annotation_rows = (
-        ('times', 'Times', (Ann.TIME,)),
+        ('times', 'Times', (Ann.TIME, Ann.TERSE,)),
         ('averages', 'Averages', (Ann.AVG,)),
         ('deltas', 'Deltas', (Ann.DELTA,)),
     )
@@ -78,6 +94,7 @@ class Decoder(srd.Decoder):
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },
         { 'id': 'edge', 'desc': 'Edges to check', 'default': 'any', 'values': ('any', 'rising', 'falling') },
         { 'id': 'delta', 'desc': 'Show delta from last', 'default': 'no', 'values': ('yes', 'no') },
+        { 'id': 'terse', 'desc': 'Show periods in terse format', 'default': 'no', 'values': ('yes', 'no') },
     )
 
     def __init__(self):
@@ -98,6 +115,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         edge = self.options['edge']
         avg_period = self.options['avg_period']
+        terse = self.options['terse'] == 'yes'
         ss = None
         last_n = deque()
         last_t = None
@@ -121,8 +139,10 @@ class Decoder(srd.Decoder):
             if len(last_n) > avg_period:
                 last_n.popleft()
 
-            self.put(ss, es, self.out_ann,
-                     [Ann.TIME, [normalize_time(t)]])
+            if terse:
+                self.put(ss, es, self.out_ann, [Ann.TERSE, terse_times(t)])
+            else:
+                self.put(ss, es, self.out_ann, [Ann.TIME, [normalize_time(t)]])
             if avg_period > 0:
                 self.put(ss, es, self.out_ann,
                          [Ann.AVG, [normalize_time(sum(last_n) / len(last_n))]])
