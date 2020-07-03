@@ -98,7 +98,7 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         edge = self.options['edge']
         avg_period = self.options['avg_period']
-        last_samplenum = None
+        ss = None
         last_n = deque()
         last_t = None
         while True:
@@ -109,10 +109,11 @@ class Decoder(srd.Decoder):
             else:
                 pin = self.wait({Pin.DATA: 'e'})
 
-            if not last_samplenum:
-                last_samplenum = self.samplenum
+            if not ss:
+                ss = self.samplenum
                 continue
-            samples = self.samplenum - last_samplenum
+            es = self.samplenum
+            samples = es - ss
             t = samples / self.samplerate
 
             if t > 0:
@@ -120,14 +121,14 @@ class Decoder(srd.Decoder):
             if len(last_n) > avg_period:
                 last_n.popleft()
 
-            self.put(last_samplenum, self.samplenum, self.out_ann,
+            self.put(ss, es, self.out_ann,
                      [Ann.TIME, [normalize_time(t)]])
             if avg_period > 0:
-                self.put(last_samplenum, self.samplenum, self.out_ann,
+                self.put(ss, es, self.out_ann,
                          [Ann.AVG, [normalize_time(sum(last_n) / len(last_n))]])
             if last_t and self.options['delta'] == 'yes':
-                self.put(last_samplenum, self.samplenum, self.out_ann,
+                self.put(ss, es, self.out_ann,
                          [Ann.DELTA, [normalize_time(t - last_t)]])
 
             last_t = t
-            last_samplenum = self.samplenum
+            ss = es
