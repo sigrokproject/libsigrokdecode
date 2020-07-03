@@ -45,20 +45,49 @@ def normalize_time(t):
     else:
         return '%f' % t
 
-def terse_times(t):
-    if abs(t) >= 1e0:
-        t *= 1e0
-        return ['{:.0f}s'.format(t), '{:.0f}'.format(t)]
-    if abs(t) >= 1e-3:
-        t *= 1e3
-        return ['{:.0f}ms'.format(t), '{:.0f}'.format(t)]
-    if abs(t) >= 1e-6:
-        t *= 1e6
-        return ['{:.0f}us'.format(t), '{:.0f}'.format(t)]
-    if abs(t) >= 1e-9:
-        t *= 1e9
-        return ['{:.0f}ns'.format(t), '{:.0f}'.format(t)]
-    return ['{:f}'.format(t = t)]
+def terse_times(t, fmt):
+    # Strictly speaking these variants are not used in the current
+    # implementation, but can reduce diffs during future maintenance.
+    if fmt == 'full':
+        return [normalize_time(t)]
+    # End of "forward compatibility".
+
+    if fmt == 'samples':
+        # See below. No unit text, on purpose.
+        return ['{:d}'.format(t)]
+
+    # Use caller specified scale, or automatically find one.
+    scale, unit = None, None
+    if fmt == 'terse-auto':
+        if abs(t) >= 1e0:
+            scale, unit = 1e0, 's'
+        elif abs(t) >= 1e-3:
+            scale, unit = 1e3, 'ms'
+        elif abs(t) >= 1e-6:
+            scale, unit = 1e6, 'us'
+        elif abs(t) >= 1e-9:
+            scale, unit = 1e9, 'ns'
+        elif abs(t) >= 1e-12:
+            scale, unit = 1e12, 'ps'
+    # Beware! Uses unit-less text when the user picked the scale. For
+    # more consistent output with less clutter, thus faster navigation
+    # by humans. Can also un-hide text at higher distance zoom levels.
+    elif fmt == 'terse-s':
+        scale, unit = 1e0, ''
+    elif fmt == 'terse-ms':
+        scale, unit = 1e3, ''
+    elif fmt == 'terse-us':
+        scale, unit = 1e6, ''
+    elif fmt == 'terse-ns':
+        scale, unit = 1e9, ''
+    elif fmt == 'terse-ps':
+        scale, unit = 1e12, ''
+    if scale:
+        t *= scale
+        return ['{:.0f}{}'.format(t, unit), '{:.0f}'.format(t)]
+
+    # Unspecified format, and nothing auto-detected.
+    return ['{:f}'.format(t)]
 
 class Pin:
     (DATA,) = range(1)
@@ -96,8 +125,10 @@ class Decoder(srd.Decoder):
           'default': 'any', 'values': ('any', 'rising', 'falling') },
         { 'id': 'delta', 'desc': 'Show delta from last',
           'default': 'no', 'values': ('yes', 'no') },
-        { 'id': 'terse', 'desc': 'Show periods in terse format',
-          'default': 'no', 'values': ('yes', 'no') },
+        { 'id': 'format', 'desc': 'Format of \'time\' annotation',
+          'default': 'full', 'values': ('full', 'terse-auto',
+          'terse-s', 'terse-ms', 'terse-us', 'terse-ns', 'terse-ps',
+          'samples') },
     )
 
     def __init__(self):
@@ -119,7 +150,7 @@ class Decoder(srd.Decoder):
         edge = self.options['edge']
         avg_period = self.options['avg_period']
         delta = self.options['delta'] == 'yes'
-        terse = self.options['terse'] == 'yes'
+        fmt = self.options['format']
         ss = None
         last_n = deque()
         last_t = None
@@ -138,11 +169,13 @@ class Decoder(srd.Decoder):
             sa = es - ss
             t = sa / self.samplerate
 
-            if terse:
-                cls, txt = Ann.TERSE, terse_times(t)
-                self.put(ss, es, self.out_ann, [cls, txt])
-            else:
+            if fmt == 'full':
                 cls, txt = Ann.TIME, [normalize_time(t)]
+            elif fmt == 'samples':
+                cls, txt = Ann.TERSE, terse_times(sa, fmt)
+            else:
+                cls, txt = Ann.TERSE, terse_times(t, fmt)
+            if txt:
                 self.put(ss, es, self.out_ann, [cls, txt])
 
             if avg_period > 0:
