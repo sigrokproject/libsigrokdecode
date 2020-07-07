@@ -74,7 +74,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['pjon_link']
     outputs = []
-    tags = ['Embedded']
+    tags = ['Embedded/industrial']
     annotations = (
         ('rx_info', 'Receiver ID'),
         ('hdr_cfg', 'Header config'),

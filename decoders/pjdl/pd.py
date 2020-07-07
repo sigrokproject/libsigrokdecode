@@ -120,7 +120,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['pjon_link']
-    tags = ['Embedded']
+    tags = ['Embedded/industrial']
     channels = (
         {'id': 'data' , 'name': 'DATA', 'desc': 'Single wire data'},
     )
