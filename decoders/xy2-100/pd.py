@@ -20,7 +20,7 @@
 
 import sigrokdecode as srd
 
-ann_bit, ann_type, ann_command, ann_parameter, ann_parity, ann_pos, ann_warning = range(7)
+ann_bit, ann_stat_bit, ann_type, ann_command, ann_parameter, ann_parity, ann_pos, ann_status, ann_warning = range(9)
 frame_type_none, frame_type_command, frame_type_16bit_pos, frame_type_18bit_pos = range(4)
 
 class Decoder(srd.Decoder):
@@ -40,20 +40,27 @@ class Decoder(srd.Decoder):
         {'id': 'sync', 'name': 'SYNC', 'desc': 'Sync'},
         {'id': 'data', 'name': 'DATA', 'desc': 'X, Y or Z axis data'},
     )
+    optional_channels = (
+        {'id': 'status', 'name': 'STAT', 'desc': 'X, Y or Z axis status'},
+    )
 
     annotations = (
-        ('bit', 'Bit'),
+        ('bit', 'Data Bit'),
+        ('stat_bit', 'Status Bit'),
         ('type', 'Frame Type'),
         ('command', 'Command'),
         ('parameter', 'Parameter'),
         ('parity', 'Parity'),
         ('position', 'Position'),
+        ('status', 'Status'),
         ('warning', 'Human-readable warnings'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (ann_bit,)),
+        ('bits', 'Data Bits', (ann_bit,)),
+        ('stat_bits', 'Status Bits', (ann_stat_bit,)),
         ('data', 'Data', (ann_type, ann_command, ann_parameter, ann_parity)),
         ('positions', 'Positions', (ann_pos,)),
+        ('statuses', 'Statuses', (ann_status,)),
         ('warnings', 'Warnings', (ann_warning,)),
     )
 
@@ -63,6 +70,8 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.bits = []
+        self.stat_bits = []
+        self.stat_skip_bit = True
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -183,17 +192,42 @@ class Decoder(srd.Decoder):
 
             self.reset()
 
+    def process_stat_bit(self, sync, bit_ss, bit_es, bit_value):
+        if self.stat_skip_bit:
+            self.stat_skip_bit = False
+            return
+
+        self.put_ann(bit_ss, bit_es, ann_stat_bit, ['%d' % bit_value])
+        self.stat_bits.append((bit_ss, bit_es, bit_value))
+
+        if (sync == 0) and (len(self.stat_bits) == 19):
+            stat_ss = self.stat_bits[0][0]
+            stat_es = self.stat_bits[18][1]
+
+            status = 0
+            count = 18
+            for ss, es, value in self.stat_bits:
+                status |= value << count
+                count -= 1
+            self.put_ann(stat_ss, stat_es, ann_status, ['Status 0x%X' % status, '0x%X' % status])
+
     def decode(self):
         bit_ss = None
         bit_es = None
         bit_value = 0
+        stat_ss = None
+        stat_es = None
+        stat_value = 0
         sync_value = 0
+        has_stat = self.has_channel(3)
 
         while True:
             # Wait for any edge on clk
-            clk, sync, data = self.wait({0: 'e'})
+            clk, sync, data, stat = self.wait({0: 'e'})
 
             if clk == 1:
+                stat_value = stat
+
                 bit_es = self.samplenum
                 if bit_ss:
                     self.process_bit(sync_value, bit_ss, bit_es, bit_value)
@@ -201,3 +235,8 @@ class Decoder(srd.Decoder):
             else:
                 bit_value = data
                 sync_value = sync
+
+                stat_es = self.samplenum
+                if stat_ss and has_stat:
+                    self.process_stat_bit(sync_value, stat_ss, stat_es, stat_value)
+                stat_ss = self.samplenum
