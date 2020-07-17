@@ -381,12 +381,13 @@ class Decoder(srd.Decoder):
         # across meta and end checksums in a frame's fields.
         caption = 'META' if is_meta else 'END'
         crc_len = 8 if is_meta else 32 if self.cfg_crc32 else 8
+        crc_bytes = crc_len // 8
         crc_fmt = '{:08x}' if crc_len == 32 else '{:02x}'
         have_text = crc_fmt.format(have)
 
         # Check received against expected checksum. Emit warnings.
         warn_texts = []
-        data = self.frame_bytes[:-1]
+        data = self.frame_bytes[:-crc_bytes]
         want = calc_crc32(data) if crc_len == 32 else calc_crc8(data)
         if want != have:
             want_text = crc_fmt.format(want)
