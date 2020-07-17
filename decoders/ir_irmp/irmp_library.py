@@ -41,6 +41,7 @@ class IrmpLibrary:
         ]
 
     FLAG_REPETITION = 1 << 0
+    FLAG_RELEASE = 1 << 1
 
     def _library_filename(self):
         '''
@@ -103,6 +104,7 @@ class IrmpLibrary:
             'address': self._data.address,
             'command': self._data.command,
             'repeat': bool(self._data.flags & self.FLAG_REPETITION),
+            'release': bool(self._data.flags & self.FLAG_RELEASE),
             'start': self._data.start_sample,
             'end': self._data.end_sample,
         }

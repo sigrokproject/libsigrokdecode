@@ -46,6 +46,7 @@ struct irmp_result_data {
 };
 
 #define IRMP_DATA_FLAG_REPETITION	(1 << 0)
+#define IRMP_DATA_FLAG_RELEASE		(1 << 1)
 
 /**
  * @brief Query the IRMP library's configured sample rate.
