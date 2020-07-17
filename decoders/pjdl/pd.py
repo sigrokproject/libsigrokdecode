@@ -510,7 +510,9 @@ class Decoder(srd.Decoder):
             is_short = bit_level and self.span_is_short(span)
 
             if is_pad:
-                ss, es = last_snum, curr_snum
+                # BEWARE! Use ss value of last edge (genuinely seen, or
+                # inserted after a DATA byte) for PAD bit annotations.
+                ss, es = self.edges[-2], curr_snum
                 texts = ['PAD', '{:d}'.format(bit_level)]
                 self.putg(ss, es, [ANN_PAD_BIT, texts])
                 self.symbols_append(ss, es, 'PAD_BIT', bit_level)
@@ -674,10 +676,20 @@ class Decoder(srd.Decoder):
             # the transmitter's and the sender's timings differ within a
             # margin, and the transmitter may hold the last DATA bit's
             # HIGH level for a little longer.
+            #
+            # When no falling edge is seen within the maximum tolerance
+            # for the last DATA bit, then this could be the combination
+            # of a HIGH DATA bit and a PAD bit without a LOW in between.
+            # Fake an edge in that case, to re-use existing code paths.
+            # Make sure to keep referencing times to the last SYNC pad's
+            # falling edge. This is the last reliable condition we have.
             if curr_level:
                 hold = self.hold_high_width
                 curr_level, = self.wait([{PIN_DATA: 'l'}, {'skip': int(hold)}])
                 self.carrier_check(curr_level, self.samplenum)
+                if self.matched[1]:
+                    self.edges.append(curr_snum)
+                    curr_level = 1 - curr_level
                 curr_snum = self.samplenum
 
             # Get the byte value from the bits (when available).
