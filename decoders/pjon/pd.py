@@ -130,6 +130,7 @@ class Decoder(srd.Decoder):
             return
 
         # Emit "communication relation" details.
+        # TODO Include the service ID (port number) as well?
         text = []
         if self.frame_rx_id is not None:
             text.append("RX {}".format(self.frame_rx_id[-1]))
@@ -236,7 +237,7 @@ class Decoder(srd.Decoder):
         text.append('svc_id' if self.cfg_port else '-') # port aka service ID
         text.append('ack_mode' if self.cfg_async_ack else '-') # async response
         text.append('ack' if self.cfg_sync_ack else '-') # synchronous response
-        text.append('tx_info' if self.cfg_tx_info else '-')
+        text.append('tx_info' if self.cfg_tx_info else '-') # sender address
         text.append('bus_id' if self.cfg_shared else '-') # "shared" vs "local"
         text = ' '.join(text)
         bits = '{:08b}'.format(b)
@@ -255,7 +256,7 @@ class Decoder(srd.Decoder):
         # Get the size of variable width fields, to calculate the size
         # of the packet overhead (the part that is not the payload data).
         # This lets us derive the payload length when we later receive
-        # the packet length.
+        # the frame's total length.
         u8_fmt = '>B'
         u16_fmt = '>H'
         u32_fmt = '>L'
@@ -339,7 +340,7 @@ class Decoder(srd.Decoder):
 
         # The wire communicates the total packet length. Some of it is
         # overhead (non-payload data), while its volume is variable in
-        # size (dpends on the header configuration).
+        # size (depends on the header configuration).
         #
         # Derive the payload size from previously observed flags. Update
         # the previously registered field description (the second last
