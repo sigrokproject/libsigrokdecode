@@ -24,6 +24,9 @@ import sigrokdecode as srd
 class SamplerateError(Exception):
     pass
 
+class LibraryError(Exception):
+    pass
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'ir_irmp'
@@ -90,12 +93,11 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_ann, [0, txts])
 
     def __init__(self):
-        self.irmp = irmp_library.IrmpLibrary()
-        self.lib_rate = self.irmp.get_sample_rate()
+        self.irmp = None
         self.reset()
 
     def reset(self):
-        self.irmp.reset_state()
+        self.want_reset = True
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -105,11 +107,24 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def decode(self):
+        if not self.irmp:
+            try:
+                self.irmp = irmp_library.IrmpLibrary()
+            except Exception as e:
+                txt = e.args[0]
+                raise LibraryError(txt)
+        if self.irmp:
+            self.lib_rate = self.irmp.get_sample_rate()
+        if not self.irmp or not self.lib_rate:
+            raise LibraryError('Cannot access IRMP library. One instance limit exceeded?')
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         if self.samplerate % self.lib_rate:
-            raise SamplerateError('capture samplerate must be multiple of library samplerate ({})'.format(self.lib_rate))
+            raise SamplerateError('Capture samplerate must be multiple of library samplerate ({})'.format(self.lib_rate))
         self.rate_factor = int(self.samplerate / self.lib_rate)
+        if self.want_reset:
+            self.irmp.reset_state()
+            self.want_reset = False
 
         self.active = 0 if self.options['polarity'] == 'active-low' else 1
         ir, = self.wait()

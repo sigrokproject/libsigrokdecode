@@ -29,6 +29,8 @@ class IrmpLibrary:
     Library instance for an infrared protocol detector.
     '''
 
+    __usable_instance = None
+
     class ResultData(ctypes.Structure):
         _fields_ = [
             ( 'protocol', ctypes.c_uint32, ),
@@ -54,14 +56,13 @@ class IrmpLibrary:
             return 'libirmp.dylib'
         return 'irmp.dll'
 
-    def __init__(self):
+    def _library_setup_api(self):
         '''
-        Create a library instance.
+        Lookup the C library's API routines. Declare their prototypes.
         '''
 
-        # Load the library. Lookup routines, declare their prototypes.
-        filename = self._library_filename()
-        self._lib = ctypes.cdll.LoadLibrary(filename)
+        if not self._lib:
+            return False
 
         self._lib.irmp_get_sample_rate.restype = ctypes.c_uint32
         self._lib.irmp_get_sample_rate.argtypes = []
@@ -85,20 +86,46 @@ class IrmpLibrary:
         # Create a result buffer that's local to the library instance.
         self._data = self.ResultData()
 
+        return True
+
+    def __init__(self):
+        '''
+        Create a library instance.
+        '''
+
+        # Only create a working instance for the first invocation.
+        # Degrade all other instances, make them fail "late" during
+        # execution, so that users will see the errors.
+        self._lib = None
+        self._data = None
+        if IrmpLibrary.__usable_instance is None:
+            filename = self._library_filename()
+            self._lib = ctypes.cdll.LoadLibrary(filename)
+            self._library_setup_api()
+            IrmpLibrary.__usable_instance = self
+
     def get_sample_rate(self):
+        if not self._lib:
+            return None
         return self._lib.irmp_get_sample_rate()
 
     def reset_state(self):
+        if not self._lib:
+            return None
         self._lib.irmp_reset_state()
 
     def add_one_sample(self, level):
+        if not self._lib:
+            raise Exception("IRMP library limited to a single instance.")
         if not self._lib.irmp_add_one_sample(int(level)):
             return False
         self._lib.irmp_get_result_data(ctypes.byref(self._data))
         return True
 
     def get_result_data(self):
-        data = {
+        if not self._data:
+            return None
+        return {
             'proto_nr': self._data.protocol,
             'proto_name': self._data.protocol_name.decode('UTF-8', 'ignore'),
             'address': self._data.address,
@@ -108,4 +135,3 @@ class IrmpLibrary:
             'start': self._data.start_sample,
             'end': self._data.end_sample,
         }
-        return data
