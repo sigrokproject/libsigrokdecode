@@ -54,11 +54,6 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (1,)),
     )
 
-    def reset_data(self):
-        self.bits = 0
-        self.number = 0
-        self.flags = 0
-
     def metadata(self, key, value):
        if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
@@ -68,25 +63,36 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.ss_cmd, self.es_cmd = 0, 0
-        self.reset_data()
+        self.bits = 0
+        self.number = 0
+        self.flags = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+
+    def putg(self, ss, es, cls, data):
+        self.put(ss, es, self.out_ann, [cls, data])
 
     # Switch bit order of variable x, which is l bit long.
     def bitr(self, x, l):
         return int(bin(x)[2:].zfill(l)[::-1], 2)
 
     def decode(self):
-        self.last_measurement = None
+        last_measurement = None
+        timeout_ms = self.options['timeout_ms']
+        want_unit = self.options['unit']
+        show_all = self.options['changes'] == 'no'
         while True:
             clk, data = self.wait([{0: 'r'}, {'skip': round(self.samplerate / 1000)}])
 
             # Timeout after inactivity.
-            if self.options['timeout_ms'] > 0:
-                if self.samplenum > self.es_cmd + (self.samplerate / (1000 / self.options['timeout_ms'])):
+            if timeout_ms > 0:
+                if self.samplenum > self.es_cmd + (self.samplerate / (1000 / timeout_ms)):
                     if self.bits > 0:
-                        self.put(self.ss_cmd, self.samplenum, self.out_ann, [1, ['timeout with %s bits in buffer' % (self.bits), 'timeout']])
+                        self.putg(self.ss_cmd, self.samplenum, 1, [
+                            'timeout with %s bits in buffer' % (self.bits),
+                            'timeout',
+                        ])
                     self.reset()
 
             # Do nothing if there was timeout without rising clock edge.
@@ -129,12 +135,12 @@ class Decoder(srd.Decoder):
 
             if inch:
                 number = number / 2000
-                if self.options['unit'] == 'mm':
+                if want_unit == 'mm':
                     number *= inchmm
                     inch = 0
             else:
                 number = number / 100
-                if self.options['unit'] == 'inch':
+                if want_unit == 'inch':
                     number = round(number / inchmm, 4)
                     inch = 1
 
@@ -142,9 +148,12 @@ class Decoder(srd.Decoder):
 
             measurement = (str(number) + units)
 
-            if ((self.options['changes'] == 'no') or (self.last_measurement != measurement)):
-                self.put(self.ss_cmd, self.es_cmd, self.out_ann, [0, [measurement, str(number)]])
-                self.last_measurement = measurement
+            if show_all or measurement != last_measurement:
+                self.putg(self.ss_cmd, self.es_cmd, 0, [
+                    measurement,
+                    str(number),
+                ])
+                last_measurement = measurement
 
             # Prepare for next packet.
             self.reset()
