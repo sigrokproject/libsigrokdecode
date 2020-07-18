@@ -22,6 +22,10 @@
 ## SOFTWARE.
 
 import sigrokdecode as srd
+from common.srdhelper import bitpack
+
+# Millimeters per inch.
+mm_per_inch = 25.4
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -62,20 +66,15 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.ss_cmd, self.es_cmd = 0, 0
-        self.bits = 0
-        self.number = 0
-        self.flags = 0
+        self.ss, self.es = 0, 0
+        self.number_bits = []
+        self.flags_bits = []
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putg(self, ss, es, cls, data):
         self.put(ss, es, self.out_ann, [cls, data])
-
-    # Switch bit order of variable x, which is l bit long.
-    def bitr(self, x, l):
-        return int(bin(x)[2:].zfill(l)[::-1], 2)
 
     def decode(self):
         last_measurement = None
@@ -89,10 +88,11 @@ class Decoder(srd.Decoder):
 
             # Timeout after inactivity.
             if timeout_ms > 0:
-                if self.samplenum > self.es_cmd + timeout_snum:
-                    if self.bits > 0:
-                        self.putg(self.ss_cmd, self.samplenum, 1, [
-                            'timeout with %s bits in buffer' % (self.bits),
+                if self.samplenum > self.es + timeout_snum:
+                    if self.number_bits or self.flags_bits:
+                        count = len(self.number_bits) + len(self.flags_bits)
+                        self.putg(self.ss, self.samplenum, 1, [
+                            'timeout with %s bits in buffer' % (count),
                             'timeout',
                         ])
                     self.reset()
@@ -101,57 +101,43 @@ class Decoder(srd.Decoder):
             if self.matched == (False, True):
                 continue
 
-            # Store position of last activity.
-            self.es_cmd = self.samplenum
-
-            # Store position of first bit.
-            if self.ss_cmd == 0:
-                self.ss_cmd = self.samplenum
-
-            # Shift in measured number.
-            if self.bits < 16:
-                self.number = (self.number << 1) | (data & 0b1)
-                self.bits += 1
+            # Store position of first bit and last activity.
+            # Shift in measured number and flag bits.
+            if not self.ss:
+                self.ss = self.samplenum
+            self.es = self.samplenum
+            if len(self.number_bits) < 16:
+                self.number_bits.append(data)
                 continue
-
-            # Shift in flag bits.
-            if self.bits < 24:
-                self.flags = (self.flags << 1) | (data & 0b1)
-                self.bits += 1
-                if self.bits < 24:
+            if len(self.flags_bits) < 8:
+                self.flags_bits.append(data)
+                if len(self.flags_bits) < 8:
                     continue
-                # We got last bit of data.
-                self.es_cmd = self.samplenum
 
-            # Do actual decoding.
-
-            negative = ((self.flags & 0b00001000) >> 3)
-            inch = (self.flags & 0b00000001)
-
-            number = self.bitr(self.number, 16)
-
-            if negative > 0:
+            # Get raw values from received data bits. Run the number
+            # conversion, controlled by flags and/or user specs.
+            negative = bool(self.flags_bits[4])
+            is_inch = bool(self.flags_bits[7])
+            number = bitpack(self.number_bits)
+            if negative:
                 number = -number
-
-            inchmm = 25.4 #how many mms in inch
-
-            if inch:
+            if is_inch:
                 number = number / 2000
                 if want_unit == 'mm':
-                    number *= inchmm
-                    inch = 0
+                    number *= mm_per_inch
+                    is_inch = False
             else:
                 number = number / 100
                 if want_unit == 'inch':
-                    number = round(number / inchmm, 4)
-                    inch = 1
+                    number = round(number / mm_per_inch, 4)
+                    is_inch = True
 
-            units = "in" if inch else "mm"
+            units = "in" if is_inch else "mm"
 
             measurement = (str(number) + units)
 
             if show_all or measurement != last_measurement:
-                self.putg(self.ss_cmd, self.es_cmd, 0, [
+                self.putg(self.ss, self.es, 0, [
                     measurement,
                     str(number),
                 ])
