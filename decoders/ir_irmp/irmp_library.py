@@ -49,7 +49,8 @@ class IrmpLibrary:
 
         if platform.uname()[0] == 'Linux':
             return 'libirmp.so'
-        # TODO Add support for more platforms.
+        if platform.uname()[0] == 'Darwin':
+            return 'libirmp.dylib'
         return 'irmp.dll'
 
     def __init__(self):
