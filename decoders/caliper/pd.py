@@ -77,7 +77,7 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_ann, [cls, data])
 
     def decode(self):
-        last_measurement = None
+        last_sent = None
         timeout_ms = self.options['timeout_ms']
         want_unit = self.options['unit']
         show_all = self.options['changes'] == 'no'
@@ -123,26 +123,24 @@ class Decoder(srd.Decoder):
             if negative:
                 number = -number
             if is_inch:
-                number = number / 2000
+                number /= 2000
                 if want_unit == 'mm':
                     number *= mm_per_inch
                     is_inch = False
             else:
-                number = number / 100
+                number /= 100
                 if want_unit == 'inch':
                     number = round(number / mm_per_inch, 4)
                     is_inch = True
+            unit = 'in' if is_inch else 'mm'
 
-            units = "in" if is_inch else "mm"
-
-            measurement = (str(number) + units)
-
-            if show_all or measurement != last_measurement:
+            # Construct and emit an annotation.
+            if show_all or (number, unit) != last_sent:
                 self.putg(self.ss, self.es, 0, [
-                    measurement,
-                    str(number),
+                    '{number}{unit}'.format(**locals()),
+                    '{number}'.format(**locals()),
                 ])
-                last_measurement = measurement
+                last_sent = (number, unit)
 
-            # Prepare for next packet.
+            # Reset internal state for the start of the next packet.
             self.reset()
