@@ -82,12 +82,14 @@ class Decoder(srd.Decoder):
         timeout_ms = self.options['timeout_ms']
         want_unit = self.options['unit']
         show_all = self.options['changes'] == 'no'
+        snum_per_ms = self.samplerate / 1000
+        timeout_snum = timeout_ms * snum_per_ms
         while True:
-            clk, data = self.wait([{0: 'r'}, {'skip': round(self.samplerate / 1000)}])
+            clk, data = self.wait([{0: 'r'}, {'skip': round(snum_per_ms)}])
 
             # Timeout after inactivity.
             if timeout_ms > 0:
-                if self.samplenum > self.es_cmd + (self.samplerate / (1000 / timeout_ms)):
+                if self.samplenum > self.es_cmd + timeout_snum:
                     if self.bits > 0:
                         self.putg(self.ss_cmd, self.samplenum, 1, [
                             'timeout with %s bits in buffer' % (self.bits),
