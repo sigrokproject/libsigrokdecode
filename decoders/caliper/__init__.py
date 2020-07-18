@@ -18,17 +18,17 @@
 ##
 
 '''
-This decodes digital output of cheap generic calipers (usualy made in china)
-Decoder will show measured value in milimeters or inches.
+This decoder interprets the digital output of cheap generic calipers
+(usually made in China), and shows the measured value in millimeters
+or inches.
 
-Please note that these devices often communicate on low voltage level,
-which might not be possible to capture with 3.3V logic analyzers.
-So additional circuitry might be needed to capture the signal.
+Notice that these devices often communicate on voltage levels below
+3.3V and may require additional circuitry to capture the signal.
 
-This is NOT for calipers using Digimatic protocol (eg. Mitutoyo and similar brands)
+This decoder does not work for calipers using the Digimatic protocol
+(eg. Mitutoyo and similar brands).
 
-More info:
-
+For more information see:
 http://www.shumatech.com/support/chinese_scales.htm
 https://www.instructables.com/id/Reading-Digital-Callipers-with-an-Arduino-USB/
 '''

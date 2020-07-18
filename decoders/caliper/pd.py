@@ -28,23 +28,26 @@ class Decoder(srd.Decoder):
     id = 'caliper'
     name = 'Caliper'
     longname = 'Digital calipers'
-    desc = 'Protocol of cheap generic digital calipers'
+    desc = 'Protocol of cheap generic digital calipers.'
     license = 'mit'
     inputs = ['logic']
     outputs = []
     channels = (
-         {'id': 'clk', 'name': 'CLK', 'desc': 'Serial clock line'},
-         {'id': 'data', 'name': 'DATA', 'desc': 'Serial data line'},
+        {'id': 'clk', 'name': 'CLK', 'desc': 'Serial clock line'},
+        {'id': 'data', 'name': 'DATA', 'desc': 'Serial data line'},
     )
     options = (
-         {'id': 'timeout_ms', 'desc': 'Timeout packet after X ms, 0 to disable', 'default': 10},
-         {'id': 'unit', 'desc': 'Convert units', 'default': 'keep', 'values': ('keep', 'mm', 'inch')},
-         {'id': 'changes', 'desc': 'Changes only', 'default': 'no', 'values': ('no', 'yes')},
+        {'id': 'timeout_ms', 'desc': 'Packet timeout in ms, 0 to disable',
+            'default': 10},
+        {'id': 'unit', 'desc': 'Convert units', 'default': 'keep',
+            'values': ('keep', 'mm', 'inch')},
+        {'id': 'changes', 'desc': 'Changes only', 'default': 'no',
+            'values': ('no', 'yes')},
     )
-    tags = ['Analog/digital', 'IC', 'Sensor']
+    tags = ['Analog/digital', 'Sensor']
     annotations = (
-        ('measurements', 'Measurements'),
-        ('warning', 'Warnings'),
+        ('measurement', 'Measurement'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('measurements', 'Measurements', (0,)),
@@ -70,59 +73,54 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    #Switch bit order of variable x, which is l bit long
-    def bitr(self,x,l):
+    # Switch bit order of variable x, which is l bit long.
+    def bitr(self, x, l):
         return int(bin(x)[2:].zfill(l)[::-1], 2)
 
     def decode(self):
         self.last_measurement = None
         while True:
-            clk, data = self.wait([{0: 'r'},{'skip': round(self.samplerate/1000)}])
-            #print([clk,data])
+            clk, data = self.wait([{0: 'r'}, {'skip': round(self.samplerate / 1000)}])
 
-            #Timeout after inactivity
-            if(self.options['timeout_ms'] > 0):
-                if self.samplenum > self.es_cmd + (self.samplerate/(1000/self.options['timeout_ms'])):
+            # Timeout after inactivity.
+            if self.options['timeout_ms'] > 0:
+                if self.samplenum > self.es_cmd + (self.samplerate / (1000 / self.options['timeout_ms'])):
                     if self.bits > 0:
-                        self.put(self.ss_cmd, self.samplenum, self.out_ann, [1, ['timeout with %s bits in buffer'%(self.bits),'timeout']])
+                        self.put(self.ss_cmd, self.samplenum, self.out_ann, [1, ['timeout with %s bits in buffer' % (self.bits), 'timeout']])
                     self.reset()
 
-            #Do nothing if there was timeout without rising clock edge
+            # Do nothing if there was timeout without rising clock edge.
             if self.matched == (False, True):
                 continue
 
-            #Store position of last activity
+            # Store position of last activity.
             self.es_cmd = self.samplenum
 
-            #Store position of first bit
+            # Store position of first bit.
             if self.ss_cmd == 0:
                 self.ss_cmd = self.samplenum
 
-            #Shift in measured number
+            # Shift in measured number.
             if self.bits < 16:
                 self.number = (self.number << 1) | (data & 0b1)
-                self.bits+=1
+                self.bits += 1
                 continue
 
-            #Shift in flag bits
+            # Shift in flag bits.
             if self.bits < 24:
                 self.flags = (self.flags << 1) | (data & 0b1)
-                self.bits+=1
+                self.bits += 1
                 if self.bits < 24:
                     continue
-                #Hooray! We got last bit of data
+                # We got last bit of data.
                 self.es_cmd = self.samplenum
 
-            #Do actual decoding
-
-            #print(format(self.flags, '08b'));
+            # Do actual decoding.
 
             negative = ((self.flags & 0b00001000) >> 3)
             inch = (self.flags & 0b00000001)
 
             number = self.bitr(self.number, 16)
-
-            #print(format(number, '016b'))
 
             if negative > 0:
                 number = -number
@@ -130,24 +128,23 @@ class Decoder(srd.Decoder):
             inchmm = 25.4 #how many mms in inch
 
             if inch:
-                number = number/2000
+                number = number / 2000
                 if self.options['unit'] == 'mm':
                     number *= inchmm
                     inch = 0
             else:
-                number = number/100
+                number = number / 100
                 if self.options['unit'] == 'inch':
-                    number = round(number/inchmm,4)
+                    number = round(number / inchmm, 4)
                     inch = 1
 
             units = "in" if inch else "mm"
 
-            measurement = (str(number)+units)
-            #print(measurement)
+            measurement = (str(number) + units)
 
             if ((self.options['changes'] == 'no') or (self.last_measurement != measurement)):
                 self.put(self.ss_cmd, self.es_cmd, self.out_ann, [0, [measurement, str(number)]])
                 self.last_measurement = measurement
 
-            #Prepare for next packet
+            # Prepare for next packet.
             self.reset()
