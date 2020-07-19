@@ -18,8 +18,11 @@
 ##
 
 '''
-This decoder stacks on top of the 'spi' PD and decodes st25r3916 High performance NFC universal device and EMVCo reader
-(SPI mode) protocol.
+This decoder stacks on top of the SPI PD and decodes the st25r39xx High performance NFC universal device and EMVCo reader protocol (SPI mode).
+
+It has been successfully tested with the st25r3916, other chips of this family may or may not be fully supported but not been verified.
+
+Please note that the SPI interface uses clock polarity 0 and clock phase 1, which is not the default setting.
 
 Details:
 https://www.st.com/resource/en/datasheet/st25r3916.pdf
