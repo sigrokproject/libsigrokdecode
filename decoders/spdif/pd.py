@@ -107,17 +107,17 @@ class Decoder(srd.Decoder):
         if self.pulse_width != 0:
             self.clocks.append(self.pulse_width)
             self.state = 'GET SECOND PULSE WIDTH'
-            self.puty([2, ['Found width 1: %d' % (self.pulse_width), 'W1: %d' % (self.pulse_width)]])
+            self.puty([2, ['Found width 1: %d' % self.pulse_width, 'W1: %d' % self.pulse_width]])
             self.ss_edge = self.samplenum
 
     def find_second_pulse_width(self):
         if self.pulse_width > (self.clocks[0] * 1.3) or \
                 self.pulse_width <= (self.clocks[0] * 0.75):
-            self.puty([2, ['Found width 2: %d' % (self.pulse_width), 'W2: %d' % (self.pulse_width)]])
+            self.puty([2, ['Found width 2: %d' % self.pulse_width, 'W2: %d' % self.pulse_width]])
             self.clocks.append(self.pulse_width)
             self.state = 'GET THIRD PULSE WIDTH'
         else:
-            self.puty([2, ['Search width 2: %d' % (self.pulse_width), 'SW2: %d' % (self.pulse_width)]])
+            self.puty([2, ['Search width 2: %d' % self.pulse_width, 'SW2: %d' % self.pulse_width]])
         self.ss_edge = self.samplenum
 
     def find_third_pulse_width(self):
@@ -125,11 +125,11 @@ class Decoder(srd.Decoder):
                 self.pulse_width <= (self.clocks[0] * 0.75)) \
                 and (self.pulse_width > (self.clocks[1] * 1.3) or \
                 self.pulse_width <= (self.clocks[1] * 0.75))):
-            self.puty([2, ['Search width 3: %d' % (self.pulse_width), 'SW3: %d' % (self.pulse_width)]])
+            self.puty([2, ['Search width 3: %d' % self.pulse_width, 'SW3: %d' % self.pulse_width]])
             self.ss_edge = self.samplenum
             return
         else:
-            self.puty([2, ['Found width 3: %d' % (self.pulse_width), 'W3: %d' % (self.pulse_width)]])
+            self.puty([2, ['Found width 3: %d' % self.pulse_width, 'W3: %d' % self.pulse_width]])
             self.ss_edge = self.samplenum
             # The message of the calculated bitrate should start at this sample
             # (right after the synchronisation).
