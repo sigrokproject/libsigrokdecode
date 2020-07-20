@@ -17,4 +17,10 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+'''
+Decoder for the Sony IR remote control protocol (SIRC).
+
+https://www.sbprojects.net/knowledge/ir/sirc.php
+'''
+
 from .pd import Decoder

@@ -33,41 +33,39 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'ir_sirc'
     name = 'IR SIRC'
-    longname = 'IR SIRC'
-    desc = 'Sony SIRC infrared remote control protocol.'
+    longname = 'Sony IR (SIRC)'
+    desc = 'Sony infrared remote control protocol (SIRC).'
     license = 'gplv2+'
+    tags = ['IR']
     inputs = ['logic']
-    outputs = ['ir_sirc']
+    outputs = []
     channels = (
-        dict(id='ir', name='IR', desc='Data line'),
+        {'id': 'ir', 'name': 'IR', 'desc': 'IR data line'},
     )
     options = (
-        dict(id='polarity', desc='Polarity', default='active-low',
-            values=('active-low', 'active-high')),
+        {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
+            'values': ('active-low', 'active-high')},
     )
     annotations = (
         ('bit', 'Bit'),
         ('agc', 'AGC'),
         ('pause', 'Pause'),
-
         ('start', 'Start'),
         ('command', 'Command'),
         ('address', 'Address'),
         ('extended', 'Extended'),
-
         ('remote', 'Remote'),
-
-        ('warnings', 'Warnings'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (0, 1, 2)),
         ('fields', 'Fields', (3, 4, 5, 6)),
-        ('remote', 'Remote', (7,)),
+        ('remotes', 'Remotes', (7,)),
         ('warnings', 'Warnings', (8,)),
     )
 
     def __init__(self):
-        pass
+        self.reset()
 
     def reset(self):
         pass
