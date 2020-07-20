@@ -266,10 +266,7 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         # Set samplerate to 0 if it is not given. Decoding is still possible.
-        try:
-            if self.samplerate != 0:
-                pass
-        except:
+        if not self.samplerate:
             self.samplerate = 0
 
         # Throw away first two edges as it might be mangled data.
