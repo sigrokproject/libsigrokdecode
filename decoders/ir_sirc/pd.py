@@ -96,8 +96,7 @@ class Decoder(srd.Decoder):
         tolerance = expected * 0.30
         return (expected - tolerance) < microseconds < (expected + tolerance)
 
-    def wait_wrap(self, conds, timeout=None):
-        conds = list(conds)
+    def wait_wrap(self, conds, timeout):
         if timeout is not None:
             to = int(timeout * self.snum_per_us)
             conds.append({'skip': to})
@@ -109,10 +108,10 @@ class Decoder(srd.Decoder):
     def read_pulse(self, high, time):
         e = 'f' if high else 'r'
         max_time = int(time * 1.30)
-        pins, ss, es, (edge, timeout) = self.wait_wrap([{0: e}], max_time)
+        (ir,), ss, es, (edge, timeout) = self.wait_wrap([{0: e}], max_time)
         if timeout or not self.tolerance(ss, es, time):
             raise SIRCError('Timeout')
-        return pins, ss, es, (edge, timeout)
+        return ir, ss, es, (edge, timeout)
 
     def read_bit(self):
         e = 'f' if self.active else 'r'
@@ -198,18 +197,19 @@ class Decoder(srd.Decoder):
         unknown = (['Unknown Device: ', 'UNK: '], {})
         while True:
             e = 'h' if self.active else 'l'
-            _, ss, es, _ = self.wait_wrap([{0: e}], None)
+            _, _, frame_ss, _ = self.wait_wrap([{0: e}], None)
             try:
                 addr, cmd, ext, payload_ss, payload_es = self.read_signal()
                 names, cmds = ADDRESSES.get((addr, ext), unknown)
                 text = cmds.get(cmd, 'Unknown')
-                self.putg(es, payload_es, Ann.REMOTE, [n + text for n in names])
+                self.putg(frame_ss, payload_es, Ann.REMOTE, [
+                    n + text for n in names
+                ])
             except SIRCErrorSilent as e:
-                continue
+                pass
             except SIRCError as e:
-                self.putg(es, self.samplenum, Ann.WARN, [
+                self.putg(frame_ss, self.samplenum, Ann.WARN, [
                     'Error: {}'.format(e),
                     'Error',
                     'E',
                 ])
-                continue
