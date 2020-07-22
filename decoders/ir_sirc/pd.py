@@ -78,36 +78,37 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
+            self.snum_per_us = self.samplerate / 1e6
 
     def putg(self, ss, es, cls, texts):
         self.put(ss, es, self.out_ann, [cls, texts])
 
     def tolerance(self, ss, es, expected):
-        microseconds = 1000000 * (es - ss) / self.samplerate
+        microseconds = (es - ss) / self.snum_per_us
         tolerance = expected * 0.30
         return (expected - tolerance) < microseconds < (expected + tolerance)
 
-    def wait(self, *conds, timeout=None):
+    def wait_wrap(self, conds, timeout=None):
         conds = list(conds)
         if timeout is not None:
-            to = int(self.samplerate * timeout / 1000000)
+            to = int(timeout * self.snum_per_us)
             conds.append({'skip': to})
         ss = self.samplenum
-        signals = super(Decoder, self).wait(conds)
+        pins = self.wait(conds)
         es = self.samplenum
-        return signals, ss, es, self.matched
+        return pins, ss, es, self.matched
 
     def read_pulse(self, high, time):
         e = 'f' if high else 'r'
         max_time = int(time * 1.30)
-        signals, ss, es, (edge, timeout) = self.wait({0: e}, timeout=max_time)
+        pins, ss, es, (edge, timeout) = self.wait_wrap([{0: e}], max_time)
         if timeout or not self.tolerance(ss, es, time):
             raise SIRCError('Timeout')
-        return signals, ss, es, (edge, timeout)
+        return pins, ss, es, (edge, timeout)
 
     def read_bit(self):
         e = 'f' if self.active else 'r'
-        signals, high_ss, high_es, (edge, timeout) = self.wait({0: e}, timeout=2000)
+        _, high_ss, high_es, (edge, timeout) = self.wait_wrap([{0: e}], 2000)
         if timeout:
             raise SIRCError('Bit High Timeout')
         if self.tolerance(high_ss, high_es, 1200):
@@ -117,10 +118,10 @@ class Decoder(srd.Decoder):
         else:
             raise SIRCError('Bit Low Timeout')
         try:
-            signals, low_ss, low_es, matched = self.read_pulse(not self.active, 600)
+            _, low_ss, low_es, matched = self.read_pulse(not self.active, 600)
             good = True
         except SIRCError:
-            low_es = high_es + int(600 * self.samplerate / 1000000)
+            low_es = high_es + int(600 * self.snum_per_us)
             good = False
         self.putg(high_ss, low_es, 0, ['{}'.format(bit)])
         return bit, high_ss, low_es, good
@@ -128,8 +129,8 @@ class Decoder(srd.Decoder):
     def read_signal(self):
         # Start code
         try:
-            signals, agc_ss, agc_es, matched = self.read_pulse(self.active, 2400)
-            signals, pause_ss, pause_es, matched = self.read_pulse(not self.active, 600)
+            _, agc_ss, agc_es, matched = self.read_pulse(self.active, 2400)
+            _, pause_ss, pause_es, matched = self.read_pulse(not self.active, 600)
         except SIRCError:
             raise SIRCErrorSilent('not an SIRC message')
         self.putg(agc_ss, agc_es, 1, ['AGC', 'A'])
@@ -188,7 +189,7 @@ class Decoder(srd.Decoder):
 
         while True:
             e = 'h' if self.active else 'l'
-            signal, ss, es, matched = self.wait({0: e})
+            signal, ss, es, matched = self.wait_wrap([{0: e}], None)
             try:
                 address, command, extended, payload_ss, payload_es = self.read_signal()
                 names, commands = ADDRESSES.get((address, extended), (['Unknown Device: ', 'UNK: '], {}))
