@@ -33,6 +33,11 @@ class SIRCErrorSilent(SIRCError):
 class Ann:
     BIT, AGC, PAUSE, START, CMD, ADDR, EXT, REMOTE, WARN = range(9)
 
+AGC_USEC = 2400
+ONE_USEC = 1200
+ZERO_USEC = 600
+PAUSE_USEC = 600
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'ir_sirc'
@@ -114,17 +119,17 @@ class Decoder(srd.Decoder):
         _, high_ss, high_es, (edge, timeout) = self.wait_wrap([{0: e}], 2000)
         if timeout:
             raise SIRCError('Bit High Timeout')
-        if self.tolerance(high_ss, high_es, 1200):
+        if self.tolerance(high_ss, high_es, ONE_USEC):
             bit = 1
-        elif self.tolerance(high_ss, high_es, 600):
+        elif self.tolerance(high_ss, high_es, ZERO_USEC):
             bit = 0
         else:
             raise SIRCError('Bit Low Timeout')
         try:
-            _, low_ss, low_es, matched = self.read_pulse(not self.active, 600)
+            _, low_ss, low_es, _ = self.read_pulse(not self.active, PAUSE_USEC)
             good = True
         except SIRCError:
-            low_es = high_es + int(600 * self.snum_per_us)
+            low_es = high_es + int(PAUSE_USEC * self.snum_per_us)
             good = False
         self.putg(high_ss, low_es, Ann.BIT, ['{}'.format(bit)])
         return bit, high_ss, low_es, good
@@ -132,8 +137,8 @@ class Decoder(srd.Decoder):
     def read_signal(self):
         # Start code
         try:
-            _, agc_ss, agc_es, matched = self.read_pulse(self.active, 2400)
-            _, pause_ss, pause_es, matched = self.read_pulse(not self.active, 600)
+            _, agc_ss, agc_es, _ = self.read_pulse(self.active, AGC_USEC)
+            _, pause_ss, pause_es, _ = self.read_pulse(not self.active, PAUSE_USEC)
         except SIRCError:
             raise SIRCErrorSilent('not an SIRC message')
         self.putg(agc_ss, agc_es, Ann.AGC, ['AGC', 'A'])
@@ -161,7 +166,7 @@ class Decoder(srd.Decoder):
                     address = bits[7:12]
                     extended = bits[12:20]
                 else:
-                    raise SIRCError('incorrect number of bits: {}'.format(len(bits)))
+                    raise SIRCError('incorrect bits count {}'.format(len(bits)))
                 break
 
         command_num = bitpack([b[0] for b in command])
@@ -190,13 +195,14 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
 
+        unknown = (['Unknown Device: ', 'UNK: '], {})
         while True:
             e = 'h' if self.active else 'l'
-            signal, ss, es, matched = self.wait_wrap([{0: e}], None)
+            _, ss, es, _ = self.wait_wrap([{0: e}], None)
             try:
-                address, command, extended, payload_ss, payload_es = self.read_signal()
-                names, commands = ADDRESSES.get((address, extended), (['Unknown Device: ', 'UNK: '], {}))
-                text = commands.get(command, 'Unknown')
+                addr, cmd, ext, payload_ss, payload_es = self.read_signal()
+                names, cmds = ADDRESSES.get((addr, ext), unknown)
+                text = cmds.get(cmd, 'Unknown')
                 self.putg(es, payload_es, Ann.REMOTE, [n + text for n in names])
             except SIRCErrorSilent as e:
                 continue
