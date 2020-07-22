@@ -118,7 +118,7 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.putg(self.ss_block, self.samplenum, data)
 
-    def putpp(self, data):
+    def putpy(self, data):
         self.put(self.ss_packet, self.es_packet, self.out_python, data)
 
     def reset_variables(self):
@@ -132,7 +132,7 @@ class Decoder(srd.Decoder):
         self.ss_bit12 = None
         self.ss_bit32 = None
         self.ss_databytebits = []
-        self.bytes = []
+        self.frame_bytes = []
         self.rtr_type = None
         self.fd = False
         self.rtr = None
@@ -242,7 +242,9 @@ class Decoder(srd.Decoder):
             if self.rawbits[-7:] != [1, 1, 1, 1, 1, 1, 1]:
                 self.putb([16, ['End of frame (EOF) must be 7 recessive bits']])
             self.es_packet = self.samplenum
-            self.putpp((self.frame_type, self.fullid, self.rtr_type, self.dlc, self.bytes))
+            py_data = tuple([self.frame_type, self.fullid, self.rtr_type,
+                self.dlc, self.frame_bytes])
+            self.putpy(py_data)
             self.reset_variables()
             return True
 
@@ -271,9 +273,10 @@ class Decoder(srd.Decoder):
                 # Bit 12: Remote transmission request (RTR) bit
                 # Data frame: dominant, remote frame: recessive
                 # Remote frames do not contain a data field.
-                self.rtr_type = 'remote' if self.bits[12] == 1 else 'data'
-                self.put12([8, ['Remote transmission request: %s frame' % self.rtr_type,
-                                'RTR: %s frame' % self.rtr_type, 'RTR']])
+                rtr = 'remote' if self.bits[12] == 1 else 'data'
+                self.put12([8, ['Remote transmission request: %s frame' % rtr,
+                                'RTR: %s frame' % rtr, 'RTR']])
+                self.rtr_type = rtr
                 self.dlc_start = 15
 
         if bitnum == 15 and self.fd:
@@ -309,7 +312,7 @@ class Decoder(srd.Decoder):
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
-                self.bytes[i] = b
+                self.frame_bytes.append(b)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
                 self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b),
@@ -356,9 +359,10 @@ class Decoder(srd.Decoder):
             self.rtr = can_rx
 
             if not self.fd:
-               self.rtr_type = 'remote' if can_rx == 1 else 'data'
-               self.putx([8, ['Remote transmission request: %s frame' % self.rtr_type,
-                              'RTR: %s frame' % self.rtr_type, 'RTR']])
+                rtr = 'remote' if can_rx == 1 else 'data'
+                self.putx([8, ['Remote transmission request: %s frame' % rtr,
+                              'RTR: %s frame' % rtr, 'RTR']])
+                self.rtr_type = rtr
 
         # Bit 33: RB1 (reserved bit)
         elif bitnum == 33:
@@ -408,7 +412,7 @@ class Decoder(srd.Decoder):
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
                 b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
-                self.bytes.append(b)
+                self.frame_bytes.append(b)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
                 self.putg(ss, es, [0, ['Data byte %d: 0x%02x' % (i, b),
