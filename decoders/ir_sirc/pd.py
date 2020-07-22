@@ -82,8 +82,8 @@ class Decoder(srd.Decoder):
     def putg(self, ss, es, cls, texts):
         self.put(ss, es, self.out_ann, [cls, texts])
 
-    def tolerance(self, start, end, expected):
-        microseconds = 1000000 * (end - start) / self.samplerate
+    def tolerance(self, ss, es, expected):
+        microseconds = 1000000 * (es - ss) / self.samplerate
         tolerance = expected * 0.30
         return (expected - tolerance) < microseconds < (expected + tolerance)
 
@@ -92,55 +92,55 @@ class Decoder(srd.Decoder):
         if timeout is not None:
             to = int(self.samplerate * timeout / 1000000)
             conds.append({'skip': to})
-        start = self.samplenum
+        ss = self.samplenum
         signals = super(Decoder, self).wait(conds)
-        end = self.samplenum
-        return signals, start, end, self.matched
+        es = self.samplenum
+        return signals, ss, es, self.matched
 
     def read_pulse(self, high, time):
         e = 'f' if high else 'r'
         max_time = int(time * 1.30)
-        signals, start, end, (edge, timeout) = self.wait({0: e}, timeout=max_time)
-        if timeout or not self.tolerance(start, end, time):
+        signals, ss, es, (edge, timeout) = self.wait({0: e}, timeout=max_time)
+        if timeout or not self.tolerance(ss, es, time):
             raise SIRCError('Timeout')
-        return signals, start, end, (edge, timeout)
+        return signals, ss, es, (edge, timeout)
 
     def read_bit(self):
         e = 'f' if self.active else 'r'
-        signals, high_start, high_end, (edge, timeout) = self.wait({0: e}, timeout=2000)
+        signals, high_ss, high_es, (edge, timeout) = self.wait({0: e}, timeout=2000)
         if timeout:
             raise SIRCError('Bit High Timeout')
-        if self.tolerance(high_start, high_end, 1200):
+        if self.tolerance(high_ss, high_es, 1200):
             bit = 1
-        elif self.tolerance(high_start, high_end, 600):
+        elif self.tolerance(high_ss, high_es, 600):
             bit = 0
         else:
             raise SIRCError('Bit Low Timeout')
         try:
-            signals, low_start, low_end, matched = self.read_pulse(not self.active, 600)
+            signals, low_ss, low_es, matched = self.read_pulse(not self.active, 600)
             good = True
         except SIRCError:
-            low_end = high_end + int(600 * self.samplerate / 1000000)
+            low_es = high_es + int(600 * self.samplerate / 1000000)
             good = False
-        self.putg(high_start, low_end, 0, ['{}'.format(bit)])
-        return bit, high_start, low_end, good
+        self.putg(high_ss, low_es, 0, ['{}'.format(bit)])
+        return bit, high_ss, low_es, good
 
     def read_signal(self):
         # Start code
         try:
-            signals, agc_start, agc_end, matched = self.read_pulse(self.active, 2400)
-            signals, pause_start, pause_end, matched = self.read_pulse(not self.active, 600)
+            signals, agc_ss, agc_es, matched = self.read_pulse(self.active, 2400)
+            signals, pause_ss, pause_es, matched = self.read_pulse(not self.active, 600)
         except SIRCError:
             raise SIRCErrorSilent('not an SIRC message')
-        self.putg(agc_start, agc_end, 1, ['AGC', 'A'])
-        self.putg(pause_start, pause_end, 2, ['Pause', 'P'])
-        self.putg(agc_start, pause_end, 3, ['Start', 'S'])
+        self.putg(agc_ss, agc_es, 1, ['AGC', 'A'])
+        self.putg(pause_ss, pause_es, 2, ['Pause', 'P'])
+        self.putg(agc_ss, pause_es, 3, ['Start', 'S'])
 
         # Read bits
         bits = []
         while True:
-            bit, start, end, good = self.read_bit()
-            bits.append((bit, start, end))
+            bit, ss, es, good = self.read_bit()
+            bits.append((bit, ss, es))
             if len(bits) > 20:
                 raise SIRCError('too many bits')
             if not good:
@@ -188,16 +188,16 @@ class Decoder(srd.Decoder):
 
         while True:
             e = 'h' if self.active else 'l'
-            signal, start, end, matched = self.wait({0: e})
+            signal, ss, es, matched = self.wait({0: e})
             try:
-                address, command, extended, payload_start, payload_end = self.read_signal()
+                address, command, extended, payload_ss, payload_es = self.read_signal()
                 names, commands = ADDRESSES.get((address, extended), (['Unknown Device: ', 'UNK: '], {}))
                 text = commands.get(command, 'Unknown')
-                self.putg(end, payload_end, 7, [n + text for n in names])
+                self.putg(es, payload_es, 7, [n + text for n in names])
             except SIRCErrorSilent as e:
                 continue
             except SIRCError as e:
-                self.putg(end, self.samplenum, 8, [
+                self.putg(es, self.samplenum, 8, [
                     'Error: {}'.format(e),
                     'Error',
                     'E',
