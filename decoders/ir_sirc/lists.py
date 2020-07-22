@@ -30,7 +30,6 @@ NUMBERS = {
     0x09: '0/10',
 }
 
-
 ADDRESSES = {
     # TV
     (0x01, None): (['TV: ', 'TV:'], {

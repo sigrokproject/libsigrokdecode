@@ -17,8 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-import sigrokdecode as srd
+from common.srdhelper import bitpack
 from .lists import ADDRESSES
+import sigrokdecode as srd
 
 class SamplerateError(Exception):
     pass
@@ -78,6 +79,9 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
+    def putg(self, ss, es, cls, texts):
+        self.put(ss, es, self.out_ann, [cls, texts])
+
     def tolerance(self, start, end, expected):
         microseconds = 1000000 * (end - start) / self.samplerate
         tolerance = expected * 0.30
@@ -103,7 +107,7 @@ class Decoder(srd.Decoder):
 
     def read_bit(self):
         e = 'f' if self.active else 'r'
-        signals, high_start, high_end, (edge, timeout) = self.wait({0:e}, timeout=2000)
+        signals, high_start, high_end, (edge, timeout) = self.wait({0: e}, timeout=2000)
         if timeout:
             raise SIRCError('Bit High Timeout')
         if self.tolerance(high_start, high_end, 1200):
@@ -118,7 +122,7 @@ class Decoder(srd.Decoder):
         except SIRCError:
             low_end = high_end + int(600 * self.samplerate / 1000000)
             good = False
-        self.put(high_start, low_end, self.out_ann, [0, [str(bit)]])
+        self.putg(high_start, low_end, 0, ['{}'.format(bit)])
         return bit, high_start, low_end, good
 
     def read_signal(self):
@@ -128,9 +132,9 @@ class Decoder(srd.Decoder):
             signals, pause_start, pause_end, matched = self.read_pulse(not self.active, 600)
         except SIRCError:
             raise SIRCErrorSilent('not an SIRC message')
-        self.put(agc_start, agc_end, self.out_ann, [1, ['AGC', 'A']])
-        self.put(pause_start, pause_end, self.out_ann, [2, ['Pause', 'P']])
-        self.put(agc_start, pause_end, self.out_ann, [3, ['Start', 'S']])
+        self.putg(agc_start, agc_end, 1, ['AGC', 'A'])
+        self.putg(pause_start, pause_end, 2, ['Pause', 'P'])
+        self.putg(agc_start, pause_end, 3, ['Start', 'S'])
 
         # Read bits
         bits = []
@@ -156,18 +160,26 @@ class Decoder(srd.Decoder):
                     raise SIRCError('incorrect number of bits: {}'.format(len(bits)))
                 break
 
-        number = lambda bits:sum(b << i for i, (b, s, e) in enumerate(bits))
-        command_num = number(command)
-        address_num = number(address)
+        command_num = bitpack([b[0] for b in command])
+        address_num = bitpack([b[0] for b in address])
         command_str = '0x{:02X}'.format(command_num)
         address_str = '0x{:02X}'.format(address_num)
-        self.put(command[0][1], command[-1][2], self.out_ann, [4, ['Command: ' + command_str, 'C:' + command_str]])
-        self.put(address[0][1], address[-1][2], self.out_ann, [5, ['Address: ' + address_str, 'A:' + address_str]])
+        self.putg(command[0][1], command[-1][2], 4, [
+            'Command: {}'.format(command_str),
+            'C:{}'.format(command_str),
+        ])
+        self.putg(address[0][1], address[-1][2], 5, [
+            'Address: {}'.format(address_str),
+            'A:{}'.format(address_str),
+        ])
         extended_num = None
         if extended:
-            extended_num = number(extended)
+            extended_num = bitpack([b[0] for b in extended])
             extended_str = '0x{:02X}'.format(extended_num)
-            self.put(extended[0][1], extended[-1][2], self.out_ann, [6, ['Extended: ' + extended_str, 'E:' + extended_str]])
+            self.putg(extended[0][1], extended[-1][2], 6, [
+                'Extended: {}'.format(extended_str),
+                'E:{}'.format(extended_str),
+            ])
         return address_num, command_num, extended_num, bits[0][1], bits[-1][2]
 
     def decode(self):
@@ -176,14 +188,18 @@ class Decoder(srd.Decoder):
 
         while True:
             e = 'h' if self.active else 'l'
-            signal, start, end, matched = self.wait({0:e})
+            signal, start, end, matched = self.wait({0: e})
             try:
                 address, command, extended, payload_start, payload_end = self.read_signal()
                 names, commands = ADDRESSES.get((address, extended), (['Unknown Device: ', 'UNK: '], {}))
                 text = commands.get(command, 'Unknown')
-                self.put(end, payload_end, self.out_ann, [7, [n + text for n in names]])
+                self.putg(end, payload_end, 7, [n + text for n in names])
             except SIRCErrorSilent as e:
                 continue
             except SIRCError as e:
-                self.put(end, self.samplenum, self.out_ann, [8, ['Error: ' + str(e), 'Error', 'E']])
+                self.putg(end, self.samplenum, 8, [
+                    'Error: {}'.format(e),
+                    'Error',
+                    'E',
+                ])
                 continue
