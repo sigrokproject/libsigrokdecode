@@ -18,6 +18,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+from common.srdhelper import bitpack
 import sigrokdecode as srd
 
 class SamplerateError(Exception):
@@ -204,7 +205,9 @@ class Decoder(srd.Decoder):
 
             x = self.last_databit + 1
             crc_bits = self.bits[x:x + self.crc_len + 1]
-            self.crc = int(''.join(str(d) for d in crc_bits), 2)
+            bits = crc_bits
+            bits.reverse()
+            self.crc = bitpack(bits)
             self.putb([11, ['%s sequence: 0x%04x' % (crc_type, self.crc),
                             '%s: 0x%04x' % (crc_type, self.crc), '%s' % crc_type]])
             if not self.is_valid_crc(crc_bits):
@@ -294,7 +297,9 @@ class Decoder(srd.Decoder):
 
         # Bits 15-18: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == self.dlc_start + 3:
-            self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
+            bits = self.bits[self.dlc_start:self.dlc_start + 4]
+            bits.reverse()
+            self.dlc = bitpack(bits)
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
             self.last_databit = self.dlc_start + 3 + (dlc2len(self.dlc) * 8)
@@ -311,7 +316,9 @@ class Decoder(srd.Decoder):
             self.ss_databytebits.append(self.samplenum) # Last databyte bit.
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
-                b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
+                bits = self.bits[x:x + 8]
+                bits.reverse()
+                b = bitpack(bits)
                 self.frame_bytes.append(b)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
@@ -335,7 +342,9 @@ class Decoder(srd.Decoder):
 
         # Bits 14-31: Extended identifier (EID[17..0])
         elif bitnum == 31:
-            self.eid = int(''.join(str(d) for d in self.bits[14:]), 2)
+            bits = self.bits[14:]
+            bits.reverse()
+            self.eid = bitpack(bits)
             s = '%d (0x%x)' % (self.eid, self.eid)
             self.putb([4, ['Extended Identifier: %s' % s,
                            'Extended ID: %s' % s, 'Extended ID', 'EID']])
@@ -396,7 +405,9 @@ class Decoder(srd.Decoder):
 
         # Bits 35-38: Data length code (DLC), in number of bytes (0-8).
         elif bitnum == self.dlc_start + 3:
-            self.dlc = int(''.join(str(d) for d in self.bits[self.dlc_start:self.dlc_start + 4]), 2)
+            bits = self.bits[self.dlc_start:self.dlc_start + 4]
+            bits.reverse()
+            self.dlc = bitpack(bits)
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
             self.last_databit = self.dlc_start + 3 + (dlc2len(self.dlc) * 8)
@@ -411,7 +422,9 @@ class Decoder(srd.Decoder):
             self.ss_databytebits.append(self.samplenum) # Last databyte bit.
             for i in range(dlc2len(self.dlc)):
                 x = self.dlc_start + 4 + (8 * i)
-                b = int(''.join(str(d) for d in self.bits[x:x + 8]), 2)
+                bits = self.bits[x:x + 8]
+                bits.reverse()
+                b = bitpack(bits)
                 self.frame_bytes.append(b)
                 ss = self.ss_databytebits[i * 8]
                 es = self.ss_databytebits[((i + 1) * 8) - 1]
@@ -459,7 +472,10 @@ class Decoder(srd.Decoder):
         # Bits 1-11: Identifier (ID[10..0])
         # The bits ID[10..4] must NOT be all recessive.
         elif bitnum == 11:
-            self.id = int(''.join(str(d) for d in self.bits[1:]), 2)
+            bits = self.bits[1:]
+            bits.reverse()
+            # BEWARE! Clobbers the decoder's .id field!
+            self.id = bitpack(bits)
             self.fullid = self.id
             s = '%d (0x%x)' % (self.id, self.id),
             self.putb([3, ['Identifier: %s' % s, 'ID: %s' % s, 'ID']])
