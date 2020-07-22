@@ -30,6 +30,9 @@ class SIRCError(Exception):
 class SIRCErrorSilent(SIRCError):
     pass
 
+class Ann:
+    BIT, AGC, PAUSE, START, CMD, ADDR, EXT, REMOTE, WARN = range(9)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'ir_sirc'
@@ -59,10 +62,10 @@ class Decoder(srd.Decoder):
         ('warning', 'Warning'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (0, 1, 2)),
-        ('fields', 'Fields', (3, 4, 5, 6)),
-        ('remotes', 'Remotes', (7,)),
-        ('warnings', 'Warnings', (8,)),
+        ('bits', 'Bits', (Ann.BIT, Ann.AGC, Ann.PAUSE)),
+        ('fields', 'Fields', (Ann.START, Ann.CMD, Ann.ADDR, Ann.EXT)),
+        ('remotes', 'Remotes', (Ann.REMOTE,)),
+        ('warnings', 'Warnings', (Ann.WARN,)),
     )
 
     def __init__(self):
@@ -123,7 +126,7 @@ class Decoder(srd.Decoder):
         except SIRCError:
             low_es = high_es + int(600 * self.snum_per_us)
             good = False
-        self.putg(high_ss, low_es, 0, ['{}'.format(bit)])
+        self.putg(high_ss, low_es, Ann.BIT, ['{}'.format(bit)])
         return bit, high_ss, low_es, good
 
     def read_signal(self):
@@ -133,9 +136,9 @@ class Decoder(srd.Decoder):
             _, pause_ss, pause_es, matched = self.read_pulse(not self.active, 600)
         except SIRCError:
             raise SIRCErrorSilent('not an SIRC message')
-        self.putg(agc_ss, agc_es, 1, ['AGC', 'A'])
-        self.putg(pause_ss, pause_es, 2, ['Pause', 'P'])
-        self.putg(agc_ss, pause_es, 3, ['Start', 'S'])
+        self.putg(agc_ss, agc_es, Ann.AGC, ['AGC', 'A'])
+        self.putg(pause_ss, pause_es, Ann.PAUSE, ['Pause', 'P'])
+        self.putg(agc_ss, pause_es, Ann.START, ['Start', 'S'])
 
         # Read bits
         bits = []
@@ -165,11 +168,11 @@ class Decoder(srd.Decoder):
         address_num = bitpack([b[0] for b in address])
         command_str = '0x{:02X}'.format(command_num)
         address_str = '0x{:02X}'.format(address_num)
-        self.putg(command[0][1], command[-1][2], 4, [
+        self.putg(command[0][1], command[-1][2], Ann.CMD, [
             'Command: {}'.format(command_str),
             'C:{}'.format(command_str),
         ])
-        self.putg(address[0][1], address[-1][2], 5, [
+        self.putg(address[0][1], address[-1][2], Ann.ADDR, [
             'Address: {}'.format(address_str),
             'A:{}'.format(address_str),
         ])
@@ -177,7 +180,7 @@ class Decoder(srd.Decoder):
         if extended:
             extended_num = bitpack([b[0] for b in extended])
             extended_str = '0x{:02X}'.format(extended_num)
-            self.putg(extended[0][1], extended[-1][2], 6, [
+            self.putg(extended[0][1], extended[-1][2], Ann.EXT, [
                 'Extended: {}'.format(extended_str),
                 'E:{}'.format(extended_str),
             ])
@@ -194,11 +197,11 @@ class Decoder(srd.Decoder):
                 address, command, extended, payload_ss, payload_es = self.read_signal()
                 names, commands = ADDRESSES.get((address, extended), (['Unknown Device: ', 'UNK: '], {}))
                 text = commands.get(command, 'Unknown')
-                self.putg(es, payload_es, 7, [n + text for n in names])
+                self.putg(es, payload_es, Ann.REMOTE, [n + text for n in names])
             except SIRCErrorSilent as e:
                 continue
             except SIRCError as e:
-                self.putg(es, self.samplenum, 8, [
+                self.putg(es, self.samplenum, Ann.WARN, [
                     'Error: {}'.format(e),
                     'Error',
                     'E',
