@@ -349,7 +349,7 @@ class Decoder(srd.Decoder):
             self.putb([4, ['Extended Identifier: %s' % s,
                            'Extended ID: %s' % s, 'Extended ID', 'EID']])
 
-            self.fullid = self.id << 18 | self.eid
+            self.fullid = self.ident << 18 | self.eid
             s = '%d (0x%x)' % (self.fullid, self.fullid)
             self.putb([5, ['Full Identifier: %s' % s, 'Full ID: %s' % s,
                            'Full ID', 'FID']])
@@ -474,12 +474,13 @@ class Decoder(srd.Decoder):
         elif bitnum == 11:
             bits = self.bits[1:]
             bits.reverse()
-            # BEWARE! Clobbers the decoder's .id field!
-            self.id = bitpack(bits)
-            self.fullid = self.id
-            s = '%d (0x%x)' % (self.id, self.id),
+            # BEWARE! Don't clobber the decoder's .id field which is
+            # part of its boiler plate!
+            self.ident = bitpack(bits)
+            self.fullid = self.ident
+            s = '%d (0x%x)' % (self.ident, self.ident),
             self.putb([3, ['Identifier: %s' % s, 'ID: %s' % s, 'ID']])
-            if (self.id & 0x7f0) == 0x7f0:
+            if (self.ident & 0x7f0) == 0x7f0:
                 self.putb([16, ['Identifier bits 10..4 must not be all recessive']])
 
         # RTR or SRR bit, depending on frame type (gets handled later).
