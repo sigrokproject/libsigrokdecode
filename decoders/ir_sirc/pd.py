@@ -17,7 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-from common.srdhelper import bitpack
+from common.srdhelper import bitpack_lsb
 from .lists import ADDRESSES
 import sigrokdecode as srd
 
@@ -168,8 +168,8 @@ class Decoder(srd.Decoder):
                     raise SIRCError('incorrect bits count {}'.format(len(bits)))
                 break
 
-        command_num = bitpack([b[0] for b in command])
-        address_num = bitpack([b[0] for b in address])
+        command_num = bitpack_lsb(command, 0)
+        address_num = bitpack_lsb(address, 0)
         command_str = '0x{:02X}'.format(command_num)
         address_str = '0x{:02X}'.format(address_num)
         self.putg(command[0][1], command[-1][2], Ann.CMD, [
@@ -182,7 +182,7 @@ class Decoder(srd.Decoder):
         ])
         extended_num = None
         if extended:
-            extended_num = bitpack([b[0] for b in extended])
+            extended_num = bitpack_lsb(extended, 0)
             extended_str = '0x{:02X}'.format(extended_num)
             self.putg(extended[0][1], extended[-1][2], Ann.EXT, [
                 'Extended: {}'.format(extended_str),
