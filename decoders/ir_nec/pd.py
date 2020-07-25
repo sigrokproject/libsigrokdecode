@@ -17,8 +17,9 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-import sigrokdecode as srd
+from common.srdhelper import bitpack
 from .lists import *
+import sigrokdecode as srd
 
 class SamplerateError(Exception):
     pass
@@ -121,7 +122,7 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.state = 'IDLE'
         self.ss_bit = self.ss_start = self.ss_other_edge = self.ss_remote = 0
-        self.data = self.count = self.active = None
+        self.data = []
         self.addr = self.cmd = None
 
     def start(self):
@@ -151,26 +152,28 @@ class Decoder(srd.Decoder):
             ret = 1
         if ret in (0, 1):
             self.putb([Ann.BIT, ['{:d}'.format(ret)]])
-            self.data |= (ret << self.count) # LSB-first
-            self.count = self.count + 1
+            self.data.append(ret)
         self.ss_bit = self.samplenum
 
     def data_ok(self, check):
         name = self.state.title()
-        valid = ((self.data >> 8) ^ (self.data & 0xff)) == 0xff
-        if self.count == 8:
+        normal, inverted = bitpack(self.data[:8]), bitpack(self.data[8:])
+        valid = (normal ^ inverted) == 0xff
+        show = inverted if self.state.endswith('#') else normal
+        if len(self.data) == 8:
             if self.state == 'ADDRESS':
-                self.addr = self.data
+                self.addr = normal
             if self.state == 'COMMAND':
-                self.cmd = self.data
-            self.putd(self.data)
+                self.cmd = normal
+            self.putd(show)
             self.ss_start = self.samplenum
             return True
         if check and not valid:
-            self.putx([Ann.WARN, ['{} error: 0x{:04X}'.format(name, self.data)]])
+            warn_show = bitpack(self.data)
+            self.putx([Ann.WARN, ['{} error: 0x{:04X}'.format(name, warn_show)]])
         else:
-            self.putd(self.data >> 8)
-        self.data = self.count = 0
+            self.putd(show)
+        self.data = []
         self.ss_bit = self.ss_start = self.samplenum
         return valid
 
@@ -184,7 +187,7 @@ class Decoder(srd.Decoder):
             cd_count = int(self.samplerate / self.options['cd_freq']) + 1
         prev_ir = None
 
-        self.active = 0 if self.options['polarity'] == 'active-low' else 1
+        active = 0 if self.options['polarity'] == 'active-low' else 1
 
         while True:
             # Detect changes in the presence of an active input signal.
@@ -203,7 +206,7 @@ class Decoder(srd.Decoder):
             if cd_count:
                 (cur_ir,) = self.wait([{Pin.IR: 'e'}, {'skip': cd_count}])
                 if self.matched[0]:
-                    cur_ir = self.active
+                    cur_ir = active
                 if cur_ir == prev_ir:
                     continue
                 prev_ir = cur_ir
@@ -211,7 +214,7 @@ class Decoder(srd.Decoder):
             else:
                 (self.ir,) = self.wait({Pin.IR: 'e'})
 
-            if self.ir != self.active:
+            if self.ir != active:
                 # Save the non-active edge, then wait for the next edge.
                 self.ss_other_edge = self.samplenum
                 continue
@@ -224,32 +227,32 @@ class Decoder(srd.Decoder):
                     self.putpause('Long')
                     self.putx([Ann.LEADER_CODE, ['Leader code', 'Leader', 'LC', 'L']])
                     self.ss_remote = self.ss_start
-                    self.data = self.count = 0
+                    self.data = []
                     self.state = 'ADDRESS'
                 elif self.compare_with_tolerance(b, self.rc):
                     self.putpause('Short')
                     self.putstop(self.samplenum)
                     self.samplenum += self.stop
                     self.putx([Ann.REPEAT_CODE, ['Repeat code', 'Repeat', 'RC', 'R']])
-                    self.data = self.count = 0
+                    self.data = []
                 self.ss_bit = self.ss_start = self.samplenum
             elif self.state == 'ADDRESS':
                 self.handle_bit(b)
-                if self.count == 8:
+                if len(self.data) == 8:
                     self.data_ok(False)
                     self.state = 'ADDRESS#'
             elif self.state == 'ADDRESS#':
                 self.handle_bit(b)
-                if self.count == 16:
+                if len(self.data) == 16:
                     self.state = 'COMMAND' if self.data_ok(True) else 'IDLE'
             elif self.state == 'COMMAND':
                 self.handle_bit(b)
-                if self.count == 8:
+                if len(self.data) == 8:
                     self.data_ok(False)
                     self.state = 'COMMAND#'
             elif self.state == 'COMMAND#':
                 self.handle_bit(b)
-                if self.count == 16:
+                if len(self.data) == 16:
                     self.state = 'STOP' if self.data_ok(True) else 'IDLE'
             elif self.state == 'STOP':
                 self.putstop(self.ss_bit)
