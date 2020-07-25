@@ -107,11 +107,8 @@ class Decoder(srd.Decoder):
 
     def putremote(self):
         dev = address.get(self.addr, 'Unknown device')
-        buttons = command.get(self.addr, None)
-        if buttons is None:
-            btn = ['Unknown', 'Unk']
-        else:
-            btn = buttons.get(self.cmd, ['Unknown', 'Unk'])
+        buttons = command.get(self.addr, {})
+        btn = buttons.get(self.cmd, ['Unknown', 'Unk'])
         self.put(self.ss_remote, self.ss_bit + self.stop, self.out_ann, [Ann.REMOTE, [
             '{}: {}'.format(dev, btn[0]),
             '{}: {}'.format(dev, btn[1]),
@@ -158,8 +155,9 @@ class Decoder(srd.Decoder):
             self.count = self.count + 1
         self.ss_bit = self.samplenum
 
-    def data_ok(self):
-        ret, name = (self.data >> 8) & (self.data & 0xff), self.state.title()
+    def data_ok(self, check):
+        name = self.state.title()
+        valid = ((self.data >> 8) ^ (self.data & 0xff)) == 0xff
         if self.count == 8:
             if self.state == 'ADDRESS':
                 self.addr = self.data
@@ -168,13 +166,13 @@ class Decoder(srd.Decoder):
             self.putd(self.data)
             self.ss_start = self.samplenum
             return True
-        if ret == 0:
-            self.putd(self.data >> 8)
-        else:
+        if check and not valid:
             self.putx([Ann.WARN, ['{} error: 0x{:04X}'.format(name, self.data)]])
+        else:
+            self.putd(self.data >> 8)
         self.data = self.count = 0
         self.ss_bit = self.ss_start = self.samplenum
-        return ret == 0
+        return valid
 
     def decode(self):
         if not self.samplerate:
@@ -238,19 +236,21 @@ class Decoder(srd.Decoder):
             elif self.state == 'ADDRESS':
                 self.handle_bit(b)
                 if self.count == 8:
-                    self.state = 'ADDRESS#' if self.data_ok() else 'IDLE'
+                    self.data_ok(False)
+                    self.state = 'ADDRESS#'
             elif self.state == 'ADDRESS#':
                 self.handle_bit(b)
                 if self.count == 16:
-                    self.state = 'COMMAND' if self.data_ok() else 'IDLE'
+                    self.state = 'COMMAND' if self.data_ok(True) else 'IDLE'
             elif self.state == 'COMMAND':
                 self.handle_bit(b)
                 if self.count == 8:
-                    self.state = 'COMMAND#' if self.data_ok() else 'IDLE'
+                    self.data_ok(False)
+                    self.state = 'COMMAND#'
             elif self.state == 'COMMAND#':
                 self.handle_bit(b)
                 if self.count == 16:
-                    self.state = 'STOP' if self.data_ok() else 'IDLE'
+                    self.state = 'STOP' if self.data_ok(True) else 'IDLE'
             elif self.state == 'STOP':
                 self.putstop(self.ss_bit)
                 self.putremote()
