@@ -133,6 +133,8 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
+
+    def calc_rate(self):
         self.tolerance = 0.05 # +/-5%
         self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
         self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
@@ -177,6 +179,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+        self.calc_rate()
 
         cd_count = None
         if self.options['cd_freq']:
