@@ -40,6 +40,8 @@ class Decoder(srd.Decoder):
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
+        {'id': 'extended', 'desc': 'Extended Protocol', 'default': 'off',
+            'values': ('on', 'off')},
     )
     annotations = (
         ('bit', 'Bit'),
@@ -156,6 +158,13 @@ class Decoder(srd.Decoder):
         self.ss_bit = self.ss_start = self.samplenum
         return ret == 0
 
+    def address16(self):
+        self.addr = self.data
+        self.putd(self.data)
+        self.ss_start = self.samplenum
+        self.data = self.count = 0
+        self.ss_bit = self.ss_start = self.samplenum
+
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -216,8 +225,11 @@ class Decoder(srd.Decoder):
                 self.ss_bit = self.ss_start = self.samplenum
             elif self.state == 'ADDRESS':
                 self.handle_bit(b)
-                if self.count == 8:
+                if self.count == 8 and self.options['extended'] == 'off':
                     self.state = 'ADDRESS#' if self.data_ok() else 'IDLE'
+                elif self.count == 16 and self.options['extended'] == 'on':
+                    self.address16()
+                    self.state = 'COMMAND'
             elif self.state == 'ADDRESS#':
                 self.handle_bit(b)
                 if self.count == 16:
