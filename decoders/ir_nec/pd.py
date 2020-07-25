@@ -49,6 +49,8 @@ class Decoder(srd.Decoder):
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
+        {'id': 'extended', 'desc': 'Extended NEC Protocol',
+            'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
         ('bit', 'Bit'),
@@ -78,16 +80,17 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.put(self.ss_bit, self.samplenum, self.out_ann, data)
 
-    def putd(self, data):
+    def putd(self, data, bit_count):
         name = self.state.title()
         d = {'ADDRESS': Ann.ADDR, 'ADDRESS#': Ann.ADDR_INV,
              'COMMAND': Ann.CMD, 'COMMAND#': Ann.CMD_INV}
         s = {'ADDRESS': ['ADDR', 'A'], 'ADDRESS#': ['ADDR#', 'A#'],
              'COMMAND': ['CMD', 'C'], 'COMMAND#': ['CMD#', 'C#']}
+        fmt = '{{}}: 0x{{:0{}X}}'.format(bit_count // 4)
         self.putx([d[self.state], [
-            '{}: 0x{:02X}'.format(name, data),
-            '{}: 0x{:02X}'.format(s[self.state][0], data),
-            '{}: 0x{:02X}'.format(s[self.state][1], data),
+            fmt.format(name, data),
+            fmt.format(s[self.state][0], data),
+            fmt.format(s[self.state][1], data),
             s[self.state][1],
         ]])
 
@@ -155,24 +158,32 @@ class Decoder(srd.Decoder):
             self.data.append(ret)
         self.ss_bit = self.samplenum
 
-    def data_ok(self, check):
+    def data_ok(self, check, want_len):
         name = self.state.title()
         normal, inverted = bitpack(self.data[:8]), bitpack(self.data[8:])
         valid = (normal ^ inverted) == 0xff
         show = inverted if self.state.endswith('#') else normal
-        if len(self.data) == 8:
+        is_ext_addr = self.is_extended and self.state == 'ADDRESS'
+        if is_ext_addr:
+            normal = bitpack(self.data)
+            show = normal
+            valid = True
+        if len(self.data) == want_len:
             if self.state == 'ADDRESS':
                 self.addr = normal
             if self.state == 'COMMAND':
                 self.cmd = normal
-            self.putd(show)
+            self.putd(show, want_len)
             self.ss_start = self.samplenum
+            if is_ext_addr:
+                self.data = []
+                self.ss_bit = self.ss_start = self.samplenum
             return True
         if check and not valid:
             warn_show = bitpack(self.data)
             self.putx([Ann.WARN, ['{} error: 0x{:04X}'.format(name, warn_show)]])
         else:
-            self.putd(show)
+            self.putd(show, want_len)
         self.data = []
         self.ss_bit = self.ss_start = self.samplenum
         return valid
@@ -188,6 +199,8 @@ class Decoder(srd.Decoder):
         prev_ir = None
 
         active = 0 if self.options['polarity'] == 'active-low' else 1
+        self.is_extended = self.options['extended'] == 'yes'
+        want_addr_len = 16 if self.is_extended else 8
 
         while True:
             # Detect changes in the presence of an active input signal.
@@ -238,22 +251,22 @@ class Decoder(srd.Decoder):
                 self.ss_bit = self.ss_start = self.samplenum
             elif self.state == 'ADDRESS':
                 self.handle_bit(b)
-                if len(self.data) == 8:
-                    self.data_ok(False)
-                    self.state = 'ADDRESS#'
+                if len(self.data) == want_addr_len:
+                    self.data_ok(False, want_addr_len)
+                    self.state = 'COMMAND' if self.is_extended else 'ADDRESS#'
             elif self.state == 'ADDRESS#':
                 self.handle_bit(b)
                 if len(self.data) == 16:
-                    self.state = 'COMMAND' if self.data_ok(True) else 'IDLE'
+                    self.state = 'COMMAND' if self.data_ok(True, 8) else 'IDLE'
             elif self.state == 'COMMAND':
                 self.handle_bit(b)
                 if len(self.data) == 8:
-                    self.data_ok(False)
+                    self.data_ok(False, 8)
                     self.state = 'COMMAND#'
             elif self.state == 'COMMAND#':
                 self.handle_bit(b)
                 if len(self.data) == 16:
-                    self.state = 'STOP' if self.data_ok(True) else 'IDLE'
+                    self.state = 'STOP' if self.data_ok(True, 8) else 'IDLE'
             elif self.state == 'STOP':
                 self.putstop(self.ss_bit)
                 self.putremote()
