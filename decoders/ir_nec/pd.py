@@ -142,6 +142,7 @@ class Decoder(srd.Decoder):
         self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
         self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
         self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
+        self.idle_to = int(self.samplerate * 0.020) - 1 # 20ms, arbitrary choice
 
     def compare_with_tolerance(self, measured, base):
         return (measured >= base * (1 - self.tolerance)
@@ -179,11 +180,10 @@ class Decoder(srd.Decoder):
                 self.data = []
                 self.ss_bit = self.ss_start = self.samplenum
             return True
+        self.putd(show, want_len)
         if check and not valid:
             warn_show = bitpack(self.data)
             self.putx([Ann.WARN, ['{} error: 0x{:04X}'.format(name, warn_show)]])
-        else:
-            self.putd(show, want_len)
         self.data = []
         self.ss_bit = self.ss_start = self.samplenum
         return valid
@@ -232,17 +232,20 @@ class Decoder(srd.Decoder):
                 self.ss_other_edge = self.samplenum
                 continue
 
-            b = self.samplenum - self.ss_bit
+            # Reset internal state for long periods of idle level.
+            width = self.samplenum - self.ss_bit
+            if width >= self.idle_to and self.state != 'STOP':
+                self.reset()
 
             # State machine.
             if self.state == 'IDLE':
-                if self.compare_with_tolerance(b, self.lc):
+                if self.compare_with_tolerance(width, self.lc):
                     self.putpause('Long')
                     self.putx([Ann.LEADER_CODE, ['Leader code', 'Leader', 'LC', 'L']])
                     self.ss_remote = self.ss_start
                     self.data = []
                     self.state = 'ADDRESS'
-                elif self.compare_with_tolerance(b, self.rc):
+                elif self.compare_with_tolerance(width, self.rc):
                     self.putpause('Short')
                     self.putstop(self.samplenum)
                     self.samplenum += self.stop
@@ -250,23 +253,25 @@ class Decoder(srd.Decoder):
                     self.data = []
                 self.ss_bit = self.ss_start = self.samplenum
             elif self.state == 'ADDRESS':
-                self.handle_bit(b)
+                self.handle_bit(width)
                 if len(self.data) == want_addr_len:
                     self.data_ok(False, want_addr_len)
                     self.state = 'COMMAND' if self.is_extended else 'ADDRESS#'
             elif self.state == 'ADDRESS#':
-                self.handle_bit(b)
+                self.handle_bit(width)
                 if len(self.data) == 16:
-                    self.state = 'COMMAND' if self.data_ok(True, 8) else 'IDLE'
+                    self.data_ok(True, 8)
+                    self.state = 'COMMAND'
             elif self.state == 'COMMAND':
-                self.handle_bit(b)
+                self.handle_bit(width)
                 if len(self.data) == 8:
                     self.data_ok(False, 8)
                     self.state = 'COMMAND#'
             elif self.state == 'COMMAND#':
-                self.handle_bit(b)
+                self.handle_bit(width)
                 if len(self.data) == 16:
-                    self.state = 'STOP' if self.data_ok(True, 8) else 'IDLE'
+                    self.data_ok(True, 8)
+                    self.state = 'STOP'
             elif self.state == 'STOP':
                 self.putstop(self.ss_bit)
                 self.putremote()
