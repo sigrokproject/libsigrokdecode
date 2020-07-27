@@ -19,6 +19,9 @@
 
 import sigrokdecode as srd
 
+class Pin:
+    RST, CLK, IO, = range(3)
+
 # CMD: [annotation-type-index, long annotation, short annotation]
 proto = {
     'RESET':           [0, 'Reset',         'R'],
@@ -140,12 +143,24 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         while True:
-            pins = self.wait([{0: 'r'}, {0: 'l', 1: 'r'}, {1: 'h', 2: 'f'}, {1: 'h', 2: 'r'}])
-            if self.matched[0]: # RESET condition (R): RST = rising
+            # Signal conditions tracked by the protocol decoder:
+            # - RESET condition (R): RST = rising
+            # - Incoming data (D): RST = low, CLK = rising.
+            # - Command mode START: CLK = high, I/O = falling.
+            # - Command mode STOP: CLK = high, I/O = rising.
+            (COND_RESET, COND_DATA, COND_CMD_START, COND_CMD_STOP,) = range(4)
+            conditions = [
+                {Pin.RST: 'r'},
+                {Pin.RST: 'l', Pin.CLK: 'r'},
+                {Pin.CLK: 'h', Pin.IO: 'f'},
+                {Pin.CLK: 'h', Pin.IO: 'r'},
+            ]
+            pins = self.wait(conditions)
+            if self.matched[COND_RESET]:
                 self.handle_reset(pins)
-            elif self.matched[1]: # Incoming data (D): RST = low, CLK = rising.
+            elif self.matched[COND_DATA]:
                 self.handle_data(pins)
-            elif self.matched[2]: # Command mode START: CLK = high, I/O = falling.
+            elif self.matched[COND_CMD_START]:
                 self.handle_command(pins)
-            elif self.matched[3]: # Command mode STOP: CLK = high, I/O = rising.
+            elif self.matched[COND_CMD_STOP]:
                 self.handle_command(pins)
