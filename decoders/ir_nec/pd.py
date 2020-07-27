@@ -48,6 +48,7 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('active-low', 'active-high')},
+        {'id': 'tolerance', 'desc': 'Timing tolerance (%)', 'default': 5},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -136,7 +137,7 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def calc_rate(self):
-        self.tolerance = 0.05 # +/-5%
+        self.tolerance = self.options['tolerance'] / 100 # 5% by default
         self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
         self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
         self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
