@@ -230,7 +230,9 @@ class Decoder(srd.Decoder):
             if self.ir != active:
                 # Save the non-active edge, then wait for the next edge.
                 self.ss_other_edge = self.samplenum
-                continue
+                # use non-active edge to also capture the last data package
+                if self.state != 'STOP':
+                    continue
 
             # Reset internal state for long periods of idle level.
             width = self.samplenum - self.ss_bit
