@@ -18,8 +18,9 @@
 ##
 
 '''
-SLE 4418/28/32/42 implement a 2-wire protocol (CLK and I/O) for comunication
-along the RST signal which is used to abort unnecessarily long memory reads.
+SLE 4418/28/32/42 memory cards implement a 2-wire protocol (CLK and I/O)
+for data communication, along with the RST signal which resets the card's
+internal state, and can terminate currently executing long memory reads.
 '''
 
 from .pd import Decoder

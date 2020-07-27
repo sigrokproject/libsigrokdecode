@@ -47,7 +47,7 @@ class Decoder(srd.Decoder):
     api_version = 3
     id = 'sle44xx'
     name = 'SLE 44xx'
-    longname = 'SLE44xx protocol'
+    longname = 'SLE44xx memory card'
     desc = 'SLE 4418/28/32/42 memory card serial protocol'
     license = 'gplv2+'
     inputs = ['logic']
