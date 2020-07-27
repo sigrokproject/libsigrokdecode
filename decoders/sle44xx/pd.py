@@ -19,22 +19,6 @@
 
 import sigrokdecode as srd
 
-'''
-OUTPUT_PYTHON format:
-
-Packet:
-[<ptype>, <pdata>]
-
-<ptype>:
- - 'RESET'  (Reset/Abort condition)
- - 'ATR'    (ATR data from card)
- - 'CMD'    (Command from reader)
- - 'DATA'   (Data from card)
-
-<pdata> is the data to/from the card
-For 'RESET' <pdata> is None.
-'''
-
 # CMD: [annotation-type-index, long annotation, short annotation]
 proto = {
     'RESET':           [0, 'Reset',         'R'],
@@ -51,7 +35,7 @@ class Decoder(srd.Decoder):
     desc = 'SLE 4418/28/32/42 memory card serial protocol'
     license = 'gplv2+'
     inputs = ['logic']
-    outputs = ['sle44xx']
+    outputs = []
     tags = ['Memory']
     channels = (
         {'id': 'rst', 'name': 'RST', 'desc': 'Reset line'},
@@ -89,15 +73,11 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def start(self):
-        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
-
-    def putp(self, data):
-        self.put(self.ss, self.es, self.out_python, data)
 
     def putb(self, data):
         self.put(self.ss, self.es, self.out_binary, data)
@@ -105,7 +85,6 @@ class Decoder(srd.Decoder):
     def handle_reset(self, pins):
         self.ss, self.es = self.samplenum, self.samplenum
         cmd = 'RESET' # No need to set the global self.cmd as this command is atomic
-        self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
         self.bitcount = self.databyte = 0
         self.bits = []
