@@ -22,12 +22,18 @@ import sigrokdecode as srd
 class Pin:
     RST, CLK, IO, = range(3)
 
-# CMD: [annotation-type-index, long annotation, short annotation]
+class Ann:
+    BIT, ATR, CMD, DATA, RESET, = range(5)
+
+class Bin:
+    SEND_DATA, = range(1)
+
+# CMD: [annotation class index, long annotation, short annotation]
 proto = {
-    'RESET':           [0, 'Reset',         'R'],
-    'ATR':             [1, 'ATR',           'ATR'],
-    'CMD':             [2, 'Command',       'C'],
-    'DATA':            [3, 'Data',          'D'],
+    'ATR':   [Ann.ATR,   'ATR',     'ATR'],
+    'CMD':   [Ann.CMD,   'Command', 'C'],
+    'DATA':  [Ann.DATA,  'Data',    'D'],
+    'RESET': [Ann.RESET, 'Reset',   'R'],
 }
 
 class Decoder(srd.Decoder):
@@ -46,16 +52,16 @@ class Decoder(srd.Decoder):
         {'id': 'io', 'name': 'I/O', 'desc': 'I/O data line'},
     )
     annotations = (
-        ('reset', 'Reset'),
+        ('bit', 'Bit'),
         ('atr', 'ATR'),
         ('cmd', 'Command'),
         ('data', 'Data exchange'),
-        ('bit', 'Bit'),
+        ('reset', 'Reset'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (4,)),
-        ('fields', 'Fields', (1, 2, 3)),
-        ('interrupts', 'Interrupts', (0,)),
+        ('bits', 'Bits', (Ann.BIT,)),
+        ('fields', 'Fields', (Ann.ATR, Ann.CMD, Ann.DATA)),
+        ('interrupts', 'Interrupts', (Ann.RESET,)),
     )
     binary = (
         ('send-data', 'Send data'),
@@ -129,10 +135,10 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
 
-        self.putb([0, bytes([self.databyte])])
+        self.putb([Bin.SEND_DATA, bytes([self.databyte])])
 
         for bit in self.bits:
-            self.put(bit[1], bit[2], self.out_ann, [4, ['%d' % bit[0]]])
+            self.put(bit[1], bit[2], self.out_ann, [Ann.BIT, ['%d' % bit[0]]])
 
         self.putx([proto[self.cmd][0], ['%s: %02X' % (proto[self.cmd][1], self.databyte),
                    '%s: %02X' % (proto[self.cmd][2], self.databyte), '%02X' % self.databyte]])
