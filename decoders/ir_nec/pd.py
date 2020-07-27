@@ -46,8 +46,8 @@ class Decoder(srd.Decoder):
         {'id': 'ir', 'name': 'IR', 'desc': 'Data line'},
     )
     options = (
-        {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
-            'values': ('active-low', 'active-high')},
+        {'id': 'polarity', 'desc': 'Polarity', 'default': 'auto',
+            'values': ('auto', 'active-low', 'active-high')},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -198,7 +198,10 @@ class Decoder(srd.Decoder):
             cd_count = int(self.samplerate / self.options['cd_freq']) + 1
         prev_ir = None
 
-        active = 0 if self.options['polarity'] == 'active-low' else 1
+        if self.options['polarity'] == 'auto':
+            active = 1 - self.wait({'skip': 0})[0]     # take sample 0 as reference
+        else:
+            active = 0 if self.options['polarity'] == 'active-low' else 1
         self.is_extended = self.options['extended'] == 'yes'
         want_addr_len = 16 if self.is_extended else 8
 
