@@ -228,9 +228,12 @@ class Decoder(srd.Decoder):
                 (self.ir,) = self.wait({Pin.IR: 'e'})
 
             if self.ir != active:
-                # Save the non-active edge, then wait for the next edge.
+                # Save the location of the non-active edge (recessive),
+                # then wait for the next edge. Immediately process the
+                # end of the STOP bit which completes an IR frame.
                 self.ss_other_edge = self.samplenum
-                continue
+                if self.state != 'STOP':
+                    continue
 
             # Reset internal state for long periods of idle level.
             width = self.samplenum - self.ss_bit
