@@ -28,13 +28,22 @@ class Ann:
 class Bin:
     SEND_DATA, = range(1)
 
-# CMD: [annotation class index, long annotation, short annotation]
+# CMD: [annotation class index, annotation texts for zoom levels]
 proto = {
-    'ATR':   [Ann.ATR,   'ATR',     'ATR'],
-    'CMD':   [Ann.CMD,   'Command', 'C'],
-    'DATA':  [Ann.DATA,  'Data',    'D'],
-    'RESET': [Ann.RESET, 'Reset',   'R'],
+    'BIT':   [Ann.BIT,   '{bit}',],
+    'ATR':   [Ann.ATR,   'Answer To Reset: {data:02x}', 'ATR: {data:02x}', '{data:02x}',],
+    'CMD':   [Ann.CMD,   'Command: {data:02x}', 'Cmd: {data:02x}', '{data:02x}',],
+    'DATA':  [Ann.DATA,  'Data: {data:02x}', '{data:02x}',],
+    'RESET': [Ann.RESET, 'Reset', 'R',],
 }
+
+def lookup_proto_ann_txt(cmd, variables):
+    ann = proto.get(cmd, None)
+    if ann is None:
+        return None, []
+    cls, texts = ann[0], ann[1:]
+    texts = [t.format(**variables) for t in texts]
+    return cls, texts
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -93,8 +102,9 @@ class Decoder(srd.Decoder):
 
     def handle_reset(self, pins):
         self.ss, self.es = self.samplenum, self.samplenum
-        cmd = 'RESET' # No need to set the global self.cmd as this command is atomic
-        self.putx([proto[cmd][0], proto[cmd][1:]])
+        self.cmd = 'RESET'
+        cls, texts = lookup_proto_ann_txt(self.cmd, {})
+        self.putx([cls, texts])
         self.bitcount = self.databyte = 0
         self.bits = []
         self.cmd = 'ATR' # Next data bytes will be ATR
@@ -137,11 +147,12 @@ class Decoder(srd.Decoder):
 
         self.putb([Bin.SEND_DATA, bytes([self.databyte])])
 
-        for bit in self.bits:
-            self.put(bit[1], bit[2], self.out_ann, [Ann.BIT, ['%d' % bit[0]]])
+        for bit_val, bit_ss, bit_es in self.bits:
+            cls, texts = lookup_proto_ann_txt('BIT', {'bit': bit_val})
+            self.put(bit_ss, bit_es, self.out_ann, [cls, texts])
 
-        self.putx([proto[self.cmd][0], ['%s: %02X' % (proto[self.cmd][1], self.databyte),
-                   '%s: %02X' % (proto[self.cmd][2], self.databyte), '%02X' % self.databyte]])
+        cls, texts = lookup_proto_ann_txt(self.cmd, {'data': self.databyte})
+        self.putx([cls, texts])
 
         # Done with this packet.
         self.bitcount = self.databyte = 0
