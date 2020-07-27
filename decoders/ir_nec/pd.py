@@ -48,6 +48,7 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'auto',
             'values': ('auto', 'active-low', 'active-high')},
+        {'id': 'tolerance', 'desc': 'Timing tolerance (%)', 'default': 5},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -204,6 +205,8 @@ class Decoder(srd.Decoder):
             active = 0 if self.options['polarity'] == 'active-low' else 1
         self.is_extended = self.options['extended'] == 'yes'
         want_addr_len = 16 if self.is_extended else 8
+
+        self.tolerance = self.options['tolerance'] * 0.01	# configurable tolerance
 
         while True:
             # Detect changes in the presence of an active input signal.
