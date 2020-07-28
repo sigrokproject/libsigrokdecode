@@ -28,7 +28,8 @@ As with most differential signals, it's sufficient to measure TXP or RXP, no
 need for a differential probe. The REFCLK used by the hardware isn't needed by
 this protocol decoder either.
 
-For details see https://www.nxp.com/docs/en/application-note/AN5134.pdf
+For details see https://www.nxp.com/docs/en/application-note/AN5134.pdf and
+https://hitex.co.uk/fileadmin/uk-files/downloads/ShieldBuddy/tc27xD_um_v2.2.pdf
 '''
 
 from .pd import Decoder

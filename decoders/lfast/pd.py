@@ -28,8 +28,72 @@ OUTPUT_PYTHON format:
 the LFAST stop bit. It's an array of bytes. 
 '''
 
-ann_bit, ann_sync, ann_header, ann_payload, ann_stopbit, ann_warning = range(6)
-state_sync, state_header, state_payload, state_stopbit = range(4)
+# See tc27xD_um_v2.2.pdf, Table 20-10
+payload_sizes = {
+    0b000: '8 bit',
+    0b001: '32 bit',
+    0b010: '64 bit',
+    0b011: '96 bit',
+    0b100: '128 bit',
+    0b101: '256 bit',
+    0b110: '512 bit',
+    0b111: '288 bit'
+}
+
+# See tc27xD_um_v2.2.pdf, Table 20-10
+payload_byte_sizes = {
+    0b000: 1,
+    0b001: 4,
+    0b010: 8,
+    0b011: 12,
+    0b100: 16,
+    0b101: 32,
+    0b110: 64,
+    0b111: 36
+}
+
+# See tc27xD_um_v2.2.pdf, Table 20-11
+channel_types = {
+    0b0000: 'Interface Control / PING (32 bit)',
+    0b0001: 'Unsolicited Status (32 bit)',
+    0b0010: 'Slave Interface Control / Read',
+    0b0011: 'CTS Transfer',
+    0b0100: 'Data Channel A',
+    0b0101: 'Data Channel B',
+    0b0110: 'Data Channel C',
+    0b0111: 'Data Channel D',
+    0b1000: 'Data Channel E',
+    0b1001: 'Data Channel F',
+    0b1010: 'Data Channel G',
+    0b1011: 'Data Channel H',
+    0b1100: 'Reserved',
+    0b1101: 'Reserved',
+    0b1110: 'Reserved',
+    0b1111: 'Reserved',
+}
+
+# See tc27xD_um_v2.2.pdf, Table 20-12
+control_payloads = {
+    0x00: 'PING',
+    0x01: 'Reserved',
+    0x02: 'Slave interface clock multiplier start',
+    0x04: 'Slave interface clock multiplier stop',
+    0x08: 'Use 5 MBaud for M->S',
+    0x10: 'Use 320 MBaud for M->S',
+    0x20: 'Use 5 MBaud for S->M',
+    0x40: 'Use 20 MBaud for S->M (needs 20 MHz SysClk)',
+    0x80: 'Use 320 MBaud for S->M',
+    0x31: 'Enable slave interface transmitter',
+    0x32: 'Disable slave interface transmitter',
+    0x34: 'Enable clock test mode',
+    0x38: 'Disable clock test mode and payload loopback',
+    0xFF: 'Enable payload loopback',
+}
+
+
+ann_bit, ann_sync, ann_header_pl_size, ann_header_ch_type, ann_header_cts, \
+    ann_payload, ann_control_data, ann_sleepbit, ann_warning = range(9)
+state_sync, state_header, state_payload, state_sleepbit = range(4)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -47,14 +111,18 @@ class Decoder(srd.Decoder):
     annotations = (
         ('bit', 'Bits'),
         ('sync', 'Sync Pattern'),
-        ('header', 'Header'),
+        ('header_pl_size', 'Payload Size'),
+        ('header_ch_type', 'Logical Channel Type'),
+        ('header_cts', 'Clear To Send'),
         ('payload', 'Payload'),
-        ('stop', 'Stop Bit'),
+        ('ctrl_data', 'Control Data'),
+        ('sleep', 'Sleep Bit'),
         ('warning', 'Warning'),
     )
     annotation_rows = (
         ('bits', 'Bits', (ann_bit,)),
-        ('fields', 'Fields', (ann_sync, ann_header, ann_payload, ann_stopbit,)),
+        ('fields', 'Fields', (ann_sync, ann_header_pl_size, ann_header_ch_type,
+            ann_header_cts, ann_payload, ann_control_data, ann_sleepbit,)),
         ('warnings', 'Warnings', (ann_warning,)),
     )
 
@@ -67,8 +135,10 @@ class Decoder(srd.Decoder):
         self.ss_payload = self.es_payload = 0
         self.bits = []
         self.payload = []
-        self.bit_len = 0
-        self.timeout = 0
+        self.payload_size = 0  # Expected number of bytes, as read from header
+        self.bit_len = 0       # Length of one bit time, in samples
+        self.timeout = 0       # desired timeout for next edge, in samples
+        self.ch_type_id = 0    # ID of channel type
         self.state = state_sync
 
     def metadata(self, key, value):
@@ -93,7 +163,7 @@ class Decoder(srd.Decoder):
             if value == 0xA84B:
                 self.put_ann(self.ss_sync, self.es_bit, ann_sync, ['Sync OK'])
             else:
-                self.put_ann(self.ss_sync, self.es_bit, ann_warning, ['Wrong Sync Value: {:2X}'.format(value)])
+                self.put_ann(self.ss_sync, self.es_bit, ann_warning, ['Wrong Sync Value: {:02X}'.format(value)])
 
             self.bits = []
             self.state = state_header
@@ -103,17 +173,32 @@ class Decoder(srd.Decoder):
             self.ss_header = self.ss_bit
 
         if len(self.bits) == 8:
+            # See tc27xD_um_v2.2.pdf, Figure 20-47, for the header structure
+            bit_len = (self.es_bit - self.ss_header) / 8
             value = bitpack(self.bits)
-            self.put_ann(self.ss_header, self.es_bit, ann_header, ['{:2X}'.format(value)])
+
+            ss = self.ss_header
+            es = ss + 3 * bit_len 
+            size_id = (value & 0xE0) >> 5
+            size = payload_sizes.get(size_id)
+            self.payload_size = payload_byte_sizes.get(size_id) 
+            self.put_ann(int(ss), int(es), ann_header_pl_size, [size])
+
+            ss = es
+            es = ss + 4 * bit_len 
+            self.ch_type_id = (value & 0x1E) >> 1
+            ch_type = channel_types.get(self.ch_type_id)
+            self.put_ann(int(ss), int(es), ann_header_ch_type, [ch_type])
+
+            ss = es
+            es = ss + bit_len 
+            cts = value & 0x01 
+            self.put_ann(int(ss), int(es), ann_header_cts, ['{}'.format(cts)])
+
             self.bits = []
             self.state = state_payload
 
     def handle_payload(self):
-        # 8 bit times without state change are possible (8 low bits) but when
-        # there are 9 bit times without state change, we should have seen the
-        # stop bit - and only the stop bit
-        self.timeout = int(9 * self.bit_len)
-
         if len(self.bits) == 1:
             self.ss_byte = self.ss_bit
             if self.ss_payload == 0:
@@ -121,29 +206,49 @@ class Decoder(srd.Decoder):
 
         if len(self.bits) == 8:
             value = bitpack(self.bits)
-            self.put_ann(self.ss_byte, self.es_bit, ann_payload, ['{:2X}'.format(value)])
+            value_hex = '{:02X}'.format(value)
+            
+            # Control transfers have no SIPI payload, show them as control transfers
+            # Check the channel_types list for the meaning of the magic values 
+            if (self.ch_type_id >= 0b0100) and (self.ch_type_id <= 0b1011):
+                self.put_ann(self.ss_byte, self.es_bit, ann_payload, [value_hex])
+            else:
+                # Control transfers are 8-bit transfers, so only evaluate the first byte
+                if len(self.payload) == 0:
+                    ctrl_data = control_payloads.get(value, value_hex)
+                    self.put_ann(self.ss_byte, self.es_bit, ann_control_data, [ctrl_data])
+                else:
+                    self.put_ann(self.ss_byte, self.es_bit, ann_control_data, [value_hex])
+
             self.bits = []
             self.payload.append(value)
             self.es_payload = self.es_bit
-
-    def handle_stopbit(self):
-        if len(self.bits) > 1:
-            self.put_ann(self.ss_bit, self.es_bit, ann_warning, ['Expected only the stop bit, got {} bits'.format(len(self.bits))])
-        else:
-            if self.bits[0] == 1: 
-                self.put_ann(self.ss_bit, self.es_bit, ann_stopbit, ['Stop Bit', 'Stop', 'S'])
-            else:
-                self.put_ann(self.ss_bit, self.es_bit, ann_warning, ['Stop Bit must be 1', 'Stop not 1', 'S'])
-
-        # We send the payload out regardless of the stop bit's status so that
-        # any intermediate results can be decoded by a stacked decoder
-        self.put_payload()
-        self.payload = []
-        self.ss_payload = 0
+            
+        self.timeout = int((self.payload_size - len(self.payload)) * 8 * self.bit_len)
         
-        self.timeout = 0
-        self.bits = []
-        self.state = state_sync
+        if (len(self.payload) == self.payload_size):
+            self.timeout = int(1.4 * self.bit_len)
+            self.bits = []
+            self.state = state_sleepbit
+
+    def handle_sleepbit(self):
+        if len(self.bits) == 0:
+            self.put_ann(self.ss_bit, self.es_bit, ann_sleepbit, ['No LVDS sleep mode request', 'No sleep', 'N'])
+        elif len(self.bits) > 1:
+            self.put_ann(self.ss_bit, self.es_bit, ann_warning, ['Expected only the sleep bit, got {} bits instead'.format(len(self.bits))])
+        else:
+            if self.bits[0] == 1:
+                self.put_ann(self.ss_bit, self.es_bit, ann_sleepbit, ['LVDS sleep mode request', 'Sleep', 'Y'])
+            else:
+                self.put_ann(self.ss_bit, self.es_bit, ann_sleepbit, ['No LVDS sleep mode request', 'No sleep', 'N'])
+
+        # We only send the payload out if this is an actual data transfer;
+        # check the channel_types list for the meaning of the magic values 
+        if (self.ch_type_id >= 0b0100) and (self.ch_type_id <= 0b1011):
+            if len(self.payload) > 0:
+                self.put_payload()
+
+        self.reset()
 
     def decode(self):
         while True:
@@ -152,17 +257,21 @@ class Decoder(srd.Decoder):
             else:
                 rising_edge, = self.wait([{0: 'e'}, {'skip': self.timeout}])
 
-            # If this is the first bit, we only update ss
+            # If this is the first edge, we only update ss
             if self.ss == 0:
                 self.ss = self.samplenum
                 continue
-        
+            
             self.es = self.samplenum
 
-            # Check for the stop bit if this is a timeout condition
-            if (self.timeout > 0) and (self.es - self.ss >= self.timeout):
-                self.handle_stopbit()
-                continue
+            if int(self.es - self.ss) == 0:
+                continue 
+            
+            # Check for the sleep bit if this is a timeout condition
+            if (self.timeout > 0) and (self.es - self.ss == self.timeout):
+                rising_edge = ~rising_edge
+                if self.state == state_sleepbit:
+                    self.handle_sleepbit()
 
             # We use the first bit to deduce the bit length
             if self.bit_len == 0:
@@ -171,7 +280,12 @@ class Decoder(srd.Decoder):
             # Determine number of bits covered by this edge
             bit_count = (self.es - self.ss) / self.bit_len
             bit_count = int(decimal.Decimal(bit_count).to_integral_value())
-
+            
+            if bit_count == 0:
+                self.put_ann(self.ss, self.es, ann_warning, ['Bit time too short'])
+                self.reset()
+                continue
+            
             bit_value = '0' if rising_edge else '1'
 
             divided_len = (self.es - self.ss) / bit_count
@@ -189,5 +303,10 @@ class Decoder(srd.Decoder):
                     self.handle_header()
                 elif self.state == state_payload:
                     self.handle_payload()
+                elif self.state == state_sleepbit:
+                    self.handle_sleepbit()
+                    break
 
-            self.ss = self.samplenum
+            # Only update ss if we didn't just perform a reset
+            if self.ss > 0:
+                self.ss = self.samplenum
