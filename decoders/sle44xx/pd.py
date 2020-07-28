@@ -83,7 +83,7 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.ss = self.es = self.ss_byte = -1
         self.bits = []
-        self.cmd = 'RESET'
+        self.cmd = None
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -153,7 +153,8 @@ class Decoder(srd.Decoder):
             self.put(bit_ss, bit_es, self.out_ann, [cls, texts])
 
         cls, texts = lookup_proto_ann_txt(self.cmd, {'data': databyte})
-        self.putx([cls, texts])
+        if cls:
+            self.putx([cls, texts])
 
         # Done with this packet.
         self.bits = []
