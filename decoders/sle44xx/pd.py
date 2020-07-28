@@ -78,6 +78,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
+        self.samplerate = None
         self.bits = []
         self.atr_bytes = []
         self.cmd_bytes = []
@@ -100,6 +101,13 @@ class Decoder(srd.Decoder):
 
     def putb(self, ss, es, cls , data):
         self.put(ss, es, self.out_binary, [cls, data,])
+
+    def snums_to_usecs(self, snum_count):
+        if not self.samplerate:
+            return None
+        snums_per_usec = self.samplerate / 1e6
+        usecs = snum_count / snums_per_usec
+        return usecs
 
     def lookup_proto_ann_txt(self, key, variables):
         ann = {
@@ -200,6 +208,10 @@ class Decoder(srd.Decoder):
             clk = self.proc_state['clk']
             high = self.proc_state['io1']
             text = '{clk} clocks, I/O {high}'.format(clk = clk, high = int(high))
+            usecs = self.snums_to_usecs(es - ss)
+            if usecs:
+                msecs = usecs / 1000
+                text = '{msecs:.2f} ms, {text}'.format(msecs = msecs, text = text)
             cls, texts = self.lookup_proto_ann_txt(key, {'data': text})
             self.putx(ss, es, cls, texts)
 
