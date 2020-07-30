@@ -51,16 +51,15 @@ command_codes = {
 }
 
 
-
 ann_header_tag, ann_header_cmd, ann_header_ch, ann_address, ann_data, \
     ann_crc, ann_warning = range(7)
 
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'sipi'
-    name = 'SIPI (ZipWire)'
+    name = 'SIPI (Zipwire)'
     longname = 'NXP SIPI interface'
-    desc = 'Serial Inter-Processor Interface (SIPI) aka ZipWire, aka HSSL'
+    desc = 'Serial Inter-Processor Interface (SIPI) aka Zipwire, aka HSSL'
     license = 'gplv2+'
     inputs = ['lfast']
     outputs = []

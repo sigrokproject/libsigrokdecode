@@ -19,7 +19,7 @@
 
 '''
 The Serial Inter-Processor Interface (SIPI) is a higher-level protocol that runs
-over the LFAST physical interface. Together, they form the NXP ZipWire interface.
+over the LFAST physical interface. Together, they form the NXP Zipwire interface.
 
 The SIPI interface is also provided by Infineon as HSST, using HSCT for transport.
 

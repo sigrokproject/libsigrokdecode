@@ -18,7 +18,7 @@
 ##
 
 '''
-LFAST is a physical communication interface used mainly by the NXP ZipWire
+LFAST is a physical communication interface used mainly by the NXP Zipwire
 interface. It's a framed asynchronous serial interface using differential
 TX/RX pairs, capable of data rates of up to 320 MBit/s.
 
