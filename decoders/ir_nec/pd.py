@@ -23,14 +23,16 @@ import sigrokdecode as srd
 
 # Concentrate all timing constraints of the IR protocol here in a single
 # location at the top of the source, to raise awareness and to simplify
-# review and adjustment.
-_TIME_TOL  =  5 # tolerance, in percent
-_TIME_LC   = 13.5 # leader code, in ms
-_TIME_RC   = 11.25 # repeat code, in ms
+# review and adjustment. The tolerance is an arbitrary choice, available
+# literature does not mention any. The inter-frame timeout is not a part
+# of the protocol, but an implementation detail of this sigrok decoder.
+_TIME_TOL  =  8     # tolerance, in percent
+_TIME_IDLE = 20.0   # inter-frame timeout, in ms
+_TIME_LC   = 13.5   # leader code, in ms
+_TIME_RC   = 11.25  # repeat code, in ms
+_TIME_ONE  =  2.25  # one data bit, in ms
 _TIME_ZERO =  1.125 # zero data bit, in ms
-_TIME_ONE  =  2.25 # one data bit, in ms
 _TIME_STOP =  0.652 # stop bit, in ms
-_TIME_IDLE = 20.0 # inter frame timeout, in ms, arbitrary choice
 
 class SamplerateError(Exception):
     pass
@@ -59,7 +61,6 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('auto', 'active-low', 'active-high')},
-        {'id': 'tolerance', 'desc': 'Timing tolerance (%)', 'default': _TIME_TOL},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -148,7 +149,7 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def calc_rate(self):
-        self.tolerance = self.options['tolerance'] / 100
+        self.tolerance = _TIME_TOL / 100
         self.lc = int(self.samplerate * _TIME_LC / 1000) - 1
         self.rc = int(self.samplerate * _TIME_RC / 1000) - 1
         self.dazero = int(self.samplerate * _TIME_ZERO / 1000) - 1
