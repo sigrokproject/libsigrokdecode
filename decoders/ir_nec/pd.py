@@ -21,6 +21,17 @@ from common.srdhelper import bitpack
 from .lists import *
 import sigrokdecode as srd
 
+# Concentrate all timing constraints of the IR protocol here in a single
+# location at the top of the source, to raise awareness and to simplify
+# review and adjustment.
+_TIME_TOL  =  5 # tolerance, in percent
+_TIME_LC   = 13.5 # leader code, in ms
+_TIME_RC   = 11.25 # repeat code, in ms
+_TIME_ZERO =  1.125 # zero data bit, in ms
+_TIME_ONE  =  2.25 # one data bit, in ms
+_TIME_STOP =  0.652 # stop bit, in ms
+_TIME_IDLE = 20.0 # inter frame timeout, in ms, arbitrary choice
+
 class SamplerateError(Exception):
     pass
 
@@ -48,7 +59,7 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
             'values': ('auto', 'active-low', 'active-high')},
-        {'id': 'tolerance', 'desc': 'Timing tolerance (%)', 'default': 5},
+        {'id': 'tolerance', 'desc': 'Timing tolerance (%)', 'default': _TIME_TOL},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -137,13 +148,13 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def calc_rate(self):
-        self.tolerance = self.options['tolerance'] / 100 # 5% by default
-        self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
-        self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
-        self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
-        self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
-        self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
-        self.idle_to = int(self.samplerate * 0.020) - 1 # 20ms, arbitrary choice
+        self.tolerance = self.options['tolerance'] / 100
+        self.lc = int(self.samplerate * _TIME_LC / 1000) - 1
+        self.rc = int(self.samplerate * _TIME_RC / 1000) - 1
+        self.dazero = int(self.samplerate * _TIME_ZERO / 1000) - 1
+        self.daone = int(self.samplerate * _TIME_ONE / 1000) - 1
+        self.stop = int(self.samplerate * _TIME_STOP / 1000) - 1
+        self.idle_to = int(self.samplerate * _TIME_IDLE / 1000) - 1
 
     def compare_with_tolerance(self, measured, base):
         return (measured >= base * (1 - self.tolerance)
