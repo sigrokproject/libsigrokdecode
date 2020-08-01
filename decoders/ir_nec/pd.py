@@ -32,7 +32,7 @@ _TIME_LC   = 13.5   # leader code, in ms
 _TIME_RC   = 11.25  # repeat code, in ms
 _TIME_ONE  =  2.25  # one data bit, in ms
 _TIME_ZERO =  1.125 # zero data bit, in ms
-_TIME_STOP =  0.652 # stop bit, in ms
+_TIME_STOP =  0.562 # stop bit, in ms
 
 class SamplerateError(Exception):
     pass
