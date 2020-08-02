@@ -49,7 +49,6 @@ class Decoder(srd.Decoder):
         ('dev', 'Device'),
     )
     annotation_rows = (
-        ('bits', 'Bits', ()),
         ('commands', 'Commands', (Ann.PE, Ann.RSB0, Ann.RSB1, Ann.RSB2,
             Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,)),
         ('warnings', 'Warnings', (Ann.WARN,)),
@@ -182,7 +181,7 @@ class Decoder(srd.Decoder):
         else:
             c = '%02x %02x %02x %02x' % tuple(cmd)
             r = '%02x %02x %02x %02x' % tuple(ret)
-            self.putx([Ann.PE, ['Unknown command: %s (reply: %s)!' % (c, r)]])
+            self.putx([Ann.WARN, ['Unknown command: %s (reply: %s)!' % (c, r)]])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
