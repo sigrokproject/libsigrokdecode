@@ -22,7 +22,7 @@ from .parts import *
 
 class Ann:
     PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, \
-    WARN, DEV, = range(10)
+    RLB, REEM, RP, LPMP, WP, WARN, DEV, = range(15)
 
 VENDOR_CODE_ATMEL = 0x1e
 
@@ -45,12 +45,18 @@ class Decoder(srd.Decoder):
         ('rfb', 'Read fuse bits'),
         ('rhfb', 'Read high fuse bits'),
         ('refb', 'Read extended fuse bits'),
+        ('rlb', 'Read lock bits'),
+        ('reem', 'Read EEPROM memory'),
+        ('rp', 'Read program memory'),
+        ('lpmp' , 'Load program memory page'),
+        ('wp', 'Write program memory'),
         ('warning', 'Warning'),
         ('dev', 'Device'),
     )
     annotation_rows = (
         ('commands', 'Commands', (Ann.PE, Ann.RSB0, Ann.RSB1, Ann.RSB2,
-            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,)),
+            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,
+            Ann.RLB, Ann.REEM, Ann.RP, Ann.LPMP, Ann.WP,)),
         ('warnings', 'Warnings', (Ann.WARN,)),
         ('devs', 'Devices', (Ann.DEV,)),
     )
@@ -161,6 +167,48 @@ class Decoder(srd.Decoder):
         # TODO: Decode fuse bits.
         # TODO: Sanity check on reply.
 
+    def handle_cmd_read_lock_bits(self, cmd, ret):
+        # Read lock bits
+        self.putx([Ann.RLB, ['Read lock bits: 0x%02x' % ret[3]]])
+
+    def handle_cmd_read_eeprom_memory(self, cmd, ret):
+        # Read EEPROM Memory
+        _addr = ((cmd[1] & 1) << 8) + cmd[2]
+        self.putx([Ann.REEM, ['Read EEPROM Memory: [0x%03x]: 0x%02x' % (_addr, ret[3])]])
+
+    def handle_cmd_read_program_memory(self, cmd, ret):
+        # Read Program Memory
+        _HL = 'Low'
+        _H = 'L'
+        if cmd[0] & 0x08:
+            _HL = 'High'
+            _H = 'H'
+        _addr = ((cmd[1] & 0x0f) << 8) + cmd[2]
+        self.putx([Ann.RP, [
+            'Read program memory %s: [0x%03x]: 0x%02x' % (_HL, _addr, ret[3]),
+            '[%03x%s]:%02x' % (_addr, _H, ret[3]),
+            '%02x' % ret[3]
+        ]])
+
+    def handle_cmd_load_program_memory_page(self, cmd, ret):
+        # Load Program Memory Page
+        _HL = 'Low'
+        _H = 'L'
+        if cmd[0] & 0x08:
+            _HL = 'High'
+            _H = 'H'
+        _addr = cmd[2] & 0x1F
+        self.putx([Ann.LPMP, [
+            'Load program memory page %s: [0x%03x]: 0x%02x' % (_HL, _addr, cmd[3]),
+            '[%03x%s]=%02x' % (_addr, _H, cmd[3]),
+            '%02x' % cmd[3]
+        ]])
+
+    def handle_cmd_write_program_memory_page(self, cmd, ret):
+        # Write Program Memory Page
+        _addr = ((cmd[1] & 0x0F) << 3) + (cmd[2] << 5)
+        self.putx([Ann.WP, ['Write program memory page: 0x%02x' % _addr]])
+
     def handle_command(self, cmd, ret):
         if cmd[:2] == [0xac, 0x53]:
             self.handle_cmd_programming_enable(cmd, ret)
@@ -178,6 +226,16 @@ class Decoder(srd.Decoder):
             self.handle_cmd_read_signature_byte_0x01(cmd, ret)
         elif cmd[0] == 0x30 and cmd[2] == 0x02:
             self.handle_cmd_read_signature_byte_0x02(cmd, ret)
+        elif cmd[:2] == [0x58, 0x00]:
+            self.handle_cmd_read_lock_bits(cmd,ret)
+        elif cmd[0] == 0xa0 and (cmd[1] & (3 << 6)) == (0 << 6):
+            self.handle_cmd_read_eeprom_memory(cmd, ret)
+        elif (cmd[0] == 0x20 or cmd[0] == 0x28) and ((cmd[1] & 0xf0) == 0x00):
+            self.handle_cmd_read_program_memory(cmd, ret)
+        elif (cmd[0] == 0x40 or cmd[0] == 0x48) and ((cmd[1] & 0xf0) == 0x00):
+            self.handle_cmd_load_program_memory_page(cmd, ret)
+        elif (cmd[0] == 0x4C and ((cmd[1] & 0xf0) == 0x00)):
+            self.handle_cmd_write_program_memory_page(cmd, ret)
         else:
             c = '%02x %02x %02x %02x' % tuple(cmd)
             r = '%02x %02x %02x %02x' % tuple(ret)
