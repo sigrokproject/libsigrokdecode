@@ -20,6 +20,10 @@
 import sigrokdecode as srd
 from .parts import *
 
+class Ann:
+    PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, \
+    WARN, DEV, = range(10)
+
 VENDOR_CODE_ATMEL = 0x1e
 
 class Decoder(srd.Decoder):
@@ -46,9 +50,10 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', ()),
-        ('commands', 'Commands', tuple(range(7 + 1))),
-        ('warnings', 'Warnings', (8,)),
-        ('devs', 'Devices', (9,)),
+        ('commands', 'Commands', (Ann.PE, Ann.RSB0, Ann.RSB1, Ann.RSB2,
+            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,)),
+        ('warnings', 'Warnings', (Ann.WARN,)),
+        ('devs', 'Devices', (Ann.DEV,)),
     )
 
     def __init__(self):
@@ -70,17 +75,17 @@ class Decoder(srd.Decoder):
     def handle_cmd_programming_enable(self, cmd, ret):
         # Programming enable.
         # Note: The chip doesn't send any ACK for 'Programming enable'.
-        self.putx([0, ['Programming enable']])
+        self.putx([Ann.PE, ['Programming enable']])
 
         # Sanity check on reply.
         if ret[1:4] != [0xac, 0x53, cmd[2]]:
-            self.putx([8, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
     def handle_cmd_read_signature_byte_0x00(self, cmd, ret):
         # Signature byte 0x00: vendor code.
         self.vendor_code = ret[3]
         v = vendor_code[self.vendor_code]
-        self.putx([1, ['Vendor code: 0x%02x (%s)' % (ret[3], v)]])
+        self.putx([Ann.RSB0, ['Vendor code: 0x%02x (%s)' % (ret[3], v)]])
 
         # Store for later.
         self.xx = cmd[1] # Same as ret[2].
@@ -89,16 +94,16 @@ class Decoder(srd.Decoder):
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != cmd[1]:
-            self.putx([8, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
         # Sanity check for the vendor code.
         if self.vendor_code != VENDOR_CODE_ATMEL:
-            self.putx([8, ['Warning: Vendor code was not 0x1e (Atmel)!']])
+            self.putx([Ann.WARN, ['Warning: Vendor code was not 0x1e (Atmel)!']])
 
     def handle_cmd_read_signature_byte_0x01(self, cmd, ret):
         # Signature byte 0x01: part family and memory size.
         self.part_fam_flash_size = ret[3]
-        self.putx([2, ['Part family / memory size: 0x%02x' % ret[3]]])
+        self.putx([Ann.RSB1, ['Part family / memory size: 0x%02x' % ret[3]]])
 
         # Store for later.
         self.mm = cmd[3]
@@ -106,20 +111,20 @@ class Decoder(srd.Decoder):
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != cmd[1] or ret[0] != self.yy:
-            self.putx([8, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
     def handle_cmd_read_signature_byte_0x02(self, cmd, ret):
         # Signature byte 0x02: part number.
         self.part_number = ret[3]
-        self.putx([3, ['Part number: 0x%02x' % ret[3]]])
+        self.putx([Ann.RSB2, ['Part number: 0x%02x' % ret[3]]])
 
         p = part[(self.part_fam_flash_size, self.part_number)]
-        data = [9, ['Device: Atmel %s' % p]]
+        data = [Ann.DEV, ['Device: Atmel %s' % p]]
         self.put(self.ss_device, self.es_cmd, self.out_ann, data)
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != self.xx or ret[0] != self.mm:
-            self.putx([8, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
         self.xx, self.yy, self.zz, self.mm = 0, 0, 0, 0
 
@@ -127,32 +132,32 @@ class Decoder(srd.Decoder):
         # Chip erase (erases both flash an EEPROM).
         # Upon successful chip erase, the lock bits will also be erased.
         # The only way to end a Chip Erase cycle is to release RESET#.
-        self.putx([4, ['Chip erase']])
+        self.putx([Ann.CE, ['Chip erase']])
 
         # TODO: Check/handle RESET#.
 
         # Sanity check on reply.
         bit = (ret[2] & (1 << 7)) >> 7
         if ret[1] != 0xac or bit != 1 or ret[3] != cmd[2]:
-            self.putx([8, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
     def handle_cmd_read_fuse_bits(self, cmd, ret):
         # Read fuse bits.
-        self.putx([5, ['Read fuse bits: 0x%02x' % ret[3]]])
+        self.putx([Ann.RFB, ['Read fuse bits: 0x%02x' % ret[3]]])
 
         # TODO: Decode fuse bits.
         # TODO: Sanity check on reply.
 
     def handle_cmd_read_fuse_high_bits(self, cmd, ret):
         # Read fuse high bits.
-        self.putx([6, ['Read fuse high bits: 0x%02x' % ret[3]]])
+        self.putx([Ann.RHFB, ['Read fuse high bits: 0x%02x' % ret[3]]])
 
         # TODO: Decode fuse bits.
         # TODO: Sanity check on reply.
 
     def handle_cmd_read_extended_fuse_bits(self, cmd, ret):
         # Read extended fuse bits.
-        self.putx([7, ['Read extended fuse bits: 0x%02x' % ret[3]]])
+        self.putx([Ann.REFB, ['Read extended fuse bits: 0x%02x' % ret[3]]])
 
         # TODO: Decode fuse bits.
         # TODO: Sanity check on reply.
@@ -177,7 +182,7 @@ class Decoder(srd.Decoder):
         else:
             c = '%02x %02x %02x %02x' % tuple(cmd)
             r = '%02x %02x %02x %02x' % tuple(ret)
-            self.putx([0, ['Unknown command: %s (reply: %s)!' % (c, r)]])
+            self.putx([Ann.PE, ['Unknown command: %s (reply: %s)!' % (c, r)]])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
