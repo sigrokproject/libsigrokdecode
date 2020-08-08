@@ -108,7 +108,7 @@ class Decoder(srd.Decoder):
     def put_desc(self, ss, es, cmd, data):
         if cmd == -1:
             return
-        if META[cmd]:
+        if cmd in META:
             self.put(ss, es, self.out_ann, [Ann.DESC,
                 ['%s: %s' % (META[cmd]['name'].strip(), META[cmd]['desc'])]])
         else:
