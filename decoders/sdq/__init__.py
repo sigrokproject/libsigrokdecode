@@ -18,7 +18,11 @@
 ##
 
 '''
-Texas Instruments SDQ protocol, also used by Apple.
+The SDQ protocol was developed by Texas Instruments, and is used in
+devices like battery pack authentication. Apple uses SDQ in MagSafe
+and Lightning connectors, as well as some batteries.
+
+See https://www.ti.com/lit/ds/symlink/bq26100.pdf for details.
 '''
 
 from .pd import Decoder
