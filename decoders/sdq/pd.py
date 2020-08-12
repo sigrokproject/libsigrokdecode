@@ -17,6 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+from common.srdhelper import bitpack
 import sigrokdecode as srd
 
 class SamplerateError(Exception):
@@ -58,12 +59,6 @@ class Decoder(srd.Decoder):
     def putbetu(self, data):
         self.put(self.bytepos, self.startsample + int(self.bit_width), self.out_ann, data)
 
-    def bits2num(self, bitlist):
-        number = 0
-        for i in range(len(bitlist)):
-            number += bitlist[i] * 2**i
-        return number
-
     def __init__(self):
         self.reset()
 
@@ -89,7 +84,7 @@ class Decoder(srd.Decoder):
         self.putetu([0, ['Bit: %d' % bit, '%d' % bit]])
 
         if len(self.bits) == 8:
-            byte = self.bits2num(self.bits)
+            byte = bitpack(self.bits)
             self.putbetu([1, ['Byte: %#04x' % byte, '%#04x' % byte]])
             self.bits = []
             self.bytepos = 0
