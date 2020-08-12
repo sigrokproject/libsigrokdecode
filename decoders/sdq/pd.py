@@ -75,9 +75,6 @@ class Decoder(srd.Decoder):
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
-            self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
-            self.half_bit_width = self.bit_width / 2.0
-            self.break_threshold = self.bit_width * 1.2 # Break if the line is low for longer than this
 
     def handle_bit(self, bit):
         self.bits.append(bit)
@@ -98,6 +95,10 @@ class Decoder(srd.Decoder):
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+        self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
+        self.half_bit_width = self.bit_width / 2.0
+        # BREAK if the line is low for longer than this.
+        self.break_threshold = self.bit_width * 1.2
 
         while True:
             if self.state == 'INIT':
