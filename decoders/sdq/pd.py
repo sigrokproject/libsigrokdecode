@@ -23,6 +23,12 @@ import sigrokdecode as srd
 class SamplerateError(Exception):
     pass
 
+class Pin:
+    SDQ, = range(1)
+
+class Ann:
+    BIT, BYTE, BREAK, = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'sdq'
@@ -45,9 +51,9 @@ class Decoder(srd.Decoder):
         ('break', 'Break'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (0,)),
-        ('bytes', 'Bytes', (1,)),
-        ('breaks', 'Breaks', (2,)),
+        ('bits', 'Bits', (Ann.BIT,)),
+        ('bytes', 'Bytes', (Ann.BYTE,)),
+        ('breaks', 'Breaks', (Ann.BREAK,)),
     )
 
     def puts(self, data):
@@ -77,16 +83,16 @@ class Decoder(srd.Decoder):
 
     def handle_bit(self, bit):
         self.bits.append(bit)
-        self.putetu([0, ['Bit: %d' % bit, '%d' % bit]])
+        self.putetu([Ann.BIT, ['Bit: %d' % bit, '%d' % bit]])
 
         if len(self.bits) == 8:
             byte = bitpack(self.bits)
-            self.putbetu([1, ['Byte: %#04x' % byte, '%#04x' % byte]])
+            self.putbetu([Ann.BYTE, ['Byte: %#04x' % byte, '%#04x' % byte]])
             self.bits = []
             self.bytepos = 0
 
     def handle_break(self):
-        self.puts([2, ['Break', 'BR']])
+        self.puts([Ann.BREAK, ['Break', 'BR']])
         self.bits = []
         self.startsample = self.samplenum
         self.bytepos = 0
@@ -100,14 +106,14 @@ class Decoder(srd.Decoder):
         break_threshold = self.bit_width * 1.2
 
         # Wait until the line is high before inspecting input data.
-        sdq, = self.wait({0: 'h'})
+        sdq, = self.wait({Pin.SDQ: 'h'})
         while True:
             # Get the length of a low pulse (falling to rising edge).
-            sdq, = self.wait({0: 'f'})
+            sdq, = self.wait({Pin.SDQ: 'f'})
             self.startsample = self.samplenum
             if self.bytepos == 0:
                 self.bytepos = self.samplenum
-            sdq, = self.wait({0: 'r'})
+            sdq, = self.wait({Pin.SDQ: 'r'})
 
             # Check for 0 or 1 data bits, or the BREAK symbol.
             delta = self.samplenum - self.startsample
