@@ -64,7 +64,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.state = 'INIT'
         self.startsample = 0
         self.bits = []
         self.bytepos = 0
@@ -98,30 +97,23 @@ class Decoder(srd.Decoder):
         self.bit_width = float(self.samplerate) / float(self.options['bitrate'])
         self.half_bit_width = self.bit_width / 2.0
         # BREAK if the line is low for longer than this.
-        self.break_threshold = self.bit_width * 1.2
+        break_threshold = self.bit_width * 1.2
 
+        # Wait until the line is high before inspecting input data.
+        sdq, = self.wait({0: 'h'})
         while True:
-            if self.state == 'INIT':
-                sdq, = self.wait({0: 'h'}) # Wait until the line is high before starting
-                self.state = 'DATA'
+            # Get the length of a low pulse (falling to rising edge).
+            sdq, = self.wait({0: 'f'})
+            self.startsample = self.samplenum
+            if self.bytepos == 0:
+                self.bytepos = self.samplenum
+            sdq, = self.wait({0: 'r'})
 
-            elif self.state == 'DATA':
-                sdq, = self.wait({0: 'f'}) # Falling edge
-
-                self.startsample = self.samplenum
-                if self.bytepos == 0:
-                    self.bytepos = self.samplenum
-
-                sdq, = self.wait({0: 'r'}) # Rising edge
-
-                delta = self.samplenum - self.startsample
-                if delta > self.break_threshold:
-                    self.state = 'BREAK'
-                elif delta > self.half_bit_width:
-                    self.handle_bit(0)
-                else:
-                    self.handle_bit(1)
-
-            elif self.state == 'BREAK':
+            # Check for 0 or 1 data bits, or the BREAK symbol.
+            delta = self.samplenum - self.startsample
+            if delta > break_threshold:
                 self.handle_break()
-                self.state = 'DATA'
+            elif delta > self.half_bit_width:
+                self.handle_bit(0)
+            else:
+                self.handle_bit(1)
