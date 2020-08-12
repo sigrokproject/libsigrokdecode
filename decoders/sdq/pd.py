@@ -83,11 +83,17 @@ class Decoder(srd.Decoder):
 
     def handle_bit(self, bit):
         self.bits.append(bit)
-        self.putetu([Ann.BIT, ['Bit: %d' % bit, '%d' % bit]])
+        self.putetu([Ann.BIT, [
+            'Bit: {:d}'.format(bit),
+            '{:d}'.format(bit),
+        ]])
 
         if len(self.bits) == 8:
             byte = bitpack(self.bits)
-            self.putbetu([Ann.BYTE, ['Byte: %#04x' % byte, '%#04x' % byte]])
+            self.putbetu([Ann.BYTE, [
+                'Byte: 0x{:02x}'.format(byte),
+                '0x{:02x}'.format(byte),
+            ]])
             self.bits = []
             self.bytepos = 0
 
