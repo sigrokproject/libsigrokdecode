@@ -18,11 +18,11 @@
 ##
 
 import sigrokdecode as srd
-#from enum import Enum
 from .parts import *
 
 class Ann:
-    DEV, WARN, PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, RLB, REEM, RP, LPMP, WP = range(15)
+    PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, \
+    RLB, REEM, RP, LPMP, WP, WARN, DEV, = range(15)
 
 VENDOR_CODE_ATMEL = 0x1e
 
@@ -37,8 +37,6 @@ class Decoder(srd.Decoder):
     outputs = []
     tags = ['Debug/trace']
     annotations = (
-        ('dev', 'Device'),
-        ('warning', 'Warning'),
         ('pe', 'Programming enable'),
         ('rsb0', 'Read signature byte 0'),
         ('rsb1', 'Read signature byte 1'),
@@ -52,10 +50,13 @@ class Decoder(srd.Decoder):
         ('rp', 'Read program memory'),
         ('lpmp' , 'Load program memory page'),
         ('wp', 'Write program memory'),
+        ('warning', 'Warning'),
+        ('dev', 'Device'),
     )
     annotation_rows = (
-        ('bits', 'Bits', ()),
-        ('commands', 'Commands', tuple(range(Ann.PE,15))),
+        ('commands', 'Commands', (Ann.PE, Ann.RSB0, Ann.RSB1, Ann.RSB2,
+            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,
+            Ann.RLB, Ann.REEM, Ann.RP, Ann.LPMP, Ann.WP,)),
         ('warnings', 'Warnings', (Ann.WARN,)),
         ('devs', 'Devices', (Ann.DEV,)),
     )
@@ -83,7 +84,7 @@ class Decoder(srd.Decoder):
 
         # Sanity check on reply.
         if ret[1:4] != [0xac, 0x53, cmd[2]]:
-            self.putx([1, ['Warning: Unexpected bytes in reply!']])
+            self.putx([Ann.WARN, ['Warning: Unexpected bytes in reply!']])
 
     def handle_cmd_read_signature_byte_0x00(self, cmd, ret):
         # Signature byte 0x00: vendor code.
@@ -168,11 +169,11 @@ class Decoder(srd.Decoder):
 
     def handle_cmd_read_lock_bits(self, cmd, ret):
         # Read lock bits
-        self.putx([Ann.RLB, ['Read lock bits: 0x%02x' % ret[3]]])        
+        self.putx([Ann.RLB, ['Read lock bits: 0x%02x' % ret[3]]])
 
     def handle_cmd_read_eeprom_memory(self, cmd, ret):
         # Read EEPROM Memory
-        _addr = (cmd[1] & 1) << 8 + cmd[2]
+        _addr = ((cmd[1] & 1) << 8) + cmd[2]
         self.putx([Ann.REEM, ['Read EEPROM Memory: [0x%03x]: 0x%02x' % (_addr, ret[3])]])
 
     def handle_cmd_read_program_memory(self, cmd, ret):
@@ -183,7 +184,11 @@ class Decoder(srd.Decoder):
             _HL = 'High'
             _H = 'H'
         _addr = ((cmd[1] & 0x0f) << 8) + cmd[2]
-        self.putx([Ann.RP, ['Read program memory %s: [0x%03x]: 0x%02x' % (_HL, _addr, ret[3]), '[%03x%s]:%02x' % (_addr, _H, ret[3]), '%02x' % ret[3]]])
+        self.putx([Ann.RP, [
+            'Read program memory %s: [0x%03x]: 0x%02x' % (_HL, _addr, ret[3]),
+            '[%03x%s]:%02x' % (_addr, _H, ret[3]),
+            '%02x' % ret[3]
+        ]])
 
     def handle_cmd_load_program_memory_page(self, cmd, ret):
         # Load Program Memory Page
@@ -193,7 +198,11 @@ class Decoder(srd.Decoder):
             _HL = 'High'
             _H = 'H'
         _addr = cmd[2] & 0x1F
-        self.putx([Ann.LPMP, ['Load program memory page %s: [0x%03x]: 0x%02x' % (_HL, _addr, cmd[3]), '[%03x%s]=%02x' % (_addr, _H, cmd[3]), '%02x' % cmd[3]]])
+        self.putx([Ann.LPMP, [
+            'Load program memory page %s: [0x%03x]: 0x%02x' % (_HL, _addr, cmd[3]),
+            '[%03x%s]=%02x' % (_addr, _H, cmd[3]),
+            '%02x' % cmd[3]
+        ]])
 
     def handle_cmd_write_program_memory_page(self, cmd, ret):
         # Write Program Memory Page
@@ -230,7 +239,7 @@ class Decoder(srd.Decoder):
         else:
             c = '%02x %02x %02x %02x' % tuple(cmd)
             r = '%02x %02x %02x %02x' % tuple(ret)
-            self.putx([0, ['Unknown command: %s (reply: %s)!' % (c, r)]])
+            self.putx([Ann.WARN, ['Unknown command: %s (reply: %s)!' % (c, r)]])
 
     def decode(self, ss, es, data):
         ptype, mosi, miso = data
