@@ -105,14 +105,16 @@ class Decoder(srd.Decoder):
         cls, texts = lookup_proto_ann_txt(self.cmd, {})
         self.putx([cls, texts])
         self.bits = []
-        self.cmd = 'ATR' # Next data bytes will be ATR
+        # Next data bytes will be Answer To Reset.
+        self.cmd = 'ATR'
 
     def handle_command(self, pins):
         rst, clk, io = pins
         self.ss, self.es = self.samplenum, self.samplenum
+        # XXX Is the comment inverted?
         # If I/O is rising -> command START
         # if I/O is falling -> command STOP and response data incoming
-        self.cmd = 'CMD' if (io == 0) else 'DATA'
+        self.cmd = 'CMD' if io == 0 else 'DATA'
         self.bits = []
 
     # Gather 8 bits of data
