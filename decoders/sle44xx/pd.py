@@ -52,6 +52,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['sle44xx']
+    tags = ['Memory']
     channels = (
         {'id': 'rst', 'name': 'RST', 'desc': 'Reset line'},
         {'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'},
@@ -66,7 +67,7 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('bits', 'Bits', (4,)),
-        ('data', 'Data', (1, 2, 3)),
+        ('fields', 'Fields', (1, 2, 3)),
         ('interrupts', 'Interrupts', (0,)),
     )
     binary = (
