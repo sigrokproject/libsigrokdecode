@@ -81,7 +81,6 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.ss = self.es = self.ss_byte = -1
         self.bits = []
         self.cmd = None
 
@@ -93,24 +92,22 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
 
-    def putx(self, data):
-        self.put(self.ss, self.es, self.out_ann, data)
+    def putx(self, ss, es, cls, data):
+        self.put(ss, es, self.out_ann, [cls, data,])
 
-    def putb(self, data):
-        self.put(self.ss, self.es, self.out_binary, data)
+    def putb(self, ss, es, cls , data):
+        self.put(ss, es, self.out_binary, [cls, data,])
 
     def handle_reset(self, pins):
-        self.ss, self.es = self.samplenum, self.samplenum
         self.cmd = 'RESET'
         cls, texts = lookup_proto_ann_txt(self.cmd, {})
-        self.putx([cls, texts])
+        self.putx(self.samplenum, self.samplenum, cls, texts)
         self.bits = []
         # Next data bytes will be Answer To Reset.
         self.cmd = 'ATR'
 
     def handle_command(self, pins):
         rst, clk, io = pins
-        self.ss, self.es = self.samplenum, self.samplenum
         # XXX Is the comment inverted?
         # If I/O is rising -> command START
         # if I/O is falling -> command STOP and response data incoming
@@ -128,8 +125,6 @@ class Decoder(srd.Decoder):
         # slightly stretched clock period throws off the following bit
         # annotation. Better look for more reliable conditions. Available
         # documentation suggests bit values are valid during high CLK.
-        if not self.bits:
-            self.ss_byte = self.samplenum
         bit_val = io
         bit_ss = self.samplenum
         bit_es = bit_ss # self.bitwidth is not known yet.
@@ -143,20 +138,19 @@ class Decoder(srd.Decoder):
 
         # Get the data byte value, and byte's ss/es.
         databyte = bitpack_lsb(self.bits, 0)
-        self.ss_byte = self.bits[0][1]
-        self.es_byte = self.bits[-1][2]
+        byte_ss = self.bits[0][1]
+        byte_es = self.bits[-1][2]
 
-        self.ss, self.es = self.ss_byte, self.es_byte
-        self.putb([Bin.SEND_DATA, bytes([databyte])])
+        self.putb(byte_ss, byte_es, Bin.SEND_DATA, bytes([databyte]))
 
         # TODO Present bit values earlier. As soon as their es is known.
         for bit_val, bit_ss, bit_es in self.bits:
             cls, texts = lookup_proto_ann_txt('BIT', {'bit': bit_val})
-            self.put(bit_ss, bit_es, self.out_ann, [cls, texts])
+            self.putx(bit_ss, bit_es, cls, texts)
 
         cls, texts = lookup_proto_ann_txt(self.cmd, {'data': databyte})
         if cls:
-            self.putx([cls, texts])
+            self.putx(byte_ss, byte_es, cls, texts)
 
         # Done with this packet.
         self.bits = []
