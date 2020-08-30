@@ -79,6 +79,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
+        self.max_addr = 256
         self.bits = []
         self.atr_bytes = []
         self.cmd_bytes = []
@@ -252,6 +253,7 @@ class Decoder(srd.Decoder):
                     'read main memory, addr {addr:02x}',
                     'RD-M @{addr:02x}',
                 ],
+                'len': lambda ctrl, addr, data: self.max_addr - addr,
             },
             0x31: {
                 'fmt': [
@@ -306,6 +308,8 @@ class Decoder(srd.Decoder):
             fmt = [fmt,]
         texts = [f.format(ctrl = ctrl, addr = addr, data = data) for f in fmt]
         length = code.get('len', None)
+        if callable(length):
+            length = length(ctrl, addr, data)
         is_proc = code.get('proc', False)
         return texts, length, is_proc
 
@@ -528,21 +532,10 @@ class Decoder(srd.Decoder):
             # The START/STOP conditions are only applicable outside of
             # "outgoing data" or "internal processing" periods. This is
             # what the data sheet specifies.
-            # TODO There is the decoder's inability to reliably detect
-            # where memory reads are done because they reached the end
-            # of the chip's capacity. Which makes the decoder miss the
-            # next START symbol, and lose synchronization to the BIT
-            # stream (bit counts are off, which breaks the accumulation
-            # of bytes). That's why this decoder unconditionally keeps
-            # detecting the START condition although it should not.
             if not is_outgoing and not is_processing:
                 if self.matched[COND_CMD_START]:
                     self.handle_command(self.samplenum, True)
                     continue
                 if self.matched[COND_CMD_STOP]:
                     self.handle_command(self.samplenum, False)
-                    continue
-            if True: # HACK See the comment above.
-                if self.matched[COND_CMD_START]:
-                    self.handle_command(self.samplenum, True)
                     continue
