@@ -19,6 +19,7 @@
 
 # Addresses/devices. Items that are not listed are reserved/unknown.
 address = {
+    0x00: 'Joy-it SBC-IRC01',
     0x40: 'Matsui TV',
     0xEA41: 'Unknown LED Panel',
 }
@@ -66,4 +67,27 @@ command = {
         0x41: ['Min Brightness', 'Min'],
         0x48: ['Max Brightness', 'Max'],
     },
+    0x00: {
+        0x45: ['Volume down', 'Vol-'],
+        0x46: ['Play/Pause', 'P/P'],
+        0x47: ['Volume up', 'Vol+'],
+        0x44: ['Setup', 'Set'],
+        0x40: ['Up', 'U'],
+        0x43: ['Stop / Mode', 'S/M'],
+        0x07: ['Left', 'L'],
+        0x15: ['Enter', 'E'],
+        0x09: ['Right', 'R'],
+        0x16: ['0 / 10+', '0'],
+        0x19: ['Down', 'D'],
+        0x0D: ['Back', 'B'],
+        0x0C: ['1', '1'],
+        0x18: ['2', '2'],
+        0x5E: ['3', '3'],
+        0x08: ['4', '4'],
+        0x1C: ['5', '5'],
+        0x5A: ['6', '6'],
+        0x42: ['7', '7'],
+        0x52: ['8', '8'],
+        0x4A: ['9', '9'],
+    }
 }
