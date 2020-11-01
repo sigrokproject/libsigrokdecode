@@ -413,8 +413,8 @@ static int get_annotations(struct srd_decoder *dec)
 		goto except_out;
 
 	if (!PyTuple_Check(py_annlist)) {
-		srd_err("Protocol decoder %s annotations should "
-			"be a tuple.", dec->name);
+		srd_err("Protocol decoder %s annotations should be a tuple.",
+			dec->name);
 		goto err_out;
 	}
 
@@ -424,8 +424,7 @@ static int get_annotations(struct srd_decoder *dec)
 			goto except_out;
 
 		if (!PyTuple_Check(py_ann) || PyTuple_Size(py_ann) != 2) {
-			srd_err("Protocol decoder %s annotation %zd should "
-				"be a tuple with two elements.",
+			srd_err("Protocol decoder %s annotation %zd should be a tuple with two elements.",
 				dec->name, i + 1);
 			goto err_out;
 		}
@@ -454,6 +453,8 @@ err_out:
 /* Convert annotation_rows to GSList of 'struct srd_decoder_annotation_row'. */
 static int get_annotation_rows(struct srd_decoder *dec)
 {
+	const char *py_member_name = "annotation_rows";
+
 	PyObject *py_ann_rows, *py_ann_row, *py_ann_classes, *py_item;
 	GSList *annotation_rows;
 	struct srd_decoder_annotation_row *ann_row;
@@ -463,20 +464,20 @@ static int get_annotation_rows(struct srd_decoder *dec)
 
 	gstate = PyGILState_Ensure();
 
-	if (!PyObject_HasAttrString(dec->py_dec, "annotation_rows")) {
+	if (!PyObject_HasAttrString(dec->py_dec, py_member_name)) {
 		PyGILState_Release(gstate);
 		return SRD_OK;
 	}
 
 	annotation_rows = NULL;
 
-	py_ann_rows = PyObject_GetAttrString(dec->py_dec, "annotation_rows");
+	py_ann_rows = PyObject_GetAttrString(dec->py_dec, py_member_name);
 	if (!py_ann_rows)
 		goto except_out;
 
 	if (!PyTuple_Check(py_ann_rows)) {
-		srd_err("Protocol decoder %s annotation_rows "
-			"must be a tuple.", dec->name);
+		srd_err("Protocol decoder %s %s must be a tuple.",
+			dec->name, py_member_name);
 		goto err_out;
 	}
 
@@ -486,9 +487,8 @@ static int get_annotation_rows(struct srd_decoder *dec)
 			goto except_out;
 
 		if (!PyTuple_Check(py_ann_row) || PyTuple_Size(py_ann_row) != 3) {
-			srd_err("Protocol decoder %s annotation_rows "
-				"must contain only tuples of 3 elements.",
-				dec->name);
+			srd_err("Protocol decoder %s %s must contain only tuples of 3 elements.",
+				dec->name, py_member_name);
 			goto err_out;
 		}
 		ann_row = g_malloc0(sizeof(struct srd_decoder_annotation_row));
@@ -512,9 +512,8 @@ static int get_annotation_rows(struct srd_decoder *dec)
 			goto except_out;
 
 		if (!PyTuple_Check(py_ann_classes)) {
-			srd_err("Protocol decoder %s annotation_rows tuples "
-				"must have a tuple of numbers as 3rd element.",
-				dec->name);
+			srd_err("Protocol decoder %s %s tuples must have a tuple of numbers as 3rd element.",
+				dec->name, py_member_name);
 			goto err_out;
 		}
 
@@ -524,8 +523,7 @@ static int get_annotation_rows(struct srd_decoder *dec)
 				goto except_out;
 
 			if (!PyLong_Check(py_item)) {
-				srd_err("Protocol decoder %s annotation row "
-					"class tuple must only contain numbers.",
+				srd_err("Protocol decoder %s annotation row class tuple must only contain numbers.",
 					dec->name);
 				goto err_out;
 			}
