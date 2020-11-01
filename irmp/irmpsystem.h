@@ -17,6 +17,11 @@
 #  error please include only irmp.h or irsnd.h, not irmpsystem.h
 #endif
 
+/* Workaround required when building with xtensa (cross-)toolchains. */
+#ifdef __xtensa__
+#undef __xtensa__
+#endif
+
 #if defined(__18CXX)                                                                // Microchip PIC C18 compiler
 #  define PIC_C18
 #elif defined(__XC8)                                                                // PIC XC8 compiler

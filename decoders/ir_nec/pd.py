@@ -21,6 +21,19 @@ from common.srdhelper import bitpack
 from .lists import *
 import sigrokdecode as srd
 
+# Concentrate all timing constraints of the IR protocol here in a single
+# location at the top of the source, to raise awareness and to simplify
+# review and adjustment. The tolerance is an arbitrary choice, available
+# literature does not mention any. The inter-frame timeout is not a part
+# of the protocol, but an implementation detail of this sigrok decoder.
+_TIME_TOL  =  8     # tolerance, in percent
+_TIME_IDLE = 20.0   # inter-frame timeout, in ms
+_TIME_LC   = 13.5   # leader code, in ms
+_TIME_RC   = 11.25  # repeat code, in ms
+_TIME_ONE  =  2.25  # one data bit, in ms
+_TIME_ZERO =  1.125 # zero data bit, in ms
+_TIME_STOP =  0.562 # stop bit, in ms
+
 class SamplerateError(Exception):
     pass
 
@@ -47,7 +60,7 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'polarity', 'desc': 'Polarity', 'default': 'active-low',
-            'values': ('active-low', 'active-high')},
+            'values': ('auto', 'active-low', 'active-high')},
         {'id': 'cd_freq', 'desc': 'Carrier Frequency', 'default': 0},
         {'id': 'extended', 'desc': 'Extended NEC Protocol',
             'default': 'no', 'values': ('yes', 'no')},
@@ -136,13 +149,13 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def calc_rate(self):
-        self.tolerance = 0.05 # +/-5%
-        self.lc = int(self.samplerate * 0.0135) - 1 # 13.5ms
-        self.rc = int(self.samplerate * 0.01125) - 1 # 11.25ms
-        self.dazero = int(self.samplerate * 0.001125) - 1 # 1.125ms
-        self.daone = int(self.samplerate * 0.00225) - 1 # 2.25ms
-        self.stop = int(self.samplerate * 0.000652) - 1 # 0.652ms
-        self.idle_to = int(self.samplerate * 0.020) - 1 # 20ms, arbitrary choice
+        self.tolerance = _TIME_TOL / 100
+        self.lc = int(self.samplerate * _TIME_LC / 1000) - 1
+        self.rc = int(self.samplerate * _TIME_RC / 1000) - 1
+        self.dazero = int(self.samplerate * _TIME_ZERO / 1000) - 1
+        self.daone = int(self.samplerate * _TIME_ONE / 1000) - 1
+        self.stop = int(self.samplerate * _TIME_STOP / 1000) - 1
+        self.idle_to = int(self.samplerate * _TIME_IDLE / 1000) - 1
 
     def compare_with_tolerance(self, measured, base):
         return (measured >= base * (1 - self.tolerance)
@@ -198,7 +211,12 @@ class Decoder(srd.Decoder):
             cd_count = int(self.samplerate / self.options['cd_freq']) + 1
         prev_ir = None
 
-        active = 0 if self.options['polarity'] == 'active-low' else 1
+        if self.options['polarity'] == 'auto':
+            # Take sample 0 as reference.
+            curr_level, = self.wait({'skip': 0})
+            active = 1 - curr_level
+        else:
+            active = 0 if self.options['polarity'] == 'active-low' else 1
         self.is_extended = self.options['extended'] == 'yes'
         want_addr_len = 16 if self.is_extended else 8
 
@@ -228,9 +246,12 @@ class Decoder(srd.Decoder):
                 (self.ir,) = self.wait({Pin.IR: 'e'})
 
             if self.ir != active:
-                # Save the non-active edge, then wait for the next edge.
+                # Save the location of the non-active edge (recessive),
+                # then wait for the next edge. Immediately process the
+                # end of the STOP bit which completes an IR frame.
                 self.ss_other_edge = self.samplenum
-                continue
+                if self.state != 'STOP':
+                    continue
 
             # Reset internal state for long periods of idle level.
             width = self.samplenum - self.ss_bit
