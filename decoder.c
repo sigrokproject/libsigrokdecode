@@ -391,13 +391,16 @@ err_out:
 }
 
 /* Convert annotation class attribute to GSList of char **. */
-static int get_annotations(struct srd_decoder *dec)
+static int get_annotations(struct srd_decoder *dec, size_t *ret_count)
 {
 	PyObject *py_annlist, *py_ann;
 	GSList *annotations;
 	char **annpair;
 	ssize_t i;
 	PyGILState_STATE gstate;
+
+	if (ret_count)
+		*ret_count = 0;
 
 	gstate = PyGILState_Ensure();
 
@@ -418,7 +421,10 @@ static int get_annotations(struct srd_decoder *dec)
 		goto err_out;
 	}
 
-	for (i = PyTuple_Size(py_annlist) - 1; i >= 0; i--) {
+	i = PyTuple_Size(py_annlist);
+	if (ret_count)
+		*ret_count = i;
+	while (i--) {
 		py_ann = PyTuple_GetItem(py_annlist, i);
 		if (!py_ann)
 			goto except_out;
@@ -451,7 +457,7 @@ err_out:
 }
 
 /* Convert annotation_rows to GSList of 'struct srd_decoder_annotation_row'. */
-static int get_annotation_rows(struct srd_decoder *dec)
+static int get_annotation_rows(struct srd_decoder *dec, size_t cls_count)
 {
 	const char *py_member_name = "annotation_rows";
 
@@ -530,6 +536,11 @@ static int get_annotation_rows(struct srd_decoder *dec)
 			class_idx = PyLong_AsSize_t(py_item);
 			if (PyErr_Occurred())
 				goto except_out;
+			if (class_idx >= cls_count) {
+				srd_err("Protocol decoder %s annotation row %zd references invalid class %zu.",
+					dec->name, i, class_idx);
+				goto err_out;
+			}
 
 			ann_row->ann_classes = g_slist_prepend(ann_row->ann_classes,
 					GSIZE_TO_POINTER(class_idx));
@@ -815,6 +826,7 @@ SRD_API int srd_decoder_load(const char *module_name)
 	int is_subclass;
 	const char *fail_txt;
 	PyGILState_STATE gstate;
+	size_t ann_cls_count;
 
 	if (!srd_check_init())
 		return SRD_ERR;
@@ -957,12 +969,12 @@ SRD_API int srd_decoder_load(const char *module_name)
 		goto err_out;
 	}
 
-	if (get_annotations(d) != SRD_OK) {
+	if (get_annotations(d, &ann_cls_count) != SRD_OK) {
 		fail_txt = "cannot get annotations";
 		goto err_out;
 	}
 
-	if (get_annotation_rows(d) != SRD_OK) {
+	if (get_annotation_rows(d, ann_cls_count) != SRD_OK) {
 		fail_txt = "cannot get annotation rows";
 		goto err_out;
 	}
