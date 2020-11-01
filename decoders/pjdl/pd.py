@@ -106,7 +106,8 @@ ANN_CARRIER_BUSY, ANN_CARRIER_IDLE, \
 ANN_PAD_BIT, ANN_LOW_BIT, ANN_DATA_BIT, ANN_SHORT_DATA, ANN_SYNC_LOSS, \
 ANN_DATA_BYTE, \
 ANN_FRAME_INIT, ANN_FRAME_BYTES, ANN_FRAME_WAIT, \
-    = range(11)
+ANN_NONCONFORMANCE, ANN_MISSING_ACK\
+    = range(13)
 
 class SamplerateError(Exception):
     pass
@@ -141,26 +142,39 @@ class Decoder(srd.Decoder):
         ('frame_init', 'Frame init'),
         ('frame_bytes', 'Frame bytes'),
         ('frame_wait', 'Frame wait'),
+        ('nonconformance', 'Nonconformance'),
+        ('missing_ack', 'Missing ack'),
     )
     annotation_rows = (
         ('carriers', 'Carriers', (ANN_CARRIER_BUSY, ANN_CARRIER_IDLE,)),
         ('bits', 'Bits', (ANN_PAD_BIT, ANN_LOW_BIT, ANN_DATA_BIT, ANN_SHORT_DATA,)),
         ('bytes', 'Bytes', (ANN_FRAME_INIT, ANN_DATA_BYTE, ANN_FRAME_WAIT,)),
         ('frames', 'Frames', (ANN_FRAME_BYTES,)),
-        ('warns', 'Warnings', (ANN_SYNC_LOSS,)),
+        ('warns', 'Warnings', (ANN_SYNC_LOSS, ANN_NONCONFORMANCE, ANN_MISSING_ACK)),
     )
 
-    # Communication modes' data bit and pad bit duration (in us), and
-    # tolerances in percent and absolute (us).
+    # Communication modes' data bit, pad bit, and busy bit duration (in us)
     mode_times = {
-        1: (44, 116),
-        2: (40, 92),
-        3: (28, 88),
-        4: (26, 60),
+        1: (44, 110, 11),
+        2: (40, 92,  10),
+        3: (28, 70,  7),
+        4: (26, 65,  6.5),
     }
-    time_tol_perc = 10
-    time_tol_abs = 1.5
 
+    # Communication modes' asymmetric tolerances for data bit octet, pad bit and 
+    # busy bit (in us), taken from spec.
+    # First and second columns give leading and trailing tolerances for pad and bits.
+    # The last two columns give leading and trailing tolerances for short bits (wait bits).
+    mode_tolerances = {
+        1: (5, 17, 5, 10),
+        2: (4, 16, 5, 10),
+        3: (3, 11, 3, 10),
+        4: (3, 10, 3, 10),
+    }
+
+    # Peaks shorter than this should be classified as noise and ignored
+    noise_width_threshold = 2
+    
     def __init__(self):
         self.reset()
 
@@ -174,7 +188,9 @@ class Decoder(srd.Decoder):
         self.carrier_idle_ss = None
         self.carrier_busy_ss = None
         self.syncpad_fall_ss = None
-
+        
+        self.ack_wanted = False
+        
         self.edges = None
         self.symbols = None
         self.sync_pads = None
@@ -267,6 +283,24 @@ class Decoder(srd.Decoder):
         self.symbols.append(item)
 
     def frame_flush(self):
+        # Warn if frame is missing ACK
+        missing_ack_seq = ['SHORT_BIT'] + ['IDLE']
+        if self.symbols is not None and len(self.symbols) > 2 and self.symbols_has_prev(missing_ack_seq):
+            # Emit missing ACK warning
+            texts = ['Missing ACK', 'No ACK', 'NA']
+            ass = int(self.symbols[-2][0])
+            aes = int(self.symbols[-1][1])
+            self.putg(ass, aes, [ANN_MISSING_ACK, texts])
+            # Emit WAIT annotation and output
+            i = 2
+            slen = len(self.symbols)
+            while i < slen - 1 and self.symbols[-i][2] == 'SHORT_BIT':
+                i = i + 1
+            ass = int(self.symbols[-i][1])
+            aes = int(self.symbols[-2][1])
+            texts = ['WAIT for sync response', 'WAIT response', 'WAIT', 'W']
+            self.putg(ass, aes, [ANN_FRAME_WAIT, texts])
+            self.putpy(ass, aes, 'SYNC_RESP_WAIT', True)
         syms = self.symbols_clear()
         while syms and syms[0][2] == 'IDLE':
             syms.pop(0)
@@ -389,37 +423,50 @@ class Decoder(srd.Decoder):
         # Get times in microseconds.
         mode_times = self.mode_times[self.options['mode']]
         mode_times = [t * 1.0 for t in mode_times]
-        self.data_width, self.pad_width = mode_times
+        self.data_width, self.pad_width, self.busy_width = mode_times
         self.byte_width = self.pad_width + 9 * self.data_width
         self.add_idle_width = self.options['idle_add_us']
         self.idle_width = self.byte_width + self.add_idle_width
 
         # Derive ranges (add tolerance) and scale to sample counts.
         self.usec_width = self.samplerate / 1e6
-        self.hold_high_width = 9 * self.time_tol_abs * self.usec_width
 
-        def _get_range(width):
-            reladd = self.time_tol_perc / 100
-            absadd = self.time_tol_abs
-            lower = min(width * (1 - reladd), width - absadd)
-            upper = max(width * (1 + reladd), width + absadd)
-            lower = floor(lower * self.usec_width)
-            upper = ceil(upper * self.usec_width)
+        # Get tolerances in microseconds
+        mode_tolerances = self.mode_tolerances[self.options['mode']]
+        mode_tolerances = [t * self.usec_width for t in mode_tolerances]
+        self.data_tolerance_before, self.data_tolerance_after, \
+            self.busy_tolerance_before, self.busy_tolerance_after, \
+            = mode_tolerances
+        # Pad tolerances are equal to bit nonet tolerances, but keep them
+        # as individual variables in case the values will differ in the future
+        self.pad_tolerance_before = self.data_tolerance_before
+        self.pad_tolerance_after = self.data_tolerance_after
+        
+        def _get_range(width, tolerance_before, tolerance_after):
+            lower = floor(self.usec_width * width - tolerance_before)
+            upper = ceil(self.usec_width * width + tolerance_after)
             return (lower, upper + 1)
 
-        self.data_bit_1_range = _get_range(self.data_width * 1)
-        self.data_bit_2_range = _get_range(self.data_width * 2)
-        self.data_bit_3_range = _get_range(self.data_width * 3)
-        self.data_bit_4_range = _get_range(self.data_width * 4)
-        self.short_data_range = _get_range(self.data_width / 4)
-        self.pad_bit_range = _get_range(self.pad_width)
-
+        self.data_bit_1_range = _get_range(self.data_width * 1, self.data_tolerance_before, self.data_tolerance_after)
+        self.data_bit_2_range = _get_range(self.data_width * 2, self.data_tolerance_before, self.data_tolerance_after)
+        self.data_bit_3_range = _get_range(self.data_width * 3, self.data_tolerance_before, self.data_tolerance_after)
+        self.data_bit_4_range = _get_range(self.data_width * 4, self.data_tolerance_before, self.data_tolerance_after)
+        self.short_data_range = _get_range(self.busy_width, self.busy_tolerance_before, self.busy_tolerance_after)
+        self.pad_bit_range = _get_range(self.pad_width, self.pad_tolerance_before, self.pad_tolerance_after)
+        
         self.data_width *= self.usec_width
         self.pad_width *= self.usec_width
+        self.busy_width *= self.usec_width
         self.byte_width *= self.usec_width
         self.idle_width *= self.usec_width
 
+        # Derived tolerances
+        self.frame_init_minimum_width = 3*(self.pad_width + self.data_width - self.pad_tolerance_before)   
+        self.combined_tolerance = self.data_tolerance_after + self.pad_tolerance_after
+        
         self.lookahead_width = int(4 * self.data_width)
+        self.noise_width = self.noise_width_threshold * self.usec_width
+
 
     def span_snum_to_us(self, count):
         return count / self.usec_width
@@ -500,18 +547,56 @@ class Decoder(srd.Decoder):
             if not self.edges:
                 self.edges = [self.samplenum]
                 continue
+                
+            # Allow leading pad in a frame to be wider than lookahead
+            if not edge_seen and bit_level and (self.symbols is None or self.symbols_has_prev('IDLE')):
+                continue
+            
+            # Ignore very narrow peaks, usually noise
+            span = self.samplenum - self.edges[-1]
+            if edge_seen and span < self.noise_width:
+                # Do not register the edge of this noise pulse
+                bit_level = 1 - bit_level
+                
+                # Emit warning
+                texts = ['Noise pulse {}'.format(span/self.usec_width), 'Noise', 'N']
+                if noise_start is None:
+                    noise_start = self.edges[-1]
+                self.putg(noise_start, self.samplenum, [ANN_NONCONFORMANCE, texts])
+                last_snum = noise_start
+                continue
+            else:
+                noise_start = None            
+
             self.edges.append(self.samplenum)
             curr_snum = self.samplenum
 
             # Check bit width (can also be multiple data bits).
-            span = self.edges[-1] - self.edges[-2]
             is_pad = bit_level and self.span_is_pad(span)
             is_data = self.span_is_data(span)
             is_short = bit_level and self.span_is_short(span)
 
+            # Check if extended leading pad
+            if bit_level and not (is_pad or is_data or is_short):
+                if span >= self.pad_bit_range[1] and (self.symbols is None or self.symbols_has_prev('IDLE')):
+                    is_pad = True
+
             if is_pad:
+                # Warn if total width of the nine bits is out of spec
+                if self.symbols_has_prev('DATA_BYTE'):
+                    o_start = int(self.data_fall_time)
+                    o_end = self.edges[-2]
+                    o_width = o_end - o_start
+                    expected_width = 9 * self.data_width
+                    if o_width < expected_width - self.data_tolerance_before \
+                        or o_width > expected_width + self.data_tolerance_after:
+                        w = '{}'.format(o_width/self.usec_width)
+                        texts = ['Out-of-spec nonet width {} (expected {})'. \
+                            format(w, expected_width/self.usec_width), 'ON width ' + w, 'ON']
+                        self.putg(o_start, o_end, [ANN_NONCONFORMANCE, texts])
+                
                 # BEWARE! Use ss value of last edge (genuinely seen, or
-                # inserted after a DATA byte) for PAD bit annotations.
+                # inserted after a DATA byte) for PAD bit annotations.        
                 ss, es = self.edges[-2], curr_snum
                 texts = ['PAD', '{:d}'.format(bit_level)]
                 self.putg(ss, es, [ANN_PAD_BIT, texts])
@@ -574,6 +659,14 @@ class Decoder(srd.Decoder):
             frame_init_seq = 3 * ['SYNC_PAD']
             if self.symbols_has_prev(frame_init_seq):
                 self.symbols_collapse(len(frame_init_seq), 'FRAME_INIT')
+                # Warn if total width of frame init is too low
+                finit_start = self.edges[-7]
+                finit_width = self.samplenum - finit_start
+                if finit_width < self.frame_init_minimum_width:
+                    w = '{}'.format(finit_width/self.usec_width)
+                    texts = ['Out-of-spec init width {} (expected {})' \
+                        .format(w, self.frame_init_minimum_width/self.usec_width), 'OI width ' + w, 'OI']
+                    self.putg(finit_start, self.samplenum, [ANN_NONCONFORMANCE, texts])                    
                 # Force a flush of the previous frame after we have
                 # reliably detected the start of another one. This is a
                 # workaround for this decoder's inability to detect the
@@ -628,7 +721,7 @@ class Decoder(srd.Decoder):
                 self.reset_state()
                 if fast_cont:
                     self.edges = [self.samplenum]
-                continue
+                continue 
             if not self.symbols_has_prev('SYNC_PAD'):
                 # Fast reponse to the specific combination of: no-sync,
                 # edge seen, and current high level. In this case we
@@ -669,28 +762,10 @@ class Decoder(srd.Decoder):
                 bit_ss = bit_es
             end_snum = bit_es
             curr_level, = self.wait_until(end_snum)
-            curr_snum = self.samplenum
+            curr_snum = self.samplenum   
 
-            # We are at the exact _calculated_ boundary of the last DATA
-            # bit time. Improve robustness for those situations where
-            # the transmitter's and the sender's timings differ within a
-            # margin, and the transmitter may hold the last DATA bit's
-            # HIGH level for a little longer.
-            #
-            # When no falling edge is seen within the maximum tolerance
-            # for the last DATA bit, then this could be the combination
-            # of a HIGH DATA bit and a PAD bit without a LOW in between.
-            # Fake an edge in that case, to re-use existing code paths.
-            # Make sure to keep referencing times to the last SYNC pad's
-            # falling edge. This is the last reliable condition we have.
-            if curr_level:
-                hold = self.hold_high_width
-                curr_level, = self.wait([{PIN_DATA: 'l'}, {'skip': int(hold)}])
-                self.carrier_check(curr_level, self.samplenum)
-                if self.matched[1]:
-                    self.edges.append(curr_snum)
-                    curr_level = 1 - curr_level
-                curr_snum = self.samplenum
+            # Now we are at the exact _calculated_ boundary of the last DATA
+            # bit time.
 
             # Get the byte value from the bits (when available).
             # TODO Has the local 'bit_field' become obsolete, or should
@@ -721,3 +796,55 @@ class Decoder(srd.Decoder):
             sync_resp_seq = ['WAIT_ACK'] + ['DATA_BYTE']
             if self.symbols_has_prev(sync_resp_seq):
                 self.frame_flush()
+
+            # We are at the exact _calculated_ boundary of the last DATA
+            # bit time. Improve robustness for those situations where
+            # the transmitter's and the sender's timings differ within a
+            # margin, and the transmitter may hold the last DATA bit's
+            # HIGH level for a little longer.
+            #
+            # When no falling edge is seen within the maximum tolerance
+            # for the last DATA bit, then this could be the combination
+            # of a HIGH DATA bit and a PAD bit without a LOW in between.
+            # Recognize and add a pad bit if present.
+            # Make sure to keep referencing times to the last SYNC pad's
+            # falling edge. This is the last reliable condition we have.
+            if curr_level:
+                # Scan minimum pad width into the pad, abort if too short
+                hold = self.pad_width - self.pad_tolerance_before - self.data_tolerance_after
+                curr_level, = self.wait([{PIN_DATA: 'f'},{'skip': int(hold)}])
+                if self.matched[0]:
+                    continue
+                # Find end of pad
+                hold = self.pad_width - self.combined_tolerance
+                curr_level, = self.wait([{PIN_DATA: 'f'},{'skip': int(hold)}])
+                self.carrier_check(curr_level, self.samplenum)
+                if self.matched[0]:
+                    pad_width = self.samplenum - curr_snum
+                    wideminwidth = self.pad_width - self.combined_tolerance
+                    widemaxwidth = self.pad_width + self.combined_tolerance
+                    if pad_width > widemaxwidth:
+                        continue
+                    elif pad_width < wideminwidth:
+                        continue       
+                    # Check that total byte width is OK
+                    if self.symbols_has_prev('DATA_BYTE'):
+                       b_width = self.samplenum - self.data_fall_time
+                       ideal_width = self.pad_width + 9 * self.data_width
+                       min_width = ideal_width - self.pad_tolerance_before - self.data_tolerance_before
+                       max_width = ideal_width + self.pad_tolerance_after + self.data_tolerance_after
+                       if b_width < min_width or b_width > max_width:
+                            w = '{}'.format(b_width/self.usec_width)
+                            texts = ['Out-of-spec byte width {} (expected {})'. \
+                                format(w, ideal_width/self.usec_width), 'OB width ' + w, 'OB']
+                            self.putg(self.data_fall_time, self.samplenum, [ANN_NONCONFORMANCE, texts])
+                    ss, es = curr_snum, self.samplenum
+                    texts = ['PAD', '{:d}'.format(1)]
+                    self.putg(ss, es, [ANN_PAD_BIT, texts])
+                    self.symbols_append(ss, es, 'PAD_BIT', 1)
+                    ss, es = self.symbols_get_last()[:2]
+                    self.putpy(ss, es, 'PAD_BIT', 1)
+                    self.edges.append(self.samplenum)
+                curr_snum = self.samplenum
+               
+              
