@@ -199,7 +199,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 	PyObject *py_channellist, *py_entry;
 	struct srd_channel *pdch;
 	GSList *pdchl;
-	ssize_t i;
+	ssize_t ch_idx;
 	PyGILState_STATE gstate;
 
 	gstate = PyGILState_Ensure();
@@ -222,8 +222,9 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 		goto err_out;
 	}
 
-	for (i = PyTuple_Size(py_channellist) - 1; i >= 0; i--) {
-		py_entry = PyTuple_GetItem(py_channellist, i);
+	ch_idx = PyTuple_Size(py_channellist);
+	while (ch_idx--) {
+		py_entry = PyTuple_GetItem(py_channellist, ch_idx);
 		if (!py_entry)
 			goto except_out;
 
@@ -243,7 +244,7 @@ static int get_channels(const struct srd_decoder *d, const char *attr,
 		if (py_dictitem_as_str(py_entry, "desc", &pdch->desc) != SRD_OK)
 			goto err_out;
 
-		pdch->order = offset + i;
+		pdch->order = offset + ch_idx;
 	}
 
 	Py_DECREF(py_channellist);
@@ -271,7 +272,7 @@ static int get_options(struct srd_decoder *d)
 	GSList *options;
 	struct srd_decoder_option *o;
 	GVariant *gvar;
-	ssize_t opt, i;
+	ssize_t opt, val_idx;
 	PyGILState_STATE gstate;
 
 	gstate = PyGILState_Ensure();
@@ -351,8 +352,9 @@ static int get_options(struct srd_decoder *d)
 				goto err_out;
 			}
 
-			for (i = PyTuple_Size(py_values) - 1; i >= 0; i--) {
-				py_item = PyTuple_GetItem(py_values, i);
+			val_idx = PyTuple_Size(py_values);
+			while (val_idx--) {
+				py_item = PyTuple_GetItem(py_values, val_idx);
 				if (!py_item)
 					goto except_out;
 
@@ -396,7 +398,7 @@ static int get_annotations(struct srd_decoder *dec, size_t *ret_count)
 	PyObject *py_annlist, *py_ann;
 	GSList *annotations;
 	char **annpair;
-	ssize_t i;
+	ssize_t ann_idx;
 	PyGILState_STATE gstate;
 
 	if (ret_count)
@@ -421,17 +423,17 @@ static int get_annotations(struct srd_decoder *dec, size_t *ret_count)
 		goto err_out;
 	}
 
-	i = PyTuple_Size(py_annlist);
+	ann_idx = PyTuple_Size(py_annlist);
 	if (ret_count)
-		*ret_count = i;
-	while (i--) {
-		py_ann = PyTuple_GetItem(py_annlist, i);
+		*ret_count = ann_idx;
+	while (ann_idx--) {
+		py_ann = PyTuple_GetItem(py_annlist, ann_idx);
 		if (!py_ann)
 			goto except_out;
 
 		if (!PyTuple_Check(py_ann) || PyTuple_Size(py_ann) != 2) {
 			srd_err("Protocol decoder %s annotation %zd should be a tuple with two elements.",
-				dec->name, i + 1);
+				dec->name, ann_idx + 1);
 			goto err_out;
 		}
 		if (py_strseq_to_char(py_ann, &annpair) != SRD_OK)
@@ -464,7 +466,7 @@ static int get_annotation_rows(struct srd_decoder *dec, size_t cls_count)
 	PyObject *py_ann_rows, *py_ann_row, *py_ann_classes, *py_item;
 	GSList *annotation_rows;
 	struct srd_decoder_annotation_row *ann_row;
-	ssize_t i, k;
+	ssize_t row_idx, item_idx;
 	size_t class_idx;
 	PyGILState_STATE gstate;
 
@@ -487,8 +489,9 @@ static int get_annotation_rows(struct srd_decoder *dec, size_t cls_count)
 		goto err_out;
 	}
 
-	for (i = PyTuple_Size(py_ann_rows) - 1; i >= 0; i--) {
-		py_ann_row = PyTuple_GetItem(py_ann_rows, i);
+	row_idx = PyTuple_Size(py_ann_rows);
+	while (row_idx--) {
+		py_ann_row = PyTuple_GetItem(py_ann_rows, row_idx);
 		if (!py_ann_row)
 			goto except_out;
 
@@ -523,8 +526,9 @@ static int get_annotation_rows(struct srd_decoder *dec, size_t cls_count)
 			goto err_out;
 		}
 
-		for (k = PyTuple_Size(py_ann_classes) - 1; k >= 0; k--) {
-			py_item = PyTuple_GetItem(py_ann_classes, k);
+		item_idx = PyTuple_Size(py_ann_classes);
+		while (item_idx--) {
+			py_item = PyTuple_GetItem(py_ann_classes, item_idx);
 			if (!py_item)
 				goto except_out;
 
@@ -538,7 +542,7 @@ static int get_annotation_rows(struct srd_decoder *dec, size_t cls_count)
 				goto except_out;
 			if (class_idx >= cls_count) {
 				srd_err("Protocol decoder %s annotation row %zd references invalid class %zu.",
-					dec->name, i, class_idx);
+					dec->name, row_idx, class_idx);
 				goto err_out;
 			}
 
@@ -570,7 +574,7 @@ static int get_binary_classes(struct srd_decoder *dec)
 	PyObject *py_bin_classes, *py_bin_class;
 	GSList *bin_classes;
 	char **bin;
-	ssize_t i;
+	ssize_t bin_idx;
 	PyGILState_STATE gstate;
 
 	gstate = PyGILState_Ensure();
@@ -592,8 +596,9 @@ static int get_binary_classes(struct srd_decoder *dec)
 		goto err_out;
 	}
 
-	for (i = PyTuple_Size(py_bin_classes) - 1; i >= 0; i--) {
-		py_bin_class = PyTuple_GetItem(py_bin_classes, i);
+	bin_idx = PyTuple_Size(py_bin_classes);
+	while (bin_idx--) {
+		py_bin_class = PyTuple_GetItem(py_bin_classes, bin_idx);
 		if (!py_bin_class)
 			goto except_out;
 
