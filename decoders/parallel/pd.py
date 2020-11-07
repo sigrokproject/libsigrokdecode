@@ -54,17 +54,24 @@ Packet:
    word <worditemcount> is 7, and so on.
 '''
 
-def channel_list(num_channels):
+NUM_CHANNELS = 8
+
+class Pin:
+    CLOCK = 0
+    DATA = range(1, NUM_CHANNELS + 1)
+
+class Ann:
+    ITEM, WORD = range(2)
+
+def channel_list():
     l = [{'id': 'clk', 'name': 'CLK', 'desc': 'Clock line'}]
-    for i in range(num_channels):
+    for i in range(NUM_CHANNELS):
         d = {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data line %d' % i}
         l.append(d)
     return tuple(l)
 
 class ChannelError(Exception):
     pass
-
-NUM_CHANNELS = 8
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -76,7 +83,7 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = ['parallel']
     tags = ['Util']
-    optional_channels = channel_list(NUM_CHANNELS)
+    optional_channels = channel_list()
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling')},
@@ -90,8 +97,8 @@ class Decoder(srd.Decoder):
         ('word', 'Word'),
     )
     annotation_rows = (
-        ('items', 'Items', (0,)),
-        ('words', 'Words', (1,)),
+        ('items', 'Items', (Ann.ITEM,)),
+        ('words', 'Words', (Ann.WORD,)),
     )
 
     def __init__(self):
@@ -128,7 +135,7 @@ class Decoder(srd.Decoder):
         if self.saved_word is not None:
             if self.options['wordsize'] > 0:
                 self.es_word = self.samplenum
-                self.putw([1, [self.fmt_word.format(self.saved_word)]])
+                self.putw([Ann.WORD, [self.fmt_word.format(self.saved_word)]])
                 self.putpw(['WORD', self.saved_word])
             self.saved_word = None
 
@@ -144,7 +151,7 @@ class Decoder(srd.Decoder):
             # Output the saved item (from the last CLK edge to the current).
             self.es_item = self.samplenum
             self.putpb(['ITEM', self.saved_item])
-            self.putb([0, [self.fmt_item.format(self.saved_item)]])
+            self.putb([Ann.ITEM, [self.fmt_item.format(self.saved_item)]])
             self.ss_item = self.samplenum
             self.saved_item = item
 
@@ -183,9 +190,10 @@ class Decoder(srd.Decoder):
         # clock signal. Either inspect samples on the configured edge of
         # the clock, or inspect samples upon ANY edge of ANY of the pins
         # which provide input data.
-        if self.has_channel(0):
+        has_clock = self.has_channel(Pin.CLOCK)
+        if has_clock:
             edge = self.options['clock_edge'][0]
-            conds = {0: edge}
+            conds = [{Pin.CLOCK: edge}]
         else:
             conds = [{idx: 'e'} for idx in has_channels]
 
@@ -208,5 +216,5 @@ class Decoder(srd.Decoder):
         while True:
             pins = self.wait(conds)
             bits = [0 if idx is None else pins[idx] for idx in idx_channels]
-            item = bitpack(bits[1:idx_strip])
+            item = bitpack(bits[Pin.DATA[0]:idx_strip])
             self.handle_bits(item, num_item_bits)
