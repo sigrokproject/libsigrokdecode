@@ -54,7 +54,7 @@ Packet:
    word <worditemcount> is 7, and so on.
 '''
 
-NUM_CHANNELS = 8
+NUM_CHANNELS = 16
 
 class Pin:
     CLOCK = 0
