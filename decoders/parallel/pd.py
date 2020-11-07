@@ -86,7 +86,7 @@ class Decoder(srd.Decoder):
     )
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
-            'default': 'rising', 'values': ('rising', 'falling')},
+            'default': 'rising', 'values': ('rising', 'falling', 'either')},
         {'id': 'wordsize', 'desc': 'Data wordsize (# bus cycles)',
             'default': 0},
         {'id': 'endianness', 'desc': 'Data endianness',
@@ -204,7 +204,11 @@ class Decoder(srd.Decoder):
         # which provide input data.
         has_clock = self.has_channel(Pin.CLOCK)
         if has_clock:
-            edge = self.options['clock_edge'][0]
+            edge = {
+                'rising': 'r',
+                'falling': 'f',
+                'either': 'e',
+            }.get(self.options['clock_edge'])
             conds = [{Pin.CLOCK: edge}]
         else:
             conds = [{idx: 'e'} for idx in has_data]
