@@ -140,8 +140,7 @@ class Decoder(srd.Decoder):
 
         txts = [self.fmt_word.format(word)]
         self.putg(ss, es, Ann.WORD, txts)
-        self.putpy(ss, es, 'WORD', word)
-        # self.putpy(ss, es, 'WORD', (word, bus_width, word_size))
+        self.putpy(ss, es, 'WORD', (word, bus_width, word_size))
 
         if len(items) != word_size:
             txts = ['incomplete word size', 'word size', 'ws']
@@ -177,8 +176,7 @@ class Decoder(srd.Decoder):
             es = now
             txts = [self.fmt_item.format(data)]
             self.putg(ss, es, Ann.ITEM, txts)
-            self.putpy(ss, es, 'ITEM', data)
-            # self.putpy(ss, es, 'ITEM', (data, bus_width))
+            self.putpy(ss, es, 'ITEM', (data, bus_width))
 
         # Optionally queue the currently seen item.
         if item is not None:
