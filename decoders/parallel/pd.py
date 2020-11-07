@@ -65,7 +65,7 @@ class Pin:
     RESET = DATA_N
 
 class Ann:
-    ITEM, WORD = range(2)
+    ITEM, WORD, WARN = range(3)
 
 class ChannelError(Exception):
     pass
@@ -101,84 +101,91 @@ class Decoder(srd.Decoder):
     annotations = (
         ('item', 'Item'),
         ('word', 'Word'),
+        ('warning', 'Warning'),
     )
     annotation_rows = (
         ('items', 'Items', (Ann.ITEM,)),
         ('words', 'Words', (Ann.WORD,)),
+        ('warnings', 'Warnings', (Ann.WARN,)),
     )
 
     def __init__(self):
         self.reset()
 
     def reset(self):
-        self.items = []
-        self.saved_item = None
-        self.ss_item = self.es_item = None
-        self.saved_word = None
-        self.ss_word = self.es_word = None
-        self.first = True
+        self.pend_item = None
+        self.word_items = []
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def putpb(self, data):
-        self.put(self.ss_item, self.es_item, self.out_python, data)
+    def putg(self, ss, es, ann, txts):
+        self.put(ss, es, self.out_ann, [ann, txts])
 
-    def putb(self, data):
-        self.put(self.ss_item, self.es_item, self.out_ann, data)
+    def putpy(self, ss, es, ann, data):
+        self.put(ss, es, self.out_python, [ann, data])
 
-    def putpw(self, data):
-        self.put(self.ss_word, self.es_word, self.out_python, data)
+    def flush_word(self, bus_width):
+        if not self.word_items:
+            return
+        word_size = self.options['wordsize']
 
-    def putw(self, data):
-        self.put(self.ss_word, self.es_word, self.out_ann, data)
+        items = self.word_items
+        ss, es = items[0][0], items[-1][1]
+        items = [i[2] for i in items]
+        if self.options['endianness'] == 'big':
+            items.reverse()
+        word = sum([d << (i * bus_width) for i, d in enumerate(items)])
 
-    def handle_bits(self, item, used_pins):
+        txts = [self.fmt_word.format(word)]
+        self.putg(ss, es, Ann.WORD, txts)
+        self.putpy(ss, es, 'WORD', word)
+        # self.putpy(ss, es, 'WORD', (word, bus_width, word_size))
 
-        # If a word was previously accumulated, then emit its annotation
-        # now after its end samplenumber became available.
-        if self.saved_word is not None:
-            if self.options['wordsize'] > 0:
-                self.es_word = self.samplenum
-                self.putw([Ann.WORD, [self.fmt_word.format(self.saved_word)]])
-                self.putpw(['WORD', self.saved_word])
-            self.saved_word = None
+        if len(items) != word_size:
+            txts = ['incomplete word size', 'word size', 'ws']
+            self.putg(ss, es, Ann.WARN, txts)
 
-        # Defer annotations for individual items until the next sample
-        # is taken, and the previous sample's end samplenumber has
-        # become available.
-        if self.first:
-            # Save the start sample and item for later (no output yet).
-            self.ss_item = self.samplenum
-            self.first = False
-            self.saved_item = item
-        elif self.saved_item is None:
-            pass
-        else:
-            # Output the saved item (from the last CLK edge to the current).
-            self.es_item = self.samplenum
-            self.putpb(['ITEM', self.saved_item])
-            self.putb([Ann.ITEM, [self.fmt_item.format(self.saved_item)]])
-            self.ss_item = self.samplenum
-            self.saved_item = item
+        self.word_items.clear()
 
-        # Get as many items as the configured wordsize specifies.
-        if not self.items:
-            self.ss_word = self.samplenum
-        self.items.append(item)
-        ws = self.options['wordsize']
-        if len(self.items) < ws:
+    def queue_word(self, now, item, bus_width):
+        wordsize = self.options['wordsize']
+        if not wordsize:
             return
 
-        # Collect words and prepare annotation details, but defer emission
-        # until the end samplenumber becomes available.
-        endian = self.options['endianness']
-        if endian == 'big':
-            self.items.reverse()
-        word = sum([self.items[i] << (i * used_pins) for i in range(ws)])
-        self.saved_word = word
-        self.items = []
+        # Terminate a previously seen item of a word first. Emit the
+        # word's annotation when the last item's end was seen.
+        if self.word_items:
+            ss, _, data = self.word_items[-1]
+            es = now
+            self.word_items[-1] = (ss, es, data)
+            if len(self.word_items) == wordsize:
+                self.flush_word(bus_width)
+
+        # Start tracking the currently seen item (yet unknown end time).
+        if item is not None:
+            pend = (now, None, item)
+            self.word_items.append(pend)
+
+    def handle_bits(self, now, item, bus_width):
+
+        # Optionally flush a previously started item.
+        if self.pend_item:
+            ss, _, data = self.pend_item
+            self.pend_item = None
+            es = now
+            txts = [self.fmt_item.format(data)]
+            self.putg(ss, es, Ann.ITEM, txts)
+            self.putpy(ss, es, 'ITEM', data)
+            # self.putpy(ss, es, 'ITEM', (data, bus_width))
+
+        # Optionally queue the currently seen item.
+        if item is not None:
+            self.pend_item = (now, None, item)
+
+        # Pass the current item to the word accumulation logic.
+        self.queue_word(now, item, bus_width)
 
     def decode(self):
         # Determine which (optional) channels have input data. Insist in
@@ -252,10 +259,8 @@ class Decoder(srd.Decoder):
             if reset_edge:
                 in_reset = pins[Pin.RESET] == reset_active
                 if in_reset:
-                    self.handle_bits(None, num_item_bits)
-                    self.saved_item = None
-                    self.saved_word = None
-                    self.first = True
+                    self.handle_bits(self.samplenum, None, num_item_bits)
+                    self.flush_word(num_item_bits)
             if in_reset:
                 continue
 
@@ -263,4 +268,4 @@ class Decoder(srd.Decoder):
                 data_bits = [0 if idx is None else pins[idx] for idx in data_indices]
                 data_bits = data_bits[:num_item_bits]
                 item = bitpack(data_bits)
-                self.handle_bits(item, num_item_bits)
+                self.handle_bits(self.samplenum, item, num_item_bits)
