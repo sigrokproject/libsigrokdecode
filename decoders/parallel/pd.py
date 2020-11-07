@@ -60,6 +60,9 @@ class Pin:
     CLOCK = 0
     DATA_0 = CLOCK + 1
     DATA_N = DATA_0 + NUM_CHANNELS
+    # BEWARE! DATA_N points _beyond_ the data partition (Python range(3)
+    # semantics, useful to have to simplify other code locations).
+    RESET = DATA_N
 
 class Ann:
     ITEM, WORD = range(2)
@@ -82,11 +85,14 @@ class Decoder(srd.Decoder):
         [
             {'id': 'd%d' % i, 'name': 'D%d' % i, 'desc': 'Data line %d' % i}
             for i in range(NUM_CHANNELS)
-        ]
+        ] +
+        [{'id': 'rst', 'name': 'RST', 'desc': 'RESET line'}]
     )
     options = (
         {'id': 'clock_edge', 'desc': 'Clock edge to sample on',
             'default': 'rising', 'values': ('rising', 'falling', 'either')},
+        {'id': 'reset_polarity', 'desc': 'Reset line polarity',
+            'default': 'low-active', 'values': ('low-active', 'high-active')},
         {'id': 'wordsize', 'desc': 'Data wordsize (# bus cycles)',
             'default': 0},
         {'id': 'endianness', 'desc': 'Data endianness',
@@ -147,6 +153,8 @@ class Decoder(srd.Decoder):
             self.ss_item = self.samplenum
             self.first = False
             self.saved_item = item
+        elif self.saved_item is None:
+            pass
         else:
             # Output the saved item (from the last CLK edge to the current).
             self.es_item = self.samplenum
@@ -202,23 +210,57 @@ class Decoder(srd.Decoder):
         # clock signal. Either inspect samples on the configured edge of
         # the clock, or inspect samples upon ANY edge of ANY of the pins
         # which provide input data.
+        conds = []
+        cond_idx_clock = None
+        cond_idx_data_0 = None
+        cond_idx_data_N = None
+        cond_idx_reset = None
         has_clock = self.has_channel(Pin.CLOCK)
         if has_clock:
+            cond_idx_clock = len(conds)
             edge = {
                 'rising': 'r',
                 'falling': 'f',
                 'either': 'e',
             }.get(self.options['clock_edge'])
-            conds = [{Pin.CLOCK: edge}]
+            conds.append({Pin.CLOCK: edge})
         else:
-            conds = [{idx: 'e'} for idx in has_data]
+            cond_idx_data_0 = len(conds)
+            conds.extend([{idx: 'e'} for idx in has_data])
+            cond_idx_data_N = len(conds)
+        has_reset = self.has_channel(Pin.RESET)
+        if has_reset:
+            cond_idx_reset = len(conds)
+            conds.append({Pin.RESET: 'e'})
+            reset_active = {
+                'low-active': 0,
+                'high-active': 1,
+            }.get(self.options['reset_polarity'])
 
         # Keep processing the input stream. Assume "always zero" for
         # not-connected input lines. Pass data bits (all inputs except
-        # clock) to the handle_bits() method.
+        # clock and reset) to the handle_bits() method. Handle reset
+        # edges first and data changes then, within the same iteration.
+        # This results in robust operation for low-oversampled input.
+        in_reset = False
         while True:
             pins = self.wait(conds)
-            data_bits = [0 if idx is None else pins[idx] for idx in data_indices]
-            data_bits = data_bits[:num_item_bits]
-            item = bitpack(data_bits)
-            self.handle_bits(item, num_item_bits)
+            clock_edge = cond_idx_clock is not None and self.matched[cond_idx_clock]
+            data_edge = cond_idx_data_0 is not None and [idx for idx in range(cond_idx_data_0, cond_idx_data_N) if self.matched[idx]]
+            reset_edge = cond_idx_reset is not None and self.matched[cond_idx_reset]
+
+            if reset_edge:
+                in_reset = pins[Pin.RESET] == reset_active
+                if in_reset:
+                    self.handle_bits(None, num_item_bits)
+                    self.saved_item = None
+                    self.saved_word = None
+                    self.first = True
+            if in_reset:
+                continue
+
+            if clock_edge or data_edge:
+                data_bits = [0 if idx is None else pins[idx] for idx in data_indices]
+                data_bits = data_bits[:num_item_bits]
+                item = bitpack(data_bits)
+                self.handle_bits(item, num_item_bits)
