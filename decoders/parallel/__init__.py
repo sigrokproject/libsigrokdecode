@@ -19,16 +19,27 @@
 
 '''
 This protocol decoder can decode synchronous parallel buses with various
-number of data bits/channels and one (optional) clock line.
+data bits/channels counts, an (optional) clock line, and an (optional)
+select/enable/reset line.
 
-If no clock line is supplied, the decoder works slightly differently in
-that it interprets every transition on any of the supplied data channels
-like there had been a clock transition.
+Data bits are taken from the decoder's lowest connected input pins. The
+input signal's data lines count need not span the full amount of the
+decoder's maximum supported data lines count. Not connected data lines
+are assumed to be low.
 
-It is required to use the lowest data channels, and use consecutive ones.
-For example, for a 4-bit sync parallel bus, channels D0/D1/D2/D3 (and CLK)
-should be used. Using combinations like D7/D12/D3/D15 is not supported.
-For an 8-bit bus you should use D0-D7, for a 16-bit bus use D0-D15 and so on.
+Example use cases are: Connect D3/D2/D1/D0 (and CLK) to a 4-bit bus.
+Connect D7 and D6 to inspect the two most significant bits of an 8-bit
+bus (and have 8-bit values shown instead of just 2-bit values).
+
+When provided, the specified clock edge determines when data lines get
+sampled. Without a clock spec, each transition on any of the data lines
+will be shown, which can become busy/noisy depending on the input data.
+
+Another signal optionally can control the period of time within which
+the data lines' bit pattern gets interpreted. Typical use cases would be
+reset, or select, or enable signals that are related to the bus' data
+communication. This optional signal can also improve synchronization to
+wider payload data which spans several bus cycles (multiplexing).
 '''
 
 from .pd import Decoder
