@@ -124,7 +124,10 @@ class Decoder(srd.Decoder):
         return h
 
     def wav_sample(self, sample):
-        return struct.pack('<I', self.data)
+        # Left shift the data, so that the MSB is correct for less than 32-bit
+        # samples.
+        d = self.data << (32 - self.bitcount)
+        return struct.pack('<I', d)
 
     def decode(self):
         while True:
