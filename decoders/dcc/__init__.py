@@ -18,7 +18,9 @@
 ##
 
 '''
-This protocol decoder can decode the data sent on a DCC model railway bus
+This protocol decoder can decode the data sent on a
+DCC (Digital Command Control) model railway bus.
+https://dccwiki.com/Digital_packet
 '''
 
 from .pd import Decoder

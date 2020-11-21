@@ -24,10 +24,8 @@ from common.srdhelper import bitpack
 ontime_min, ontime_max = 52e-6, 64e-6
 offtime_min, offtime_max = 90e-6, 10000e-6
 
-
 class SamplerateError(Exception):
     pass
-
 
 class Pin:
     DATA, = range(1)
@@ -37,7 +35,6 @@ class Ann:
 
 class Mode:
     SEARCHING, SYNCHRONISATION, START, BYTE, STOP = range(5)
-
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -52,17 +49,11 @@ class Decoder(srd.Decoder):
 
     options = (
     )
-
-    # no optional channels
     optional_channels = (
     )
-
-    # one channel has to be connected to the system.
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data'},
     )
-
-    # decoded data
     annotations = (
         ('timing error', 'Timing Error'),
         ('bit', 'Bit'),
@@ -72,7 +63,6 @@ class Decoder(srd.Decoder):
         ('byte', 'Byte'),
         ('checksum', 'Checksum'),
     )
-
     annotation_rows = (
         ('errors', 'Errors', (Ann.ERRORS, )),
         ('bits', 'Bits', (Ann.BITS, )),
@@ -87,9 +77,12 @@ class Decoder(srd.Decoder):
     def reset(self):
         ''' Reset the object '''
         self.state = Mode.SEARCHING
-        self.startBitSamples = [0, 0]
-        self.stopBitSamples = [0, 0]
-        self.byteSamples = [0, 0]
+        self.start_bit_es = 0
+        self.start_bit_ss = 0
+        self.stop_bit_es = 0
+        self.stop_bit_ss = 0
+        self.byte_ss = 0
+        self.byte_es = 0
         self.validity = False
 
     def start(self):
@@ -110,13 +103,13 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def handleBit(self, bit, BitStartSample, BitStopSample):
+    def handle_bit(self, bit, bit_ss, bit_es):
         ''' Decode one bit '''
         if self.state == Mode.SEARCHING:
             if bit == 1:
-                self.startSync = BitStartSample
+                self.start_sync = bit_ss
                 self.state = Mode.SYNCHRONISATION
-                self.numSyncBits = 1
+                self.num_sync_bits = 1
 
         if self.state == Mode.SYNCHRONISATION:
             self.data = []
@@ -124,64 +117,66 @@ class Decoder(srd.Decoder):
 
             if bit == 1:
                 # synchronisation continues
-                self.numSyncBits += 1
-                self.stopSync = BitStopSample
+                self.num_sync_bits += 1
+                self.stop_sync = bit_es
 
             else:
                 # synchronisation is over
-                if self.numSyncBits >= 16:
-                    self.putx(self.startSync, self.stopSync, [Ann.SYNC,
-                              ['Synchronisation: %d Bits' % self.numSyncBits,
-                               'Sync: %d' % self.numSyncBits]])
-                    self.putp(self.startSync, self.stopSync,
+                if self.num_sync_bits >= 16:
+                    self.putx(self.start_sync, self.stop_sync, [Ann.SYNC,
+                              ['Synchronisation: %d Bits' % self.num_sync_bits,
+                               'Sync: %d' % self.num_sync_bits, 'Sync']])
+                    self.putp(self.start_sync, self.stop_sync,
                               ['Synchronisation',
-                               {'length': self.numSyncBits}])
+                               {'length': self.num_sync_bits}])
 
                     self.state = Mode.START
-                    self.startBitSamples = (BitStartSample, BitStopSample)
-
-                    self.startPackage = BitStartSample
+                    self.start_bit_ss = bit_ss
+                    self.start_bit_es = bit_es
+                    self.package_ss = bit_ss
                 else:
                     self.state = Mode.SEARCHING
-                    self.numSyncBits = 1
+                    self.num_sync_bits = 1
 
         elif self.state == Mode.START:
-            self.putx(*self.startBitSamples, [Ann.START, ['Start']])
-            self.putp(*self.startBitSamples, ['Start', None])
+            self.putx(self.start_bit_ss, self.start_bit_es,
+                      [Ann.START, ['Start']])
+            self.putp(self.start_bit_ss, self.start_bit_es, ['Start', None])
             self.state = Mode.BYTE
-            self.byteSamples[0] = BitStartSample
+            self.byte_ss = bit_ss
             self.bits = [bit]
 
         elif self.state == Mode.STOP:
-            self.putx(*self.stopBitSamples,
+            self.putx(self.stop_bit_ss, self.stop_bit_es,
                       [Ann.STOP, ['Stop']])
-            self.putp(*self.stopBitSamples, ['Stop', None])
+            self.putp(self.stop_bit_ss, self.stop_bit_es, ['Stop', None])
 
-            self.putp(self.startPackage, self.stopBitSamples[1], ['Package', {
+            self.putp(self.package_ss, self.start_bit_ss, ['Package', {
                       'data': self.data, 'length': len(self.data),
                       'validity': self.validity, 'borders': self.borders}])
 
             self.state = Mode.SEARCHING
             if bit == 1:
-                self.startSync = BitStartSample
+                self.start_sync = bit_ss
                 self.state = Mode.SYNCHRONISATION
-                self.numSyncBits = 1
+                self.num_sync_bits = 1
 
         elif self.state == Mode.BYTE:
             if len(self.bits) < 8:
                 self.bits.append(bit)
-
-                self.byteSamples[1] = BitStopSample
+                self.byte_es = bit_es
 
             elif bit == 0:
                 self.state = Mode.START
-                self.startBitSamples = (BitStartSample, BitStopSample)
+                self.start_bit_ss = bit_ss
+                self.start_bit_es = bit_es
                 value = bitpack(self.bits)
-                self.putx(*self.byteSamples, [Ann.BYTE, ['0x%02X' % (value)]])
-                self.putp(*self.byteSamples, ['Byte', {'value': value}])
-
+                self.putx(self.byte_ss, self.byte_es,
+                          [Ann.BYTE, ['%02x' % (value)]])
+                self.putp(self.byte_ss, self.byte_es,
+                          ['Byte', {'value': value}])
                 self.data.append(value)
-                self.borders.append(self.byteSamples)
+                self.borders.append((self.byte_ss, self.byte_es))
 
             elif bit == 1:
                 checksum = bitpack(self.bits)
@@ -191,28 +186,28 @@ class Decoder(srd.Decoder):
                     val ^= byte
 
                 validity = (val == 0)
-
                 text = 'ok' if validity else 'invalid'
-                self.putx(*self.byteSamples, [Ann.CHECKSUM,
-                          ['Checksum %s: 0x%02X' % (text, checksum), text]])
-                self.putp(*self.byteSamples, ['Checksum',
+                self.putx(self.byte_ss, self.byte_es, [Ann.CHECKSUM,
+                          ['Checksum %s: %02x' % (text, checksum),
+                           '%s: %02x' % (text, checksum), text]])
+                self.putp(self.byte_ss, self.byte_es, ['Checksum',
                           {'value': checksum, 'validity': validity}])
-
                 self.validity = validity
-
                 self.state = Mode.STOP
-                self.stopBitSamples = (BitStartSample, BitStopSample)
+                self.stop_bit_ss = bit_ss
+                self.stop_bit_es = bit_es
 
     def decode(self):
         ''' main decoding function '''
 
-        signalStartSample = 0
-        lastSignalStopSample = 0
-        lastSignalStartSample = 0
-        lastBitStopSample = 0
+        signal_ss = 0
+        last_signal_ss = 0
+        last_signal_es = 0
+        last_bit_es = 0
 
         bit = None
         lastbit = None
+        transition_seen = False
 
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
@@ -221,7 +216,7 @@ class Decoder(srd.Decoder):
             # wait for any edge
             self.wait({Pin.DATA: 'e'})
 
-            time = (self.samplenum - signalStartSample) / self.samplerate
+            time = (self.samplenum - signal_ss) / self.samplerate
 
             valid = False
             if ontime_min <= time <= ontime_max:
@@ -234,24 +229,27 @@ class Decoder(srd.Decoder):
 
             if valid:
                 if lastbit == bit:
-                    # two parts of bits have the same value
-                    BitStartSample = lastSignalStartSample
-                    BitStopSample = self.samplenum
+                    # two parts of one bit have the same value
+                    bit_ss = last_signal_ss
+                    bit_es = self.samplenum
 
-                    if lastSignalStopSample == signalStartSample:
-                        if lastBitStopSample <= BitStartSample:
-                            self.putx(BitStartSample, BitStopSample,
-                                      [Ann.BITS, [str(bit)]])
-                            self.handleBit(bit, BitStartSample, BitStopSample)
+                    if last_signal_es == signal_ss:
+                        if last_bit_es <= bit_ss:
+                            if transition_seen:
+                                self.putx(bit_ss, bit_es,
+                                          [Ann.BITS, [str(bit)]])
+                                self.handle_bit(bit, bit_ss, bit_es)
+                            last_bit_es = bit_es
 
-                            lastBitStopSample = BitStopSample
+                elif lastbit is not None:
+                    transition_seen = True
+                last_signal_ss = signal_ss
+                last_signal_es = self.samplenum
 
-                lastSignalStartSample = signalStartSample
-                lastSignalStopSample = self.samplenum
+            elif transition_seen:
+                self.putx(signal_ss, self.samplenum, [Ann.ERRORS, [
+                          'invalid timing: %0.1fµs' % (time * 1e6),
+                          'invalid timing', 'invalid']])
 
-            else:
-                self.putx(signalStartSample, self.samplenum, [Ann.ERRORS, [
-                    'invalid timing: %0.1fµs' % (time * 1e6), 'invalid']])
-
-            signalStartSample = self.samplenum
+            signal_ss = self.samplenum
             lastbit = bit
