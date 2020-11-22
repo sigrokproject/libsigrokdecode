@@ -67,6 +67,8 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'polarity', 'desc': 'Expected polarity',
             'default': 'common-cathode', 'values': ('common-cathode', 'common-anode')},
+        {'id': 'show_unknown', 'desc': 'Display Unknown characters as #',
+            'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
         ('decoded-digit', 'Decoded digit'),
@@ -119,6 +121,9 @@ class Decoder(srd.Decoder):
 
             # Convert to character string.
             digit = self.pins_to_hex(oldpins[:7])
+
+            if digit is None and self.options['show_unknown'] == 'yes':
+                digit = '#'
 
             if digit is not None:
                 dp = oldpins[7]
