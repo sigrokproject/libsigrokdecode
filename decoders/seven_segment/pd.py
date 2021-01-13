@@ -151,46 +151,36 @@ class Decoder(srd.Decoder):
 
     def decode(self):
         oldpins = self.wait()
-
-        # Check if at least the 7 signals are present.
-        if False in [p in (0, 1) for p in oldpins[:7]]:
-            raise ChannelError('7 or 8 pins have to be present.')
-
         lastpos = self.samplenum
 
+        # Check mandatory and optional decoder input signals.
+        if False in [p in (0, 1) for p in oldpins[:7]]:
+            raise ChannelError('Need at least segments A-G.')
         self.have_dp = self.has_channel(7)
+        seg_count = 8 if self.have_dp else 7
 
-        conditions = [{0: 'e'}, {1: 'e'}, {2: 'e'}, {3: 'e'}, {4: 'e'}, {5: 'e'}, {6: 'e'}]
-
-        if self.have_dp:
-            conditions.append({7: 'e'})
-
+        conditions = [{i: 'e'} for i in range(seg_count)]
         while True:
             # Wait for any change.
             pins = self.wait(conditions)
 
+            # Invert all data lines if a common anode display is used.
             if self.options['polarity'] == 'common-anode':
-                # Invert all data lines if a common anode display is used.
-                if self.have_dp:
-                    oldpins = tuple((1 - state for state in oldpins))
-                else:
-                    oldpins = tuple((1 - state for state in oldpins[:7]))
+                oldpins = tuple((1 - state for state in oldpins[:seg_count]))
 
             # Convert to character string.
             digit = self.pins_to_hex(oldpins[:7])
-
             if digit is None and self.options['show_unknown'] == 'yes':
                 digit = '#'
 
+            # Emit annotation when conversion succeeded.
+            # Optionally present the decimal point when active.
             if digit is not None:
-                dp = oldpins[7]
-
-                # Check if decimal point is present and active.
-                if self.have_dp and dp == 1:
-                    digit += '.'
-
+                if self.have_dp:
+                    dp = oldpins[7]
+                    if dp == 1:
+                        digit += '.'
                 self.putb(lastpos, self.samplenum, [0, [digit]])
 
-            lastpos = self.samplenum
-
             oldpins = pins
+            lastpos = self.samplenum
