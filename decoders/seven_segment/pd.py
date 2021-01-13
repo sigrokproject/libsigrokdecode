@@ -22,6 +22,18 @@ import sigrokdecode as srd
 class ChannelError(Exception):
     pass
 
+# This table is sorted by ASCII code numbers, with the exception
+# of letters having their upper/lower case ignored.
+#
+# Traditional LED segment names and layout:
+#
+#      A
+#    F   B
+#      G
+#    E   C
+#      D
+#
+#    A  B  C  D  E  F  G
 digits = {
     (0, 0, 0, 0, 0, 0, 0): ' ',
     (0, 1, 0, 0, 0, 1, 0): '"',
