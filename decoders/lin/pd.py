@@ -19,6 +19,23 @@
 
 import sigrokdecode as srd
 
+'''
+OUTPUT_PYTHON format:
+Packet:
+[<ptype>, <data>]
+
+<ptype>:
+ - 'FRAME'
+ - 'ERROR'
+
+Examples:
+['FRAME', {'break': (4992, 5665, 0), 'sync': (5823, 6241, 85),
+           'pid': (6602, 7020, 8), 'id': 8, 'parity': 0, 'parity_valid': True,
+           'checksum': (9114, 9532, 64), 'checksum_valid': True,
+           'data': [(7401, 7819, 81), (7972, 8390, 6), (8543, 8961, 96)]} ]
+['ERROR']
+'''
+
 class LinFsm:
     class State:
         WaitForBreak = 'WAIT_FOR_BREAK'
@@ -65,7 +82,7 @@ class Decoder(srd.Decoder):
     desc = 'Local Interconnect Network (LIN) protocol.'
     license = 'gplv2+'
     inputs = ['uart']
-    outputs = []
+    outputs = ['lin']
     tags = ['Automotive']
     options = (
         {'id': 'version', 'desc': 'Protocol version', 'default': 2, 'values': (1, 2)},
@@ -94,6 +111,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.lin_version = self.options['version']
 
     def putx(self, data):
@@ -135,6 +153,7 @@ class Decoder(srd.Decoder):
         self.fsm.reset()
         self.fsm.transit(LinFsm.State.Sync)
 
+        self.lin_header.append((self.ss_block, self.es_block, value))
         self.putx([1, ['Break condition', 'Break', 'Brk', 'B']])
 
     def handle_sync(self, value):
@@ -149,6 +168,9 @@ class Decoder(srd.Decoder):
         self.lin_rsp.append((self.ss_block, self.es_block, value))
 
     def handle_checksum(self):
+        frame_dict = {}
+
+        break_ = self.lin_header.pop(0) if len(self.lin_header) else None
         sync = self.lin_header.pop(0) if len(self.lin_header) else None
 
         self.put(sync[0], sync[1], self.out_ann, [0, ['Sync', 'S']])
@@ -159,6 +181,10 @@ class Decoder(srd.Decoder):
 
         pid = self.lin_header.pop(0) if len(self.lin_header) else None
         checksum = self.lin_rsp.pop() if len(self.lin_rsp) else None
+
+        frame_dict['break'] = break_
+        frame_dict['sync'] = sync
+        frame_start = break_[0]
 
         if pid:
             id_ = pid[2] & 0x3F
@@ -176,6 +202,11 @@ class Decoder(srd.Decoder):
                 'ID: 0x%02X' % id_, 'I: %d' % id_
             ]])
 
+            frame_dict['pid'] = pid
+            frame_dict['id'] = id_
+            frame_dict['parity'] = parity
+            frame_dict['parity_valid'] = parity_valid
+
         if len(self.lin_rsp):
             checksum_valid = self.checksum_is_valid(pid[2], self.lin_rsp, checksum[2])
 
@@ -188,14 +219,23 @@ class Decoder(srd.Decoder):
 
             if not checksum_valid:
                 self.put(checksum[0], checksum[1], self.out_ann, [2, ['Checksum invalid']])
+
+            frame_dict['checksum'] = checksum
+            frame_dict['checksum_valid'] = checksum_valid
+            frame_end = checksum[1]
         else:
-            pass # No response.
+            # No response.
+            frame_end = pid[1]
+
+        frame_dict['data'] = list(self.lin_rsp) # copy
+        self.put(frame_start, frame_end, self.out_python, ['FRAME', frame_dict])
 
         self.lin_header.clear()
         self.lin_rsp.clear()
 
     def handle_error(self, dummy):
         self.putx([3, ['Error', 'Err', 'E']])
+        self.put(self.ss_block, self.es_block, self.out_python, ['ERROR'])
 
     def checksum_is_valid(self, pid, data, checksum):
         if self.lin_version == 2:
