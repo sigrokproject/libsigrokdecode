@@ -210,7 +210,7 @@ class Decoder(srd.Decoder):
                                 "Protocol:    {} ({})".format(ip_protocol[protocol][1], ip_protocol[protocol][0]),
                                 "Protocol:    {}".format(ip_protocol[protocol][1]),
                                 "Protocol:    {}".format(ip_protocol[protocol][0]),
-                                "Protocol"
+                                ip_protocol[protocol][0]
                             ]
                         ])
 
