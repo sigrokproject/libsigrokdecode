@@ -60,6 +60,7 @@ class Decoder(srd.Decoder):
         self.frame_start = None
         self.header_start = None
         self.payload_start = None
+        self.payload = []
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -114,6 +115,14 @@ class Decoder(srd.Decoder):
                         "FCS"
                     ]
                 ])
+
+                # Trim FCS from payload
+                self.payload = self.payload[:-4]
+
+                # Push payload to stacked decoders
+                self.ss_block = self.payload_start
+                self.es_block = startsample - int((endsample - startsample) * 8)
+                self.putp(self.payload)
 
             #TODO: Handle RESET control character
             return
@@ -217,6 +226,14 @@ class Decoder(srd.Decoder):
 
         # Frame payload
         elif self.state == "PAYLOAD":
+            # Add byte to payload
+            self.payload.append({
+                "start": startsample,
+                "end":   endsample,
+                "data":  data["data"]
+            })
+
+            # Add payload annotation
             self.ss_block = startsample
             self.es_block = endsample
             self.putx([1, ["0x{:02X}".format(data["data"])]])
