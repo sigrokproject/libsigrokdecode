@@ -98,7 +98,7 @@ def edgetype_to_waitcondition(edgetype):
         return 'e'
 
 class Pin:
-    (DATA,DATAEND) = range(2)
+    (DATA,END,) = range(2)
 
 class Ann:
     (TIME, TERSE, AVG, DELTA,) = range(4)
