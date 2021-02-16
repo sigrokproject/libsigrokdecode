@@ -159,7 +159,7 @@ class Decoder(srd.Decoder):
         self.last_n = deque()
         self.last_t = None
 
-    def __put_timing_region(self, ss, es):        
+    def put_timing_region(self, ss, es):        
         fmt = self.options['format']
         avg_period = self.options['avg_period']
         delta = self.options['delta'] == 'yes'
@@ -211,7 +211,7 @@ class Decoder(srd.Decoder):
             # If we previously found a start edge, check for end edge
             if ss and self.matched[end_edge_idx]:
                 es = self.samplenum
-                self.__put_timing_region(ss, es)
+                self.put_timing_region(ss, es)
                 # Invalidate start edge
                 ss = None
             
