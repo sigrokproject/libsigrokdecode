@@ -31,9 +31,36 @@
 #   then took some arbitrary choices and liberties to cope with real life
 #   data from an example setup. Strictly speaking this decoder violates
 #   the spec, and errs towards the usability side.
+# - Emit more header fields to stacked decoders
+
+# TODO priority:
+# Support PORT
+# Support MAC
 
 import sigrokdecode as srd
 import struct
+
+'''
+OUTPUT_PYTHON format for stacked decoders:
+
+General packet format:
+[<ptype>, <pdata>]
+
+This is the list of <ptype>s and their respective <pdata> values:
+
+Date bytes and frames:
+'FRAME': A list of parts of the frame as tuples:
+    ('HEADER', start, end, rx_id, tx_id, port)
+    ('PAYLOAD_BYTES', start, end, list of bytes in payload)
+        (value, start, end)
+    ('CRC', start, end)
+    ('ACK, start, end)
+    ('HEADER_TEXT, start, end, header as text)
+    ('FRAME_BYTES', start, end, list of bytes of whole frame)
+    
+This decoder will outpout parsed and verified frames
+to stacked decoders.
+'''
 
 ANN_RX_INFO, ANN_HDR_CFG, ANN_PKT_LEN, ANN_META_CRC, ANN_TX_INFO, \
 ANN_SVC_ID, ANN_PKT_ID, ANN_ANON_DATA, ANN_PAYLOAD, ANN_END_CRC, \
@@ -73,7 +100,7 @@ class Decoder(srd.Decoder):
     desc = 'The PJON protocol.'
     license = 'gplv2+'
     inputs = ['pjon_link']
-    outputs = []
+    outputs = ['pjon']
     tags = ['Embedded/industrial']
     annotations = (
         ('rx_info', 'Receiver ID'),
@@ -116,13 +143,18 @@ class Decoder(srd.Decoder):
         self.ack_bytes = None
         self.ann_ss = None
         self.ann_es = None
+        self.frame_headers_text = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
 
     def putg(self, ss, es, ann, data):
         self.put(ss, es, self.out_ann, [ann, data])
 
+    def putpy(self, ss, es, ptype, pdata):
+        self.put(ss, es, self.out_python, [ptype, pdata])
+       
     def frame_flush(self):
         if not self.frame_bytes:
             return
@@ -132,6 +164,7 @@ class Decoder(srd.Decoder):
         # Emit "communication relation" details.
         # TODO Include the service ID (port number) as well?
         text = []
+        data = []
         if self.frame_rx_id is not None:
             text.append("RX {}".format(self.frame_rx_id[-1]))
         if self.frame_tx_id is not None:
@@ -143,6 +176,23 @@ class Decoder(srd.Decoder):
         if text:
             text = " - ".join(text)
             self.putg(self.frame_ss, self.frame_es, ANN_RELATION, [text])
+            
+        # Emit output to stacked decoders
+        if len(self.payload_pos) > 1:
+            if self.frame_rx_id is not None and self.frame_tx_id is not None:
+                data.append(("HEADER", self.frame_ss, self.payload_pos[0], \
+                    self.frame_rx_id[-1], self.frame_tx_id[-1]))
+            data.append(("PAYLOAD_BYTES", self.payload_pos[0], \
+                self.payload_pos[1], self.frame_payload))
+        if self.end_crc_pos is not None and len(self.end_crc_pos) > 1:
+            data.append(("CRC", self.end_crc_pos[0], self.end_crc_pos[1]))
+        if self.frame_has_ack is not None:
+            data.append(("ACK", self.ack_pos[0], self.ack_pos[1]))    
+        if self.frame_headers_text is not None:
+            data.append(("HEADER_TEXT", self.frame_headers_text))
+        if self.frame_bytes is not None:
+            data.append(("FRAME_BYTES", self.frame_bytes))
+        self.putpy(self.frame_ss, self.frame_es, 'FRAME', data)
 
     def handle_field_get_desc(self, idx = None):
         '''Lookup description of a PJON frame field.'''
@@ -213,6 +263,24 @@ class Decoder(srd.Decoder):
 
         return texts
 
+    def handle_field_port(self, b):
+        '''Process port number field of a PJON frame.'''
+
+        port_bytes = b[:2]
+        ba = bytearray(port_bytes)
+        port_num = struct.unpack('>H', ba)
+        port_txt = '.'.join(['{:d}'.format(b) for b in port_num])
+        #port_txt = '{}'.format(port_num)
+        texts = [
+            'PORT {}'.format(port_txt),
+            '{}'.format(port_txt),
+        ]
+
+        # Track port info for communication relation emission.
+        self.frame_port = (port_num, port_txt)
+
+        return texts
+
     def handle_field_config(self, b):
         '''Process header config field of a PJON frame.'''
 
@@ -246,6 +314,7 @@ class Decoder(srd.Decoder):
             'CFG {}'.format(bits),
             bits
         ]
+        self.frame_headers_text = text
 
         # TODO Come up with the most appropriate phrases for this logic.
         # Are separate instruction groups with repeated conditions more
@@ -298,21 +367,30 @@ class Decoder(srd.Decoder):
         # into one block of instructions, to reduce the redundancy in the
         # condition checks, and raise awareness for incomplete sequences
         # during maintenance.
-        self.handle_field_add_desc(len_fmt, self.handle_field_pkt_len, ANN_PKT_LEN)
-        self.handle_field_add_desc(u8_fmt, self.handle_field_meta_crc, ANN_META_CRC)
+        self.handle_field_add_desc(len_fmt, self.handle_field_pkt_len, \
+            ANN_PKT_LEN)
+        self.handle_field_add_desc(u8_fmt, self.handle_field_meta_crc, \
+            ANN_META_CRC)
         if self.cfg_shared:
-            self.handle_field_add_desc(bus_fmt, self.handle_field_rx_bus, ANN_ANON_DATA)
+            self.handle_field_add_desc(bus_fmt, self.handle_field_rx_bus, \
+                ANN_ANON_DATA)
         if self.cfg_tx_info:
             if self.cfg_shared:
-                self.handle_field_add_desc(bus_fmt, self.handle_field_tx_bus, ANN_ANON_DATA)
-            self.handle_field_add_desc(u8_fmt, self.handle_field_tx_id, ANN_ANON_DATA)
+                self.handle_field_add_desc(bus_fmt, self.handle_field_tx_bus, \
+                    ANN_ANON_DATA)
+            self.handle_field_add_desc(u8_fmt, self.handle_field_tx_id, \
+                ANN_ANON_DATA)
         if self.cfg_port:
-            self.handle_field_add_desc(u16_fmt, ['PORT {:d}', '{:d}'], ANN_ANON_DATA)
+            self.handle_field_add_desc(u16_fmt, ['PORT {:d}', '{:d}'], \
+                ANN_ANON_DATA)
         if self.cfg_pkt_id:
-            self.handle_field_add_desc(u16_fmt, ['PKT {:04x}', '{:04x}'], ANN_ANON_DATA)
+            self.handle_field_add_desc(u16_fmt, ['PKT {:04x}', '{:04x}'], \
+                ANN_ANON_DATA)
         pl_fmt = '>{:d}B'.format(0)
-        self.handle_field_add_desc(pl_fmt, self.handle_field_payload, ANN_PAYLOAD)
-        self.handle_field_add_desc(crc_fmt, self.handle_field_end_crc, ANN_END_CRC)
+        self.handle_field_add_desc(pl_fmt, self.handle_field_payload, \
+            ANN_PAYLOAD)
+        self.handle_field_add_desc(crc_fmt, self.handle_field_end_crc, \
+            ANN_END_CRC)
 
         # Emit warning annotations for invalid flag combinations.
         warn_texts = []
@@ -392,10 +470,14 @@ class Decoder(srd.Decoder):
         want = calc_crc32(data) if crc_len == 32 else calc_crc8(data)
         if want != have:
             want_text = crc_fmt.format(want)
-            warn_texts.append('CRC mismatch - want {} have {}'.format(want_text, have_text))
+            warn_texts.append('CRC mismatch - want {} have {}'\
+                .format(want_text, have_text))
         if warn_texts:
             warn_texts = ', '.join(warn_texts)
             self.putg(self.ann_ss, self.ann_es, ANN_WARN, [warn_texts])
+
+        if not is_meta:
+            self.end_crc_pos = (self.ann_ss, self.ann_es)
 
         # Provide text representation for frame field, caller emits
         # the annotation.
@@ -484,6 +566,8 @@ class Decoder(srd.Decoder):
         self.frame_payload = b[:]
         self.frame_payload_text = text
 
+        self.payload_pos = (self.ann_ss, self.ann_es)
+
         texts = [
             'PAYLOAD {}'.format(text),
             text,
@@ -548,6 +632,7 @@ class Decoder(srd.Decoder):
                 text = self.handle_field_sync_resp(b)
                 if text:
                     self.putg(self.ann_ss, self.ann_es, ANN_SYN_RSP, text)
+                    self.ack_pos = self.ann_ss, self.ann_es
                 self.ann_ss, self.ann_es = None, None
                 return
 
