@@ -194,6 +194,10 @@ class Decoder(srd.Decoder):
         frame_dict['break'] = break_
         frame_dict['sync'] = sync
         frame_start = break_[0]
+        frame_end = break_[1] # may be reassigned as more bytes processed
+
+        if sync:
+            frame_end = sync[1]
 
         if pid:
             id_ = pid[2] & 0x3F
@@ -216,6 +220,7 @@ class Decoder(srd.Decoder):
             frame_dict['id'] = id_
             frame_dict['parity'] = parity
             frame_dict['parity_valid'] = parity_valid
+            frame_end = pid[1]
 
         if len(self.lin_rsp):
             checksum_valid = self.checksum_is_valid(pid[2], self.lin_rsp, checksum[2])
@@ -236,8 +241,7 @@ class Decoder(srd.Decoder):
             frame_dict['checksum_valid'] = checksum_valid
             frame_end = checksum[1]
         else:
-            # No response.
-            frame_end = pid[1]
+            pass # No response.
 
         frame_dict['data'] = list(self.lin_rsp) # copy
         self.put_frame_annotation(frame_start, frame_end, frame_dict)
@@ -247,9 +251,16 @@ class Decoder(srd.Decoder):
         self.lin_rsp.clear()
 
     def put_frame_annotation(self, ss, es, frame_dict):
-        data_str = ' '.join(['0x%02X' % t[2] for t in frame_dict['data']])
-        id_str = '0x%02X' % frame_dict['id']
-        ann_short = id_str + ': ' + data_str
+        id_str = '0x%02X' % frame_dict['id'] if 'id' in frame_dict else None
+
+        data_bytes = frame_dict['data'] if 'data' in frame_dict else []
+        data_str = ' '.join(['0x%02X' % t[2] for t in data_bytes])
+
+        if id_str:
+            ann_short = id_str + ': ' + data_str
+        else:
+            ann_short = ''
+
         self.put(ss, es, self.out_ann, [Ann.FRAME, [ann_short]])
 
     def handle_error(self, dummy):
