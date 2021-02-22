@@ -57,6 +57,7 @@ class Decoder(srd.Decoder):
         self.spa = None     # Source IP
         self.tha = None     # Destination MAC
         self.tpa = None     # Destination IP
+        self.oper = None    # Operation
         self.msg_start = None
         self.msg_end = None
 
@@ -163,15 +164,15 @@ class Decoder(srd.Decoder):
             # Operation
             elif i == 7:
                 ops = ["", "Request", "Reply"]
-                oper = ops[(data[i-1]["data"] << 8) | data[i]["data"]]
+                self.oper = ops[(data[i-1]["data"] << 8) | data[i]["data"]]
 
                 self.ss_block = data[i-1]["start"]
                 self.es_block = data[i]["end"]
                 self.putx([
                     0,
                     [
-                        "Operation:    {}".format(oper),
-                        "OP:    {}".format(oper),
+                        "Operation:    {}".format(self.oper),
+                        "OP:    {}".format(self.oper),
                         "OP"
                     ]
                 ])
@@ -265,4 +266,8 @@ class Decoder(srd.Decoder):
         # Add message annotation
         self.ss_block = self.msg_start
         self.es_block = self.msg_end
-        self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
+
+        if self.oper == "Request":
+            self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
+        elif self.oper == "Reply":
+            self.putx([1, ["{} is at {}".format(self.spa, self.sha)]])
