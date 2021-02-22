@@ -159,7 +159,7 @@ class Decoder(srd.Decoder):
                 # Create MAC string
                 dst_mac = ""
                 for octet in self.buffer:
-                    dst_mac += "{:X}:".format(octet)
+                    dst_mac += "{:02X}:".format(octet)
                 dst_mac = dst_mac[:-1]
 
                 # Broadcast MAC
@@ -181,7 +181,7 @@ class Decoder(srd.Decoder):
                 # Create MAC string
                 src_mac = ""
                 for octet in self.buffer:
-                    src_mac += "{:X}:".format(octet)
+                    src_mac += "{:02X}:".format(octet)
                 src_mac = src_mac[:-1]
 
                 # Add preamble annotation
