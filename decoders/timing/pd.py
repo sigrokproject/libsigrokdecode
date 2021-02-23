@@ -143,17 +143,45 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.last_n = deque()
+        self.last_t = None
+
+    def put_timing_region(self, ss, es):        
+        fmt = self.options['format']
+        avg_period = self.options['avg_period']
+        delta = self.options['delta'] == 'yes'
+        es = self.samplenum
+        sa = es - ss
+        t = sa / self.samplerate
+        
+        if fmt == 'full':
+            cls, txt = Ann.TIME, [normalize_time(t)]
+        elif fmt == 'samples':
+            cls, txt = Ann.TERSE, terse_times(sa, fmt)
+        else:
+            cls, txt = Ann.TERSE, terse_times(t, fmt)
+        if txt:
+            self.put(ss, es, self.out_ann, [cls, txt])
+        
+        if avg_period > 0:
+            if t > 0:
+                self.last_n.append(t)
+            if len(self.last_n) > avg_period:
+                self.last_n.popleft()
+            average = sum(self.last_n) / len(self.last_n)
+            cls, txt = Ann.AVG, normalize_time(average)
+            self.put(ss, es, self.out_ann, [cls, [txt]])
+        if self.last_t and delta:
+            cls, txt = Ann.DELTA, normalize_time(t - self.last_t)
+            self.put(ss, es, self.out_ann, [cls, [txt]])
+        
+        self.last_t = t
 
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         edge = self.options['edge']
-        avg_period = self.options['avg_period']
-        delta = self.options['delta'] == 'yes'
-        fmt = self.options['format']
         ss = None
-        last_n = deque()
-        last_t = None
         while True:
             if edge == 'rising':
                 pin = self.wait({Pin.DATA: 'r'})
@@ -166,29 +194,5 @@ class Decoder(srd.Decoder):
                 ss = self.samplenum
                 continue
             es = self.samplenum
-            sa = es - ss
-            t = sa / self.samplerate
-
-            if fmt == 'full':
-                cls, txt = Ann.TIME, [normalize_time(t)]
-            elif fmt == 'samples':
-                cls, txt = Ann.TERSE, terse_times(sa, fmt)
-            else:
-                cls, txt = Ann.TERSE, terse_times(t, fmt)
-            if txt:
-                self.put(ss, es, self.out_ann, [cls, txt])
-
-            if avg_period > 0:
-                if t > 0:
-                    last_n.append(t)
-                if len(last_n) > avg_period:
-                    last_n.popleft()
-                average = sum(last_n) / len(last_n)
-                cls, txt = Ann.AVG, normalize_time(average)
-                self.put(ss, es, self.out_ann, [cls, [txt]])
-            if last_t and delta:
-                cls, txt = Ann.DELTA, normalize_time(t - last_t)
-                self.put(ss, es, self.out_ann, [cls, [txt]])
-
-            last_t = t
+            self.put_timing_region(ss, es)
             ss = es
