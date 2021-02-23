@@ -88,9 +88,17 @@ def terse_times(t, fmt):
 
     # Unspecified format, and nothing auto-detected.
     return ['{:f}'.format(t)]
+   
+def edgetype_to_waitcondition(edgetype):
+    if edgetype == 'rising':
+        return 'r'
+    elif edgetype == 'falling':
+        return 'f'
+    else:
+        return 'e'
 
 class Pin:
-    (DATA,) = range(1)
+    (DATA,END,) = range(2)
 
 class Ann:
     (TIME, TERSE, AVG, DELTA,) = range(4)
@@ -108,6 +116,9 @@ class Decoder(srd.Decoder):
     channels = (
         {'id': 'data', 'name': 'Data', 'desc': 'Data line'},
     )
+    optional_channels = (
+        {'id': 'end', 'name': 'EndData', 'desc': 'Optional data line for end edge'},
+    )
     annotations = (
         ('time', 'Time'),
         ('terse', 'Terse'),
@@ -122,6 +133,8 @@ class Decoder(srd.Decoder):
     options = (
         { 'id': 'avg_period', 'desc': 'Averaging period', 'default': 100 },
         { 'id': 'edge', 'desc': 'Edges to check',
+          'default': 'any', 'values': ('any', 'rising', 'falling') },
+        { 'id': 'edge_end', 'desc': 'Edges to check for optional end edge',
           'default': 'any', 'values': ('any', 'rising', 'falling') },
         { 'id': 'delta', 'desc': 'Show delta from last',
           'default': 'no', 'values': ('yes', 'no') },
@@ -181,18 +194,27 @@ class Decoder(srd.Decoder):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         edge = self.options['edge']
+        have_end = self.has_channel(1)
+        edge_end = self.options['edge_end']
         ss = None
+        
+        wait_cond = [{0: edgetype_to_waitcondition(edge)}]
+        if have_end:
+            wait_cond.append({1: edgetype_to_waitcondition(edge_end)})
+        
+        start_edge_idx = 0
+        end_edge_idx = 1 if have_end else 0
+        
         while True:
-            if edge == 'rising':
-                pin = self.wait({Pin.DATA: 'r'})
-            elif edge == 'falling':
-                pin = self.wait({Pin.DATA: 'f'})
-            else:
-                pin = self.wait({Pin.DATA: 'e'})
-
-            if not ss:
-                ss = self.samplenum
-                continue
-            es = self.samplenum
-            self.put_timing_region(ss, es)
-            ss = es
+            self.wait(wait_cond)
+            
+            # If we previously found a start edge, check for end edge
+            if ss and self.matched[end_edge_idx]:
+                es = self.samplenum
+                self.put_timing_region(ss, es)
+                # Invalidate start edge
+                ss = None
+            
+            # Check for start edge
+            if self.matched[start_edge_idx]:
+                ss = self.samplenum 
