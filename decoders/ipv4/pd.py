@@ -18,6 +18,8 @@
 ##
 
 import sigrokdecode as srd
+import struct
+from collections import namedtuple
 
 from .dicts import *
 
@@ -54,7 +56,6 @@ class Decoder(srd.Decoder):
         self.es_block = None            # Annotation end sample
 
         self.payload_start = None       # Payload start sample
-        self.payload = []               # IPv4 payload
         self.ihl = None                 # IP header length
 
     # Get metadata from PulseView
@@ -82,215 +83,167 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        # Tuples in list "data" contain ([byte] value, [int] startsample, [int] endsample)
+        """
+        data = (
+            payload (bytearray),
+            blocks (list) = [
+                {"ss": start_sample, "es": end_sample},
+                {"ss": start_sample, "es": end_sample},
+                ....
+                {"ss": start_sample, "es": end_sample},
+            ]
+        )
+        """
 
-        # Loop through bytes
-        for i, b in enumerate(data):
-            # Version and IHL
-            if i == 0:
-                ver = b[0] >> 4                 # IP Version (always 4)
-                self.ihl = (b[0] & 0x0F) * 4    # Header Length (usually 5)
+        payload = data[0]
+        blocks = data[1]
 
-                # Add payload annotation
-                self.ss_block = b[1]
-                self.es_block = b[2]
-                self.putx([
-                    0,
-                    [
-                        "Version: {}    Header Length: {} bytes".format(ver, self.ihl),
-                        "Version and Header Length",
-                        "Version and IHL",
-                        "IHL"
-                    ]
-                ])
-            
-            # IP Header
-            elif 0 < i < self.ihl:
-                # DSCP and ECN
-                if i == 1:
-                    self.ss_block = b[1]
-                    self.es_block = b[2]
-                    self.putx([
-                        0,
-                        [
-                            "Differentiated Services Code Point (DSCP) and Explicit Congestion Notification (ECN)",
-                            "DSCP and ECN",
-                            "DSCP"
-                        ]
-                    ])
 
-                # Total packet length
-                elif i == 3:
-                    length = (data[i-1][0] << 8) | data[i][0]
+        # Get Internet Header Length (IHL)
+        self.ver = payload[0] >> 4              # Internet Protocol version (always 4)
+        self.ihl = (payload[0] & 0x0F) * 4      # Header Length (typically 5 = 20 bytes)
+        if self.ihl != 20: return               #TODO: Support optional fields
 
-                    self.ss_block = data[i-1][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Packet Length:    {} bytes".format(length),
-                            "Packet Length",
-                            "Length"
-                        ]
-                    ])
-                
-                # Identification
-                elif i == 5:
-                    ident = (data[i-1][0] << 8) | data[i][0]
 
-                    self.ss_block = data[i-1][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Identification:    {}".format(ident),
-                            "Identification",
-                            "ID"
-                        ]
-                    ])
-                
-                # Flags
-                elif i == 6:
-                    df = (b[0] & 0b010 ) >> 1
-                    mf = (b[0] & 0b100 ) >> 2
+        # Add version/length annotation
+        self.ss_block = blocks[0]["ss"]
+        self.es_block = blocks[0]["es"]
+        self.putx([0, [
+            "Version: {}    Header Length: {} bytes".format(self.ver, self.ihl),
+            "Version and Header Length",
+            "Version and IHL",
+            "IHL"
+        ]])
 
-                    self.ss_block = b[1]
-                    self.es_block = b[1] + int(((b[2] - b[1]) / 8) * 3)
-                    self.putx([
-                        0,
-                        [
-                            "Don't Fragment: {}    More Fragments: {}".format(bool(df), bool(mf)),
-                            "DF: {}    MF: {}".format(bool(df), bool(mf)),
-                            "DF and MF",
-                            "Flags"
-                        ]
-                    ])
-                
-                # Fragment offset
-                elif i == 7:
-                    offset = (((data[i-1][0] & 0b00011111) << 8) | data[i][0]) * 8
 
-                    self.ss_block = data[i-1][1] + int(((data[i][2] - data[i][1]) / 8) * 3)
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Fragment Offset:    {} bytes".format(offset),
-                            "Fragment Offset",
-                            "Offset"
-                        ]
-                    ])
-                
-                # Time to live (TTL)
-                elif i == 8:
-                    ttl = b[0]
+        # Unpack IP packet header
+        ip_tuple = namedtuple("ip", "length ident fragment ttl protocol checksum source destination")
+        fields = struct.unpack(">3H2BH4s4s", payload[2:20])
+        ip = ip_tuple(*fields)
 
-                    self.ss_block = b[1]
-                    self.es_block = b[2]
-                    self.putx([
-                        0,
-                        [
-                            "Time To Live:    {}".format(ttl),
-                            "Time To Live",
-                            "TTL"
-                        ]
-                    ])
 
-                # Protocol
-                elif i == 9:
-                    protocol = b[0]
+        # DSCP and ECN
+        self.ss_block = blocks[1]["ss"]
+        self.es_block = blocks[1]["es"]
+        self.putx([0, [
+            "Differentiated Services Code Point (DSCP) and Explicit Congestion Notification (ECN)",
+            "DSCP and ECN",
+            "DSCP"
+        ]])
 
-                    # Known protocol
-                    if protocol in ip_protocol:
-                        self.ss_block = b[1]
-                        self.es_block = b[2]
-                        self.putx([
-                            0,
-                            [
-                                "Protocol:    {} ({})".format(ip_protocol[protocol][1], ip_protocol[protocol][0]),
-                                "Protocol:    {}".format(ip_protocol[protocol][1]),
-                                "Protocol:    {}".format(ip_protocol[protocol][0]),
-                                ip_protocol[protocol][0]
-                            ]
-                        ])
 
-                    # Unknown protocol
-                    else:
-                        self.ss_block = b[1]
-                        self.es_block = b[2]
-                        self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
+        # Total packet length
+        self.ss_block = blocks[2]["ss"]
+        self.es_block = blocks[3]["es"]
+        self.putx([0, [
+            "Packet Length:    {} bytes".format(ip.length),
+            "Packet Length",
+            "Length"
+        ]])
 
-                # Header checksum
-                elif i == 11:
-                    checksum = (data[i-1][0] << 8) | data[i][0]
 
-                    #TODO: Calculate checksum and compare
+        # Identification
+        self.ss_block = blocks[4]["ss"]
+        self.es_block = blocks[5]["es"]
+        self.putx([0, [
+            "Identification:    {}".format(ip.ident),
+            "Identification",
+            "ID"
+        ]])
 
-                    self.ss_block = data[i-1][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Header Checksum:    0x{:04X}".format(checksum),
-                            "Checksum:    0x{:04X}".format(checksum),
-                            "Checksum"
-                        ]
-                    ])
 
-                # Source IP
-                elif i == 15:
-                    octets = [
-                        data[i-3][0],
-                        data[i-2][0],
-                        data[i-1][0],
-                        data[i][0],
-                    ]
+        # Flags
+        df = (payload[6] & 0b010 ) >> 1
+        mf = (payload[6] & 0b100 ) >> 2
+        self.ss_block = blocks[6]["ss"]
+        self.es_block = blocks[6]["ss"] + int(((blocks[6]["es"] - blocks[6]["ss"]) / 8) * 3)
+        self.putx([0, [
+            "Don't Fragment: {}    More Fragments: {}".format(bool(df), bool(mf)),
+            "DF: {}    MF: {}".format(bool(df), bool(mf)),
+            "DF and MF",
+            "Flags"
+        ]])
 
-                    self.ss_block = data[i-3][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Source IP Address:    {}.{}.{}.{}".format(octets[0], octets[1], octets[2], octets[3]),
-                            "Source IP:    {}.{}.{}.{}".format(octets[0], octets[1], octets[2], octets[3]),
-                            "Source IP"
-                        ]
-                    ])
 
-                # Destination IP
-                elif i == 19:
-                    octets = [
-                        data[i-3][0],
-                        data[i-2][0],
-                        data[i-1][0],
-                        data[i][0],
-                    ]
+        # Fragment offset
+        offset = (((payload[6] & 0b00011111) << 8) | payload[7]) * 8
+        self.ss_block = blocks[6]["ss"] + int(((blocks[6]["es"] - blocks[6]["ss"]) / 8) * 3)
+        self.es_block = blocks[7]["es"]
+        self.putx([0, [
+            "Fragment Offset:    {} bytes".format(offset),
+            "Fragment Offset",
+            "Offset"
+        ]])
 
-                    self.ss_block = data[i-3][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Destination IP Address:    {}.{}.{}.{}".format(octets[0], octets[1], octets[2], octets[3]),
-                            "Destination IP:    {}.{}.{}.{}".format(octets[0], octets[1], octets[2], octets[3]),
-                            "Destination IP"
-                        ]
-                    ])
 
-                    # Payload start sample for stacked decoders
-                    self.payload_start = data[i][2]
+        # Time to live (TTL)
+        self.ss_block = blocks[8]["ss"]
+        self.es_block = blocks[8]["es"]
+        self.putx([0, [
+            "Time To Live:    {}".format(ip.ttl),
+            "Time To Live",
+            "TTL"
+        ]])
 
-            # IP Payload
-            elif i >= self.ihl:
-                # Add byte to payload
-                self.payload.append(b)
 
-                # Add payload annotation
-                self.ss_block = b[1]
-                self.es_block = b[2]
-                self.putx([1, ["0x{:02X}".format(b[0])]])
+        # Protocol
+        self.ss_block = blocks[9]["ss"]
+        self.es_block = blocks[9]["es"]
+        if ip.protocol in ip_protocol:
+            # Add known protocol annotation
+            self.putx([0, [
+                "Protocol:    {} ({})".format(ip_protocol[ip.protocol][1], ip_protocol[ip.protocol][0]),
+                "Protocol:    {}".format(ip_protocol[ip.protocol][1]),
+                "Protocol:    {}".format(ip_protocol[ip.protocol][0]),
+                ip_protocol[ip.protocol][0]
+            ]])
+        else:
+            # Add unknown protocol annotation
+            self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
+
+
+        # Header checksum
+        self.ss_block = blocks[10]["ss"]
+        self.es_block = blocks[11]["es"]
+        self.putx([0, [
+            "Header Checksum:    0x{:04X}".format(ip.checksum),
+            "Checksum:    0x{:04X}".format(ip.checksum),
+            "Checksum"
+        ]])
+        #TODO: Verify checksum
+
+
+        # Source IP
+        ip_src = ".".join(str(octet) for octet in ip.source)
+        self.ss_block = blocks[12]["ss"]
+        self.es_block = blocks[15]["es"]
+        self.putx([0, [
+            "Source IP Address:    {}".format(ip_src),
+            "Source IP:    {}".format(ip_src),
+            "Source IP"
+        ]])
+
+
+        # Destination IP
+        ip_dst = ".".join(str(octet) for octet in ip.destination)
+        self.ss_block = blocks[16]["ss"]
+        self.es_block = blocks[19]["es"]
+        self.putx([0, [
+            "Destination IP Address:    {}".format(ip_dst),
+            "Destination IP:    {}".format(ip_dst),
+            "Destination IP"
+        ]])
+        self.payload_start = self.es_block
+
+
+        # IP Payload
+        for i, b in enumerate(payload[20:]):
+            # Add payload annotation
+            self.ss_block = blocks[i + 20]["ss"]
+            self.es_block = blocks[i + 20]["es"]
+            self.putx([1, ["0x{:02X}".format(b)]])
 
         # Push payload to stacked decoders
-        self.ss_block = self.payload_start
-        self.es_block = data[-1][2]
-        self.putp(self.payload)
+        self.ss_block = blocks[20]["ss"]
+        self.es_block = blocks[-1]["es"]
+        self.putp((payload[20:], blocks[20:]))
