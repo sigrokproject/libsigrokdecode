@@ -31,7 +31,6 @@ class Decoder(srd.Decoder):
     inputs   = ['ethernet']
     outputs  = ['ipv4']
     tags     = ['Networking', 'PC']
-    #options = ()
     annotations = (
         ('header', 'Decoded header'),
         ('data', 'Decoded data'),
@@ -50,12 +49,13 @@ class Decoder(srd.Decoder):
 
     # Reset decoder variables
     def reset(self):
-        self.samplerate = None
-        self.ss_block = None
-        self.es_block = None
+        self.samplerate = None          # Session sample rate
+        self.ss_block = None            # Annotation start sample
+        self.es_block = None            # Annotation end sample
 
-        self.payload_start = None
-        self.payload = []
+        self.payload_start = None       # Payload start sample
+        self.payload = []               # IPv4 payload
+        self.ihl = None                 # IP header length
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data for stacked decoders
+    # Put binary data
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 
