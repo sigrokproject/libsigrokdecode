@@ -103,11 +103,12 @@ class Decoder(srd.Decoder):
             self.bit_offset -= 1
             return
 
-        # If first bit of symbol, set symbol start sample
-        if self.bits == 0: self.symbol_start = startsample
-        
-        # If first nibble of data byte, set data byte start sample
-        if self.bits == 0 and self.last_nibble == None: self.data_start = startsample
+        # Set symbol and data byte start samples
+        if self.bits == 0:
+            self.symbol_start = startsample
+
+            if self.last_nibble == None:
+                self.data_start = startsample
 
         # Shift bit into symbol
         self.symbol = (self.symbol << 1) | data
@@ -124,8 +125,8 @@ class Decoder(srd.Decoder):
                 # Add control symbol annotation
                 self.putx([1, sym_ctrl[self.symbol]])
 
-                # Push control symbol to stacked decoders
-                self.putp({"data": None, "control": sym_ctrl[self.symbol][1]})
+                # Push control symbol to stacked decoders (value, is_control_symbol)
+                self.putp((sym_ctrl[self.symbol][1], True))
             
             # Data symbol
             elif self.symbol in sym_data:
@@ -143,8 +144,8 @@ class Decoder(srd.Decoder):
                     self.es_block = endsample
                     self.putx([3, ["0x{:02X}".format(data_byte)]])
 
-                    # Push byte to stacked decoders
-                    self.putp({"data": data_byte, "control": None})
+                    # Push byte to stacked decoders (value, is_control_symbol)
+                    self.putp((data_byte, False))
 
                     # Reset data byte value
                     self.data_start = endsample
