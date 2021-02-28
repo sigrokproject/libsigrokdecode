@@ -146,29 +146,25 @@ class Decoder(srd.Decoder):
             # Decode NRZ-I waveform into bits
             elif self.state == "DECODE":
                 # Start of bit
-                start_samp = self.samplenum
+                start_sample = self.samplenum
 
                 # Skip forward to next edge or one symbol len
                 self.wait([{0: 'e'}, {'skip': self.symbol_len}])
 
                 # Check if transition was detected
                 if self.matched == (True, False):
-                    # Adjust symbol length to transition is at mid-point
-                    edge_samp = self.samplenum - start_samp             # Edge position within symbol
+                    # Adjust symbol length so transition is at mid-point
+                    edge_samp = self.samplenum - start_sample           # Edge position within symbol
                     offset = int(self.symbol_len / 2) - edge_samp       # Edge offset from mid-point of symbol
                     remaining = self.symbol_len - edge_samp - offset    # Number of samples remaining in symbol
 
                     # Skip forward to end of symbol
                     self.wait({'skip': remaining})
 
-                    bit = 1
-                else:
-                    bit = 0
-
                 # Add bit annotation
-                self.ss_block = start_samp
+                self.ss_block = start_sample
                 self.es_block = self.samplenum
-                self.putx([1, [str(bit)]])
+                self.putx([1, ["{:n}".format(self.matched[0])]])
 
                 # Push bit to stacked decoders
-                self.putp(bit)
+                self.putp(self.matched[0])
