@@ -91,9 +91,17 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        # Handle control character
-        if data["control"] != None:
-            if data["control"] == "T":  # TERMINATE
+        # Tuple "data" contains ([str/byte] value, [boolean] is_control_symbol)
+
+        # Handle control characters
+        if data[1]:
+            # START 2
+            if data[0] == "K":
+                # Set start sample of frame
+                self.frame_start = endsample
+
+            # TERMINATE
+            elif data[0] == "T":
                 # Get FCS
                 fcs = int.from_bytes(self.buffer[-4:], byteorder="big")
                 #fcs = self.reverse_bits(fcs, 32)
@@ -106,8 +114,7 @@ class Decoder(srd.Decoder):
                 # Add FCS annotation
                 self.ss_block = startsample - int((endsample - startsample) * 8)
                 self.es_block = endsample - (endsample - startsample)
-                self.putx([
-                    0,
+                self.putx([0,
                     [
                         "Frame Check Sequence:    0x{:08X}".format(fcs),
                         "Frame Check Sequence",
@@ -123,18 +130,19 @@ class Decoder(srd.Decoder):
                 self.es_block = startsample - int((endsample - startsample) * 8)
                 self.putp(self.payload)
 
-            #TODO: Handle RESET control character
+            # RESET
+            elif data[0] == "R":
+                # Reset decoder state ready for next frame
+                self.reset()
+
             return
         
         # Add byte to buffer
-        elif data["data"] != None: self.buffer.append(data["data"])
+        self.buffer.append(data[0])
 
         # Waiting for start of frame
         if self.state == "WAITING":
-            # Get start position of frame
-            if len(self.buffer) == 1: self.frame_start = startsample
-            
-            # Frame Preamble and Start Frame Delimiter
+            # Check for Start Frame Delimiter
             if self.buffer[-1] == 0xD5:
                 # Add preamble annotation
                 self.ss_block = self.frame_start
@@ -202,8 +210,7 @@ class Decoder(srd.Decoder):
                 if et in ethertype:
                     # Add EtherType annotation
                     self.es_block = endsample
-                    self.putx([
-                        0,
+                    self.putx([0,
                         [
                             "EtherType:    {} (0x{:04X})".format(ethertype[et][0], et),
                             "EtherType:    {} (0x{:04X})".format(ethertype[et][1], et),
@@ -229,10 +236,10 @@ class Decoder(srd.Decoder):
             self.payload.append({
                 "start": startsample,
                 "end":   endsample,
-                "data":  data["data"]
+                "data":  data[0]
             })
 
             # Add payload annotation
             self.ss_block = startsample
             self.es_block = endsample
-            self.putx([1, ["0x{:02X}".format(data["data"])]])
+            self.putx([1, ["0x{:02X}".format(data[0])]])
