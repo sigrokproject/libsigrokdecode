@@ -59,7 +59,8 @@ class Decoder(srd.Decoder):
         self.frame_start = None         # Frame start sample
         self.header_start = None        # Header start sample
         self.payload_start = None       # Payload start sample
-        self.payload = []               # Ethernet payload
+        self.payload = bytearray()      # Ethernet payload bytes
+        self.blocks = []                # Payload block start/stop samples
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -128,7 +129,7 @@ class Decoder(srd.Decoder):
                 # Push payload to stacked decoders
                 self.es_block = self.ss_block           # FCS start sample
                 self.ss_block = self.payload_start
-                self.putp(self.payload)
+                self.putp((self.payload, self.blocks))
 
             # RESET
             elif data[0] == "R":
@@ -233,11 +234,8 @@ class Decoder(srd.Decoder):
         # Frame payload
         elif self.state == "PAYLOAD":
             # Add tuple to payload
-            self.payload.append((
-                data[0],
-                startsample,
-                endsample,
-            ))
+            self.payload.append(data[0])
+            self.blocks.append({"ss": startsample, "es": endsample})
 
             # Add payload annotation
             self.ss_block = startsample
