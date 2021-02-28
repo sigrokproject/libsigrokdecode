@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     api_version = 3
     id       = 'nrzi'
     name     = 'NRZ-I'
-    longname = 'Non-return-to-zero inverted'
+    longname = 'Non-return-to-zero Inverted'
     desc     = 'Bits encoded as presence or absence of a transition.'
     license  = 'gplv2+'
     inputs   = ['logic']
@@ -48,10 +48,11 @@ class Decoder(srd.Decoder):
         },
     )
     annotations = (
+        ('preamble', 'Preamble'),
         ('bit', 'Decoded bits'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (0,)),
+        ('bits', 'Bits', (0,1)),
     )
     binary = (
         ('data', 'Decoded data'),
@@ -106,7 +107,7 @@ class Decoder(srd.Decoder):
         while True:
             # Calculate clock period using preamble
             if self.state == "SYNC":
-                # Last edge
+                # Previous edge
                 start = self.samplenum
 
                 # Next edge
@@ -124,17 +125,17 @@ class Decoder(srd.Decoder):
                     # Convert average cycle duration to frequency
                     self.clock_rate = self.samplerate / (self.symbol_len * 2)
 
-                    # Preamble annotation position
+                    # Preamble frequency string
+                    frequency = "{} Hz".format(self.clock_rate)
+                    if 1e3 <= self.clock_rate < 1e6:
+                        frequency = "{} kHz".format(self.clock_rate / 1e3)
+                    elif self.clock_rate >= 1e6:
+                        frequency = "{} MHz".format(self.clock_rate / 1e6)
+
+                    # Preamble annotation
                     self.ss_block = preamble_start
                     self.es_block = self.samplenum
-
-                    # Preamble annotation frequency notation
-                    if self.clock_rate < 1e3:
-                        self.putx([0, ["Preamble ({} Hz)".format(self.clock_rate)]])
-                    elif self.clock_rate >= 1e3 and self.clock_rate < 1e6:
-                        self.putx([0, ["Preamble ({} kHz)".format(self.clock_rate / 1e3)]])
-                    elif self.clock_rate >= 1e6:
-                        self.putx([0, ["Preamble ({} MHz)".format(self.clock_rate / 1e6)]])
+                    self.putx([0, ["Preamble ({})".format(frequency)]])
 
                     # Skip to start of next symbol after preamble
                     self.wait({'skip': int(self.symbol_len / 2)})
@@ -152,7 +153,7 @@ class Decoder(srd.Decoder):
 
                 # Check if transition was detected
                 if self.matched == (True, False):
-                    # Adjust symbol length so transition is at mid-point
+                    # Adjust symbol length to transition is at mid-point
                     edge_samp = self.samplenum - start_samp             # Edge position within symbol
                     offset = int(self.symbol_len / 2) - edge_samp       # Edge offset from mid-point of symbol
                     remaining = self.symbol_len - edge_samp - offset    # Number of samples remaining in symbol
@@ -167,7 +168,7 @@ class Decoder(srd.Decoder):
                 # Add bit annotation
                 self.ss_block = start_samp
                 self.es_block = self.samplenum
-                self.putx([0, [str(bit)]])
+                self.putx([1, [str(bit)]])
 
                 # Push bit to stacked decoders
                 self.putp(bit)
