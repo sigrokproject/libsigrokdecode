@@ -90,16 +90,16 @@ class Decoder(srd.Decoder):
         for i, b in enumerate(data):
             # Hardware type
             if i == 1:
-                hw_type = (data[i-1]["data"] << 8) | data[i]["data"]
+                hw_type = (data[i-1][0] << 8) | data[i][0]
 
-                # More than two types exist
+                # More than these two types exist
                 if hw_type == 1:
                     hw_type = "Ethernet"
                 elif hw_type == 3:
                     hw_type = "AX.25"
 
-                self.ss_block = data[i-1]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-1][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -112,13 +112,13 @@ class Decoder(srd.Decoder):
 
             # Protocol Type (Ethertype)
             elif i == 3:
-                proto = (data[i-1]["data"] << 8) | data[i]["data"]
+                proto = (data[i-1][0] << 8) | data[i][0]
 
                 # Known EtherType
                 if proto in ethertype:
                     # Add EtherType annotation
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -131,32 +131,32 @@ class Decoder(srd.Decoder):
 
                 # Unknown EtherType
                 else:
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1]
+                    self.es_block = data[i][2]
                     self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
 
             # Hardware Address Length
             elif i == 4:
-                self.ss_block = data[i]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
-                        "Hardware Address Length:    {}".format(data[i]["data"]),
-                        "Hardware Length:    {}".format(data[i]["data"]),
+                        "Hardware Address Length:    {}".format(data[i][0]),
+                        "Hardware Length:    {}".format(data[i][0]),
                         "Hardware Length"
                     ]
                 ])
 
             # Protocol Address Length
             elif i == 5:
-                self.ss_block = data[i]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
-                        "Protocol Address Length:    {}".format(data[i]["data"]),
-                        "Protocol Length:    {}".format(data[i]["data"]),
+                        "Protocol Address Length:    {}".format(data[i][0]),
+                        "Protocol Length:    {}".format(data[i][0]),
                         "Protocol Length",
                     ]
                 ])
@@ -164,10 +164,10 @@ class Decoder(srd.Decoder):
             # Operation
             elif i == 7:
                 ops = ["", "Request", "Reply"]
-                self.oper = ops[(data[i-1]["data"] << 8) | data[i]["data"]]
+                self.oper = ops[(data[i-1][0] << 8) | data[i][0]]
 
-                self.ss_block = data[i-1]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-1][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -180,16 +180,16 @@ class Decoder(srd.Decoder):
             # Sender Hardware Address (SHA) MAC
             elif i == 13:
                 self.sha = "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}".format(
-                    data[i-5]["data"],
-                    data[i-4]["data"],
-                    data[i-3]["data"],
-                    data[i-2]["data"],
-                    data[i-1]["data"],
-                    data[i]["data"]
+                    data[i-5][0],
+                    data[i-4][0],
+                    data[i-3][0],
+                    data[i-2][0],
+                    data[i-1][0],
+                    data[i][0]
                 )
 
-                self.ss_block = data[i-5]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-5][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -198,19 +198,19 @@ class Decoder(srd.Decoder):
                         "Source MAC"
                     ]
                 ])
-                self.msg_start = data[i-5]["start"]
+                self.msg_start = data[i-5][1]
 
             # Sender Protocol Address (SPA) IP
             elif i == 17:
                 self.spa = "{}.{}.{}.{}".format(
-                    data[i-3]["data"],
-                    data[i-2]["data"],
-                    data[i-1]["data"],
-                    data[i]["data"]
+                    data[i-3][0],
+                    data[i-2][0],
+                    data[i-1][0],
+                    data[i][0]
                 )
 
-                self.ss_block = data[i-3]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-3][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -223,16 +223,16 @@ class Decoder(srd.Decoder):
             # Target Hardware Address (THA) MAC
             elif i == 23:
                 self.tha = "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}".format(
-                    data[i-5]["data"],
-                    data[i-4]["data"],
-                    data[i-3]["data"],
-                    data[i-2]["data"],
-                    data[i-1]["data"],
-                    data[i]["data"]
+                    data[i-5][0],
+                    data[i-4][0],
+                    data[i-3][0],
+                    data[i-2][0],
+                    data[i-1][0],
+                    data[i][0]
                 )
 
-                self.ss_block = data[i-5]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-5][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -245,14 +245,14 @@ class Decoder(srd.Decoder):
             # Target Protocol Address (TPA) IP
             elif i == 27:
                 self.tpa = "{}.{}.{}.{}".format(
-                    data[i-3]["data"],
-                    data[i-2]["data"],
-                    data[i-1]["data"],
-                    data[i]["data"]
+                    data[i-3][0],
+                    data[i-2][0],
+                    data[i-1][0],
+                    data[i][0]
                 )
 
-                self.ss_block = data[i-3]["start"]
-                self.es_block = data[i]["end"]
+                self.ss_block = data[i-3][1]
+                self.es_block = data[i][2]
                 self.putx([
                     0,
                     [
@@ -261,12 +261,13 @@ class Decoder(srd.Decoder):
                         "Destination IP"
                     ]
                 ])
-                self.msg_end = data[i]["end"]
+                self.msg_end = data[i][2]
 
         # Add message annotation
         self.ss_block = self.msg_start
         self.es_block = self.msg_end
 
+        # Friendly message string
         if self.oper == "Request":
             self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
         elif self.oper == "Reply":
