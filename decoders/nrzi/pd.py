@@ -65,10 +65,11 @@ class Decoder(srd.Decoder):
     # Reset decoder variables
     def reset(self):
         self.samplerate = None
-        self.state = "SYNC"
         self.ss_block = None
         self.es_block = None
         self.preamble_len = None
+
+        self.state = "SYNC"
         self.sync_cycles = []
 
     # Get metadata from PulseView
@@ -87,7 +88,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data for stacked decoders
+    # Put binary data
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 
