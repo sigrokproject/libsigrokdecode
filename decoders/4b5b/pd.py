@@ -60,17 +60,17 @@ class Decoder(srd.Decoder):
 
     # Reset decoder variables
     def reset(self):
-        self.samplerate = None
-        self.ss_block = None
-        self.es_block = None
-        self.bit_offset = None
+        self.samplerate = None          # Session sample rate
+        self.ss_block = None            # Annotation start sample
+        self.es_block = None            # Annotation end sample
+        self.bit_offset = None          # Symbol bit offset option
         
-        self.symbol_start = None
-        self.symbol = 0
-        self.bits = 0
+        self.symbol_start = None        # Symbol start sample
+        self.symbol = 0                 # Symbol value
+        self.bits = 0                   # Symbol bit counter
         
-        self.data_start = None
-        self.last_nibble = None
+        self.data_start = None          # Data byte start sample
+        self.last_nibble = None         # Previous data nibble
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -88,7 +88,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data for stacked decoders
+    # Put binary data
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 

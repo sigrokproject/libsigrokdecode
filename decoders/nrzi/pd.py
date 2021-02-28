@@ -64,13 +64,13 @@ class Decoder(srd.Decoder):
 
     # Reset decoder variables
     def reset(self):
-        self.samplerate = None
-        self.ss_block = None
-        self.es_block = None
-        self.preamble_len = None
+        self.samplerate = None          # Session sample rate
+        self.ss_block = None            # Annotation start sample
+        self.es_block = None            # Annotation end sample
+        self.preamble_len = None        # Preamble cycle count option
 
-        self.state = "SYNC"
-        self.sync_cycles = []
+        self.state = "SYNC"             # Decoder state
+        self.sync_cycles = []           # Preamble cycle duration list
 
     # Get metadata from PulseView
     def metadata(self, key, value):
