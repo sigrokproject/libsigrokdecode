@@ -140,6 +140,7 @@ class Decoder(srd.Decoder):
             "Length"
         ]])
 
+
         # Checksum
         self.ss_block = blocks[6]["ss"]
         self.es_block = blocks[7]["es"]
