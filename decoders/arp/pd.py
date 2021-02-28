@@ -106,7 +106,7 @@ class Decoder(srd.Decoder):
 
         # Unpack ARP packet
         arp_tuple = namedtuple("arp", "htype ptype hlen plen oper sha spa tha tpa")
-        fields = struct.unpack(">2h2Bh6s4s6s4s", payload[:28])
+        fields = struct.unpack(">2H2BH6s4s6s4s", payload[:28])
         arp = arp_tuple(*fields)
 
 
