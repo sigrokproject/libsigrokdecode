@@ -99,10 +99,12 @@ class Decoder(srd.Decoder):
             ]
         )
         """
+
         payload = data[0]
         blocks = data[1]
 
-        # Unpack file header
+
+        # Unpack ARP packet
         arp_tuple = namedtuple("arp", "htype ptype hlen plen oper sha spa tha tpa")
         fields = struct.unpack(">2h2Bh6s4s6s4s", payload[:28])
         arp = arp_tuple(*fields)
