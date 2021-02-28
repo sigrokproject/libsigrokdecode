@@ -18,6 +18,8 @@
 ##
 
 import sigrokdecode as srd
+import struct
+from collections import namedtuple
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -55,12 +57,12 @@ class Decoder(srd.Decoder):
 
     # Reset decoder variables
     def reset(self):
-        self.samplerate = None
-        self.ss_block = None
-        self.es_block = None
+        self.samplerate = None          # Session sample rate
+        self.ss_block = None            # Annotation start sample
+        self.es_block = None            # Annotation end sample
+        self.format = None              # Payload format option
 
-        self.payload_start = None
-        self.payload = []
+        self.payload_start = None       # Payload start sample
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -78,7 +80,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data for stacked decoders
+    # Put binary data
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 
@@ -88,102 +90,89 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        length = None
+        """
+        data = (
+            payload (bytearray),
+            blocks (list) = [
+                {"ss": start_sample, "es": end_sample},
+                {"ss": start_sample, "es": end_sample},
+                ....
+                {"ss": start_sample, "es": end_sample},
+            ]
+        )
+        """
 
-        # Loop through bytes
-        for i, b in enumerate(data):
-            # UDP Header
-            if 0 < i < 8:
-                # Source port
-                if i == 1:
-                    src_port = (data[i-1]["data"] << 8) | data[i]["data"]
+        payload = data[0]
+        blocks = data[1]
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
-                    self.putx([
-                        0,
-                        [
-                            "Source Port:    {}".format(src_port),
-                            "Source Port",
-                            "Src"
-                        ]
-                    ])
 
-                # Destination port
-                elif i == 3:
-                    dst_port = (data[i-1]["data"] << 8) | data[i]["data"]
+        # Unpack UDP packet header
+        udp_tuple = namedtuple("udp", "source destination length checksum")
+        fields = struct.unpack(">4H", payload[:8])
+        udp = udp_tuple(*fields)
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
-                    self.putx([
-                        0,
-                        [
-                            "Destination Port:    {}".format(dst_port),
-                            "Destination Port",
-                            "Dst"
-                        ]
-                    ])
 
-                # Packet Length
-                elif i == 5:
-                    length = (data[i-1]["data"] << 8) | data[i]["data"]
+        # Source port
+        self.ss_block = blocks[0]["ss"]
+        self.es_block = blocks[1]["es"]
+        self.putx([0, [
+            "Source Port:    {}".format(udp.source),
+            "Source Port",
+            "Src"
+        ]])
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
-                    self.putx([
-                        0,
-                        [
-                            "Length:    {} bytes".format(length),
-                            "Length"
-                        ]
-                    ])
 
-                # Checksum
-                elif i == 7:
-                    checksum = (data[i-1]["data"] << 8) | data[i]["data"]
+        # Destination port
+        self.ss_block = blocks[2]["ss"]
+        self.es_block = blocks[3]["es"]
+        self.putx([0, [
+            "Destination Port:    {}".format(udp.destination),
+            "Destination Port",
+            "Dst"
+        ]])
 
-                    #TODO: Calculate checksum and compare
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
-                    self.putx([
-                        0,
-                        [
-                            "Checksum:    0x{:04X}".format(checksum),
-                            "Checksum"
-                        ]
-                    ])
+        # Destination port
+        self.ss_block = blocks[4]["ss"]
+        self.es_block = blocks[5]["es"]
+        self.putx([0, [
+            "Length:    {} bytes".format(udp.length),
+            "Length"
+        ]])
 
-                    # Payload start sample for stacked decoders
-                    self.payload_start = data[i]["end"]
+        # Checksum
+        self.ss_block = blocks[6]["ss"]
+        self.es_block = blocks[7]["es"]
+        self.putx([0, [
+            "Checksum:    0x{:04X}".format(udp.checksum),
+            "Checksum"
+        ]])
+        #TODO: Verify checksum
+        self.payload_start = self.es_block
 
-            # UDP Payload
-            elif 7 < i < length:
-                # Add byte to payload
-                self.payload.append({
-                    "start": b["start"],
-                    "end":   b["end"],
-                    "data":  b["data"]
-                })
 
-                # Format string as ASCII, decimal, hexadecimal, octal or binary
-                data_str = None
-                if self.format == "ascii":
-                    try:
-                        data_str = "\"{}\"".format(bytes([b["data"]]).decode('utf-8'))
-                    except Exception:
-                        data_str == "[0x{:02X}]".format(b["data"])
-                elif self.format == "dec": data_str = "{:d}".format(b["data"])
-                elif self.format == "hex": data_str = "0x{:02X}".format(b["data"])
-                elif self.format == "oct": data_str = "{:o}".format(b["data"])
-                elif self.format == "bin": data_str = "0b{:08b}".format(b["data"])
-                
-                # Add payload annotation
-                self.ss_block = b["start"]
-                self.es_block = b["end"]
-                self.putx([1, [data_str]])
+        # UDP Payload
+        for i, b in enumerate(payload[8:udp.length]):
+            # Add payload annotation
+            self.ss_block = blocks[i + 8]["ss"]
+            self.es_block = blocks[i + 8]["es"]
+
+            # Format string as ASCII, decimal, hexadecimal, octal or binary
+            data_str = None
+            if self.format == "ascii":
+                try:
+                    data_str = "\"{}\"".format(bytes([b]).decode('utf-8'))
+                except Exception:
+                    data_str == "[0x{:02X}]".format(b)
+            elif self.format == "dec": data_str = "{:d}".format(b)
+            elif self.format == "hex": data_str = "0x{:02X}".format(b)
+            elif self.format == "oct": data_str = "{:o}".format(b)
+            elif self.format == "bin": data_str = "0b{:08b}".format(b)
+            self.putx([1, [data_str]])
+
 
         # Push payload to stacked decoders
-        self.ss_block = self.payload_start
-        self.es_block = data[-1]["end"]
-        self.putp(self.payload)
+        self.ss_block = blocks[8]["ss"]
+        self.es_block = blocks[udp.length]["es"]
+        self.putp((payload[8:udp.length], blocks[8:udp.length]))
+
