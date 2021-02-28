@@ -82,22 +82,22 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        ihl = None
+        # Tuple "data" contains ([byte] value, [int] startsample, [int] endsample)
 
         # Loop through bytes
         for i, b in enumerate(data):
             # Version and IHL
             if i == 0:
-                ver = b["data"] >> 4            # IP Version (always 4)
-                ihl = (b["data"] & 0x0F) * 4    # Header Length (usually 5)
+                ver = b[0] >> 4                 # IP Version (always 4)
+                self.ihl = (b[0] & 0x0F) * 4    # Header Length (usually 5)
 
                 # Add payload annotation
-                self.ss_block = b["start"]
-                self.es_block = b["end"]
+                self.ss_block = b[1]
+                self.es_block = b[2]
                 self.putx([
                     0,
                     [
-                        "Version: {}    Header Length: {} bytes".format(ver, ihl),
+                        "Version: {}    Header Length: {} bytes".format(ver, self.ihl),
                         "Version and Header Length",
                         "Version and IHL",
                         "IHL"
@@ -105,11 +105,11 @@ class Decoder(srd.Decoder):
                 ])
             
             # IP Header
-            elif 0 < i < ihl:
+            elif 0 < i < self.ihl:
                 # DSCP and ECN
                 if i == 1:
-                    self.ss_block = b["start"]
-                    self.es_block = b["end"]
+                    self.ss_block = b[1]
+                    self.es_block = b[2]
                     self.putx([
                         0,
                         [
@@ -121,10 +121,10 @@ class Decoder(srd.Decoder):
 
                 # Total packet length
                 elif i == 3:
-                    length = (data[i-1]["data"] << 8) | data[i]["data"]
+                    length = (data[i-1][0] << 8) | data[i][0]
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -136,10 +136,10 @@ class Decoder(srd.Decoder):
                 
                 # Identification
                 elif i == 5:
-                    ident = (data[i-1]["data"] << 8) | data[i]["data"]
+                    ident = (data[i-1][0] << 8) | data[i][0]
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -151,11 +151,11 @@ class Decoder(srd.Decoder):
                 
                 # Flags
                 elif i == 6:
-                    df = (b["data"] & 0b010 ) >> 1
-                    mf = (b["data"] & 0b100 ) >> 2
+                    df = (b[0] & 0b010 ) >> 1
+                    mf = (b[0] & 0b100 ) >> 2
 
-                    self.ss_block = b["start"]
-                    self.es_block = b["start"] + int(((b["end"] - b["start"]) / 8) * 3)
+                    self.ss_block = b[1]
+                    self.es_block = b[1] + int(((b[2] - b[1]) / 8) * 3)
                     self.putx([
                         0,
                         [
@@ -168,10 +168,10 @@ class Decoder(srd.Decoder):
                 
                 # Fragment offset
                 elif i == 7:
-                    offset = (((data[i-1]["data"] & 0b00011111) << 8) | data[i]["data"]) * 8
+                    offset = (((data[i-1][0] & 0b00011111) << 8) | data[i][0]) * 8
 
-                    self.ss_block = data[i-1]["start"] + int(((data[i]["end"] - data[i]["start"]) / 8) * 3)
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1] + int(((data[i][2] - data[i][1]) / 8) * 3)
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -183,10 +183,10 @@ class Decoder(srd.Decoder):
                 
                 # Time to live (TTL)
                 elif i == 8:
-                    ttl = b["data"]
+                    ttl = b[0]
 
-                    self.ss_block = b["start"]
-                    self.es_block = b["end"]
+                    self.ss_block = b[1]
+                    self.es_block = b[2]
                     self.putx([
                         0,
                         [
@@ -198,12 +198,12 @@ class Decoder(srd.Decoder):
 
                 # Protocol
                 elif i == 9:
-                    protocol = b["data"]
+                    protocol = b[0]
 
                     # Known protocol
                     if protocol in ip_protocol:
-                        self.ss_block = b["start"]
-                        self.es_block = b["end"]
+                        self.ss_block = b[1]
+                        self.es_block = b[2]
                         self.putx([
                             0,
                             [
@@ -216,18 +216,18 @@ class Decoder(srd.Decoder):
 
                     # Unknown protocol
                     else:
-                        self.ss_block = b["start"]
-                        self.es_block = b["end"]
+                        self.ss_block = b[1]
+                        self.es_block = b[2]
                         self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
 
                 # Header checksum
                 elif i == 11:
-                    checksum = (data[i-1]["data"] << 8) | data[i]["data"]
+                    checksum = (data[i-1][0] << 8) | data[i][0]
 
                     #TODO: Calculate checksum and compare
 
-                    self.ss_block = data[i-1]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-1][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -240,14 +240,14 @@ class Decoder(srd.Decoder):
                 # Source IP
                 elif i == 15:
                     octets = [
-                        data[i-3]["data"],
-                        data[i-2]["data"],
-                        data[i-1]["data"],
-                        data[i]["data"],
+                        data[i-3][0],
+                        data[i-2][0],
+                        data[i-1][0],
+                        data[i][0],
                     ]
 
-                    self.ss_block = data[i-3]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-3][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -260,14 +260,14 @@ class Decoder(srd.Decoder):
                 # Destination IP
                 elif i == 19:
                     octets = [
-                        data[i-3]["data"],
-                        data[i-2]["data"],
-                        data[i-1]["data"],
-                        data[i]["data"],
+                        data[i-3][0],
+                        data[i-2][0],
+                        data[i-1][0],
+                        data[i][0],
                     ]
 
-                    self.ss_block = data[i-3]["start"]
-                    self.es_block = data[i]["end"]
+                    self.ss_block = data[i-3][1]
+                    self.es_block = data[i][2]
                     self.putx([
                         0,
                         [
@@ -278,23 +278,23 @@ class Decoder(srd.Decoder):
                     ])
 
                     # Payload start sample for stacked decoders
-                    self.payload_start = data[i]["end"]
+                    self.payload_start = data[i][2]
 
             # IP Payload
-            elif i >= ihl:
+            elif i >= self.ihl:
                 # Add byte to payload
                 self.payload.append({
-                    "start": b["start"],
-                    "end":   b["end"],
-                    "data":  b["data"]
+                    "start": b[1],
+                    "end":   b[2],
+                    "data":  b[0]
                 })
 
                 # Add payload annotation
-                self.ss_block = b["start"]
-                self.es_block = b["end"]
-                self.putx([1, ["0x{:02X}".format(b["data"])]])
+                self.ss_block = b[1]
+                self.es_block = b[2]
+                self.putx([1, ["0x{:02X}".format(b[0])]])
 
         # Push payload to stacked decoders
         self.ss_block = self.payload_start
-        self.es_block = data[-1]["end"]
+        self.es_block = data[-1][2]
         self.putp(self.payload)
