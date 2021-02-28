@@ -126,8 +126,8 @@ class Decoder(srd.Decoder):
                 self.payload = self.payload[:-4]
 
                 # Push payload to stacked decoders
+                self.es_block = self.ss_block           # FCS start sample
                 self.ss_block = self.payload_start
-                self.es_block = startsample - int((endsample - startsample) * 8)
                 self.putp(self.payload)
 
             # RESET
@@ -232,12 +232,12 @@ class Decoder(srd.Decoder):
 
         # Frame payload
         elif self.state == "PAYLOAD":
-            # Add byte to payload
-            self.payload.append({
-                "start": startsample,
-                "end":   endsample,
-                "data":  data[0]
-            })
+            # Add tuple to payload
+            self.payload.append((
+                data[0],
+                startsample,
+                endsample,
+            ))
 
             # Add payload annotation
             self.ss_block = startsample
