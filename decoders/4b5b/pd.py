@@ -26,7 +26,7 @@ class Decoder(srd.Decoder):
     id       = '4b5b'
     name     = '4B5B'
     longname = '4B5B Line Code'
-    desc     = 'Maps 4 bits of data to 5 bits for transmission.'
+    desc     = 'Maps 4 data bits to 5 bit symbols for transmission.'
     license  = 'gplv2+'
     inputs   = ['nrzi']
     outputs  = ['4b5b']
