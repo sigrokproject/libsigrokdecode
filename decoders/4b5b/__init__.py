@@ -5,6 +5,8 @@ These 5-bit symbols are pre-determined in a dictionary and they are chosen to en
 
 Some symbols are used as control characters to indicate the transmission medium is idle or to mark the start and end of a frame.
 
+4B5B is used by Fiber Distributed Data Interface (FDDI), Multichannel Audio Digital Interface (MADI), Fast Ethernet (100BASE-X) and USB Power Delivery (USB-PD).
+
 This decoder stacks on top of the 'NRZ-I' PD and decodes bits into 4B5B symbols.
 '''
 
