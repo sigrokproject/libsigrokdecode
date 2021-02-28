@@ -82,7 +82,7 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        # Tuple "data" contains ([byte] value, [int] startsample, [int] endsample)
+        # Tuples in list "data" contain ([byte] value, [int] startsample, [int] endsample)
 
         # Loop through bytes
         for i, b in enumerate(data):
@@ -283,11 +283,7 @@ class Decoder(srd.Decoder):
             # IP Payload
             elif i >= self.ihl:
                 # Add byte to payload
-                self.payload.append({
-                    "start": b[1],
-                    "end":   b[2],
-                    "data":  b[0]
-                })
+                self.payload.append(b)
 
                 # Add payload annotation
                 self.ss_block = b[1]
