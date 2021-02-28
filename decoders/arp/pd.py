@@ -18,6 +18,8 @@
 ##
 
 import sigrokdecode as srd
+import struct
+from collections import namedtuple
 
 from .dicts import *
 
@@ -86,188 +88,135 @@ class Decoder(srd.Decoder):
 
     # Decode signal
     def decode(self, startsample, endsample, data):
-        # Loop through bytes
-        for i, b in enumerate(data):
-            # Hardware type
-            if i == 1:
-                hw_type = (data[i-1][0] << 8) | data[i][0]
+        """
+        data = (
+            payload (bytearray),
+            blocks (list) = [
+                {"ss": start_sample, "es": end_sample},
+                {"ss": start_sample, "es": end_sample},
+                ....
+                {"ss": start_sample, "es": end_sample},
+            ]
+        )
+        """
+        payload = data[0]
+        blocks = data[1]
 
-                # More than these two types exist
-                if hw_type == 1:
-                    hw_type = "Ethernet"
-                elif hw_type == 3:
-                    hw_type = "AX.25"
+        # Unpack file header
+        arp_tuple = namedtuple("arp", "htype ptype hlen plen oper sha spa tha tpa")
+        fields = struct.unpack(">2h2Bh6s4s6s4s", payload[:28])
+        arp = arp_tuple(*fields)
 
-                self.ss_block = data[i-1][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Hardware Type:    {}".format(hw_type),
-                        "HW Type:    {}".format(hw_type),
-                        "HW Type",
-                        "HW"
-                    ]
-                ])
 
-            # Protocol Type (Ethertype)
-            elif i == 3:
-                proto = (data[i-1][0] << 8) | data[i][0]
+        # Hardware type
+        self.ss_block = blocks[0]["ss"]
+        self.es_block = blocks[1]["es"]
+        self.putx([0, [
+            "Hardware Type:    {}".format(arp.htype),
+            "HW Type:    {}".format(arp.htype),
+            "HW Type",
+            "HW"
+        ]])
 
-                # Known EtherType
-                if proto in ethertype:
-                    # Add EtherType annotation
-                    self.ss_block = data[i-1][1]
-                    self.es_block = data[i][2]
-                    self.putx([
-                        0,
-                        [
-                            "Protocol:    {} (0x{:04X})".format(ethertype[proto][0], proto),
-                            "Protocol:    {} (0x{:04X})".format(ethertype[proto][1], proto),
-                            "Protocol:    {}".format(ethertype[proto][1]),
-                            "Protocol"
-                        ]
-                    ])
 
-                # Unknown EtherType
-                else:
-                    self.ss_block = data[i-1][1]
-                    self.es_block = data[i][2]
-                    self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
+        # EtherType
+        self.ss_block = blocks[2]["ss"]
+        self.es_block = blocks[3]["es"]
+        if arp.ptype in ethertype:
+            # Add known EtherType annotation
+            self.putx([0, [
+                "Protocol:    {} (0x{:04X})".format(ethertype[arp.ptype][0], arp.ptype),
+                "Protocol:    {} (0x{:04X})".format(ethertype[arp.ptype][1], arp.ptype),
+                "Protocol:    {}".format(ethertype[arp.ptype][1]),
+                "Protocol"
+            ]])
+        else:
+            # Add unknown EtherType annotation
+            self.putx([0, ["Protocol:    UNKNOWN", "Protocol"]])
 
-            # Hardware Address Length
-            elif i == 4:
-                self.ss_block = data[i][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Hardware Address Length:    {}".format(data[i][0]),
-                        "Hardware Length:    {}".format(data[i][0]),
-                        "Hardware Length"
-                    ]
-                ])
 
-            # Protocol Address Length
-            elif i == 5:
-                self.ss_block = data[i][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Protocol Address Length:    {}".format(data[i][0]),
-                        "Protocol Length:    {}".format(data[i][0]),
-                        "Protocol Length",
-                    ]
-                ])
+        # Hardware Address Length
+        self.ss_block = blocks[4]["ss"]
+        self.es_block = blocks[4]["es"]
+        self.putx([0, [
+            "Hardware Address Length:    {}".format(arp.hlen),
+            "Hardware Length:    {}".format(arp.hlen),
+            "Hardware Length"
+        ]])
 
-            # Operation
-            elif i == 7:
-                ops = ["", "Request", "Reply"]
-                self.oper = ops[(data[i-1][0] << 8) | data[i][0]]
 
-                self.ss_block = data[i-1][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Operation:    {}".format(self.oper),
-                        "OP:    {}".format(self.oper),
-                        "OP"
-                    ]
-                ])
+        # Protocol Address Length
+        self.ss_block = blocks[5]["ss"]
+        self.es_block = blocks[5]["es"]
+        self.putx([0, [
+            "Protocol Address Length:    {}".format(arp.plen),
+            "Protocol Length:    {}".format(arp.plen),
+            "Protocol Length",
+        ]])
 
-            # Sender Hardware Address (SHA) MAC
-            elif i == 13:
-                self.sha = "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}".format(
-                    data[i-5][0],
-                    data[i-4][0],
-                    data[i-3][0],
-                    data[i-2][0],
-                    data[i-1][0],
-                    data[i][0]
-                )
 
-                self.ss_block = data[i-5][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Source MAC Address:    {}".format(self.sha),
-                        "Source MAC:    {}".format(self.sha),
-                        "Source MAC"
-                    ]
-                ])
-                self.msg_start = data[i-5][1]
+        # Operation
+        ops = ["", "Request", "Reply"]
+        self.oper = ops[arp.oper]
+        self.ss_block = blocks[6]["ss"]
+        self.es_block = blocks[7]["es"]
+        self.putx([0, [
+            "Operation:    {}".format(self.oper),
+            "OP:    {}".format(self.oper),
+            "OP"
+        ]])
 
-            # Sender Protocol Address (SPA) IP
-            elif i == 17:
-                self.spa = "{}.{}.{}.{}".format(
-                    data[i-3][0],
-                    data[i-2][0],
-                    data[i-1][0],
-                    data[i][0]
-                )
 
-                self.ss_block = data[i-3][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Source IP Address:    {}".format(self.spa),
-                        "Source IP:    {}".format(self.spa),
-                        "Source IP"
-                    ]
-                ])
+        # Sender Hardware Address (SHA) MAC
+        self.sha = ":".join("{:02X}".format(octet) for octet in arp.sha)
+        self.ss_block = blocks[8]["ss"]
+        self.es_block = blocks[13]["es"]
+        self.putx([0, [
+            "Source MAC Address:    {}".format(self.sha),
+            "Source MAC:    {}".format(self.sha),
+            "Source MAC"
+        ]])
+        self.msg_start = self.ss_block
 
-            # Target Hardware Address (THA) MAC
-            elif i == 23:
-                self.tha = "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}".format(
-                    data[i-5][0],
-                    data[i-4][0],
-                    data[i-3][0],
-                    data[i-2][0],
-                    data[i-1][0],
-                    data[i][0]
-                )
 
-                self.ss_block = data[i-5][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Destination MAC Address:    {}".format(self.tha),
-                        "Destination MAC:    {}".format(self.tha),
-                        "Destination MAC"
-                    ]
-                ])
+        # Sender Protocol Address (SPA) IP
+        self.spa = ".".join(str(octet) for octet in arp.spa)
+        self.ss_block = blocks[14]["ss"]
+        self.es_block = blocks[17]["es"]
+        self.putx([0, [
+            "Source IP Address:    {}".format(self.spa),
+            "Source IP:    {}".format(self.spa),
+            "Source IP"
+        ]])
 
-            # Target Protocol Address (TPA) IP
-            elif i == 27:
-                self.tpa = "{}.{}.{}.{}".format(
-                    data[i-3][0],
-                    data[i-2][0],
-                    data[i-1][0],
-                    data[i][0]
-                )
 
-                self.ss_block = data[i-3][1]
-                self.es_block = data[i][2]
-                self.putx([
-                    0,
-                    [
-                        "Destination IP Address:    {}".format(self.tpa),
-                        "Destination IP:    {}".format(self.tpa),
-                        "Destination IP"
-                    ]
-                ])
-                self.msg_end = data[i][2]
+        # Target Hardware Address (THA) MAC
+        self.tha = ":".join("{:02X}".format(octet) for octet in arp.tha)
+        self.ss_block = blocks[18]["ss"]
+        self.es_block = blocks[23]["es"]
+        self.putx([0, [
+            "Destination MAC Address:    {}".format(self.tha),
+            "Destination MAC:    {}".format(self.tha),
+            "Destination MAC"
+        ]])
+
+
+        # Target Protocol Address (TPA) IP
+        self.tpa = ".".join(str(octet) for octet in arp.tpa)
+        self.ss_block = blocks[24]["ss"]
+        self.es_block = blocks[27]["es"]
+        self.putx([0, [
+            "Destination IP Address:    {}".format(self.tpa),
+            "Destination IP:    {}".format(self.tpa),
+            "Destination IP"
+        ]])
+        self.msg_end = self.es_block
+
 
         # Add message annotation
         self.ss_block = self.msg_start
         self.es_block = self.msg_end
-
-        # Friendly message string
+        #TODO: Handle ARP announcements
         if self.oper == "Request":
             self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
         elif self.oper == "Reply":
