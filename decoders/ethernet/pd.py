@@ -26,13 +26,12 @@ class Decoder(srd.Decoder):
     api_version = 3
     id       = 'ethernet'
     name     = 'Ethernet'
-    longname = 'Ethernet II'
-    desc     = 'Ethernet II networking protocol'
+    longname = 'Ethernet II (IEEE 802.3)'
+    desc     = 'Ethernet networking protocol'
     license  = 'gplv2+'
     inputs   = ['4b5b']
     outputs  = ['ethernet']
     tags     = ['Networking', 'PC']
-    #options = ()
     annotations = (
         ('header', 'Decoded header'),
         ('data', 'Decoded data'),
@@ -51,16 +50,16 @@ class Decoder(srd.Decoder):
 
     # Reset decoder variables
     def reset(self):
-        self.samplerate = None
-        self.ss_block = None
-        self.es_block = None
+        self.samplerate = None          # Session sample rate
+        self.ss_block = None            # Annotation start sample
+        self.es_block = None            # Annotation end sample
 
-        self.state = "WAITING"
-        self.buffer = bytearray(b'')
-        self.frame_start = None
-        self.header_start = None
-        self.payload_start = None
-        self.payload = []
+        self.state = "WAITING"          # Decoder state
+        self.buffer = bytearray(b'')    # Decoder data buffer
+        self.frame_start = None         # Frame start sample
+        self.header_start = None        # Header start sample
+        self.payload_start = None       # Payload start sample
+        self.payload = []               # Ethernet payload
 
     # Get metadata from PulseView
     def metadata(self, key, value):
@@ -77,7 +76,7 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data for stacked decoders
+    # Put binary data
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_binary, data)
 
