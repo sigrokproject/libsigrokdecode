@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+import struct
 import zlib
 
 from .dicts import *
@@ -41,7 +42,7 @@ class Decoder(srd.Decoder):
         ('data', 'Data', (1,)),
     )
     binary = (
-        ('data', 'Decoded data'),
+        ('pcapng', 'Wireshark packet capture (.pcapng)'),
     )
 
     # Initialise decoder
@@ -56,6 +57,7 @@ class Decoder(srd.Decoder):
 
         self.state = "WAITING"          # Decoder state
         self.buffer = bytearray(b'')    # Decoder data buffer
+        self.frame = bytearray(b'')     # Binary output buffer
         self.frame_start = None         # Frame start sample
         self.header_start = None        # Header start sample
         self.payload_start = None       # Payload start sample
@@ -72,6 +74,7 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_python = self.register(srd.OUTPUT_PYTHON)
+        self.pcap_headers()
 
     # Put annotation for PulseView
     def putx(self, data):
@@ -79,16 +82,58 @@ class Decoder(srd.Decoder):
 
     # Put binary data
     def putb(self, data):
-        self.put(self.ss_block, self.es_block, self.out_binary, data)
+        self.put(0, 0, self.out_binary, data)
 
     # Put Python object for stacked decoders
     def putp(self, data):
         self.put(self.ss_block, self.es_block, self.out_python, data)
 
-    # Reverse integer bits
-    def reverse_bits(self, n, width):
-        b = '{:0{width}b}'.format(n, width=width)
-        return int(b[::-1], 2)
+    # Generate pcapng file headers
+    def pcap_headers(self):
+        # Section Header Block
+        shb = [
+            b'\x0A\x0D\x0D\x0A',                    # Block Type (SHB)
+            b'\x1C\x00\x00\x00',                    # Block Length (28)
+            b'\x4D\x3C\x2B\x1A',                    # Byte Order Magic
+            b'\x01\x00',                            # Major Version
+            b'\x00\x00',                            # Minor Version
+            b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF',    # Section Length (-1)
+            b'\x1C\x00\x00\x00'                     # Block Length (28)
+        ]
+        for field in shb:
+            self.putb([0, field])
+        
+        # Interface Description Block
+        idb = [
+            b'\x01\x00\x00\x00',                    # Block Type (IdB)
+            b'\x14\x00\x00\x00',                    # Block Length (20)
+            b'\x01\x00',                            # Link Type (Ethernet, 1)
+            b'\x00\x00',                            # Reserved
+            b'\xF2\x05\x00\x00',                    # Snap Length (1522 bytes)
+            b'\x14\x00\x00\x00'                     # Block Length (20)
+        ]
+        for field in idb:
+            self.putb([0, field])
+    
+    # Add Ethernet frame to pcapng file
+    def pcap_append(self):
+        # Simple Packet Block
+        frame_len = struct.pack("<I", len(self.frame))
+        pad_bytes = b''.join(b'\x00' for i in range(len(self.frame) % 4))
+        block_len = struct.pack("<I", len(self.frame) + len(pad_bytes) + 16)
+        spb = [
+            b'\x03\x00\x00\x00',    # Block Type (SPB)
+            block_len,              # Block Length
+            frame_len,              # Original Packet Length
+            bytes(self.frame),      # Packet Data
+            pad_bytes,              # Padding
+            block_len               # Block Length
+        ]
+        for field in spb:
+            self.putb([0, field])
+
+        # Reset frame
+        self.frame = bytearray(b'')
 
     # Decode signal
     def decode(self, startsample, endsample, data):
@@ -105,12 +150,6 @@ class Decoder(srd.Decoder):
             elif data[0] == "T":
                 # Get FCS
                 fcs = int.from_bytes(self.buffer[-4:], byteorder="big")
-                #fcs = self.reverse_bits(fcs, 32)
-
-                # Calculate FCS CRC-32
-                #payload = self.buffer[:-4]
-                #fcs_calc = zlib.crc32(payload) & 0xFFFFFFFF
-                #TODO: Fix CRC
 
                 # Add FCS annotation
                 self.ss_block = startsample - int((endsample - startsample) * 8)
@@ -122,6 +161,10 @@ class Decoder(srd.Decoder):
                         "FCS"
                     ]
                 ])
+
+                # Add frame to pcapng file
+                self.frame.extend(self.payload)
+                self.pcap_append()
 
                 # Trim FCS from payload
                 self.payload = self.payload[:-4]
@@ -165,10 +208,7 @@ class Decoder(srd.Decoder):
         elif self.state == "DST_MAC":
             if len(self.buffer) == 6:
                 # Create MAC string
-                dst_mac = ""
-                for octet in self.buffer:
-                    dst_mac += "{:02X}:".format(octet)
-                dst_mac = dst_mac[:-1]
+                dst_mac = ":".join("{:02X}".format(octet) for octet in self.buffer)
 
                 # Broadcast MAC
                 if bytes(self.buffer) == b'\xFF\xFF\xFF\xFF\xFF\xFF':
@@ -179,6 +219,7 @@ class Decoder(srd.Decoder):
                 self.putx([0, ["Destination MAC:    {}".format(dst_mac), "Dst MAC"]])
 
                 # Switch to Source MAC Address state
+                self.frame.extend(self.buffer)
                 self.buffer.clear()
                 self.ss_block = endsample
                 self.state = "SRC_MAC"
@@ -187,16 +228,14 @@ class Decoder(srd.Decoder):
         elif self.state == "SRC_MAC":
             if len(self.buffer) == 6:
                 # Create MAC string
-                src_mac = ""
-                for octet in self.buffer:
-                    src_mac += "{:02X}:".format(octet)
-                src_mac = src_mac[:-1]
+                src_mac = ":".join("{:02X}".format(octet) for octet in self.buffer)
 
                 # Add preamble annotation
                 self.es_block = endsample
                 self.putx([0, ["Source MAC:    {}".format(src_mac), "Src MAC"]])
 
                 # Switch to EtherType state
+                self.frame.extend(self.buffer)
                 self.buffer.clear()
                 self.ss_block = endsample
                 self.state = "ETH_TYPE"
@@ -226,6 +265,7 @@ class Decoder(srd.Decoder):
                     self.putx([0, ["EtherType:    UNKNOWN", "EtherType"]])
                 
                 # Switch to Payload state
+                self.frame.extend(self.buffer)
                 self.buffer.clear()
                 self.payload_start = endsample
                 self.ss_block = endsample
