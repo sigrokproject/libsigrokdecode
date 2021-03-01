@@ -47,9 +47,6 @@ class Decoder(srd.Decoder):
         ('header', 'Header', (0,)),
         ('data', 'Data', (1,)),
     )
-    binary = (
-        ('data', 'Decoded data'),
-    )
 
     # Initialise decoder
     def __init__(self):
@@ -72,7 +69,6 @@ class Decoder(srd.Decoder):
     # Register output types
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.format = self.options["format"]
 
@@ -176,4 +172,3 @@ class Decoder(srd.Decoder):
         self.ss_block = blocks[8]["ss"]
         self.es_block = blocks[udp.length]["es"]
         self.putp((payload[8:udp.length], blocks[8:udp.length]))
-

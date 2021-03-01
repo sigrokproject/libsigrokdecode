@@ -54,9 +54,6 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (0,1)),
     )
-    binary = (
-        ('data', 'Decoded data'),
-    )
 
     # Initialise decoder
     def __init__(self):
@@ -80,7 +77,6 @@ class Decoder(srd.Decoder):
     # Register output types
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.preamble_len = int(self.options['preamble_len'])
 

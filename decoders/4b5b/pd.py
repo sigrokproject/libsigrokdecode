@@ -50,9 +50,6 @@ class Decoder(srd.Decoder):
         ('bits', 'Bits', (2,)),
         ('bytes', 'Bytes', (3,)),
     )
-    binary = (
-        ('data', 'Decoded data'),
-    )
 
     # Initialise decoder
     def __init__(self):
@@ -80,7 +77,6 @@ class Decoder(srd.Decoder):
     # Register output types
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
-        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.bit_offset = int(self.options['bit_offset'])
 
