@@ -69,10 +69,6 @@ class Decoder(srd.Decoder):
     def putx(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    # Put binary data
-    def putb(self, data):
-        self.put(self.ss_block, self.es_block, self.out_binary, data)
-
     # Put Python object for stacked decoders
     def putp(self, data):
         self.put(self.ss_block, self.es_block, self.out_python, data)
