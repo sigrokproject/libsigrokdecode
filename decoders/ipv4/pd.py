@@ -92,7 +92,6 @@ class Decoder(srd.Decoder):
 
 
         # Get Internet Header Length (IHL)
-        self.ver = payload[0] >> 4              # Internet Protocol version (always 4)
         self.ihl = (payload[0] & 0x0F) * 4      # Header Length (typically 5 = 20 bytes)
         if self.ihl != 20: return               #TODO: Support optional fields
 
@@ -101,7 +100,7 @@ class Decoder(srd.Decoder):
         self.ss_block = blocks[0]["ss"]
         self.es_block = blocks[0]["es"]
         self.putx([0, [
-            "Version: {}    Header Length: {} bytes".format(self.ver, self.ihl),
+            "Version: 4    Header Length: {} bytes".format(self.ihl),
             "Version and Header Length",
             "Version and IHL",
             "IHL"
