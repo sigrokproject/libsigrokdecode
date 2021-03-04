@@ -145,7 +145,7 @@ class Decoder(srd.Decoder):
                 self.frame.extend(self.payload)
 
                 # Verify FCS
-                if zlib.crc32(self.frame) != 0x2144DF1C:
+                if zlib.crc32(self.frame) == 0x2144DF1C:
                     fcs_ok = "OK"
                 else:
                     fcs_ok = "FAILED"
