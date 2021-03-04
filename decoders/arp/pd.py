@@ -212,8 +212,13 @@ class Decoder(srd.Decoder):
         # Add message annotation
         self.ss_block = self.msg_start
         self.es_block = self.msg_end
-        #TODO: Handle ARP announcements
+
         if self.oper == "Request":
-            self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
+            if self.spa == self.tpa:    # Announcement
+                self.putx([1, ["ARP Announcement for {} ({})".format(self.spa, self.sha)]])
+            elif self.spa == "0.0.0.0": # Probe
+                self.putx([1, ["ARP Probe for {} ({})".format(self.tpa, self.sha)]])
+            else:                       # Request
+                self.putx([1, ["Who has {}? Tell {} ({})".format(self.tpa, self.spa, self.sha)]])
         elif self.oper == "Reply":
             self.putx([1, ["{} is at {}".format(self.spa, self.sha)]])
