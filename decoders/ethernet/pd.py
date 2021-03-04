@@ -91,46 +91,39 @@ class Decoder(srd.Decoder):
     # Generate pcapng file headers
     def pcap_headers(self):
         # Section Header Block
-        shb = [
-            b'\x0A\x0D\x0D\x0A',                    # Block Type (SHB)
-            b'\x1C\x00\x00\x00',                    # Block Length (28)
-            b'\x4D\x3C\x2B\x1A',                    # Byte Order Magic
-            b'\x01\x00',                            # Major Version
-            b'\x00\x00',                            # Minor Version
-            b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF',    # Section Length (-1)
-            b'\x1C\x00\x00\x00'                     # Block Length (28)
-        ]
-        for field in shb:
-            self.putb([0, field])
-        
+        self.putb([0, struct.pack("<3I2HqI",
+            0x0A0D0D0A,     # Block Type (SHB)
+            28,             # Block Length (28)
+            0x1A2B3C4D,     # Byte Order Magic
+            1,              # Major Version
+            0,              # Minor Version
+            -1,             # Section Length
+            28              # Block Length
+        )])
+
         # Interface Description Block
-        idb = [
-            b'\x01\x00\x00\x00',                    # Block Type (IdB)
-            b'\x14\x00\x00\x00',                    # Block Length (20)
-            b'\x01\x00',                            # Link Type (Ethernet, 1)
-            b'\x00\x00',                            # Reserved
-            b'\xF2\x05\x00\x00',                    # Snap Length (1522 bytes)
-            b'\x14\x00\x00\x00'                     # Block Length (20)
-        ]
-        for field in idb:
-            self.putb([0, field])
-    
+        self.putb([0, struct.pack("<2I2H2I",
+            1,              # Block Type (IDB)
+            20,             # Block Length
+            1,              # Link Type (Ethernet)
+            0,              # Reserved
+            1522,           # Snap Length (max packet lenth in bytes)
+            20,             # Block Length
+        )])
+
     # Add Ethernet frame to pcapng file
     def pcap_append(self):
         # Simple Packet Block
-        frame_len = struct.pack("<I", len(self.frame))
         pad_bytes = b''.join(b'\x00' for i in range(len(self.frame) % 4))
-        block_len = struct.pack("<I", len(self.frame) + len(pad_bytes) + 16)
-        spb = [
-            b'\x03\x00\x00\x00',    # Block Type (SPB)
-            block_len,              # Block Length
-            frame_len,              # Original Packet Length
-            bytes(self.frame),      # Packet Data
-            pad_bytes,              # Padding
-            block_len               # Block Length
-        ]
-        for field in spb:
-            self.putb([0, field])
+        block_len = 16 + len(self.frame) + len(pad_bytes)
+        self.putb([0, struct.pack("<3I{}s{}sI".format(len(self.frame), len(pad_bytes)),
+            3,                  # Block Type (SPB)
+            block_len,          # Block Length
+            len(self.frame),    # Original Packet Length
+            bytes(self.frame),  # Packet Data
+            pad_bytes,          # Padding
+            block_len           # Block Length
+        )])
 
         # Reset frame
         self.frame = bytearray(b'')
