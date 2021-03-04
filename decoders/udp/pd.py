@@ -135,14 +135,26 @@ class Decoder(srd.Decoder):
         ]])
 
 
-        # Checksum
+        # Assemble pseudo IPv4 header
+        buffer = bytearray(b'')
+        buffer.extend(data[2])                          # Source IP Address
+        buffer.extend(data[3])                          # Destination IP Address
+        buffer.extend(b'\x00\x11')                      # Protocol (UDP)
+        buffer.extend(struct.pack(">H", udp.length))    # Payload Length
+        buffer.extend(payload)
+
+        # Verify checksum
+        cs = 0
+        for i in range(0, len(buffer), 2):              # Loop through header 2 bytes at a time
+            cs += (buffer[i] << 8) | buffer[i + 1]      # Sum each byte pair in header
+        cs = (cs + (cs >> 16)) & 0xFFFF                 # Add carry value then truncate
+        cs_ok = "OK" if cs == 0xFFFF else "FAILED"
         self.ss_block = blocks[6]["ss"]
         self.es_block = blocks[7]["es"]
         self.putx([0, [
-            "Checksum:    0x{:04X}".format(udp.checksum),
+            "Checksum:    {}".format(cs_ok),
             "Checksum"
         ]])
-        #TODO: Verify checksum
         self.payload_start = self.es_block
 
 
