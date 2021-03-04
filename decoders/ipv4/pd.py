@@ -77,12 +77,12 @@ class Decoder(srd.Decoder):
     def decode(self, startsample, endsample, data):
         """
         data = (
-            payload (bytearray),
-            blocks (list) = [
-                {"ss": start_sample, "es": end_sample},
-                {"ss": start_sample, "es": end_sample},
-                ....
-                {"ss": start_sample, "es": end_sample},
+            bytearray payload,
+            list blocks = [
+                {"ss": int start_sample, "es": int end_sample},
+                {"ss": int start_sample, "es": int end_sample},
+                ...
+                {"ss": int start_sample, "es": int end_sample},
             ]
         )
         """
