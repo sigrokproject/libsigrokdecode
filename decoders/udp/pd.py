@@ -90,7 +90,9 @@ class Decoder(srd.Decoder):
                 {"ss": start_sample, "es": end_sample},
                 ....
                 {"ss": start_sample, "es": end_sample},
-            ]
+            ],
+            src_ip (bytearray),
+            dst_ip (bytearray)
         )
         """
 

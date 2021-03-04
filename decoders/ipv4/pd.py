@@ -242,4 +242,4 @@ class Decoder(srd.Decoder):
         # Push payload to stacked decoders
         self.ss_block = blocks[20]["ss"]
         self.es_block = blocks[-1]["es"]
-        self.putp((payload[20:], blocks[20:]))
+        self.putp((payload[20:], blocks[20:], ip.source, ip.destination))
