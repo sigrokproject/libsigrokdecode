@@ -141,31 +141,33 @@ class Decoder(srd.Decoder):
 
             # TERMINATE
             elif data[0] == "T":
-                # Get FCS
-                fcs = int.from_bytes(self.buffer[-4:], byteorder="big")
+                # Add payload to frame
+                self.frame.extend(self.payload)
+
+                # Verify FCS
+                if zlib.crc32(self.frame) != 0x2144DF1C:
+                    fcs_ok = "OK"
+                else:
+                    fcs_ok = "FAILED"
 
                 # Add FCS annotation
                 self.ss_block = startsample - int((endsample - startsample) * 8)
                 self.es_block = endsample - (endsample - startsample)
                 self.putx([0,
                     [
-                        "Frame Check Sequence:    0x{:08X}".format(fcs),
-                        "Frame Check Sequence",
+                        "Frame Check Sequence:    {}".format(fcs_ok),
+                        "FCS:    {}".format(fcs_ok),
                         "FCS"
                     ]
                 ])
 
                 # Add frame to pcapng file
-                self.frame.extend(self.payload)
                 self.pcap_append()
 
-                # Trim FCS from payload
-                self.payload = self.payload[:-4]
-
                 # Push payload to stacked decoders
-                self.es_block = self.ss_block           # FCS start sample
+                self.es_block = self.ss_block                   # FCS start sample
                 self.ss_block = self.payload_start
-                self.putp((self.payload, self.blocks))
+                self.putp((self.payload[:-4], self.blocks))     # Payload without FCS
 
             # RESET
             elif data[0] == "R":
