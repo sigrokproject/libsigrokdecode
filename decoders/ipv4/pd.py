@@ -194,14 +194,19 @@ class Decoder(srd.Decoder):
 
 
         # Header checksum
+        cs = 0
+        header = payload[:self.ihl]
+        for i in range(0, self.ihl, 2):                 # Loop through header 2 bytes at a time
+            cs += (header[i] << 8) | header[i + 1]      # Sum each byte pair in header
+        cs = (cs + (cs >> 16)) & 0xFFFF                 # Add carry value then truncate
+        cs_ok = "OK" if cs == 0xFFFF else "FAILED"
         self.ss_block = blocks[10]["ss"]
         self.es_block = blocks[11]["es"]
         self.putx([0, [
-            "Header Checksum:    0x{:04X}".format(ip.checksum),
-            "Checksum:    0x{:04X}".format(ip.checksum),
+            "Header Checksum:    {}".format(cs_ok),
+            "Checksum:    {}".format(cs_ok),
             "Checksum"
         ]])
-        #TODO: Verify checksum
 
 
         # Source IP
