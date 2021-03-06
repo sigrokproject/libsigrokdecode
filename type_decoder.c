@@ -1130,7 +1130,10 @@ static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
 
 	PyGILState_Release(gstate);
 
-	return (di->dec_channelmap[idx] == -1) ? Py_False : Py_True;
+	if (di->dec_channelmap[idx] == -1)
+		Py_RETURN_FALSE;
+	else
+		Py_RETURN_TRUE;
 
 err:
 	PyGILState_Release(gstate);
