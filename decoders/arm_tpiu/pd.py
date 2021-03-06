@@ -76,7 +76,7 @@ class Decoder(srd.Decoder):
     def process_frame(self, buf):
         # Byte 15 contains the lowest bits of bytes 0, 2, ... 14.
         lowbits = buf[15][2]
-		self.put(buf[0][0], buf[15][0], self.out_ann, [2, ['PACKET']])
+        self.put(buf[0][0], buf[15][0], self.out_ann, [2, ['PACKET']])
 		
         for i in range(0, 15, 2):
             # Odd bytes can be stream ID or data.
