@@ -1100,6 +1100,7 @@ static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
 	int idx, count;
 	struct srd_decoder_inst *di;
 	PyGILState_STATE gstate;
+	PyObject *bool_ret;
 
 	if (!self || !args)
 		return NULL;
@@ -1130,7 +1131,9 @@ static PyObject *Decoder_has_channel(PyObject *self, PyObject *args)
 
 	PyGILState_Release(gstate);
 
-	return (di->dec_channelmap[idx] == -1) ? Py_False : Py_True;
+	bool_ret = (di->dec_channelmap[idx] == -1) ? Py_False : Py_True;
+	Py_INCREF(bool_ret);
+	return bool_ret;
 
 err:
 	PyGILState_Release(gstate);
