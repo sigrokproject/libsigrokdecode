@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2015 Petteri Aimonen <jpa@sigrok.mail.kapsi.fi>
+##           (C) 2021 Steffen Mauch <steffen.mauch@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -36,10 +37,12 @@ class Decoder(srd.Decoder):
     annotations = (
         ('stream', 'Current stream'),
         ('data', 'Stream data'),
+        ('packet', 'current packet'),
     )
     annotation_rows = (
         ('streams', 'Current streams', (0,)),
         ('data-vals', 'Stream data', (1,)),
+        ('packets', 'current packet', (2,)),
     )
 
     def __init__(self):
@@ -59,7 +62,7 @@ class Decoder(srd.Decoder):
 
     def stream_changed(self, ss, stream):
         if self.stream != stream:
-            if self.stream != 0:
+            if self.stream != 0 and self.stream != 127:
                 self.put(self.ss_stream, ss, self.out_ann,
                          [0, ['Stream %d' % self.stream, 'S%d' % self.stream]])
             self.stream = stream
@@ -73,7 +76,8 @@ class Decoder(srd.Decoder):
     def process_frame(self, buf):
         # Byte 15 contains the lowest bits of bytes 0, 2, ... 14.
         lowbits = buf[15][2]
-
+        self.put(buf[0][0], buf[15][0], self.out_ann, [2, ['PACKET']])
+		
         for i in range(0, 15, 2):
             # Odd bytes can be stream ID or data.
             delayed_stream_change = None
@@ -120,11 +124,16 @@ class Decoder(srd.Decoder):
         # Keep separate buffer for detection of sync packets.
         # Sync packets override everything else, so that we can regain sync
         # even if some packets are corrupted.
-        self.syncbuf = self.syncbuf[-3:] + [pdata[0]]
-        if self.syncbuf == [0xFF, 0xFF, 0xFF, 0x7F]:
+        self.syncbuf = self.syncbuf[-5:] + [pdata[0]]
+        if (self.syncbuf[-4:] == [0xFF, 0xFF, 0xFF, 0x7F]):
             self.buf = []
             self.syncbuf = []
+            self.put(es-1, es, self.out_ann, [2, ['SYNC']])
             return
+        ## halfword sync according to D4.2.3 see PDF
+        ## coresight_v3_0_architecture_specification_IHI0029E.pdf
+        if( self.syncbuf[-2:] == [0xFF, 0x7F] ):
+            self.buf = self.buf[:-2]
 
         if len(self.buf) == 16:
             self.process_frame(self.buf)
