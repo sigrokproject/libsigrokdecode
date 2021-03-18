@@ -284,7 +284,7 @@ class Decoder(srd.Decoder):
         {'id': 'clk', 'name': 'CLK', 'desc': 'Serial clock'},
     )
     options = (
-        {'id': 'iec_periph', 'desc': 'Decode Commodore IEC bus peripherals details',
+        {'id': 'iec_periph', 'desc': 'Decode Commodore IEC peripherals',
             'default': 'no', 'values': ('no', 'yes')},
         {'id': 'delim', 'desc': 'Payload data delimiter',
             'default': 'eol', 'values': ('none', 'eol')},
