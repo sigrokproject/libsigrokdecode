@@ -288,6 +288,8 @@ class Decoder(srd.Decoder):
             'default': 'no', 'values': ('no', 'yes')},
         {'id': 'delim', 'desc': 'Payload data delimiter',
             'default': 'eol', 'values': ('none', 'eol')},
+        {'id': 'atn_parity', 'desc': 'ATN commands use parity',
+            'default': 'no', 'values': ('no', 'yes')},
     )
     annotations = (
         ('bit', 'IEC bit'),
@@ -486,6 +488,13 @@ class Decoder(srd.Decoder):
             upd_iec = False,
             py_type = None
             py_peers = False
+            if self.options['atn_parity'] == 'yes':
+                par = 1 if b & 0x80 else 0
+                b &= ~0x80
+                ones = bin(b).count('1') + par
+                if ones % 2:
+                    warn_texts = ['Command parity error', 'parity', 'PAR']
+                    self.emit_warn_ann(self.ss_raw, self.es_raw, warn_texts)
             is_cmd, is_unl, is_unt = _is_command(b)
             laddr = _is_listen_addr(b)
             taddr = _is_talk_addr(b)
