@@ -68,11 +68,11 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def start(self):
-        self.idle = int(self.samplerate * 21 / 1000) - 1    # Idle
+        self.idle = int(self.samplerate * 7 / 1000) - 1     # Idle
         self.header = int(self.samplerate * 4 / 1000) - 1   # Header bit
         self.lo = int(self.samplerate * 2 / 1000) - 1       # Lo bit
         self.hi = int(self.samplerate * 3 / 1000) - 1       # Hi bit
-        self.stop = int(self.samplerate * 21 / 1000) - 1    # Stop bit
+        self.stop = int(self.samplerate * 7 / 1000) - 1     # Stop bit
         self.anchor = self.register(
             srd.OUTPUT_ANN)         # Anchor for outputs
 
