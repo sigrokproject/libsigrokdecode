@@ -37,18 +37,13 @@ class Decoder(srd.Decoder):
     inputs = ['logic']
     outputs = []
     tags = ['RI']
-    channels = (
-        {'id': 'ri', 'name': 'RI', 'desc': 'Onkyo RI'},
-    )
-    options = (
-        {
-            'id': 'polarity',
-            'desc': 'Polarity',
-            'default': 'active-high',
-            'values': ('auto', 'active low', 'active high')
-        },
-
-    )
+    channels = ({'id': 'ri', 'name': 'RI', 'desc': 'Onkyo RI'}, )
+    options = ({
+        'id': 'polarity',
+        'desc': 'Polarity',
+        'default': 'active-high',
+        'values': ('auto', 'active low', 'active high')
+    }, )
     annotations = (
         ('bitstart', 'Start'),
         ('bitcode', 'Code'),
@@ -59,8 +54,16 @@ class Decoder(srd.Decoder):
         ('decode', 'Decode'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (Ann.BitStart, Ann.BitCode,  Ann.BitStop, )),
-        ('codes', 'Code', (Ann.Header, Ann.Code, Ann.Footer, )),
+        ('bits', 'Bits', (
+            Ann.BitStart,
+            Ann.BitCode,
+            Ann.BitStop,
+        )),
+        ('codes', 'Code', (
+            Ann.Header,
+            Ann.Code,
+            Ann.Footer,
+        )),
         ('decodes', 'Decode', (Ann.Decode, )),
     )
 
@@ -68,13 +71,12 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def start(self):
-        self.idle = int(self.samplerate * 7 / 1000) - 1     # Idle
-        self.header = int(self.samplerate * 4 / 1000) - 1   # Header bit
-        self.lo = int(self.samplerate * 2 / 1000) - 1       # Lo bit
-        self.hi = int(self.samplerate * 3 / 1000) - 1       # Hi bit
-        self.stop = int(self.samplerate * 7 / 1000) - 1     # Stop bit
-        self.anchor = self.register(
-            srd.OUTPUT_ANN)         # Anchor for outputs
+        self.idle = int(self.samplerate * 7e-3) - 1  # Idle
+        self.header = int(self.samplerate * 4e-3) - 1  # Header bit
+        self.lo = int(self.samplerate * 2e-3) - 1  # Lo bit
+        self.hi = int(self.samplerate * 3e-3) - 1  # Hi bit
+        self.stop = int(self.samplerate * 7e-3) - 1  # Stop bit
+        self.anchor = self.register(srd.OUTPUT_ANN)  # Anchor for outputs
 
     def reset(self):
         self.state = 'Idle'
@@ -124,10 +126,10 @@ class Decoder(srd.Decoder):
             # Start bit
             if self.state == 'Idle':
                 if self.tolerance(space, self.header):
-                    self.put(self.samplenum_field, self.samplenum,
-                             self.anchor, [Ann.BitStart, ['Start', 'S']])
-                    self.put(self.samplenum_field, self.samplenum,
-                             self.anchor, [Ann.Header, ['Start', 'S']])
+                    self.put(self.samplenum_field, self.samplenum, self.anchor,
+                             [Ann.BitStart, ['Start', 'S']])
+                    self.put(self.samplenum_field, self.samplenum, self.anchor,
+                             [Ann.Header, ['Start', 'S']])
                     self.samplenum_decode = self.samplenum_field
                     self.data = []
                     self.state = 'Code'
@@ -141,9 +143,9 @@ class Decoder(srd.Decoder):
                 elif self.tolerance(space, self.hi):
                     bit = 1
                 if bit in (0, 1):
-                    self.put(self.samplenum_save, self.samplenum,
-                             self.anchor, [Ann.BitCode, ['{:d}'.format(bit)]])
-                    self.data.append(bit)
+                    self.put(self.samplenum_save, self.samplenum, self.anchor,
+                             [Ann.BitCode, ['{:d}'.format(bit)]])
+                    self.data.insert(0, bit)
                 else:
                     self.reset()
                 self.samplenum_save = self.samplenum
@@ -153,22 +155,9 @@ class Decoder(srd.Decoder):
 
                     code = bitpack(self.data)
 
-                    # Fast LSB <> MSB 16 bit converter
-                    code = ((code & 0b0101010101010101) << 1) | (
-                        (code & 0b1010101010101010) >> 1)
-                    code = ((code & 0b0011001100110011) << 2) | (
-                        (code & 0b1100110011001100) >> 2)
-                    code = ((code & 0b0000111100001111) << 4) | (
-                        (code & 0b1111000011110000) >> 4)
-                    code = ((code & 0b0000000011111111) << 8) | (
-                        (code & 0b1111111100000000) >> 8)
-
-                    # Shift code 16b > 12b
-                    code = (code >> 4)
-
                     f = '0x{{:0{}X}}'.format(3)
-                    self.put(self.samplenum_field, self.samplenum,
-                             self.anchor, [Ann.Code, [f.format(code)]])
+                    self.put(self.samplenum_field, self.samplenum, self.anchor,
+                             [Ann.Code, [f.format(code)]])
 
                     self.hex = code
                     self.samplenum_field = self.samplenum
@@ -182,8 +171,11 @@ class Decoder(srd.Decoder):
                          self.anchor, [Ann.Footer, ['Stop', 'S']])
 
                 oricode = ori.get(self.hex, 'Unknown RI code')
-                self.put(self.samplenum_decode, self.samplenum_save + self.stop,
-                         self.anchor, [Ann.Decode, ['{}'.format(oricode), ]])
+                self.put(self.samplenum_decode,
+                         self.samplenum_save + self.stop, self.anchor,
+                         [Ann.Decode, [
+                             '{}'.format(oricode),
+                         ]])
 
                 self.samplenum_save = self.samplenum_field = self.samplenum
                 self.state = 'Idle'
