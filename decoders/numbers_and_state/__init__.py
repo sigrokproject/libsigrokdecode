@@ -21,10 +21,10 @@
 '''
 This protocol decoder takes a set of logic input signals, and interprets
 their bit pattern according to user specifications as different kinds of
-numbers, or an enumeration of e.g. machine states.
+numbers, chars or an enumeration of e.g. machine states.
 
 Supported formats are: signed and unsigned integers, fixed point numbers,
-IEEE754 floating point numbers, and number to text mapping controlled by
+IEEE754 floating point numbers, chars and number to text mapping controlled by
 external data files. (Support for half precision floats depends on the
 Python runtime, and may not universally be available.)
 
