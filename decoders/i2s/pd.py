@@ -19,6 +19,7 @@
 
 import sigrokdecode as srd
 import struct
+from common.srdhelper import SrdIntEnum
 
 '''
 OUTPUT_PYTHON format:
@@ -32,6 +33,8 @@ Packet:
 <channel>: 'L' or 'R'
 <value>: integer
 '''
+
+Pin = SrdIntEnum.from_str('Pin', 'SCK WS SD')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -131,7 +134,7 @@ class Decoder(srd.Decoder):
     def decode(self):
         while True:
             # Wait for a rising edge on the SCK pin.
-            sck, ws, sd = self.wait({0: 'r'})
+            sck, ws, sd = self.wait({Pin.SCK: 'r'})
 
             # Shift the data in, one SCK at a time
             self.data = (self.data << 1) | sd
@@ -150,7 +153,7 @@ class Decoder(srd.Decoder):
 
                 self.samplesreceived += 1
 
-                self.wait({0: 'f'})
+                self.wait({Pin.SCK: 'f'})
 
                 c1 = 'Left channel' if not self.oldws else 'Right channel'
                 c2 = 'Left' if not self.oldws else 'Right'
@@ -172,7 +175,7 @@ class Decoder(srd.Decoder):
 
                 self.wordlength = self.bitcount
             else:
-                self.wait({0: 'f'})
+                self.wait({Pin.SCK: 'f'})
 
             # Reset decoder state.
             self.data = 0
