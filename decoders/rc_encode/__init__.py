@@ -26,11 +26,15 @@ pressed and address settings into a series of pulses which is then
 transmitted over whatever frequency and modulation that the designer
 chooses. These devices operate at a number of frequencies including 433MHz.
 
-This PD should also decode the HX2262 and SC5262 which are equivalents.
+This PD should also decode the HX2262 and SC5262 which are equivalents, as
+well as the 2272 variants of these ICs. Support for the EV1527, RT1527, FP1527
+and HS1527 is also present.
 
-The decoder also contains some additional decoding for a Maplin L95AR
-remote control and will turn the received signal into which button was
-pressed and what the address code DIP switches are set to.
+The decoder can additionaly decoding the Maplin L95AR remote control and will
+turn the received signal into which button was pressed and what the address
+code DIP switches are set to.
+Please contact the sigrok team if you want decoding for further remote
+controls to be added.
 '''
 
 from .pd import Decoder

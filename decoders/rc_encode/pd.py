@@ -21,43 +21,63 @@ import sigrokdecode as srd
 
 bitvals = ('0', '1', 'f', 'U')
 
-def decode_bit(edges):
-    # Datasheet says long pulse is 3 times short pulse.
-    lmin = 2 # long min multiplier
-    lmax = 5 # long max multiplier
-    eqmin = 0.5 # equal min multiplier
-    eqmax = 1.5 # equal max multiplier
-    if ( # 0 -___-___
-        (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
-        (edges[2] >= edges[0] * eqmin and edges[2] <= edges[0] * eqmax) and
-        (edges[3] >= edges[0] * lmin and edges[3] <= edges[0] * lmax)):
-        return '0'
-    elif ( # 1 ---_---_
-        (edges[0] >= edges[1] * lmin and edges[0] <= edges[1] * lmax) and
-        (edges[0] >= edges[2] * eqmin and edges[0] <= edges[2] * eqmax) and
-        (edges[0] >= edges[3] * lmin and edges[0] <= edges[3] * lmax)):
-        return '1'
-    elif ( # float ---_-___
-        (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
-        (edges[2] >= edges[0] * lmin and edges[2] <= edges[0]* lmax) and
-        (edges[3] >= edges[0] * eqmin and edges[3] <= edges[0] * eqmax)):
-        return 'f'
-    else:
-        return 'U'
+def decode_bit(edges, pulses_per_bit):
+    if pulses_per_bit == 2:
+        # Datasheet says long pulse is 3 times short pulse.
+        lmin = 1.5 # long min multiplier
+        lmax = 5 # long max multiplier
+        if (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax): # 0 -___
+            return '0'
+        elif (edges[0] >= edges[1] * lmin and edges[0] <= edges[1] * lmax): # 1 ---_
+             return '1'
+        # No float type for this line encoding
+        else:
+            return 'U'
 
-def pinlabels(bit_count):
-    if bit_count <= 6:
-        return 'A%i' % (bit_count - 1)
-    else:
-        return 'A%i/D%i' % (bit_count - 1, 12 - bit_count)
+    if pulses_per_bit == 4:
+        # Datasheet says long pulse is 3 times short pulse.
+        lmin = 2 # long min multiplier
+        lmax = 5 # long max multiplier
+        eqmin = 0.5 # equal min multiplier
+        eqmax = 1.5 # equal max multiplier
+        if ( # 0 -___-___
+            (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
+            (edges[2] >= edges[0] * eqmin and edges[2] <= edges[0] * eqmax) and
+            (edges[3] >= edges[0] * lmin and edges[3] <= edges[0] * lmax)):
+            return '0'
+        elif ( # 1 ---_---_
+            (edges[0] >= edges[1] * lmin and edges[0] <= edges[1] * lmax) and
+            (edges[0] >= edges[2] * eqmin and edges[0] <= edges[2] * eqmax) and
+            (edges[0] >= edges[3] * lmin and edges[0] <= edges[3] * lmax)):
+             return '1'
+        elif ( # float ---_-___
+             (edges[1] >= edges[0] * lmin and edges[1] <= edges[0] * lmax) and
+            (edges[2] >= edges[0] * lmin and edges[2] <= edges[0]* lmax) and
+            (edges[3] >= edges[0] * eqmin and edges[3] <= edges[0] * eqmax)):
+            return 'f'
+        else:
+            return 'U'
+
+def pinlabels(bit_count, packet_bit_count):
+    if packet_bit_count == 12:
+        if bit_count <= 6:
+            return 'A%i' % (bit_count - 1)
+        else:
+            return 'A%i/D%i' % (bit_count - 1, 12 - bit_count)
+
+    if packet_bit_count == 24:
+        if bit_count <= 20:
+            return 'A%i' % (bit_count - 1)
+        else:
+            return 'D%i' % (bit_count - 21)
 
 def decode_model(model, bits):
     if model == 'maplin_l95ar':
-        address = 'Addr' # Address pins A0 to A5
+        address = 'Addr' # Address bits A0 to A5
         for i in range(0, 6):
             address += ' %i:' % (i + 1) + ('on' if bits[i][0] == '0' else 'off')
         button = 'Button'
-        # Button pins A6/D5 to A11/D0
+        # Button bits A6/D5 to A11/D0
         if bits[6][0] == '0' and bits[11][0] == '0':
             button += ' A ON/OFF'
         elif bits[7][0] == '0' and bits[11][0] == '0':
@@ -68,15 +88,36 @@ def decode_model(model, bits):
             button += ' D ON/OFF'
         else:
             button += ' Unknown'
-        return ['%s' % address, bits[0][1], bits[5][2], \
-                '%s' % button, bits[6][1], bits[11][2]]
+        return [address, bits[0][1], bits[5][2], \
+                button, bits[6][1], bits[11][2]]
+
+    if model == 'xx1527':
+        addr = 0
+        addr_valid = 1
+        for i in range(0, 20):
+            if bits[i][0] != 'U':
+                addr += int(bits[i][0]) * 2 ** i
+            else:
+                addr_valid = 0
+
+        if addr_valid == 1:
+            address = 'Address 0x%X %X %X' % (addr & 0xFF, (addr >> 8) & 0xFF, addr >> 16)
+        else:
+            address = 'Invalid address as not all bits are 0 or 1'
+
+        output  = ' K0 = ' + bits[20][0] + ','
+        output += ' K1 = ' + bits[21][0] + ','
+        output += ' K2 = ' + bits[22][0] + ','
+        output += ' K3 = ' + bits[23][0]
+        return [address, bits[0][1], bits[19][2], \
+                output, bits[20][1], bits[23][2]]
 
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'rc_encode'
     name = 'RC encode'
     longname = 'Remote control encoder'
-    desc = 'PT2262/HX2262/SC5262 remote control encoder protocol.'
+    desc = 'PT22x2/HX22x2/SC52x2 and xx1527 remote control encoder protocol.'
     license = 'gplv2+'
     inputs = ['logic']
     outputs = []
@@ -100,8 +141,8 @@ class Decoder(srd.Decoder):
         ('code-words', 'Code words', (6, 7)),
     )
     options = (
-        {'id': 'remote', 'desc': 'Remote', 'default': 'none', 
-            'values': ('none', 'maplin_l95ar')},
+        {'id': 'linecoding', 'desc': 'Encoding', 'default': 'SC52x2/HX22x2', 'values': ('SC52x2/HX22x2', 'xx1527')},
+        {'id': 'remote', 'desc': 'Remote', 'default': 'none', 'values': ('none', 'maplin_l95ar')},
     )
 
     def __init__(self):
@@ -120,6 +161,13 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.model = self.options['remote']
+        if self.options['linecoding'] == 'xx1527':
+            self.pulses_per_bit = 2
+            self.packet_bits = 24
+            self.model = 'xx1527'
+        else:
+            self.pulses_per_bit = 4 # Each bit is repeated
+            self.packet_bits = 12
 
     def putx(self, data):
         self.put(self.ss, self.es, self.out_ann, data)
@@ -134,20 +182,20 @@ class Decoder(srd.Decoder):
                 self.ss = self.samplenum
                 continue
 
-            if self.bit_count < 12: # Decode A0 to A11.
+            if self.bit_count < self.packet_bits: # Decode A0 to A11 / A23.
                 self.bit_count += 1
-                for i in range(0, 4): # Get four pulses for each bit.
+                for i in range(0, self.pulses_per_bit):
                     if i > 0:
-                        pin = self.wait({0: 'e'}) # Get next 3 edges.
+                        pin = self.wait({0: 'e'}) # Get next edges if we need more.
                     samples = self.samplenum - self.samplenumber_last
                     self.pulses.append(samples) # Save the pulse width.
                     self.samplenumber_last = self.samplenum
                 self.es = self.samplenum
-                self.bits.append([decode_bit(self.pulses), self.ss,
+                self.bits.append([decode_bit(self.pulses, self.pulses_per_bit), self.ss,
                                   self.es]) # Save states and times.
-                idx = bitvals.index(decode_bit(self.pulses))
-                self.putx([idx, [decode_bit(self.pulses)]]) # Write decoded bit.
-                self.putx([5, [pinlabels(self.bit_count)]]) # Write pin labels.
+                idx = bitvals.index(decode_bit(self.pulses, self.pulses_per_bit))
+                self.putx([idx, [decode_bit(self.pulses, self.pulses_per_bit)]]) # Write decoded bit.
+                self.putx([5, [pinlabels(self.bit_count, self.packet_bits)]]) # Write pin labels.
                 self.pulses = []
                 self.ss = self.samplenum
             else:
