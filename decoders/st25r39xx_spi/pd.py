@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2019-2020 Benjamin Vernoux <bvernoux@gmail.com>
+## Copyright (C) 2019-2021 Benjamin Vernoux <bvernoux@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -16,6 +16,16 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
+## v0.1 - 17 September 2019 B.VERNOUX
+### Use ST25R3916 Datasheet DS12484 Rev 1 (January 2019)
+## v0.2 - 28 April 2020 B.VERNOUX
+### Use ST25R3916 Datasheet DS12484 Rev 2 (December 2019)
+## v0.3 - 17 June 2020 B.VERNOUX
+### Use ST25R3916 Datasheet DS12484 Rev 3 (04 June 2020)
+## v0.4 - 10 Aug 2021 B.VERNOUX
+### Fix FIFOR/FIFOW issues with Pulseview (with "Tabular Output View")
+### because of FIFO Read/FIFO Write commands, was not returning the
+### annotations short name FIFOR/FIFOW
 
 import sigrokdecode as srd
 from collections import namedtuple
@@ -127,7 +137,7 @@ class Decoder(srd.Decoder):
 
     def format_command(self):
         '''Returns the label for the current command.'''
-        if self.cmd in ('Write', 'Read', 'WriteB', 'ReadB', 'WriteT', 'ReadT', 'FIFO Write', 'FIFO Read'):
+        if self.cmd in ('Write', 'Read', 'WriteB', 'ReadB', 'WriteT', 'ReadT', 'FIFOW', 'FIFOR'):
             return self.cmd
         if self.cmd == 'Cmd':
             reg = dir_cmd.get(self.dat, 'Unknown direct command')
@@ -182,7 +192,7 @@ class Decoder(srd.Decoder):
                 # Register Space-B Access   0b11111011 0xFB => 'Space B'
                 # Register Test Access      0b11111100 0xFC => 'TestAccess'
                 if b == 0x80:
-                    return ('FIFO Write', b, 1, 99999)
+                    return ('FIFOW', b, 1, 99999)
                 if b == 0xA0:
                     return ('Write', b, 1, 99999)
                 if b == 0xA8:
@@ -192,7 +202,7 @@ class Decoder(srd.Decoder):
                 if b == 0xBF:
                     return ('Read', b, 1, 99999)
                 if b == 0x9F:
-                    return ('FIFO Read', b, 1, 99999)
+                    return ('FIFOR', b, 1, 99999)
                 if (b >= 0x0C and b <= 0xE8) :
                     return ('Cmd', b, 0, 0)
                 if b == 0xFB:
@@ -273,9 +283,9 @@ class Decoder(srd.Decoder):
             self.decode_reg(pos, Ann.BURST_WRITET, self.dat, self.mosi_bytes())
         elif self.cmd == 'ReadT':
             self.decode_reg(pos, Ann.BURST_READT, self.dat, self.miso_bytes())
-        elif self.cmd == 'FIFO Write':
+        elif self.cmd == 'FIFOW':
             self.decode_reg(pos, Ann.FIFO_WRITE, self.dat, self.mosi_bytes())
-        elif self.cmd == 'FIFO Read':
+        elif self.cmd == 'FIFOR':
             self.decode_reg(pos, Ann.FIFO_READ, self.dat, self.miso_bytes())
         elif self.cmd == 'Cmd':
             self.decode_reg(pos, Ann.DIRECTCMD, self.dat, self.mosi_bytes())
