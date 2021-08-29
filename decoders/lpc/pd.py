@@ -231,8 +231,12 @@ class Decoder(srd.Decoder):
         self.putb([3, [s % self.addr]])
         self.ss_block = self.samplenum
 
-        self.state = 'GET TAR'
-        self.tar_count = 0
+        if self.cycle_type in ('I/O write', 'Memory write'):
+            self.state = 'GET DATA'
+            self.cycle_count = 0
+        else:
+            self.state = 'GET TAR'
+            self.tar_count = 0
 
     def handle_get_tar(self, lad, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
@@ -273,8 +277,12 @@ class Decoder(srd.Decoder):
 
         # TODO
 
-        self.cycle_count = 0
-        self.state = 'GET DATA'
+        if self.cycle_type in ('I/O write', 'Memory write'):
+            self.state = 'GET TAR2'
+            self.cycle_count = 0
+        else:
+            self.cycle_count = 0
+            self.state = 'GET DATA'
 
     def handle_get_data(self, lad, lad_bits):
         # LAD[3:0]: DATA field (2 clock cycles).
@@ -295,8 +303,12 @@ class Decoder(srd.Decoder):
         self.putb([6, ['DATA: 0x%02x' % self.databyte]])
         self.ss_block = self.samplenum
 
-        self.cycle_count = 0
-        self.state = 'GET TAR2'
+        if self.cycle_type in ('I/O write', 'Memory write'):
+            self.state = 'GET TAR'
+            self.tar_count = 0
+        else:
+            self.state = 'GET TAR2'
+            self.cycle_count = 0
 
     def handle_get_tar2(self, lad, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
