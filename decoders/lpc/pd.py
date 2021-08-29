@@ -141,7 +141,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.state = 'IDLE'
-        self.oldlclk = -1
         self.lad = -1
         self.addr = 0
         self.cur_nibble = 0
@@ -315,7 +314,9 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
 
     def decode(self):
-        conditions = [{i: 'e'} for i in range(6)]
+        # Only look at the signals upon rising LCLK edges. The LPC clock
+        # is the same as the PCI clock (which is sampled at rising edges).
+        conditions = [{1: 'r'}]
         while True:
             pins = self.wait(conditions)
 
@@ -325,12 +326,6 @@ class Decoder(srd.Decoder):
             # Get individual pin values into local variables.
             (lframe, lclk, lad0, lad1, lad2, lad3) = pins[:6]
             (lreset, ldrq, serirq, clkrun, lpme, lpcpd, lsmi) = pins[6:]
-
-            # Only look at the signals upon rising LCLK edges. The LPC clock
-            # is the same as the PCI clock (which is sampled at rising edges).
-            if not (self.oldlclk == 0 and lclk == 1):
-                self.oldlclk = lclk
-                continue
 
             # Store LAD[3:0] bit values (one nibble) in local variables.
             # Most (but not all) states need this.
