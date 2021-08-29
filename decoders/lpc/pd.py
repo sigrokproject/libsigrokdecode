@@ -186,13 +186,19 @@ class Decoder(srd.Decoder):
 
         self.cycle_type = fields['CT_DR'].get(lad, 'Reserved / unknown')
 
-        # TODO: Warning/error on invalid cycle types.
         if 'Reserved' in self.cycle_type:
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
+            self.state = 'IDLE'
+            return
 
         self.es_block = self.samplenum
         self.putb([2, ['Cycle type: %s' % self.cycle_type]])
         self.ss_block = self.samplenum
+
+        if self.cycle_type in ('DMA read', 'DMA write'):
+            self.putb([0, ['DMA cycle decoding not supported']])
+            self.state = 'IDLE'
+            return
 
         self.state = 'GET ADDR'
         self.addr = 0
@@ -202,13 +208,13 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: ADDR field (4/8/0 clock cycles).
 
         # I/O cycles: 4 ADDR clocks. Memory cycles: 8 ADDR clocks.
-        # DMA cycles: no ADDR clocks at all.
         if self.cycle_type in ('I/O read', 'I/O write'):
             addr_nibbles = 4 # Address is 16bits.
         elif self.cycle_type in ('Memory read', 'Memory write'):
             addr_nibbles = 8 # Address is 32bits.
         else:
-            addr_nibbles = 0 # TODO: How to handle later on?
+            # Should never have got here for a DMA cycle
+            raise Exception('Invalid cycle_type: %s' % self.cycle_type)
 
         # Addresses are driven MSN-first.
         offset = ((addr_nibbles - 1) - self.cur_nibble) * 4
