@@ -147,6 +147,7 @@ class Decoder(srd.Decoder):
         self.cycle_type = -1
         self.databyte = 0
         self.tarcount = 0
+        self.sync_type = 0
         self.synccount = 0
         self.oldpins = None
         self.ss_block = self.es_block = None
@@ -259,10 +260,10 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
         self.sync_val = lad_bits
-        self.cycle_type = fields['SYNC'].get(lad, 'Reserved / unknown')
+        self.sync_type = fields['SYNC'].get(lad, 'Reserved / unknown')
 
         # TODO: Warnings if reserved value are seen?
-        if 'Reserved' in self.cycle_type:
+        if 'Reserved' in self.sync_type:
             self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
