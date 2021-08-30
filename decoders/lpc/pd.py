@@ -174,7 +174,6 @@ class Decoder(srd.Decoder):
         self.putb([1, [fields['START'][self.lad], 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
-        # TODO
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
             self.putb([0, ['LAD[3:0] changed while LFRAME# was asserted']])
 
@@ -288,8 +287,6 @@ class Decoder(srd.Decoder):
         self.putb([5, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
         self.ss_block = self.samplenum
 
-        # TODO
-
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR2'
             self.cycle_count = 0
@@ -387,7 +384,7 @@ class Decoder(srd.Decoder):
             # Save the cycle of the last lclk rising edge
             self.ss_cycle = self.samplenum
 
-            # TODO: Only memory read/write is currently supported/tested.
+            # TODO: Need to implement DMA and firmware cycle decode
 
             # At any stage, if lframe is asserted with LAD=1111, then the
             # transaction is aborted
