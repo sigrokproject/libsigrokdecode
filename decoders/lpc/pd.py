@@ -203,7 +203,7 @@ class Decoder(srd.Decoder):
             self.state = 'IDLE'
             return
 
-        self.putb([2, ['Cycle type: %s' % self.cycle_type]])
+        self.putb([2, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
 
         if self.cycle_type in ('DMA read', 'DMA write'):
             self.putb([0, ['DMA cycle decoding not supported']])
