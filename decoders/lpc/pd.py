@@ -130,8 +130,10 @@ class Decoder(srd.Decoder):
         ('sync', 'Sync'),
         ('data', 'Data'),
         ('tar2', 'Turn-around cycle 2'),
+        ('lad', 'LAD bus'),
     )
     annotation_rows = (
+        ('lad-vals', 'LAD bus', (8,)),
         ('data-vals', 'Data', (1, 2, 3, 4, 5, 6, 7)),
         ('warnings', 'Warnings', (0,)),
     )
@@ -153,6 +155,7 @@ class Decoder(srd.Decoder):
         self.synccount = 0
         self.oldpins = None
         self.ss_block = self.es_block = None
+        self.ss_cycle = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -379,7 +382,10 @@ class Decoder(srd.Decoder):
             # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad_bits = '{:04b}'.format(self.lad)
-                # self.putb([0, ['LAD: %s' % lad_bits]])
+                self.put(self.ss_cycle, self.samplenum, self.out_ann, [8, ['%s' % lad_bits]])
+
+            # Save the cycle of the last lclk rising edge
+            self.ss_cycle = self.samplenum
 
             # TODO: Only memory read/write is currently supported/tested.
 
