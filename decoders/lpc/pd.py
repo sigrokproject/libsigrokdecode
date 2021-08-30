@@ -331,7 +331,7 @@ class Decoder(srd.Decoder):
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.putb([0, ['Warning: TAR, cycle %d: %s (expected 1111)'
+            self.putb([0, ['TAR, cycle %d: %s (expected 1111)'
                            % (self.tarcount, lad_bits)]])
 
         self.ss_block = self.samplenum
