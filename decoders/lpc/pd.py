@@ -143,6 +143,7 @@ class Decoder(srd.Decoder):
         self.state = 'IDLE'
         self.lad = -1
         self.prev_lad = -1
+        self.lframe = 1
         self.addr = 0
         self.cur_nibble = 0
         self.cycle_type = -1
@@ -334,6 +335,18 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.state = 'IDLE'
 
+    def handle_abort(self, lad_bits):
+        # Go back to idle once lframe is no longer asserted
+        if self.lframe == 1:
+            self.state = 'IDLE'
+            return
+
+        if lad_bits == '1111':
+            self.es_block = self.samplenum
+            self.putb([0, ['ABORT']])
+
+        return
+
     def decode(self):
         # Only look at the signals upon rising LCLK edges. The LPC clock
         # is the same as the PCI clock (which is sampled at rising edges).
@@ -355,6 +368,19 @@ class Decoder(srd.Decoder):
                 # self.putb([0, ['LAD: %s' % lad_bits]])
 
             # TODO: Only memory read/write is currently supported/tested.
+
+            # At any stage, if lframe is asserted with LAD=1111, then the
+            # transaction is aborted
+            if self.lframe == 0 and lad_bits == '1111':
+                self.state = 'ABORT'
+            # If lframe is asserted any time after the start of the transaction,
+            # the transaction is aborted. Instead of checking this in almost every
+            # state, do it here.
+            elif self.lframe == 0 and self.state not in ('IDLE', 'GET START'):
+                self.es_block = self.samplenum
+                self.putb([0, ['LFRAME asserted during transaction, likely an abort']])
+                self.ss_block = self.samplenum
+                self.state = 'ABORT'
 
             # State machine
             if self.state == 'IDLE':
@@ -378,6 +404,9 @@ class Decoder(srd.Decoder):
                 self.handle_get_data(lad_bits)
             elif self.state == 'GET TAR2':
                 self.handle_get_tar2(lad_bits)
+            elif self.state == 'ABORT':
+                self.handle_abort(lad_bits)
 
-            # We operate on the LAD bits from the previous cycle
+            # We operate on the LAD bits and lframe from the previous cycle
             self.lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
+            self.lframe = lframe
