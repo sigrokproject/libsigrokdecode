@@ -356,11 +356,17 @@ class Decoder(srd.Decoder):
         return
 
     def decode(self):
-        # Only look at the signals upon rising LCLK edges. The LPC clock
+        # When idle, look for lframe low (asserted) and rising LCLK edge
+        # This allows us to skip over rising clock edges when idle
+        idle_conditions = [{0: 'l', 1: 'r'}]
+        # When not idle, only look for rising LCLK edges. The LPC clock
         # is the same as the PCI clock (which is sampled at rising edges).
-        conditions = [{1: 'r'}]
+        non_idle_conditions = [{1: 'r'}]
         while True:
-            pins = self.wait(conditions)
+            if self.state == 'IDLE':
+                pins = self.wait(idle_conditions)
+            else:
+                pins = self.wait(non_idle_conditions)
 
             # Store current pin values for the next round.
             self.oldpins = pins
