@@ -169,12 +169,13 @@ class Decoder(srd.Decoder):
         # though the peripherals are supposed to ignore all but the last one.
         self.es_block = self.samplenum
         self.putb([1, [fields['START'][self.lad], 'START', 'St', 'S']])
-        self.ss_block = self.samplenum
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         # TODO
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
             self.putb([0, ['LAD[3:0] changed while LFRAME# was asserted']])
+
+        self.ss_block = self.samplenum
 
         self.prev_lad = self.lad
 
@@ -190,19 +191,23 @@ class Decoder(srd.Decoder):
 
         self.cycle_type = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
 
+        self.es_block = self.samplenum
+
         if 'Reserved' in self.cycle_type:
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
+            self.ss_block = self.samplenum
             self.state = 'IDLE'
             return
 
-        self.es_block = self.samplenum
         self.putb([2, ['Cycle type: %s' % self.cycle_type]])
-        self.ss_block = self.samplenum
 
         if self.cycle_type in ('DMA read', 'DMA write'):
             self.putb([0, ['DMA cycle decoding not supported']])
             self.state = 'IDLE'
+            self.ss_block = self.samplenum
             return
+
+        self.ss_block = self.samplenum
 
         self.state = 'GET ADDR'
         self.addr = 0
@@ -246,7 +251,6 @@ class Decoder(srd.Decoder):
 
         self.es_block = self.samplenum
         self.putb([4, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
-        self.ss_block = self.samplenum
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -255,6 +259,8 @@ class Decoder(srd.Decoder):
         if lad_bits != '1111':
             self.putb([0, ['TAR, cycle %d: %s (expected 1111)' % \
                            (self.tarcount, lad_bits)]])
+
+        self.ss_block = self.samplenum
 
         if (self.tarcount != 1):
             self.tarcount += 1
@@ -269,12 +275,13 @@ class Decoder(srd.Decoder):
         self.sync_val = lad_bits
         self.sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
 
+        self.es_block = self.samplenum
+
         # TODO: Warnings if reserved value are seen?
         if 'Reserved' in self.sync_type:
             self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
                            (self.synccount, self.sync_val)]])
 
-        self.es_block = self.samplenum
         self.putb([5, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
         self.ss_block = self.samplenum
 
@@ -318,7 +325,6 @@ class Decoder(srd.Decoder):
 
         self.es_block = self.samplenum
         self.putb([7, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
-        self.ss_block = self.samplenum
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -327,6 +333,8 @@ class Decoder(srd.Decoder):
         if lad_bits != '1111':
             self.putb([0, ['Warning: TAR, cycle %d: %s (expected 1111)'
                            % (self.tarcount, lad_bits)]])
+
+        self.ss_block = self.samplenum
 
         if (self.tarcount != 1):
             self.tarcount += 1
