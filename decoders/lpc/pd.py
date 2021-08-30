@@ -151,8 +151,6 @@ class Decoder(srd.Decoder):
         self.cycle_type = -1
         self.databyte = 0
         self.tarcount = 0
-        self.sync_type = 0
-        self.synccount = 0
         self.oldpins = None
         self.ss_block = self.es_block = None
         self.ss_cycle = None
@@ -274,18 +272,20 @@ class Decoder(srd.Decoder):
     def handle_get_sync(self, lad_bits):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
-        self.sync_val = lad_bits
-        self.sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
+        sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
 
         self.es_block = self.samplenum
 
-        # TODO: Warnings if reserved value are seen?
-        if 'Reserved' in self.sync_type:
-            self.putb([0, ['SYNC, cycle %d: %s (reserved value)' % \
-                           (self.synccount, self.sync_val)]])
+        if 'Reserved' in sync_type:
+            self.putb([0, ['SYNC %s (reserved value)' % sync_type]])
 
-        self.putb([5, ['SYNC, cycle %d: %s' % (self.synccount, self.sync_val)]])
+        self.putb([5, ['SYNC: %s' % sync_type]])
+
         self.ss_block = self.samplenum
+
+        # Long or short wait
+        if 'wait' in sync_type:
+            return
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR2'
