@@ -145,15 +145,17 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.state = 'IDLE'
+
         self.lad = -1
-        self.prev_lad = -1
         self.lframe = 1
+        self.prev_lad = -1
+
         self.addr = 0
-        self.cur_nibble = 0
+        self.data = 0
+
         self.cycle_type = -1
-        self.databyte = 0
-        self.tarcount = 0
-        self.oldpins = None
+        self.cycle_count = 0
+
         self.ss_block = self.es_block = None
         self.ss_cycle = None
 
@@ -213,7 +215,7 @@ class Decoder(srd.Decoder):
 
         self.state = 'GET ADDR'
         self.addr = 0
-        self.cur_nibble = 0
+        self.cycle_count = 0
 
     def handle_get_addr(self, lad_bits):
         # LAD[3:0]: ADDR field (4/8/0 clock cycles).
@@ -228,12 +230,12 @@ class Decoder(srd.Decoder):
             raise Exception('Invalid cycle_type: %s' % self.cycle_type)
 
         # Addresses are driven MSN-first.
-        offset = ((addr_nibbles - 1) - self.cur_nibble) * 4
+        offset = ((addr_nibbles - 1) - self.cycle_count) * 4
         self.addr |= (self.lad << offset)
 
         # Continue if we haven't seen all ADDR cycles, yet.
-        if (self.cur_nibble < addr_nibbles - 1):
-            self.cur_nibble += 1
+        if (self.cycle_count < addr_nibbles - 1):
+            self.cycle_count += 1
             return
 
         self.es_block = self.samplenum
@@ -246,13 +248,13 @@ class Decoder(srd.Decoder):
             self.cycle_count = 0
         else:
             self.state = 'GET TAR'
-            self.tar_count = 0
+            self.cycle_count = 0
 
     def handle_get_tar(self, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
         self.es_block = self.samplenum
-        self.putb([4, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.putb([4, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -260,15 +262,15 @@ class Decoder(srd.Decoder):
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
             self.putb([0, ['TAR, cycle %d: %s (expected 1111)' % \
-                           (self.tarcount, lad_bits)]])
+                           (self.cycle_count, lad_bits)]])
 
         self.ss_block = self.samplenum
 
-        if (self.tarcount != 1):
-            self.tarcount += 1
+        if (self.cycle_count != 1):
+            self.cycle_count += 1
             return
 
-        self.tarcount = 0
+        self.cycle_count = 0
         self.state = 'GET SYNC'
 
     def handle_get_sync(self, lad_bits):
@@ -301,9 +303,9 @@ class Decoder(srd.Decoder):
 
         # Data is driven LSN-first.
         if (self.cycle_count == 0):
-            self.databyte = self.lad
+            self.data = self.lad
         elif (self.cycle_count == 1):
-            self.databyte |= (self.lad << 4)
+            self.data |= (self.lad << 4)
         else:
             raise Exception('Invalid cycle_count: %d' % self.cycle_count)
 
@@ -313,14 +315,14 @@ class Decoder(srd.Decoder):
 
         self.es_block = self.samplenum
         if self.cycle_type in ('I/O write', 'Memory write'):
-            self.putb([6, ['DATA: 0x%02x' % self.databyte]])
+            self.putb([6, ['DATA: 0x%02x' % self.data]])
         else:
-            self.putb([9, ['DATA: 0x%02x' % self.databyte]])
+            self.putb([9, ['DATA: 0x%02x' % self.data]])
         self.ss_block = self.samplenum
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR'
-            self.tar_count = 0
+            self.cycle_count = 0
         else:
             self.state = 'GET TAR2'
             self.cycle_count = 0
@@ -329,7 +331,7 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
         self.es_block = self.samplenum
-        self.putb([7, ['TAR, cycle %d: %s' % (self.tarcount, lad_bits)]])
+        self.putb([7, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
@@ -337,15 +339,15 @@ class Decoder(srd.Decoder):
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
             self.putb([0, ['TAR, cycle %d: %s (expected 1111)'
-                           % (self.tarcount, lad_bits)]])
+                           % (self.cycle_count, lad_bits)]])
 
         self.ss_block = self.samplenum
 
-        if (self.tarcount != 1):
-            self.tarcount += 1
+        if (self.cycle_count != 1):
+            self.cycle_count += 1
             return
 
-        self.tarcount = 0
+        self.cycle_count = 0
         self.state = 'IDLE'
 
     def handle_abort(self, lad_bits):
@@ -372,9 +374,6 @@ class Decoder(srd.Decoder):
                 pins = self.wait(idle_conditions)
             else:
                 pins = self.wait(non_idle_conditions)
-
-            # Store current pin values for the next round.
-            self.oldpins = pins
 
             # Get individual pin values into local variables.
             (lframe, lclk, lad0, lad1, lad2, lad3) = pins[:6]
