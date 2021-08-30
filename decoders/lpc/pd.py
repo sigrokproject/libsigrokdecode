@@ -142,6 +142,7 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.state = 'IDLE'
         self.lad = -1
+        self.prev_lad = -1
         self.addr = 0
         self.cur_nibble = 0
         self.cycle_type = -1
@@ -158,7 +159,7 @@ class Decoder(srd.Decoder):
     def putb(self, data):
         self.put(self.ss_block, self.es_block, self.out_ann, data)
 
-    def handle_get_start(self, lad, lad_bits, lframe):
+    def handle_get_start(self, lad_bits, lframe):
         # LAD[3:0]: START field (1 clock cycle).
 
         # The last value of LAD[3:0] before LFRAME# gets de-asserted is what
@@ -166,26 +167,27 @@ class Decoder(srd.Decoder):
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
         self.es_block = self.samplenum
-        self.putb([1, [fields['START'][lad], 'START', 'St', 'S']])
+        self.putb([1, [fields['START'][self.lad], 'START', 'St', 'S']])
         self.ss_block = self.samplenum
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         # TODO
-        if (self.lad != -1 and self.lad != lad):
+        if (self.prev_lad != -1 and self.prev_lad != self.lad):
             self.putb([0, ['LAD[3:0] changed while LFRAME# was asserted']])
+
+        self.prev_lad = self.lad
 
         # LFRAME# is asserted (low). Wait until it gets de-asserted again
         # (the host is allowed to keep it asserted multiple clocks).
         if lframe != 1:
             return
 
-        self.start_field = self.lad
         self.state = 'GET CT/DR'
 
-    def handle_get_ct_dr(self, lad, lad_bits):
+    def handle_get_ct_dr(self, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
 
-        self.cycle_type = fields['CT_DR'].get(lad, 'Reserved / unknown')
+        self.cycle_type = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
 
         if 'Reserved' in self.cycle_type:
             self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
@@ -205,7 +207,7 @@ class Decoder(srd.Decoder):
         self.addr = 0
         self.cur_nibble = 0
 
-    def handle_get_addr(self, lad, lad_bits):
+    def handle_get_addr(self, lad_bits):
         # LAD[3:0]: ADDR field (4/8/0 clock cycles).
 
         # I/O cycles: 4 ADDR clocks. Memory cycles: 8 ADDR clocks.
@@ -219,7 +221,7 @@ class Decoder(srd.Decoder):
 
         # Addresses are driven MSN-first.
         offset = ((addr_nibbles - 1) - self.cur_nibble) * 4
-        self.addr |= (lad << offset)
+        self.addr |= (self.lad << offset)
 
         # Continue if we haven't seen all ADDR cycles, yet.
         if (self.cur_nibble < addr_nibbles - 1):
@@ -238,7 +240,7 @@ class Decoder(srd.Decoder):
             self.state = 'GET TAR'
             self.tar_count = 0
 
-    def handle_get_tar(self, lad, lad_bits):
+    def handle_get_tar(self, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
         self.es_block = self.samplenum
@@ -260,11 +262,11 @@ class Decoder(srd.Decoder):
         self.tarcount = 0
         self.state = 'GET SYNC'
 
-    def handle_get_sync(self, lad, lad_bits):
+    def handle_get_sync(self, lad_bits):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
         self.sync_val = lad_bits
-        self.sync_type = fields['SYNC'].get(lad, 'Reserved / unknown')
+        self.sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
 
         # TODO: Warnings if reserved value are seen?
         if 'Reserved' in self.sync_type:
@@ -284,14 +286,14 @@ class Decoder(srd.Decoder):
             self.cycle_count = 0
             self.state = 'GET DATA'
 
-    def handle_get_data(self, lad, lad_bits):
+    def handle_get_data(self, lad_bits):
         # LAD[3:0]: DATA field (2 clock cycles).
 
         # Data is driven LSN-first.
         if (self.cycle_count == 0):
-            self.databyte = lad
+            self.databyte = self.lad
         elif (self.cycle_count == 1):
-            self.databyte |= (lad << 4)
+            self.databyte |= (self.lad << 4)
         else:
             raise Exception('Invalid cycle_count: %d' % self.cycle_count)
 
@@ -310,7 +312,7 @@ class Decoder(srd.Decoder):
             self.state = 'GET TAR2'
             self.cycle_count = 0
 
-    def handle_get_tar2(self, lad, lad_bits):
+    def handle_get_tar2(self, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
         self.es_block = self.samplenum
@@ -349,8 +351,7 @@ class Decoder(srd.Decoder):
             # Store LAD[3:0] bit values (one nibble) in local variables.
             # Most (but not all) states need this.
             if self.state != 'IDLE':
-                lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
-                lad_bits = '{:04b}'.format(lad)
+                lad_bits = '{:04b}'.format(self.lad)
                 # self.putb([0, ['LAD: %s' % lad_bits]])
 
             # TODO: Only memory read/write is currently supported/tested.
@@ -364,16 +365,19 @@ class Decoder(srd.Decoder):
                 self.state = 'GET START'
                 self.lad = -1
             elif self.state == 'GET START':
-                self.handle_get_start(lad, lad_bits, lframe)
+                self.handle_get_start(lad_bits, lframe)
             elif self.state == 'GET CT/DR':
-                self.handle_get_ct_dr(lad, lad_bits)
+                self.handle_get_ct_dr(lad_bits)
             elif self.state == 'GET ADDR':
-                self.handle_get_addr(lad, lad_bits)
+                self.handle_get_addr(lad_bits)
             elif self.state == 'GET TAR':
-                self.handle_get_tar(lad, lad_bits)
+                self.handle_get_tar(lad_bits)
             elif self.state == 'GET SYNC':
-                self.handle_get_sync(lad, lad_bits)
+                self.handle_get_sync(lad_bits)
             elif self.state == 'GET DATA':
-                self.handle_get_data(lad, lad_bits)
+                self.handle_get_data(lad_bits)
             elif self.state == 'GET TAR2':
-                self.handle_get_tar2(lad, lad_bits)
+                self.handle_get_tar2(lad_bits)
+
+            # We operate on the LAD bits from the previous cycle
+            self.lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
