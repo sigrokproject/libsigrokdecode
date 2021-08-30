@@ -128,13 +128,15 @@ class Decoder(srd.Decoder):
         ('addr', 'Address'),
         ('tar1', 'Turn-around cycle 1'),
         ('sync', 'Sync'),
-        ('data', 'Data'),
+        ('server-data', 'Server Data'),
         ('tar2', 'Turn-around cycle 2'),
         ('lad', 'LAD bus'),
+        ('peripheral-data', 'Peripheral Data'),
     )
     annotation_rows = (
         ('lad-vals', 'LAD bus', (8,)),
-        ('data-vals', 'Data', (1, 2, 3, 4, 5, 6, 7)),
+        ('server-vals', 'Server', (1, 2, 3, 4, 6)),
+        ('periherals-vals', 'Peripheral', (5, 7, 9)),
         ('warnings', 'Warnings', (0,)),
     )
 
@@ -310,7 +312,10 @@ class Decoder(srd.Decoder):
             return
 
         self.es_block = self.samplenum
-        self.putb([6, ['DATA: 0x%02x' % self.databyte]])
+        if self.cycle_type in ('I/O write', 'Memory write'):
+            self.putb([6, ['DATA: 0x%02x' % self.databyte]])
+        else:
+            self.putb([9, ['DATA: 0x%02x' % self.databyte]])
         self.ss_block = self.samplenum
 
         if self.cycle_type in ('I/O write', 'Memory write'):
