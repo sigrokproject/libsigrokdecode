@@ -156,14 +156,19 @@ class Decoder(srd.Decoder):
         self.cycle_type = -1
         self.cycle_count = 0
 
-        self.ss_block = self.es_block = None
+        self.ss_block = None
         self.ss_cycle = None
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
-    def putb(self, data):
-        self.put(self.ss_block, self.es_block, self.out_ann, data)
+    # Address and data fields are output as multicycle block
+    def put_block(self, data):
+        self.put(self.ss_block, self.samplenum, self.out_ann, data)
+
+    # All other fields are output as a single cycle block
+    def put_cycle(self, data):
+        self.put(self.ss_cycle, self.samplenum, self.out_ann, data)
 
     def handle_get_start(self, lad_bits, lframe):
         # LAD[3:0]: START field (1 clock cycle).
@@ -172,14 +177,11 @@ class Decoder(srd.Decoder):
         # the peripherals must use. However, the host can keep LFRAME# asserted
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
-        self.es_block = self.samplenum
-        self.putb([1, [fields['START'][self.lad], 'START', 'St', 'S']])
+        self.put_cycle([1, [fields['START'][self.lad], 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
-            self.putb([0, ['LAD[3:0] changed while LFRAME# was asserted']])
-
-        self.ss_block = self.samplenum
+            self.put_cycle([0, ['LAD[3:0] changed while LFRAME# was asserted']])
 
         self.prev_lad = self.lad
 
@@ -195,25 +197,20 @@ class Decoder(srd.Decoder):
 
         self.cycle_type = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
 
-        self.es_block = self.samplenum
-
         if 'Reserved' in self.cycle_type:
-            self.putb([0, ['Invalid cycle type (%s)' % lad_bits]])
-            self.ss_block = self.samplenum
+            self.put_cycle([0, ['Invalid cycle type (%s)' % lad_bits]])
             self.state = 'IDLE'
             return
 
-        self.putb([2, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
+        self.put_cycle([2, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
 
         if self.cycle_type in ('DMA read', 'DMA write'):
-            self.putb([0, ['DMA cycle decoding not supported']])
+            self.put_cycle([0, ['DMA cycle decoding not supported']])
             self.state = 'IDLE'
-            self.ss_block = self.samplenum
             return
 
-        self.ss_block = self.samplenum
-
         self.state = 'GET ADDR'
+        self.ss_block = self.samplenum
         self.addr = 0
         self.cycle_count = 0
 
@@ -238,13 +235,12 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
-        self.es_block = self.samplenum
         s = 'Address: 0x%%0%dx' % addr_nibbles
-        self.putb([3, [s % self.addr]])
-        self.ss_block = self.samplenum
+        self.put_block([3, [s % self.addr]])
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET DATA'
+            self.ss_block = self.samplenum
             self.cycle_count = 0
         else:
             self.state = 'GET TAR'
@@ -253,18 +249,15 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
-        self.es_block = self.samplenum
-        self.putb([4, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([4, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.putb([0, ['TAR, cycle %d: %s (expected 1111)' % \
+            self.put_cycle([0, ['TAR, cycle %d: %s (expected 1111)' % \
                            (self.cycle_count, lad_bits)]])
-
-        self.ss_block = self.samplenum
 
         if (self.cycle_count != 1):
             self.cycle_count += 1
@@ -278,14 +271,10 @@ class Decoder(srd.Decoder):
 
         sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
 
-        self.es_block = self.samplenum
-
         if 'Reserved' in sync_type:
-            self.putb([0, ['SYNC %s (reserved value)' % sync_type]])
+            self.put_cycle([0, ['SYNC %s (reserved value)' % sync_type]])
 
-        self.putb([5, ['SYNC: %s' % sync_type]])
-
-        self.ss_block = self.samplenum
+        self.put_cycle([5, ['SYNC: %s' % sync_type]])
 
         # Long or short wait
         if 'wait' in sync_type:
@@ -295,8 +284,9 @@ class Decoder(srd.Decoder):
             self.state = 'GET TAR2'
             self.cycle_count = 0
         else:
-            self.cycle_count = 0
             self.state = 'GET DATA'
+            self.cycle_count = 0
+            self.ss_block = self.samplenum
 
     def handle_get_data(self, lad_bits):
         # LAD[3:0]: DATA field (2 clock cycles).
@@ -313,12 +303,10 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
-        self.es_block = self.samplenum
         if self.cycle_type in ('I/O write', 'Memory write'):
-            self.putb([6, ['DATA: 0x%02x' % self.data]])
+            self.put_block([6, ['DATA: 0x%02x' % self.data]])
         else:
-            self.putb([9, ['DATA: 0x%02x' % self.data]])
-        self.ss_block = self.samplenum
+            self.put_block([9, ['DATA: 0x%02x' % self.data]])
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR'
@@ -330,18 +318,15 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
-        self.es_block = self.samplenum
-        self.putb([7, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([7, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.putb([0, ['TAR, cycle %d: %s (expected 1111)'
+            self.put_cycle([0, ['TAR, cycle %d: %s (expected 1111)'
                            % (self.cycle_count, lad_bits)]])
-
-        self.ss_block = self.samplenum
 
         if (self.cycle_count != 1):
             self.cycle_count += 1
@@ -357,8 +342,7 @@ class Decoder(srd.Decoder):
             return
 
         if lad_bits == '1111':
-            self.es_block = self.samplenum
-            self.putb([0, ['ABORT']])
+            self.put_cycle([0, ['ABORT']])
 
         return
 
@@ -383,10 +367,7 @@ class Decoder(srd.Decoder):
             # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad_bits = '{:04b}'.format(self.lad)
-                self.put(self.ss_cycle, self.samplenum, self.out_ann, [8, ['%s' % lad_bits]])
-
-            # Save the cycle of the last lclk rising edge
-            self.ss_cycle = self.samplenum
+                self.put_cycle([8, ['%s' % lad_bits]])
 
             # TODO: Need to implement DMA and firmware cycle decode
 
@@ -398,9 +379,7 @@ class Decoder(srd.Decoder):
             # the transaction is aborted. Instead of checking this in almost every
             # state, do it here.
             elif self.lframe == 0 and self.state not in ('IDLE', 'GET START'):
-                self.es_block = self.samplenum
-                self.putb([0, ['LFRAME asserted during transaction, likely an abort']])
-                self.ss_block = self.samplenum
+                self.put_cycle([0, ['LFRAME asserted during transaction, likely an abort']])
                 self.state = 'ABORT'
 
             # State machine
@@ -408,7 +387,6 @@ class Decoder(srd.Decoder):
                 # A valid LPC cycle starts with LFRAME# being asserted (low).
                 if lframe != 0:
                     continue
-                self.ss_block = self.samplenum
                 self.state = 'GET START'
                 self.lad = -1
             elif self.state == 'GET START':
@@ -427,6 +405,9 @@ class Decoder(srd.Decoder):
                 self.handle_get_tar2(lad_bits)
             elif self.state == 'ABORT':
                 self.handle_abort(lad_bits)
+
+            # Save the cycle of the last lclk rising edge
+            self.ss_cycle = self.samplenum
 
             # We operate on the LAD bits and lframe from the previous cycle
             self.lad = (lad3 << 3) | (lad2 << 2) | (lad1 << 1) | lad0
