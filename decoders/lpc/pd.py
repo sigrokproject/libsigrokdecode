@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import SrdIntEnum
 
 # ...
 fields = {
@@ -94,6 +95,8 @@ fields = {
     },
 }
 
+Ann = SrdIntEnum.from_str('Ann', 'WARNING START CYCLE_TYPE ADDR TAR1 SYNC SERVER_DATA TAR2 LAD PERIPHERAL_DATA')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'lpc'
@@ -124,20 +127,20 @@ class Decoder(srd.Decoder):
     annotations = (
         ('warning', 'Warning'),
         ('start', 'Start'),
-        ('cycle-type', 'Cycle-type/direction'),
+        ('cycle_type', 'Cycle-type/direction'),
         ('addr', 'Address'),
         ('tar1', 'Turn-around cycle 1'),
         ('sync', 'Sync'),
-        ('server-data', 'Server Data'),
+        ('server_data', 'Server Data'),
         ('tar2', 'Turn-around cycle 2'),
         ('lad', 'LAD bus'),
-        ('peripheral-data', 'Peripheral Data'),
+        ('peripheral_data', 'Peripheral Data'),
     )
     annotation_rows = (
-        ('lad-vals', 'LAD bus', (8,)),
-        ('server-vals', 'Server', (1, 2, 3, 4, 6)),
-        ('periherals-vals', 'Peripheral', (5, 7, 9)),
-        ('warnings', 'Warnings', (0,)),
+        ('lad-vals', 'LAD bus', (Ann.LAD,)),
+        ('server-vals', 'Server', (Ann.START, Ann.CYCLE_TYPE, Ann.ADDR, Ann.TAR1, Ann.SERVER_DATA)),
+        ('periherals-vals', 'Peripheral', (Ann.SYNC, Ann.TAR2, Ann.PERIPHERAL_DATA)),
+        ('warnings', 'Warnings', (Ann.WARNING,)),
     )
 
     def __init__(self):
@@ -177,11 +180,11 @@ class Decoder(srd.Decoder):
         # the peripherals must use. However, the host can keep LFRAME# asserted
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
-        self.put_cycle([1, [fields['START'][self.lad], 'START', 'St', 'S']])
+        self.put_cycle([Ann.START, [fields['START'][self.lad], 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
-            self.put_cycle([0, ['LAD[3:0] changed while LFRAME# was asserted']])
+            self.put_cycle([Ann.START, ['LAD[3:0] changed while LFRAME# was asserted']])
 
         self.prev_lad = self.lad
 
@@ -198,14 +201,14 @@ class Decoder(srd.Decoder):
         self.cycle_type = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
 
         if 'Reserved' in self.cycle_type:
-            self.put_cycle([0, ['Invalid cycle type (%s)' % lad_bits]])
+            self.put_cycle([Ann.WARNING, ['Invalid cycle type (%s)' % lad_bits]])
             self.state = 'IDLE'
             return
 
-        self.put_cycle([2, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
+        self.put_cycle([Ann.CYCLE_TYPE, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
 
         if self.cycle_type in ('DMA read', 'DMA write'):
-            self.put_cycle([0, ['DMA cycle decoding not supported']])
+            self.put_cycle([Ann.WARNING, ['DMA cycle decoding not supported']])
             self.state = 'IDLE'
             return
 
@@ -236,7 +239,7 @@ class Decoder(srd.Decoder):
             return
 
         s = 'Address: 0x%%0%dx' % addr_nibbles
-        self.put_block([3, [s % self.addr]])
+        self.put_block([Ann.ADDR, [s % self.addr]])
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET DATA'
@@ -249,14 +252,14 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
-        self.put_cycle([4, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([Ann.TAR1, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put_cycle([0, ['TAR, cycle %d: %s (expected 1111)' % \
+            self.put_cycle([Ann.WARNING, ['TAR, cycle %d: %s (expected 1111)' % \
                            (self.cycle_count, lad_bits)]])
 
         if (self.cycle_count != 1):
@@ -272,9 +275,9 @@ class Decoder(srd.Decoder):
         sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
 
         if 'Reserved' in sync_type:
-            self.put_cycle([0, ['SYNC %s (reserved value)' % sync_type]])
+            self.put_cycle([Ann.WARNING, ['SYNC %s (reserved value)' % sync_type]])
 
-        self.put_cycle([5, ['SYNC: %s' % sync_type]])
+        self.put_cycle([Ann.SYNC, ['SYNC: %s' % sync_type]])
 
         # Long or short wait
         if 'wait' in sync_type:
@@ -304,9 +307,9 @@ class Decoder(srd.Decoder):
             return
 
         if self.cycle_type in ('I/O write', 'Memory write'):
-            self.put_block([6, ['DATA: 0x%02x' % self.data]])
+            self.put_block([Ann.SERVER_DATA, ['DATA: 0x%02x' % self.data]])
         else:
-            self.put_block([9, ['DATA: 0x%02x' % self.data]])
+            self.put_block([Ann.PERIPHERAL_DATA, ['DATA: 0x%02x' % self.data]])
 
         if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR'
@@ -318,14 +321,14 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
-        self.put_cycle([7, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([Ann.TAR2, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put_cycle([0, ['TAR, cycle %d: %s (expected 1111)'
+            self.put_cycle([Ann.WARNING, ['TAR, cycle %d: %s (expected 1111)'
                            % (self.cycle_count, lad_bits)]])
 
         if (self.cycle_count != 1):
@@ -342,7 +345,7 @@ class Decoder(srd.Decoder):
             return
 
         if lad_bits == '1111':
-            self.put_cycle([0, ['ABORT']])
+            self.put_cycle([Ann.WARNING, ['ABORT']])
 
         return
 
@@ -367,7 +370,7 @@ class Decoder(srd.Decoder):
             # Most (but not all) states need this.
             if self.state != 'IDLE':
                 lad_bits = '{:04b}'.format(self.lad)
-                self.put_cycle([8, ['%s' % lad_bits]])
+                self.put_cycle([Ann.LAD, ['%s' % lad_bits]])
 
             # TODO: Need to implement DMA and firmware cycle decode
 
@@ -379,7 +382,7 @@ class Decoder(srd.Decoder):
             # the transaction is aborted. Instead of checking this in almost every
             # state, do it here.
             elif self.lframe == 0 and self.state not in ('IDLE', 'GET START'):
-                self.put_cycle([0, ['LFRAME asserted during transaction, likely an abort']])
+                self.put_cycle([Ann.WARNING, ['LFRAME asserted during transaction, likely an abort']])
                 self.state = 'ABORT'
 
             # State machine
