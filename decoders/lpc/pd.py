@@ -97,6 +97,8 @@ fields = {
 
 Ann = SrdIntEnum.from_str('Ann', 'WARNING START CYCLE_TYPE ADDR TAR1 SYNC SERVER_DATA TAR2 LAD PERIPHERAL_DATA')
 
+CycType = SrdIntEnum.from_str('CycType', 'IO_READ IO_WRITE MEM_READ MEM_WRITE FW_READ FW_WRITE')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'lpc'
@@ -156,7 +158,7 @@ class Decoder(srd.Decoder):
         self.addr = 0
         self.data = 0
 
-        self.cycle_type = -1
+        self.cycle_type = None
         self.cycle_count = 0
 
         self.ss_block = None
@@ -198,17 +200,24 @@ class Decoder(srd.Decoder):
     def handle_get_ct_dr(self, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
 
-        self.cycle_type = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
+        cycle_type_str = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
 
-        if 'Reserved' in self.cycle_type:
-            self.put_cycle([Ann.WARNING, ['Invalid cycle type (%s)' % lad_bits]])
+        self.put_cycle([Ann.CYCLE_TYPE, ['Cycle type: %s' % cycle_type_str, "%s" % cycle_type_str]])
+
+        if 'I/O read' in cycle_type_str:
+            self.cycle_type = CycType.IO_READ
+        elif 'I/O write' in cycle_type_str:
+            self.cycle_type = CycType.IO_WRITE
+        elif 'Memory read' in cycle_type_str:
+            self.cycle_type = CycType.MEM_READ
+        elif 'Memory write' in cycle_type_str:
+            self.cycle_type = CycType.MEM_WRITE
+        elif 'DMA' in cycle_type_str:
+            self.put_cycle([Ann.WARNING, ['DMA cycle decoding not supported']])
             self.state = 'IDLE'
             return
-
-        self.put_cycle([Ann.CYCLE_TYPE, ['Cycle type: %s' % self.cycle_type, "%s" % self.cycle_type]])
-
-        if self.cycle_type in ('DMA read', 'DMA write'):
-            self.put_cycle([Ann.WARNING, ['DMA cycle decoding not supported']])
+        elif 'Reserved' in cycle_type_str:
+            self.put_cycle([Ann.WARNING, ['Invalid cycle type (%s)' % lad_bits]])
             self.state = 'IDLE'
             return
 
@@ -221,13 +230,13 @@ class Decoder(srd.Decoder):
         # LAD[3:0]: ADDR field (4/8/0 clock cycles).
 
         # I/O cycles: 4 ADDR clocks. Memory cycles: 8 ADDR clocks.
-        if self.cycle_type in ('I/O read', 'I/O write'):
+        if self.cycle_type in (CycType.IO_READ, CycType.IO_WRITE):
             addr_nibbles = 4 # Address is 16bits.
-        elif self.cycle_type in ('Memory read', 'Memory write'):
+        elif self.cycle_type in (CycType.MEM_READ, CycType.MEM_WRITE):
             addr_nibbles = 8 # Address is 32bits.
         else:
             # Should never have got here for a DMA cycle
-            raise Exception('Invalid cycle_type: %s' % self.cycle_type)
+            raise Exception('Invalid cycle_type: %d' % self.cycle_type)
 
         # Addresses are driven MSN-first.
         offset = ((addr_nibbles - 1) - self.cycle_count) * 4
@@ -241,7 +250,7 @@ class Decoder(srd.Decoder):
         s = 'Address: 0x%%0%dx' % addr_nibbles
         self.put_block([Ann.ADDR, [s % self.addr]])
 
-        if self.cycle_type in ('I/O write', 'Memory write'):
+        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
             self.state = 'GET DATA'
             self.ss_block = self.samplenum
             self.cycle_count = 0
@@ -283,7 +292,7 @@ class Decoder(srd.Decoder):
         if 'wait' in sync_type:
             return
 
-        if self.cycle_type in ('I/O write', 'Memory write'):
+        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
             self.state = 'GET TAR2'
             self.cycle_count = 0
         else:
@@ -306,15 +315,12 @@ class Decoder(srd.Decoder):
             self.cycle_count += 1
             return
 
-        if self.cycle_type in ('I/O write', 'Memory write'):
+        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
             self.put_block([Ann.SERVER_DATA, ['DATA: 0x%02x' % self.data]])
-        else:
-            self.put_block([Ann.PERIPHERAL_DATA, ['DATA: 0x%02x' % self.data]])
-
-        if self.cycle_type in ('I/O write', 'Memory write'):
             self.state = 'GET TAR'
             self.cycle_count = 0
         else:
+            self.put_block([Ann.PERIPHERAL_DATA, ['DATA: 0x%02x' % self.data]])
             self.state = 'GET TAR2'
             self.cycle_count = 0
 
