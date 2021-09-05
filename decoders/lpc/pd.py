@@ -99,6 +99,8 @@ Ann = SrdIntEnum.from_str('Ann', 'WARNING START CYCLE_TYPE ADDR TAR1 SYNC SERVER
 
 CycType = SrdIntEnum.from_str('CycType', 'IO_READ IO_WRITE MEM_READ MEM_WRITE FW_READ FW_WRITE')
 
+St = SrdIntEnum.from_str('St', 'IDLE GET_START GET_CT_DR GET_ADDR GET_DATA GET_TAR GET_SYNC GET_TAR2 ABORT')
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'lpc'
@@ -149,7 +151,7 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.state = 'IDLE'
+        self.state = St.IDLE
 
         self.lad = -1
         self.lframe = 1
@@ -195,7 +197,7 @@ class Decoder(srd.Decoder):
         if lframe != 1:
             return
 
-        self.state = 'GET CT/DR'
+        self.state = St.GET_CT_DR
 
     def handle_get_ct_dr(self, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
@@ -214,14 +216,14 @@ class Decoder(srd.Decoder):
             self.cycle_type = CycType.MEM_WRITE
         elif 'DMA' in cycle_type_str:
             self.put_cycle([Ann.WARNING, ['DMA cycle decoding not supported']])
-            self.state = 'IDLE'
+            self.state = St.IDLE
             return
         elif 'Reserved' in cycle_type_str:
             self.put_cycle([Ann.WARNING, ['Invalid cycle type (%s)' % lad_bits]])
-            self.state = 'IDLE'
+            self.state = St.IDLE
             return
 
-        self.state = 'GET ADDR'
+        self.state = St.GET_ADDR
         self.ss_block = self.samplenum
         self.addr = 0
         self.cycle_count = 0
@@ -251,11 +253,11 @@ class Decoder(srd.Decoder):
         self.put_block([Ann.ADDR, [s % self.addr]])
 
         if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
-            self.state = 'GET DATA'
+            self.state = St.GET_DATA
             self.ss_block = self.samplenum
             self.cycle_count = 0
         else:
-            self.state = 'GET TAR'
+            self.state = St.GET_TAR
             self.cycle_count = 0
 
     def handle_get_tar(self, lad_bits):
@@ -276,7 +278,7 @@ class Decoder(srd.Decoder):
             return
 
         self.cycle_count = 0
-        self.state = 'GET SYNC'
+        self.state = St.GET_SYNC
 
     def handle_get_sync(self, lad_bits):
         # LAD[3:0]: SYNC field (1-n clock cycles).
@@ -293,10 +295,10 @@ class Decoder(srd.Decoder):
             return
 
         if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
-            self.state = 'GET TAR2'
+            self.state = St.GET_TAR2
             self.cycle_count = 0
         else:
-            self.state = 'GET DATA'
+            self.state = St.GET_DATA
             self.cycle_count = 0
             self.ss_block = self.samplenum
 
@@ -317,11 +319,11 @@ class Decoder(srd.Decoder):
 
         if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
             self.put_block([Ann.SERVER_DATA, ['DATA: 0x%02x' % self.data]])
-            self.state = 'GET TAR'
+            self.state = St.GET_TAR
             self.cycle_count = 0
         else:
             self.put_block([Ann.PERIPHERAL_DATA, ['DATA: 0x%02x' % self.data]])
-            self.state = 'GET TAR2'
+            self.state = St.GET_TAR2
             self.cycle_count = 0
 
     def handle_get_tar2(self, lad_bits):
@@ -342,12 +344,12 @@ class Decoder(srd.Decoder):
             return
 
         self.cycle_count = 0
-        self.state = 'IDLE'
+        self.state = St.IDLE
 
     def handle_abort(self, lad_bits):
         # Go back to idle once lframe is no longer asserted
         if self.lframe == 1:
-            self.state = 'IDLE'
+            self.state = St.IDLE
             return
 
         if lad_bits == '1111':
@@ -363,7 +365,7 @@ class Decoder(srd.Decoder):
         # is the same as the PCI clock (which is sampled at rising edges).
         non_idle_conditions = [{1: 'r'}]
         while True:
-            if self.state == 'IDLE':
+            if self.state == St.IDLE:
                 pins = self.wait(idle_conditions)
             else:
                 pins = self.wait(non_idle_conditions)
@@ -374,7 +376,7 @@ class Decoder(srd.Decoder):
 
             # Store LAD[3:0] bit values (one nibble) in local variables.
             # Most (but not all) states need this.
-            if self.state != 'IDLE':
+            if self.state != St.IDLE:
                 lad_bits = '{:04b}'.format(self.lad)
                 self.put_cycle([Ann.LAD, ['%s' % lad_bits]])
 
@@ -383,36 +385,36 @@ class Decoder(srd.Decoder):
             # At any stage, if lframe is asserted with LAD=1111, then the
             # transaction is aborted
             if self.lframe == 0 and lad_bits == '1111':
-                self.state = 'ABORT'
+                self.state = St.ABORT
             # If lframe is asserted any time after the start of the transaction,
             # the transaction is aborted. Instead of checking this in almost every
             # state, do it here.
-            elif self.lframe == 0 and self.state not in ('IDLE', 'GET START'):
+            elif self.lframe == 0 and self.state not in (St.IDLE, St.GET_START):
                 self.put_cycle([Ann.WARNING, ['LFRAME asserted during transaction, likely an abort']])
-                self.state = 'ABORT'
+                self.state = St.ABORT
 
             # State machine
-            if self.state == 'IDLE':
+            if self.state == St.IDLE:
                 # A valid LPC cycle starts with LFRAME# being asserted (low).
                 if lframe != 0:
                     continue
-                self.state = 'GET START'
+                self.state = St.GET_START
                 self.lad = -1
-            elif self.state == 'GET START':
+            elif self.state == St.GET_START:
                 self.handle_get_start(lad_bits, lframe)
-            elif self.state == 'GET CT/DR':
+            elif self.state == St.GET_CT_DR:
                 self.handle_get_ct_dr(lad_bits)
-            elif self.state == 'GET ADDR':
+            elif self.state == St.GET_ADDR:
                 self.handle_get_addr(lad_bits)
-            elif self.state == 'GET TAR':
+            elif self.state == St.GET_TAR:
                 self.handle_get_tar(lad_bits)
-            elif self.state == 'GET SYNC':
+            elif self.state == St.GET_SYNC:
                 self.handle_get_sync(lad_bits)
-            elif self.state == 'GET DATA':
+            elif self.state == St.GET_DATA:
                 self.handle_get_data(lad_bits)
-            elif self.state == 'GET TAR2':
+            elif self.state == St.GET_TAR2:
                 self.handle_get_tar2(lad_bits)
-            elif self.state == 'ABORT':
+            elif self.state == St.ABORT:
                 self.handle_abort(lad_bits)
 
             # Save the cycle of the last lclk rising edge
