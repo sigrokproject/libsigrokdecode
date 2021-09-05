@@ -93,13 +93,21 @@ fields = {
         0b1110: 'Reserved',
         0b1111: 'Reserved',
     },
+    # MSIZE field (determines how many bytes to transfer in a firmware cycle)
+    'MSIZE': {
+        0b0000: 1,
+        0b0001: 2,
+        0b0010: 4,
+        0b0100: 16,
+        0b0111: 128,
+    },
 }
 
-Ann = SrdIntEnum.from_str('Ann', 'WARNING START CYCLE_TYPE ADDR TAR1 SYNC SERVER_DATA TAR2 LAD PERIPHERAL_DATA')
+Ann = SrdIntEnum.from_str('Ann', 'WARNING START CYCLE_TYPE ADDR TAR1 SYNC SERVER_DATA TAR2 LAD PERIPHERAL_DATA IDSEL MSIZE')
 
 CycType = SrdIntEnum.from_str('CycType', 'IO_READ IO_WRITE MEM_READ MEM_WRITE FW_READ FW_WRITE')
 
-St = SrdIntEnum.from_str('St', 'IDLE GET_START GET_CT_DR GET_ADDR GET_DATA GET_TAR GET_SYNC GET_TAR2 ABORT')
+St = SrdIntEnum.from_str('St', 'IDLE GET_START GET_IDSEL GET_CT_DR GET_ADDR GET_MSIZE GET_DATA GET_TAR GET_SYNC GET_TAR2 ABORT')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -139,10 +147,12 @@ class Decoder(srd.Decoder):
         ('tar2', 'Turn-around cycle 2'),
         ('lad', 'LAD bus'),
         ('peripheral_data', 'Peripheral Data'),
+        ('idsel', 'Device select'),
+        ('msize', 'Memory size'),
     )
     annotation_rows = (
         ('lad-vals', 'LAD bus', (Ann.LAD,)),
-        ('server-vals', 'Server', (Ann.START, Ann.CYCLE_TYPE, Ann.ADDR, Ann.TAR1, Ann.SERVER_DATA)),
+        ('server-vals', 'Server', (Ann.START, Ann.CYCLE_TYPE, Ann.ADDR, Ann.TAR1, Ann.SERVER_DATA, Ann.IDSEL, Ann.MSIZE)),
         ('periherals-vals', 'Peripheral', (Ann.SYNC, Ann.TAR2, Ann.PERIPHERAL_DATA)),
         ('warnings', 'Warnings', (Ann.WARNING,)),
     )
@@ -162,6 +172,7 @@ class Decoder(srd.Decoder):
 
         self.cycle_type = None
         self.cycle_count = 0
+        self.data_nibbles = 0
 
         self.ss_block = None
         self.ss_cycle = None
@@ -184,7 +195,8 @@ class Decoder(srd.Decoder):
         # the peripherals must use. However, the host can keep LFRAME# asserted
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
-        self.put_cycle([Ann.START, [fields['START'][self.lad], 'START', 'St', 'S']])
+        start_str = fields['START'][self.lad]
+        self.put_cycle([Ann.START, [start_str, 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
@@ -197,7 +209,14 @@ class Decoder(srd.Decoder):
         if lframe != 1:
             return
 
-        self.state = St.GET_CT_DR
+        if 'Firmware Memory Read cycle' in start_str:
+            self.cycle_type = CycType.FW_READ
+            self.state = St.GET_IDSEL
+        elif 'Firmware Memory Write cycle' in start_str:
+            self.cycle_type = CycType.FW_WRITE
+            self.state = St.GET_IDSEL
+        else:
+            self.state = St.GET_CT_DR
 
     def handle_get_ct_dr(self, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
@@ -228,6 +247,14 @@ class Decoder(srd.Decoder):
         self.addr = 0
         self.cycle_count = 0
 
+    def handle_get_idsel(self, lad_bits):
+        self.put_cycle([Ann.IDSEL, ['IDSEL: %s' % (lad_bits), 'IDSEL']])
+
+        self.state = St.GET_ADDR
+        self.ss_block = self.samplenum
+        self.addr = 0
+        self.cycle_count = 0
+
     def handle_get_addr(self, lad_bits):
         # LAD[3:0]: ADDR field (4/8/0 clock cycles).
 
@@ -236,6 +263,8 @@ class Decoder(srd.Decoder):
             addr_nibbles = 4 # Address is 16bits.
         elif self.cycle_type in (CycType.MEM_READ, CycType.MEM_WRITE):
             addr_nibbles = 8 # Address is 32bits.
+        elif self.cycle_type in (CycType.FW_READ, CycType.FW_WRITE):
+            addr_nibbles = 7 # Address is 28bits.
         else:
             # Should never have got here for a DMA cycle
             raise Exception('Invalid cycle_type: %d' % self.cycle_type)
@@ -256,8 +285,29 @@ class Decoder(srd.Decoder):
             self.state = St.GET_DATA
             self.ss_block = self.samplenum
             self.cycle_count = 0
+            self.data_nibbles = 2
+        elif self.cycle_type in (CycType.FW_READ, CycType.FW_WRITE):
+            self.state = St.GET_MSIZE
         else:
             self.state = St.GET_TAR
+            self.cycle_count = 0
+
+    def handle_get_msize(self, lad_bits):
+        msize_bytes = fields['MSIZE'].get(self.lad, 0)
+        if msize_bytes == 0:
+            self.put_cycle([Ann.WARNING, ['Bad MSIZE: %d' % self.lad]])
+            self.state = St.IDLE
+            return
+
+        self.put_cycle([Ann.MSIZE, ['MSIZE: %s bytes' % (msize_bytes), 'MSIZE']])
+        self.data_nibbles = 2*msize_bytes
+
+        if self.cycle_type == CycType.FW_READ:
+            self.state = St.GET_TAR
+            self.cycle_count = 0
+        else:
+            self.state = St.GET_DATA
+            self.ss_block = self.samplenum
             self.cycle_count = 0
 
     def handle_get_tar(self, lad_bits):
@@ -294,13 +344,16 @@ class Decoder(srd.Decoder):
         if 'wait' in sync_type:
             return
 
-        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
+        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE, CycType.FW_WRITE):
             self.state = St.GET_TAR2
             self.cycle_count = 0
         else:
             self.state = St.GET_DATA
             self.cycle_count = 0
             self.ss_block = self.samplenum
+            # This gets set in the MSIZE state
+            if self.cycle_type != CycType.FW_READ:
+                self.data_nibbles = 2
 
     def handle_get_data(self, lad_bits):
         # LAD[3:0]: DATA field (2 clock cycles).
@@ -308,16 +361,14 @@ class Decoder(srd.Decoder):
         # Data is driven LSN-first.
         if (self.cycle_count == 0):
             self.data = self.lad
-        elif (self.cycle_count == 1):
-            self.data |= (self.lad << 4)
         else:
-            raise Exception('Invalid cycle_count: %d' % self.cycle_count)
+            self.data |= (self.lad << (4*self.cycle_count))
 
-        if (self.cycle_count != 1):
+        if (self.cycle_count != (self.data_nibbles - 1)):
             self.cycle_count += 1
             return
 
-        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE):
+        if self.cycle_type in (CycType.IO_WRITE, CycType.MEM_WRITE, CycType.FW_WRITE):
             self.put_block([Ann.SERVER_DATA, ['DATA: 0x%02x' % self.data]])
             self.state = St.GET_TAR
             self.cycle_count = 0
@@ -404,8 +455,12 @@ class Decoder(srd.Decoder):
                 self.handle_get_start(lad_bits, lframe)
             elif self.state == St.GET_CT_DR:
                 self.handle_get_ct_dr(lad_bits)
+            elif self.state == St.GET_IDSEL:
+                self.handle_get_idsel(lad_bits)
             elif self.state == St.GET_ADDR:
                 self.handle_get_addr(lad_bits)
+            elif self.state == St.GET_MSIZE:
+                self.handle_get_msize(lad_bits)
             elif self.state == St.GET_TAR:
                 self.handle_get_tar(lad_bits)
             elif self.state == St.GET_SYNC:
