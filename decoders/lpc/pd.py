@@ -25,18 +25,8 @@ fields = {
     # START field (indicates start or stop of a transaction)
     'START': {
         0b0000: 'Start of cycle for a target',
-        0b0001: 'Reserved',
         0b0010: 'Grant for bus master 0',
         0b0011: 'Grant for bus master 1',
-        0b0100: 'Reserved',
-        0b0101: 'Reserved',
-        0b0110: 'Reserved',
-        0b0111: 'Reserved',
-        0b1000: 'Reserved',
-        0b1001: 'Reserved',
-        0b1010: 'Reserved',
-        0b1011: 'Reserved',
-        0b1100: 'Reserved',
         0b1101: 'Start of cycle for a Firmware Memory Read cycle',
         0b1110: 'Start of cycle for a Firmware Memory Write cycle',
         0b1111: 'Stop/abort (end of a cycle for a target)',
@@ -51,8 +41,6 @@ fields = {
         0b0110: 'Memory write',
         0b1000: 'DMA read',
         0b1010: 'DMA write',
-        0b1100: 'Reserved / not allowed',
-        0b1110: 'Reserved / not allowed',
     },
     # SIZE field (determines how many bytes are to be transferred)
     # Bits[3:2] are reserved, must be driven to 0b00.
@@ -60,7 +48,6 @@ fields = {
     'SIZE': {
         0b0000: '8 bits (1 byte)',
         0b0001: '16 bits (2 bytes)',
-        0b0010: 'Reserved / not allowed',
         0b0011: '32 bits (4 bytes)',
     },
     # CHANNEL field (bits[2:0] contain the DMA channel number)
@@ -77,21 +64,10 @@ fields = {
     # SYNC field (used to add wait states)
     'SYNC': {
         0b0000: 'Ready',
-        0b0001: 'Reserved',
-        0b0010: 'Reserved',
-        0b0011: 'Reserved',
-        0b0100: 'Reserved',
         0b0101: 'Short wait',
         0b0110: 'Long wait',
-        0b0111: 'Reserved',
-        0b1000: 'Reserved',
         0b1001: 'Ready more (DMA only)',
         0b1010: 'Error',
-        0b1011: 'Reserved',
-        0b1100: 'Reserved',
-        0b1101: 'Reserved',
-        0b1110: 'Reserved',
-        0b1111: 'Reserved',
     },
     # MSIZE field (determines how many bytes to transfer in a firmware cycle)
     'MSIZE': {
@@ -195,7 +171,7 @@ class Decoder(srd.Decoder):
         # the peripherals must use. However, the host can keep LFRAME# asserted
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
-        start_str = fields['START'][self.lad]
+        start_str = fields['START'].get(self.lad, 'Reserved')
         self.put_cycle([Ann.START, [start_str, 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
@@ -221,7 +197,7 @@ class Decoder(srd.Decoder):
     def handle_get_ct_dr(self, lad_bits):
         # LAD[3:0]: Cycle type / direction field (1 clock cycle).
 
-        cycle_type_str = fields['CT_DR'].get(self.lad, 'Reserved / unknown')
+        cycle_type_str = fields['CT_DR'].get(self.lad, 'Reserved')
 
         self.put_cycle([Ann.CYCLE_TYPE, ['Cycle type: %s' % cycle_type_str, "%s" % cycle_type_str]])
 
@@ -333,7 +309,7 @@ class Decoder(srd.Decoder):
     def handle_get_sync(self, lad_bits):
         # LAD[3:0]: SYNC field (1-n clock cycles).
 
-        sync_type = fields['SYNC'].get(self.lad, 'Reserved / unknown')
+        sync_type = fields['SYNC'].get(self.lad, 'Reserved')
 
         if 'Reserved' in sync_type:
             self.put_cycle([Ann.WARNING, ['SYNC %s (reserved value)' % sync_type]])
