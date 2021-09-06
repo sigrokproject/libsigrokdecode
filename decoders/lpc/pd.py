@@ -248,7 +248,7 @@ class Decoder(srd.Decoder):
         self.cycle_count = 0
 
     def handle_get_idsel(self, lad_bits):
-        self.put_cycle([Ann.IDSEL, ['IDSEL: %s' % (lad_bits), 'IDSEL']])
+        self.put_cycle([Ann.IDSEL, ['IDSEL: %s' % (lad_bits), 'IDSEL', 'ID', 'I']])
 
         self.state = St.GET_ADDR
         self.ss_block = self.samplenum
@@ -299,7 +299,7 @@ class Decoder(srd.Decoder):
             self.state = St.IDLE
             return
 
-        self.put_cycle([Ann.MSIZE, ['MSIZE: %s bytes' % (msize_bytes), 'MSIZE']])
+        self.put_cycle([Ann.MSIZE, ['MSIZE: %s bytes' % (msize_bytes), 'MSIZE', 'M']])
         self.data_nibbles = 2*msize_bytes
 
         if self.cycle_type == CycType.FW_READ:
@@ -313,14 +313,14 @@ class Decoder(srd.Decoder):
     def handle_get_tar(self, lad_bits):
         # LAD[3:0]: First TAR (turn-around) field (2 clock cycles).
 
-        self.put_cycle([Ann.TAR1, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([Ann.TAR1, ['TAR1: cycle %d' % (self.cycle_count), 'TAR1', 'T']])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put_cycle([Ann.WARNING, ['TAR, cycle %d: %s (expected 1111)' % \
+            self.put_cycle([Ann.WARNING, ['TAR1: cycle %d: %s (expected 1111)' % \
                            (self.cycle_count, lad_bits)]])
 
         if (self.cycle_count != 1):
@@ -338,7 +338,7 @@ class Decoder(srd.Decoder):
         if 'Reserved' in sync_type:
             self.put_cycle([Ann.WARNING, ['SYNC %s (reserved value)' % sync_type]])
 
-        self.put_cycle([Ann.SYNC, ['SYNC: %s' % sync_type]])
+        self.put_cycle([Ann.SYNC, ['SYNC: %s' % sync_type, 'SYNC', 'Sy', 'S']])
 
         # Long or short wait
         if 'wait' in sync_type:
@@ -380,14 +380,14 @@ class Decoder(srd.Decoder):
     def handle_get_tar2(self, lad_bits):
         # LAD[3:0]: Second TAR field (2 clock cycles).
 
-        self.put_cycle([Ann.TAR2, ['TAR, cycle %d: %s' % (self.cycle_count, lad_bits)]])
+        self.put_cycle([Ann.TAR2, ['TAR2: cycle %d' % (self.cycle_count), 'TAR2', 'T']])
 
         # On the first TAR clock cycle LAD[3:0] is driven to 1111 by
         # either the host or peripheral. On the second clock cycle,
         # the host or peripheral tri-states LAD[3:0], but its value
         # should still be 1111, due to pull-ups on the LAD lines.
         if lad_bits != '1111':
-            self.put_cycle([Ann.WARNING, ['TAR, cycle %d: %s (expected 1111)'
+            self.put_cycle([Ann.WARNING, ['TAR2: cycle %d: %s (expected 1111)'
                            % (self.cycle_count, lad_bits)]])
 
         if (self.cycle_count != 1):
