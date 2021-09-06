@@ -24,12 +24,12 @@ from common.srdhelper import SrdIntEnum
 fields = {
     # START field (indicates start or stop of a transaction)
     'START': {
-        0b0000: 'Start of cycle for a target',
+        0b0000: 'Target',
         0b0010: 'Grant for bus master 0',
         0b0011: 'Grant for bus master 1',
-        0b1101: 'Start of cycle for a Firmware Memory Read cycle',
-        0b1110: 'Start of cycle for a Firmware Memory Write cycle',
-        0b1111: 'Stop/abort (end of a cycle for a target)',
+        0b1101: 'Firmware Memory Read',
+        0b1110: 'Firmware Memory Write',
+        0b1111: 'Stop/abort',
     },
     # Cycle type / direction field
     # Bit 0 (LAD[0]) is unused, should always be 0.
@@ -172,7 +172,7 @@ class Decoder(srd.Decoder):
         # multiple clocks, and we output all START fields that occur, even
         # though the peripherals are supposed to ignore all but the last one.
         start_str = fields['START'].get(self.lad, 'Reserved')
-        self.put_cycle([Ann.START, [start_str, 'START', 'St', 'S']])
+        self.put_cycle([Ann.START, ['START: %s' % start_str, 'START', 'St', 'S']])
 
         # Output a warning if LAD[3:0] changes while LFRAME# is low.
         if (self.prev_lad != -1 and self.prev_lad != self.lad):
@@ -185,10 +185,10 @@ class Decoder(srd.Decoder):
         if lframe != 1:
             return
 
-        if 'Firmware Memory Read cycle' in start_str:
+        if 'Firmware Memory Read' in start_str:
             self.cycle_type = CycType.FW_READ
             self.state = St.GET_IDSEL
-        elif 'Firmware Memory Write cycle' in start_str:
+        elif 'Firmware Memory Write' in start_str:
             self.cycle_type = CycType.FW_WRITE
             self.state = St.GET_IDSEL
         else:
