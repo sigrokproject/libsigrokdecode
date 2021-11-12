@@ -34,7 +34,7 @@ class Decoder(srd.Decoder):
     id = 'pcf8574'
     name = 'PCF8574'
     longname = 'TI PCA8574'
-    desc = 'TI PCF8574 Remote 8-Bit I/O Expander for I²C Bus'
+    desc = 'TI PCF8574 Remote 8-Bit I/O Expander for I²C Bus.'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = []
