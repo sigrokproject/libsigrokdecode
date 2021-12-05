@@ -62,11 +62,11 @@ class Decoder(srd.Decoder):
         self.es_block = None            # Annotation end sample
         self.bit_offset = None          # Symbol bit offset option
         self.jk = [False, False]        # Start sequence flags
-        
+
         self.symbol_start = None        # Symbol start sample
         self.symbol = 0                 # Symbol value
         self.bits = 0                   # Symbol bit counter
-        
+
         self.data_start = None          # Data byte start sample
         self.last_nibble = None         # Previous data nibble
 
@@ -124,8 +124,8 @@ class Decoder(srd.Decoder):
 
                 # Push control symbol to stacked decoders (value, is_control_symbol)
                 self.putp((sym_ctrl[self.symbol][1], True))
-            
-            # Data symbol (only if decoder has not seen JK start sequence)
+
+            # Data symbol (only if decoder has seen JK start sequence)
             elif self.symbol in sym_data and self.jk == [True, True]:
                 # Add data symbol annotations
                 self.putx([0, ["{:05b}".format(self.symbol)]])
@@ -147,7 +147,7 @@ class Decoder(srd.Decoder):
                     # Reset data byte value
                     self.data_start = endsample
                     self.last_nibble = None
-                
+
                 # First nibble of data byte
                 else:
                     self.last_nibble = sym_data[self.symbol]
