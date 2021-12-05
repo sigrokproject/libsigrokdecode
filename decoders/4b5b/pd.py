@@ -61,6 +61,7 @@ class Decoder(srd.Decoder):
         self.ss_block = None            # Annotation start sample
         self.es_block = None            # Annotation end sample
         self.bit_offset = None          # Symbol bit offset option
+        self.jk = [False, False]        # Start sequence flags
         
         self.symbol_start = None        # Symbol start sample
         self.symbol = 0                 # Symbol value
@@ -114,14 +115,18 @@ class Decoder(srd.Decoder):
 
             # Control symbol
             if self.symbol in sym_ctrl:
+                # Check for start sequence symbols (J, K)
+                self.jk[0] = self.symbol == 0b11000 or self.jk[0]   # J
+                self.jk[1] = self.symbol == 0b10001 or self.jk[1]   # K
+
                 # Add control symbol annotation
                 self.putx([1, sym_ctrl[self.symbol]])
 
                 # Push control symbol to stacked decoders (value, is_control_symbol)
                 self.putp((sym_ctrl[self.symbol][1], True))
             
-            # Data symbol
-            elif self.symbol in sym_data:
+            # Data symbol (only if decoder has not seen JK start sequence)
+            elif self.symbol in sym_data and self.jk == [True, True]:
                 # Add data symbol annotations
                 self.putx([0, ["{:05b}".format(self.symbol)]])
                 self.putx([2, ["{:04b}".format(sym_data[self.symbol])]])
