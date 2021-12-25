@@ -397,7 +397,10 @@ static void release_meta(GVariant *gvar)
 }
 
 PyDoc_STRVAR(Decoder_put_doc,
-	"Accepts a dictionary with the following keys: startsample, endsample, data"
+	"Put an annotation for the specified span of samples.\n"
+	"\n"
+	"Arguments: start and end sample number, stream id, annotation data.\n"
+	"Annotation data's layout depends on the output stream type."
 );
 
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
@@ -559,7 +562,7 @@ err:
 }
 
 PyDoc_STRVAR(Decoder_register_doc,
-	"Register a new output stream"
+	"Register a new output stream."
 );
 
 static PyObject *Decoder_register(PyObject *self,
@@ -961,7 +964,20 @@ static int set_skip_condition(struct srd_decoder_inst *di, uint64_t count)
 }
 
 PyDoc_STRVAR(Decoder_wait_doc,
-	"Wait for one or more conditions to occur"
+	"Wait for one or more conditions to occur.\n"
+	"\n"
+	"Returns the sample data at the next position where the condition\n"
+	"is seen. When the optional condition is missing or empty, the next\n"
+	"sample number is used. The condition can be a dictionary with one\n"
+	"condition's details, or a list of dictionaries specifying multiple\n"
+	"conditions of which at least one condition must be true. Dicts can\n"
+	"contain one or more key/value pairs, all of which must be true for\n"
+	"the dict's condition to be considered true. The key either is a\n"
+	"channel index or a keyword, the value is the operation's parameter.\n"
+	"\n"
+	"Supported parameters for channel number keys: 'h', 'l', 'r', 'f',\n"
+	"or 'e' for level or edge conditions. Other supported keywords:\n"
+	"'skip' to advance over the given number of samples.\n"
 );
 
 static PyObject *Decoder_wait(PyObject *self, PyObject *args)
@@ -1098,7 +1114,11 @@ err:
 }
 
 PyDoc_STRVAR(Decoder_has_channel_doc,
-	"Report whether a channel was supplied"
+	"Check whether input data is supplied for a given channel.\n"
+	"\n"
+	"Argument: A channel index.\n"
+	"Returns: A boolean, True if the channel is connected,\n"
+	"False if the channel is open (won't see any input data).\n"
 );
 
 /**
