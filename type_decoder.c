@@ -33,7 +33,7 @@ typedef struct {
 /* This is only used for nicer srd_dbg() output. */
 SRD_PRIV const char *output_type_name(unsigned int idx)
 {
-	static const char names[][16] = {
+	static const char *names[] = {
 		"OUTPUT_ANN",
 		"OUTPUT_PYTHON",
 		"OUTPUT_BINARY",
