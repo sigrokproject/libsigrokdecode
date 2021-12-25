@@ -1196,7 +1196,7 @@ static PyMethodDef Decoder_methods[] = {
 	  Decoder_has_channel, METH_VARARGS,
 	  Decoder_has_channel_doc,
 	},
-	{NULL, NULL, 0, NULL}
+	ALL_ZERO,
 };
 
 /**
@@ -1213,7 +1213,7 @@ SRD_PRIV PyObject *srd_Decoder_type_new(void)
 		{ Py_tp_doc, Decoder_doc },
 		{ Py_tp_methods, Decoder_methods },
 		{ Py_tp_new, (void *)&PyType_GenericNew },
-		{ 0, NULL }
+		ALL_ZERO,
 	};
 	PyObject *py_obj;
 	PyGILState_STATE gstate;
