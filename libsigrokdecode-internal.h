@@ -27,6 +27,17 @@
 #include <Python.h> /* First, so we avoid a _POSIX_C_SOURCE warning. */
 #include "libsigrokdecode.h"
 
+/*
+ * Static definition of tables ending with an all-zero sentinel entry
+ * may raise warnings when compiling with -Wmissing-field-initializers.
+ * GCC suppresses the warning only with { 0 }, clang wants { } instead.
+ */
+#ifdef __clang__
+#  define ALL_ZERO { }
+#else
+#  define ALL_ZERO { 0 }
+#endif
+
 enum {
 	SRD_TERM_ALWAYS_FALSE,
 	SRD_TERM_HIGH,
