@@ -396,6 +396,10 @@ static void release_meta(GVariant *gvar)
 	g_variant_unref(gvar);
 }
 
+PyDoc_STRVAR(Decoder_put_doc,
+	"Accepts a dictionary with the following keys: startsample, endsample, data"
+);
+
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
@@ -554,8 +558,12 @@ err:
 	return NULL;
 }
 
-static PyObject *Decoder_register(PyObject *self, PyObject *args,
-		PyObject *kwargs)
+PyDoc_STRVAR(Decoder_register_doc,
+	"Register a new output stream"
+);
+
+static PyObject *Decoder_register(PyObject *self,
+	PyObject *args, PyObject *kwargs)
 {
 	struct srd_decoder_inst *di;
 	struct srd_pd_output *pdo;
@@ -952,6 +960,10 @@ static int set_skip_condition(struct srd_decoder_inst *di, uint64_t count)
 	return SRD_OK;
 }
 
+PyDoc_STRVAR(Decoder_wait_doc,
+	"Wait for one or more conditions to occur"
+);
+
 static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 {
 	int ret;
@@ -1085,6 +1097,10 @@ err:
 	return NULL;
 }
 
+PyDoc_STRVAR(Decoder_has_channel_doc,
+	"Report whether a channel was supplied"
+);
+
 /**
  * Return whether the specified channel was supplied to the decoder.
  *
@@ -1141,15 +1157,25 @@ err:
 	return NULL;
 }
 
+PyDoc_STRVAR(Decoder_doc, "sigrok Decoder base class");
+
 static PyMethodDef Decoder_methods[] = {
-	{ "put", Decoder_put, METH_VARARGS,
-	  "Accepts a dictionary with the following keys: startsample, endsample, data" },
-	{ "register", (PyCFunction)(void(*)(void))Decoder_register, METH_VARARGS|METH_KEYWORDS,
-			"Register a new output stream" },
-	{ "wait", Decoder_wait, METH_VARARGS,
-			"Wait for one or more conditions to occur" },
-	{ "has_channel", Decoder_has_channel, METH_VARARGS,
-			"Report whether a channel was supplied" },
+	{ "put",
+	  Decoder_put, METH_VARARGS,
+	  Decoder_put_doc,
+	},
+	{ "register",
+	  (PyCFunction)(void(*)(void))Decoder_register, METH_VARARGS | METH_KEYWORDS,
+	  Decoder_register_doc,
+	},
+	{ "wait",
+	  Decoder_wait, METH_VARARGS,
+	  Decoder_wait_doc,
+	},
+	{ "has_channel",
+	  Decoder_has_channel, METH_VARARGS,
+	  Decoder_has_channel_doc,
+	},
 	{NULL, NULL, 0, NULL}
 };
 
@@ -1164,7 +1190,7 @@ SRD_PRIV PyObject *srd_Decoder_type_new(void)
 {
 	PyType_Spec spec;
 	PyType_Slot slots[] = {
-		{ Py_tp_doc, "sigrok Decoder base class" },
+		{ Py_tp_doc, Decoder_doc },
 		{ Py_tp_methods, Decoder_methods },
 		{ Py_tp_new, (void *)&PyType_GenericNew },
 		{ 0, NULL }
