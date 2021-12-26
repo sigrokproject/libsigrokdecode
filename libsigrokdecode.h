@@ -291,6 +291,9 @@ struct srd_decoder_inst {
 	/** Requests termination of wait() and decode(). */
 	gboolean want_wait_terminate;
 
+	/** Requests that .wait() terminates a Python iteration. */
+	gboolean communicate_eof;
+
 	/** Indicates the current state of the decoder stack. */
 	int decoder_state;
 
@@ -353,6 +356,7 @@ SRD_API int srd_session_metadata_set(struct srd_session *sess, int key,
 SRD_API int srd_session_send(struct srd_session *sess,
 		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize);
+SRD_API int srd_session_send_eof(struct srd_session *sess);
 SRD_API int srd_session_terminate_reset(struct srd_session *sess);
 SRD_API int srd_session_destroy(struct srd_session *sess);
 SRD_API int srd_pd_output_callback_add(struct srd_session *sess,

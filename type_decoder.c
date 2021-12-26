@@ -1090,6 +1090,22 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		g_cond_signal(&di->handled_all_samples_cond);
 
 		/*
+		 * When EOF was provided externally, communicate the
+		 * Python EOFError exception to .decode() and return
+		 * from the .wait() method call. This is motivated by
+		 * the use of Python context managers, so that .decode()
+		 * methods can "close" incompletely accumulated data
+		 * when the sample data is exhausted.
+		 */
+		if (di->communicate_eof) {
+			srd_dbg("%s: %s: Raising EOF from wait().",
+				di->inst_id, __func__);
+			g_mutex_unlock(&di->data_mutex);
+			PyErr_SetString(PyExc_EOFError, "samples exhausted");
+			goto err;
+		}
+
+		/*
 		 * When termination of wait() and decode() was requested,
 		 * then exit the loop after releasing the mutex.
 		 */

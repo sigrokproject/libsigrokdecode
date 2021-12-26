@@ -279,6 +279,32 @@ SRD_API int srd_session_send(struct srd_session *sess,
 }
 
 /**
+ * Communicate the end of the stream of sample data to the session.
+ *
+ * @param[in] sess The session. Must not be NULL.
+ *
+ * @return SRD_OK upon success. A (negative) error code otherwise.
+ *
+ * @since 0.6.0
+ */
+SRD_API int srd_session_send_eof(struct srd_session *sess)
+{
+	GSList *d;
+	int ret;
+
+	if (!sess)
+		return SRD_ERR_ARG;
+
+	for (d = sess->di_list; d; d = d->next) {
+		ret = srd_inst_send_eof(d->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
+
+	return SRD_OK;
+}
+
+/**
  * Terminate currently executing decoders in a session, reset internal state.
  *
  * All decoder instances have their .wait() method terminated, which
