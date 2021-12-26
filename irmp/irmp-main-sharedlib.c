@@ -31,9 +31,13 @@
  * upstream project.
  */
 #if defined _WIN32
-#  define WIN32
+#  if !defined WIN32
+#    define WIN32
+#  endif
 #else
-#  define unix
+#  if !defined unix
+#    define unix
+#  endif
 #endif
 #include "irmp.h"
 #include "irmp.c"
