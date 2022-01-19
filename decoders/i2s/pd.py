@@ -65,7 +65,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.oldws = 1
+        self.oldws = None
         self.bitcount = 0
         self.data = 0
         self.samplesreceived = 0
@@ -132,6 +132,13 @@ class Decoder(srd.Decoder):
         return struct.pack('<I', self.data)
 
     def decode(self):
+        # Skip any incomplete frames by waiting for WS transition
+        ws = self.wait({Pin.WS: 'e'})[1]
+
+        # Current sample contains the new value after the transition, so old
+        # value is inverted.
+        self.oldws = 0 if ws else 1
+
         while True:
             # Wait for a rising edge on the SCK pin.
             sck, ws, sd = self.wait({Pin.SCK: 'r'})
