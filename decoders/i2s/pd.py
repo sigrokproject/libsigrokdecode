@@ -129,7 +129,10 @@ class Decoder(srd.Decoder):
         return h
 
     def wav_sample(self, sample):
-        return struct.pack('<I', self.data)
+        try:
+            return struct.pack('<I', self.data)
+        except struct.error:
+            return struct.pack('<I', 0)
 
     def decode(self):
         while True:
