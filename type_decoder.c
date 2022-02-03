@@ -33,7 +33,7 @@ typedef struct {
 /* This is only used for nicer srd_dbg() output. */
 SRD_PRIV const char *output_type_name(unsigned int idx)
 {
-	static const char names[][16] = {
+	static const char *names[] = {
 		"OUTPUT_ANN",
 		"OUTPUT_PYTHON",
 		"OUTPUT_BINARY",
@@ -396,6 +396,13 @@ static void release_meta(GVariant *gvar)
 	g_variant_unref(gvar);
 }
 
+PyDoc_STRVAR(Decoder_put_doc,
+	"Put an annotation for the specified span of samples.\n"
+	"\n"
+	"Arguments: start and end sample number, stream id, annotation data.\n"
+	"Annotation data's layout depends on the output stream type."
+);
+
 static PyObject *Decoder_put(PyObject *self, PyObject *args)
 {
 	GSList *l;
@@ -554,8 +561,12 @@ err:
 	return NULL;
 }
 
-static PyObject *Decoder_register(PyObject *self, PyObject *args,
-		PyObject *kwargs)
+PyDoc_STRVAR(Decoder_register_doc,
+	"Register a new output stream."
+);
+
+static PyObject *Decoder_register(PyObject *self,
+	PyObject *args, PyObject *kwargs)
 {
 	struct srd_decoder_inst *di;
 	struct srd_pd_output *pdo;
@@ -952,6 +963,23 @@ static int set_skip_condition(struct srd_decoder_inst *di, uint64_t count)
 	return SRD_OK;
 }
 
+PyDoc_STRVAR(Decoder_wait_doc,
+	"Wait for one or more conditions to occur.\n"
+	"\n"
+	"Returns the sample data at the next position where the condition\n"
+	"is seen. When the optional condition is missing or empty, the next\n"
+	"sample number is used. The condition can be a dictionary with one\n"
+	"condition's details, or a list of dictionaries specifying multiple\n"
+	"conditions of which at least one condition must be true. Dicts can\n"
+	"contain one or more key/value pairs, all of which must be true for\n"
+	"the dict's condition to be considered true. The key either is a\n"
+	"channel index or a keyword, the value is the operation's parameter.\n"
+	"\n"
+	"Supported parameters for channel number keys: 'h', 'l', 'r', 'f',\n"
+	"or 'e' for level or edge conditions. Other supported keywords:\n"
+	"'skip' to advance over the given number of samples.\n"
+);
+
 static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 {
 	int ret;
@@ -1062,6 +1090,22 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		g_cond_signal(&di->handled_all_samples_cond);
 
 		/*
+		 * When EOF was provided externally, communicate the
+		 * Python EOFError exception to .decode() and return
+		 * from the .wait() method call. This is motivated by
+		 * the use of Python context managers, so that .decode()
+		 * methods can "close" incompletely accumulated data
+		 * when the sample data is exhausted.
+		 */
+		if (di->communicate_eof) {
+			srd_dbg("%s: %s: Raising EOF from wait().",
+				di->inst_id, __func__);
+			g_mutex_unlock(&di->data_mutex);
+			PyErr_SetString(PyExc_EOFError, "samples exhausted");
+			goto err;
+		}
+
+		/*
 		 * When termination of wait() and decode() was requested,
 		 * then exit the loop after releasing the mutex.
 		 */
@@ -1084,6 +1128,14 @@ err:
 
 	return NULL;
 }
+
+PyDoc_STRVAR(Decoder_has_channel_doc,
+	"Check whether input data is supplied for a given channel.\n"
+	"\n"
+	"Argument: A channel index.\n"
+	"Returns: A boolean, True if the channel is connected,\n"
+	"False if the channel is open (won't see any input data).\n"
+);
 
 /**
  * Return whether the specified channel was supplied to the decoder.
@@ -1141,16 +1193,26 @@ err:
 	return NULL;
 }
 
+PyDoc_STRVAR(Decoder_doc, "sigrok Decoder base class");
+
 static PyMethodDef Decoder_methods[] = {
-	{ "put", Decoder_put, METH_VARARGS,
-	  "Accepts a dictionary with the following keys: startsample, endsample, data" },
-	{ "register", (PyCFunction)(void(*)(void))Decoder_register, METH_VARARGS|METH_KEYWORDS,
-			"Register a new output stream" },
-	{ "wait", Decoder_wait, METH_VARARGS,
-			"Wait for one or more conditions to occur" },
-	{ "has_channel", Decoder_has_channel, METH_VARARGS,
-			"Report whether a channel was supplied" },
-	{NULL, NULL, 0, NULL}
+	{ "put",
+	  Decoder_put, METH_VARARGS,
+	  Decoder_put_doc,
+	},
+	{ "register",
+	  (PyCFunction)(void(*)(void))Decoder_register, METH_VARARGS | METH_KEYWORDS,
+	  Decoder_register_doc,
+	},
+	{ "wait",
+	  Decoder_wait, METH_VARARGS,
+	  Decoder_wait_doc,
+	},
+	{ "has_channel",
+	  Decoder_has_channel, METH_VARARGS,
+	  Decoder_has_channel_doc,
+	},
+	ALL_ZERO,
 };
 
 /**
@@ -1164,10 +1226,10 @@ SRD_PRIV PyObject *srd_Decoder_type_new(void)
 {
 	PyType_Spec spec;
 	PyType_Slot slots[] = {
-		{ Py_tp_doc, "sigrok Decoder base class" },
+		{ Py_tp_doc, Decoder_doc },
 		{ Py_tp_methods, Decoder_methods },
 		{ Py_tp_new, (void *)&PyType_GenericNew },
-		{ 0, NULL }
+		ALL_ZERO,
 	};
 	PyObject *py_obj;
 	PyGILState_STATE gstate;

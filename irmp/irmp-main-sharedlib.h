@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2009-2019 Frank Meyer - frank(at)fli4l.de
  * Copyright (c) 2009-2019 René Staffen - r.staffen(at)gmx.de
+ * Copyright (c) 2020-2021 Gerhard Sittig <gerhard.sittig@gmx.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +32,49 @@ extern "C" {
 
 /* Part of the library API is optional. */
 #define WITH_IRMP_DETECT_BUFFER 0
+
+/**
+ * @brief State container for a decoder core instance. Opaque to clients.
+ */
+struct irmp_instance;
+
+/**
+ * @brief Allocate a decoder instance.
+ *
+ * @returns Reference to the allocated instance state.
+ */
+IRMP_DLLEXPORT struct irmp_instance *irmp_instance_alloc(void);
+
+/**
+ * @brief Release a decoder instance.
+ *
+ * @param[in] state Reference to the instance's state.
+ */
+IRMP_DLLEXPORT void irmp_instance_free(struct irmp_instance *state);
+
+/**
+ * @brief Get the client ID of an IRMP decoder core instance.
+ */
+IRMP_DLLEXPORT size_t irmp_instance_id(struct irmp_instance *state);
+
+/**
+ * @brief Acquire a decoder instance's lock.
+ *
+ * @param[in] state Reference to the instance's state.
+ * @param[in] wait Whether to block until the lock is acquired.
+ *
+ * @returns 0 upon success, non-zero upon failure
+ */
+IRMP_DLLEXPORT int irmp_instance_lock(struct irmp_instance *state, int wait);
+
+/**
+ * @brief Release a decoder instance's lock.
+ *
+ * @param[in] state Reference to the instance's state.
+ *
+ * @returns 0 upon success, non-zero upon failure
+ */
+IRMP_DLLEXPORT void irmp_instance_unlock(struct irmp_instance *state);
 
 /**
  * @brief IR decoder result data at the library's public API.

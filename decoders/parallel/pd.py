@@ -108,6 +108,9 @@ class Decoder(srd.Decoder):
         ('words', 'Words', (Ann.WORD,)),
         ('warnings', 'Warnings', (Ann.WARN,)),
     )
+    binary = (
+        ('binary', 'Binary'),
+    )
 
     def __init__(self):
         self.reset()
@@ -118,6 +121,7 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
+        self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def putg(self, ss, es, ann, txts):
@@ -125,6 +129,9 @@ class Decoder(srd.Decoder):
 
     def putpy(self, ss, es, ann, data):
         self.put(ss, es, self.out_python, [ann, data])
+
+    def putbin(self, ss, es, ann_class, data):
+        self.put(ss, es, self.out_binary, [ann_class, data])
 
     def flush_word(self, bus_width):
         if not self.word_items:
@@ -177,6 +184,7 @@ class Decoder(srd.Decoder):
             txts = [self.fmt_item.format(data)]
             self.putg(ss, es, Ann.ITEM, txts)
             self.putpy(ss, es, 'ITEM', (data, bus_width))
+            self.putbin(ss, es, 0, data.to_bytes(1, byteorder='big'))
 
         # Optionally queue the currently seen item.
         if item is not None:

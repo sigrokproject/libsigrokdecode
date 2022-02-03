@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2009-2019 Frank Meyer - frank(at)fli4l.de
  * Copyright (c) 2009-2019 René Staffen - r.staffen(at)gmx.de
+ * Copyright (c) 2020-2021 Gerhard Sittig <gerhard.sittig@gmx.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +17,9 @@
  */
 #include "irmp-main-sharedlib.h"
 
+#include <errno.h>
+#include <glib.h>
+#include <Python.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,9 +35,13 @@
  * upstream project.
  */
 #if defined _WIN32
-#  define WIN32
+#  if !defined WIN32
+#    define WIN32
+#  endif
 #else
-#  define unix
+#  if !defined unix
+#    define unix
+#  endif
 #endif
 #include "irmp.h"
 #include "irmp.c"
@@ -93,6 +101,109 @@
 #ifndef ARRAY_SIZE
 #  define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #endif
+
+static int irmp_lib_initialized;
+static size_t irmp_lib_client_id;
+static GMutex irmp_lib_mutex;
+
+struct irmp_instance {
+	size_t client_id;
+	GMutex *mutex;
+};
+
+static void irmp_lib_autoinit(void)
+{
+	if (irmp_lib_initialized)
+		return;
+
+	irmp_lib_client_id = 0;
+	g_mutex_init(&irmp_lib_mutex);
+
+	irmp_lib_initialized = 1;
+}
+
+static size_t irmp_next_client_id(void)
+{
+	size_t id;
+
+	do {
+		id = ++irmp_lib_client_id;
+	} while (!id);
+
+	return id;
+}
+
+IRMP_DLLEXPORT struct irmp_instance *irmp_instance_alloc(void)
+{
+	struct irmp_instance *inst;
+
+	irmp_lib_autoinit();
+
+	inst = g_malloc0(sizeof(*inst));
+	if (!inst)
+		return NULL;
+
+	inst->client_id = irmp_next_client_id();
+	inst->mutex = &irmp_lib_mutex;
+
+	return inst;
+}
+
+IRMP_DLLEXPORT void irmp_instance_free(struct irmp_instance *state)
+{
+
+	irmp_lib_autoinit();
+
+	if (!state)
+		return;
+
+	g_free(state);
+}
+
+IRMP_DLLEXPORT size_t irmp_instance_id(struct irmp_instance *state)
+{
+
+	irmp_lib_autoinit();
+
+	return state ? state->client_id : 0;
+}
+
+IRMP_DLLEXPORT int irmp_instance_lock(struct irmp_instance *state, int wait)
+{
+	int rc;
+	PyGILState_STATE pyst;
+
+	irmp_lib_autoinit();
+
+	if (!state || !state->mutex)
+		return -EINVAL;
+
+	pyst = PyGILState_Ensure();
+	Py_BEGIN_ALLOW_THREADS
+	if (wait) {
+		g_mutex_lock(state->mutex);
+		rc = 0;
+	} else {
+		rc = g_mutex_trylock(state->mutex);
+	}
+	Py_END_ALLOW_THREADS
+	PyGILState_Release(pyst);
+	if (rc != 0)
+		return rc;
+
+	return 0;
+}
+
+IRMP_DLLEXPORT void irmp_instance_unlock(struct irmp_instance *state)
+{
+
+	irmp_lib_autoinit();
+
+	if (!state || !state->mutex)
+		return;
+
+	g_mutex_unlock(state->mutex);
+}
 
 static uint32_t s_end_sample;
 
@@ -190,4 +301,9 @@ IRMP_DLLEXPORT const char *irmp_get_protocol_name(uint32_t protocol)
 	if (!name || !*name)
 		return "unknown";
 	return name;
+}
+
+static __attribute__((constructor)) void init(void)
+{
+	irmp_lib_autoinit();
 }

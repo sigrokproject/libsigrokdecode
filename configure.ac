@@ -100,7 +100,7 @@ SR_PKG_CHECK_SUMMARY([srd_pkglibs_summary])
 # first, since usually only that variant will add "-lpython3.8".
 # https://docs.python.org/3/whatsnew/3.8.html#debug-build-uses-the-same-abi-as-release-build
 SR_PKG_CHECK([python3], [SRD_PKGLIBS],
-	[python-3.9-embed], [python-3.8-embed], [python-3.8 >= 3.8], [python-3.7 >= 3.7], [python-3.6 >= 3.6], [python-3.5 >= 3.5], [python-3.4 >= 3.4], [python-3.3 >= 3.3], [python-3.2 >= 3.2], [python3 >= 3.2])
+	[python-3.10-embed], [python-3.9-embed], [python-3.8-embed], [python3-embed], [python-3.8 >= 3.8], [python-3.7 >= 3.7], [python-3.6 >= 3.6], [python-3.5 >= 3.5], [python-3.4 >= 3.4], [python-3.3 >= 3.3], [python-3.2 >= 3.2], [python3 >= 3.2])
 AS_IF([test "x$sr_have_python3" = xno],
 	[AC_MSG_ERROR([Cannot find Python 3 development headers.])])
 
@@ -159,6 +159,7 @@ AC_SUBST([SRD_PKGLIBS])
 # Retrieve the compile and link flags for all modules combined.
 # Also, bail out at this point if any module dependency is not met.
 PKG_CHECK_MODULES([LIBSIGROKDECODE], [glib-2.0 >= 2.34 $SRD_PKGLIBS])
+PKG_CHECK_MODULES([LIBIRMP], [glib-2.0 >= 2.34 $SRD_PKGLIBS])
 PKG_CHECK_MODULES([TESTS], [$SRD_PKGLIBS_TESTS glib-2.0 $SRD_PKGLIBS])
 
 srd_glib_version=`$PKG_CONFIG --modversion glib-2.0 2>&AS_MESSAGE_LOG_FD`

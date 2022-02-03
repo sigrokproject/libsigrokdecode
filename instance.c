@@ -426,6 +426,7 @@ SRD_API struct srd_decoder_inst *srd_inst_new(struct srd_session *sess,
 	di->got_new_samples = FALSE;
 	di->handled_all_samples = FALSE;
 	di->want_wait_terminate = FALSE;
+	di->communicate_eof = FALSE;
 	di->decoder_state = SRD_OK;
 
 	/*
@@ -500,6 +501,7 @@ static void srd_inst_reset_state(struct srd_decoder_inst *di)
 	di->got_new_samples = FALSE;
 	di->handled_all_samples = FALSE;
 	di->want_wait_terminate = FALSE;
+	di->communicate_eof = FALSE;
 	di->decoder_state = SRD_OK;
 	/* Conditions and mutex got reset after joining the thread. */
 }
@@ -1058,6 +1060,17 @@ static gpointer di_thread(gpointer data)
 	py_res = PyObject_CallMethod(di->py_inst, "decode", NULL);
 	srd_dbg("%s: decode() terminated.", di->inst_id);
 
+	/*
+	 * Termination with an EOFError exception is accepted to simplify
+	 * the implementation of decoders and for backwards compatibility.
+	 */
+	if (PyErr_Occurred() && PyErr_ExceptionMatches(PyExc_EOFError)) {
+		srd_dbg("%s: ignoring EOFError during decode() execution.",
+			di->inst_id);
+		PyErr_Clear();
+		if (!py_res)
+			py_res = Py_None;
+	}
 	if (!py_res)
 		di->decoder_state = SRD_ERR;
 
@@ -1279,6 +1292,64 @@ SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di)
 	}
 
 	return di->decoder_state;
+}
+
+/**
+ * Communicate the end of the stream of sample data to a decoder instance.
+ *
+ * @param[in] di The decoder instance to call. Must not be NULL.
+ *
+ * @return SRD_OK upon success, a (negative) error code otherwise.
+ *
+ * @private
+ */
+SRD_PRIV int srd_inst_send_eof(struct srd_decoder_inst *di)
+{
+	GSList *l;
+	int ret;
+
+	if (!di)
+		return SRD_ERR_ARG;
+
+	/*
+	 * Send EOF to the caller specified decoder instance. Only
+	 * communicate EOF to currently executing decoders. Never
+	 * started or previously finished is perfectly acceptable.
+	 */
+	srd_dbg("End of sample data: instance %s.", di->inst_id);
+	if (!di->thread_handle) {
+		srd_dbg("No worker thread, nothing to do.");
+		return SRD_OK;
+	}
+
+	/* Signal the thread about the EOF condition. */
+	g_mutex_lock(&di->data_mutex);
+	di->inbuf = NULL;
+	di->inbuflen = 0;
+	di->got_new_samples = TRUE;
+	di->handled_all_samples = FALSE;
+	di->want_wait_terminate = TRUE;
+	di->communicate_eof = TRUE;
+	g_cond_signal(&di->got_new_samples_cond);
+	g_mutex_unlock(&di->data_mutex);
+
+	/* Only return from here when the condition was handled. */
+	g_mutex_lock(&di->data_mutex);
+	while (!di->handled_all_samples && !di->want_wait_terminate)
+		g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
+	g_mutex_unlock(&di->data_mutex);
+
+	/* Flush the decoder instance which handled EOF. */
+	srd_inst_flush(di);
+
+	/* Pass EOF to all stacked decoders. */
+	for (l = di->next_di; l; l = l->next) {
+		ret = srd_inst_send_eof(l->data);
+		if (ret != SRD_OK)
+			return ret;
+	}
+
+	return SRD_OK;
 }
 
 /**

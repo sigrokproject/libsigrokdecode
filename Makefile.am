@@ -64,6 +64,8 @@ libirmp_la_SOURCES = \
 	irmp/irmpsystem.h \
 	irmp/irmpprotocols.h
 noinst_HEADERS += irmp/irmp.c
+libirmp_la_CFLAGS = $(LIBIRMP_CFLAGS)
+libirmp_la_LIBADD = $(LIBIRMP_LIBS)
 libirmp_la_LDFLAGS = -no-undefined -version-info 0:0:0
 endif
 
