@@ -106,17 +106,21 @@ enum srd_loglevel {
  */
 
 /* Marks public libsigrokdecode API symbols. */
-#ifndef _WIN32
-#define SRD_API __attribute__((visibility("default")))
+#if defined _WIN32
+#  if defined DLL_EXPORT
+#    define SRD_API __declspec(dllexport)
+#  else
+#    define SRD_API extern
+#  endif
 #else
-#define SRD_API
+#  define SRD_API __attribute__((visibility("default")))
 #endif
 
 /* Marks private, non-public libsigrokdecode symbols (not part of the API). */
-#ifndef _WIN32
-#define SRD_PRIV __attribute__((visibility("hidden")))
+#if defined _WIN32
+#  define SRD_PRIV /* EMPTY */
 #else
-#define SRD_PRIV
+#  define SRD_PRIV __attribute__((visibility("hidden")))
 #endif
 
 /*
