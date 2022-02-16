@@ -62,6 +62,7 @@ cmd_names = {
     40: 'GO_IRQ_STATE',
     # 41: Reserved
     42: 'LOCK_UNLOCK',
+    # 43: Reserved
     44: 'QUEUED_TASK_PARAMS',
     45: 'QUEUED_TASK_ADDRESS',
     46: 'EXECUTE_READ_TASK',
@@ -80,6 +81,65 @@ cmd_names = {
     63: 'Reserved for manufacturer',
 }
 
+# These are copy-paste from the sdcard_sd decoder
+# TODO: Find how they are specified in the eMMC 5.1 spec
+#
+# Application-specific commands (ACMD)
+# Unlisted items are 'Reserved' as per SD spec. The 'Unknown' items don't
+# seem to be mentioned in the spec, but aren't marked as reserved either.
+acmd_names = {
+    # 1-5: Reserved
+    6:  'SET_BUS_WIDTH',
+    # 7-12: Reserved
+    13: 'SD_STATUS',
+    14: 'Reserved for Security Application',
+    15: 'Reserved for Security Application',
+    16: 'Reserved for Security Application',
+    # 17: Reserved
+    18: 'Reserved for SD security applications',
+    # 19-21: Reserved
+    22: 'SEND_NUM_WR_BLOCKS',
+    23: 'SET_WR_BLK_ERASE_COUNT',
+    # 24: Reserved
+    25: 'Reserved for SD security applications',
+    26: 'Reserved for SD security applications',
+    27: 'Reserved for security specification',
+    28: 'Reserved for security specification',
+    # 29: Reserved
+    30: 'Reserved for security specification',
+    31: 'Reserved for security specification',
+    32: 'Reserved for security specification',
+    33: 'Reserved for security specification',
+    34: 'Reserved for security specification',
+    35: 'Reserved for security specification',
+    # 36-37: Reserved
+    38: 'Reserved for SD security applications',
+    # 39-40: Reserved
+    41: 'SD_SEND_OP_COND',
+    42: 'SET_CLR_CARD_DETECT',
+    43: 'Reserved for SD security applications',
+    44: 'Reserved for SD security applications',
+    45: 'Reserved for SD security applications',
+    46: 'Reserved for SD security applications',
+    47: 'Reserved for SD security applications',
+    48: 'Reserved for SD security applications',
+    49: 'Reserved for SD security applications',
+    50: 'Unknown',
+    51: 'SEND_SCR',
+    52: 'Reserved for security specification',
+    53: 'Reserved for security specification',
+    54: 'Reserved for security specification',
+    55: 'Non-existant', # Doesn't exist (equivalent to CMD55)
+    56: 'Reserved for security specification',
+    57: 'Reserved for security specification',
+    58: 'Reserved for security specification',
+    59: 'Reserved for security specification',
+    60: 'Unknown',
+    61: 'Unknown',
+    62: 'Unknown',
+    63: 'Unknown',
+}
+
 accepted_voltages = {
     0b0001: '2.7-3.6V',
     0b0010: 'reserved for low voltage range',
@@ -88,42 +148,17 @@ accepted_voltages = {
     # All other values: "not defined".
 }
 
-device_status = {
-    0:  'Reserved for manufacturer test mode',
-    1:  'Reserved for manufacturer test mode',
-    2:  'Reserved for application specific commands',
-    3:  'AKE_SEQ_ERROR',
-    4:  'Reserved',
-    5:  'APP_CMD',
-    6:  'EXCEPTION_EVENT',
-    7:  'SWITCH_ERROR',
-    8:  'READY_FOR_DATA',
-    9:  'CURRENT_STATE', # CURRENT_STATE is a 4-bit value (decimal: 0..15).
-    10: 'CURRENT_STATE',
-    11: 'CURRENT_STATE',
-    12: 'CURRENT_STATE',
-    13: 'ERASE_RESET',
-    14: 'Reserved(must be 0)',
-    15: 'WP_ERASE_SKIP',
-    16: 'CIS/CSD_OVERWRITE',
-    17: 'Obsolete',
-    18: 'Obsolete',
-    19: 'ERROR',
-    20: 'CC_ERROR',
-    21: 'DEVICE_ECC_FAILED',
-    22: 'ILLEGAL_COMMAND',
-    23: 'COM_CRC_ERROR',
-    24: 'LOCK_UNLOCK_FAILED',
-    25: 'DEVICE_IS_LOCKED',
-    26: 'WP_VIOLATION',
-    27: 'ERASE_PARAM',
-    28: 'ERASE_SEQ_ERROR',
-    29: 'BLOCK_LEN_ERROR',
-    30: 'ADDR_MISALIGN',
-    31: 'ADDR_OUT_OF_RANGE',
-}
-
-sd_status = {
-    # 311:0: Reserved for manufacturer
-    # 391:312: Reserved
+device_current_state = {
+    0: 'Idle',
+    1: 'Ready',
+    2: 'Ident',
+    3: 'Stby',
+    4: 'Tran',
+    5: 'Data',
+    6: 'Rcv',
+    7: 'Prg',
+    8: 'Dis',
+    9: 'Btst',
+    10: 'Slp',
+    #11-15: 'reserved',
 }
