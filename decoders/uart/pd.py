@@ -207,6 +207,7 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.frame_start = [-1, -1]
         self.frame_valid = [None, None]
+        self.cur_frame_bit = [None, None]
         self.startbit = [-1, -1]
         self.cur_data_bit = [0, 0]
         self.datavalue = [0, 0]
@@ -251,11 +252,13 @@ class Decoder(srd.Decoder):
         # Save the sample number where the start bit begins.
         self.frame_start[rxtx] = self.samplenum
         self.frame_valid[rxtx] = True
+        self.cur_frame_bit[rxtx] = 0
 
         self.advance_state(rxtx, signal)
 
     def get_start_bit(self, rxtx, signal):
         self.startbit[rxtx] = signal
+        self.cur_frame_bit[rxtx] += 1
 
         # The startbit must be 0. If not, we report an error and wait
         # for the next start bit (assuming this one was spurious).
@@ -316,6 +319,7 @@ class Decoder(srd.Decoder):
         # Store individual data bits and their start/end samplenumbers.
         s, halfbit = self.samplenum, int(self.bit_width / 2)
         self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
+        self.cur_frame_bit[rxtx] += 1
 
         # Return here, unless we already received all data bits.
         self.cur_data_bit[rxtx] += 1
@@ -389,6 +393,7 @@ class Decoder(srd.Decoder):
 
     def get_parity_bit(self, rxtx, signal):
         self.paritybit[rxtx] = signal
+        self.cur_frame_bit[rxtx] += 1
 
         if parity_ok(self.options['parity'], self.paritybit[rxtx],
                      self.datavalue[rxtx], self.options['data_bits']):
@@ -404,6 +409,7 @@ class Decoder(srd.Decoder):
 
     def get_stop_bits(self, rxtx, signal):
         self.stopbits[rxtx].append(signal)
+        self.cur_frame_bit[rxtx] += 1
 
         # Stop bits must be 1. If not, we report an error.
         if signal != 1:
@@ -495,19 +501,12 @@ class Decoder(srd.Decoder):
         state = self.state[rxtx]
         if state == 'WAIT FOR START BIT':
             return {rxtx: 'r' if inv else 'f'}
-        if state == 'GET START BIT':
-            bitnum = 0
-        elif state == 'GET DATA BITS':
-            bitnum = 1 + self.cur_data_bit[rxtx]
-        elif state == 'GET PARITY BIT':
-            bitnum = 1 + self.options['data_bits']
-        elif state == 'GET STOP BITS':
+        if state in ('GET START BIT', 'GET DATA BITS',
+                'GET PARITY BIT', 'GET STOP BITS'):
+            bitnum = self.cur_frame_bit[rxtx]
             # TODO: Currently does not support half STOP bits.
-            bitnum = 1 + self.options['data_bits']
-            bitnum += 0 if self.options['parity'] == 'none' else 1
-            bitnum += len(self.stopbits[rxtx])
-        want_num = ceil(self.get_sample_point(rxtx, bitnum))
-        return {'skip': want_num - self.samplenum}
+            want_num = ceil(self.get_sample_point(rxtx, bitnum))
+            return {'skip': want_num - self.samplenum}
 
     def get_idle_cond(self, rxtx, inv):
         # Return a condition that corresponds to the (expected) end of
