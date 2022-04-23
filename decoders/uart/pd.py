@@ -114,7 +114,7 @@ class Decoder(srd.Decoder):
         {'id': 'parity', 'desc': 'Parity', 'default': 'none',
             'values': ('none', 'odd', 'even', 'zero', 'one', 'ignore')},
         {'id': 'stop_bits', 'desc': 'Stop bits', 'default': 1.0,
-            'values': (0.0, 0.5, 1.0, 1.5)},
+            'values': (0.0, 0.5, 1.0, 1.5, 2.0)},
         {'id': 'bit_order', 'desc': 'Bit order', 'default': 'lsb-first',
             'values': ('lsb-first', 'msb-first')},
         {'id': 'format', 'desc': 'Data format', 'default': 'hex',
@@ -211,7 +211,7 @@ class Decoder(srd.Decoder):
         self.cur_data_bit = [0, 0]
         self.datavalue = [0, 0]
         self.paritybit = [-1, -1]
-        self.stopbit1 = [-1, -1]
+        self.stopbits = [[], []]
         self.startsample = [-1, -1]
         self.state = ['WAIT FOR START BIT', 'WAIT FOR START BIT']
         self.databits = [[], []]
@@ -269,9 +269,13 @@ class Decoder(srd.Decoder):
             self.advance_state(rxtx, signal, fatal = True, idle = es)
             return
 
+        # Reset internal state for the pending UART frame.
         self.cur_data_bit[rxtx] = 0
         self.datavalue[rxtx] = 0
+        self.paritybit[rxtx] = -1
+        self.stopbits[rxtx].clear()
         self.startsample[rxtx] = -1
+        self.databits[rxtx].clear()
 
         self.putp(['STARTBIT', rxtx, self.startbit[rxtx]])
         self.putg([Ann.RX_START + rxtx, ['Start bit', 'Start', 'S']])
@@ -398,20 +402,21 @@ class Decoder(srd.Decoder):
 
         self.advance_state(rxtx, signal)
 
-    # TODO: Currently only supports 1 stop bit.
     def get_stop_bits(self, rxtx, signal):
-        self.stopbit1[rxtx] = signal
+        self.stopbits[rxtx].append(signal)
 
         # Stop bits must be 1. If not, we report an error.
-        if self.stopbit1[rxtx] != 1:
-            self.putp(['INVALID STOPBIT', rxtx, self.stopbit1[rxtx]])
+        if signal != 1:
+            self.putp(['INVALID STOPBIT', rxtx, signal])
             self.putg([Ann.RX_WARN + rxtx, ['Frame error', 'Frame err', 'FE']])
             self.frame_valid[rxtx] = False
 
-        self.putp(['STOPBIT', rxtx, self.stopbit1[rxtx]])
+        self.putp(['STOPBIT', rxtx, signal])
         self.putg([Ann.RX_STOP + rxtx, ['Stop bit', 'Stop', 'T']])
 
-        # Postprocess the UART frame
+        # Postprocess the UART frame after all STOP bits were seen.
+        if len(self.stopbits[rxtx]) < self.options['stop_bits']:
+            return
         self.advance_state(rxtx, signal)
 
     def advance_state(self, rxtx, signal = None, fatal = False, idle = None):
@@ -497,8 +502,10 @@ class Decoder(srd.Decoder):
         elif state == 'GET PARITY BIT':
             bitnum = 1 + self.options['data_bits']
         elif state == 'GET STOP BITS':
+            # TODO: Currently does not support half STOP bits.
             bitnum = 1 + self.options['data_bits']
             bitnum += 0 if self.options['parity'] == 'none' else 1
+            bitnum += len(self.stopbits[rxtx])
         want_num = ceil(self.get_sample_point(rxtx, bitnum))
         return {'skip': want_num - self.samplenum}
 
