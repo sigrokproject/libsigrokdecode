@@ -94,6 +94,9 @@ class Decoder(srd.Decoder):
         self.fall_start = None
         self.fall_end = None
         self.rise = None
+        self.prev_fall_start = None
+        self.prev_fall_end = None
+        self.prev_rise = None
         self.reset_frame_vars()
 
     def reset_frame_vars(self):
@@ -112,7 +115,7 @@ class Decoder(srd.Decoder):
             self.samplerate = value
             self.precalculate()
 
-    def handle_frame(self, is_nack):
+    def handle_frame(self, is_nack, is_incomplete = 0):
         if self.fall_start is None or self.fall_end is None:
             return
 
@@ -148,8 +151,11 @@ class Decoder(srd.Decoder):
         if i == 1:
             string += ' | OPC: PING' if self.eom else ' | OPC: NONE. Aborted cmd'
 
-        # Add extra information (ack of the command from the destination)
-        string += ' | R: NACK' if is_nack else ' | R: ACK'
+        if is_incomplete:
+            string += ' | INCOMPLETE'
+        else:
+            # Add extra information (ack of the command from the destination)
+            string += ' | R: NACK' if is_nack else ' | R: ACK'
 
         self.put(self.frame_start, self.frame_end, self.out_ann, [8, [string]])
 
@@ -167,24 +173,25 @@ class Decoder(srd.Decoder):
         # VALIDATION: Invalid pulse
         if pulse == Pulse.INVALID:
             self.stat = Stat.WAIT_START
-            self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Invalid pulse: Wrong timing']])
+            string = 'ERROR: Invalid pulse: Wrong timing (' + str(zero_time) + ')'
+            self.put(self.fall_start, self.fall_end, self.out_ann, [9, [string]])
             return
 
         # VALIDATION: If waiting for start, discard everything else
         if self.stat == Stat.WAIT_START and pulse != Pulse.START:
-            self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Expected START: BIT found']])
+            self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['ERROR: Expected START: BIT found']])
             return
 
         # VALIDATION: If waiting for ACK or EOM, only BIT pulses (0/1) are expected
         if (self.stat == Stat.WAIT_ACK or self.stat == Stat.WAIT_EOM) and pulse == Pulse.START:
-            self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Expected BIT: START received)']])
+            self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['ERROR: Expected BIT: START received)']])
             self.stat = Stat.WAIT_START
 
         # VALIDATION: ACK bit pulse remains high till the next frame (if any): Validate only min time of the low period
         if self.stat == Stat.WAIT_ACK and pulse != Pulse.START:
             if total_time < timing[pulse]['total']['min']:
                 pulse = Pulse.INVALID
-                self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['ACK pulse below minimun time']])
+                self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['ERROR: ACK pulse below minimun time']])
                 self.stat = Stat.WAIT_START
                 return
 
@@ -192,8 +199,15 @@ class Decoder(srd.Decoder):
         if self.stat == Stat.GET_BITS and pulse == Pulse.START:
             # Make sure we received a complete byte to consider it a valid ping
             if self.bit_count == 0:
-                self.handle_frame(self.is_nack)
+                if self.frame_start is None or self.frame_end is None:
+                    zero_time = ((self.prev_rise - self.prev_fall_start) / self.samplerate) * 1000.0
+                    total_time = ((self.prev_fall_end - self.prev_fall_start) / self.samplerate) * 1000.0
+                    string = 'ERROR: Unexpected pulse (' + str(zero_time) + '/' + str(total_time) + ')'
+                    self.put(self.prev_fall_start, self.prev_fall_end, self.out_ann, [9, [string]])
+                else:
+                    self.handle_frame(self.is_nack)
             else:
+                self.handle_frame(self.is_nack, 1)
                 self.put(self.frame_start, self.samplenum, self.out_ann, [9, ['ERROR: Incomplete byte received']])
 
             # Set wait start so we receive next frame
@@ -202,7 +216,8 @@ class Decoder(srd.Decoder):
         # VALIDATION: Check timing of the BIT (0/1) pulse in any other case (not waiting for ACK)
         if self.stat != Stat.WAIT_ACK and pulse != Pulse.START:
             if total_time < timing[pulse]['total']['min'] or total_time > timing[pulse]['total']['max']:
-                self.put(self.fall_start, self.fall_end, self.out_ann, [9, ['Bit pulse exceeds total pulse timespan']])
+                string = 'ERROR: Bit pulse exceeds total pulse timespan (' + str(total_time) +')'
+                self.put(self.fall_start, self.fall_end, self.out_ann, [9, [string]])
                 pulse = Pulse.INVALID
                 self.stat = Stat.WAIT_START
                 return
@@ -292,6 +307,7 @@ class Decoder(srd.Decoder):
 
         while True:
             self.wait({0: 'r'})
+            self.prev_rise = self.rise
             self.rise = self.samplenum
 
             if self.stat == Stat.WAIT_ACK:
@@ -299,6 +315,8 @@ class Decoder(srd.Decoder):
             else:
                 self.wait([{0: 'f'}])
 
+            self.prev_fall_start = self.fall_start
+            self.prev_fall_end = self.fall_end
             self.fall_start = self.fall_end
             self.fall_end = self.samplenum
             self.process()
