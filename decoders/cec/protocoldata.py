@@ -2,7 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2018 Jorge Solla Rubiales <jorgesolla@gmail.com>
-## Copyright (c) 2022 Marcin Mikula Marcin Mikula <mmikula@libertyglobal.com>
+## Copyright (c) 2022 Marcin Mikula <mmikula@libertyglobal.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
