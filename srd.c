@@ -285,6 +285,22 @@ SRD_API int srd_init(const char *path)
 			return ret;
 		}
 	}
+	env_path = g_getenv("SIGROKDECODE_PATH");
+	if (env_path) {
+		char **dir_list, **dir_iter, *dir_item;
+		dir_list = g_strsplit(env_path, G_SEARCHPATH_SEPARATOR_S, 0);
+		for (dir_iter = dir_list; *dir_iter; dir_iter++) {
+			dir_item = *dir_iter;
+			if (!dir_item || !*dir_item)
+				continue;
+			ret = srd_decoder_searchpath_add(dir_item);
+			if (ret != SRD_OK) {
+				Py_Finalize();
+				return ret;
+			}
+		}
+		g_strfreev(dir_list);
+	}
 
 	/* Initialize the Python GIL (this also happens to acquire it). */
 	PyEval_InitThreads();
