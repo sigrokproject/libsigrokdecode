@@ -270,6 +270,15 @@ SRD_API int srd_init(const char *path)
 	}
 
 	/* Environment variable overrides everything, for debugging. */
+	/*
+	 * TODO
+	 * Is the comment still applicable and correct or up to date?
+	 * This implementation adds paths which were specified by the
+	 * env var. Which can shadow files in other locations, or can
+	 * extend the set of available decoders. Which need not only
+	 * serve for development, it is as beneficial to regular users.
+	 * Without shadowing all other files still are found.
+	 */
 	if ((env_path = g_getenv("SIGROKDECODE_DIR"))) {
 		if ((ret = srd_decoder_searchpath_add(env_path)) != SRD_OK) {
 			Py_Finalize();
