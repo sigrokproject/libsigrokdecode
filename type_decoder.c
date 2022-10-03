@@ -1098,6 +1098,11 @@ static PyObject *Decoder_wait(PyObject *self, PyObject *args)
 		 * when the sample data is exhausted.
 		 */
 		if (di->communicate_eof) {
+			/* Advance self.samplenum to the (absolute) last sample number. */
+			py_samplenum = PyLong_FromUnsignedLongLong(di->abs_cur_samplenum);
+			PyObject_SetAttrString(di->py_inst, "samplenum", py_samplenum);
+			Py_DECREF(py_samplenum);
+			/* Raise an EOFError Python exception. */
 			srd_dbg("%s: %s: Raising EOF from wait().",
 				di->inst_id, __func__);
 			g_mutex_unlock(&di->data_mutex);
