@@ -257,7 +257,10 @@ class Decoder(srd.Decoder):
         # This results in robust operation for low-oversampled input.
         in_reset = False
         while True:
-            pins = self.wait(conds)
+            try:
+                pins = self.wait(conds)
+            except EOFError as e:
+                break
             clock_edge = cond_idx_clock is not None and self.matched[cond_idx_clock]
             data_edge = cond_idx_data_0 is not None and [idx for idx in range(cond_idx_data_0, cond_idx_data_N) if self.matched[idx]]
             reset_edge = cond_idx_reset is not None and self.matched[cond_idx_reset]
@@ -275,3 +278,8 @@ class Decoder(srd.Decoder):
                 data_bits = data_bits[:num_item_bits]
                 item = bitpack(data_bits)
                 self.handle_bits(self.samplenum, item, num_item_bits)
+
+        self.handle_bits(self.samplenum, None, num_item_bits)
+        # TODO Determine whether a WARN annotation needs to get emitted.
+        # The decoder has not seen the end of the last accumulated item.
+        # Instead it just ran out of input data.
