@@ -385,6 +385,9 @@ class Decoder(srd.Decoder):
                 # TODO: Check CRC.
                 self.put(self.ss_crc, self.es_crc, self.out_ann, [Ann.CMD17, ['CRC']])
                 self.state = 'IDLE'
+                self.read_buf = []
+                self.cmd17_start_token_found = False
+                self.is_cmd17 = False
         elif miso == 0xfe:
             self.put(self.ss, self.es, self.out_ann, [Ann.CMD17, ['Start Block']])
             self.cmd17_start_token_found = True
