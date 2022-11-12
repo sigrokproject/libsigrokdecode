@@ -160,7 +160,7 @@ class Decoder(srd.Decoder):
             self.putb([Ann.BIT_WARNING, ['End bit: %d (Warning: Must be 1!)' % bit]])
 
         # Handle command.
-        if cmd in (0, 1, 9, 16, 17, 24, 41, 49, 55, 59):
+        if cmd in (0, 1, 9, 16, 17, 24, 41, 49, 55, 58, 59):
             self.state = 'HANDLE CMD%d' % cmd
             self.cmd_str = '%s%d (%s)' % (s, cmd, self.cmd_name(cmd))
         else:
@@ -238,6 +238,12 @@ class Decoder(srd.Decoder):
         self.putc(Ann.CMD55, 'Next command is an application-specific command')
         self.is_acmd = True
         self.state = 'GET RESPONSE R1'
+
+    def handle_cmd58(self):
+        # CMD58: READ_OCR
+        self.putc(Ann.CMD58, 'Read the OCR register')
+        self.read_buf = []
+        self.state = 'GET RESPONSE R3'
 
     def handle_cmd59(self):
         # CMD59: CRC_ON_OFF
@@ -348,8 +354,23 @@ class Decoder(srd.Decoder):
         pass
 
     def handle_response_r3(self, res):
-        # TODO
-        pass
+        # The R3 response token format (5 bytes).
+        # Sent by the card when a READ_OCR command is received.
+        # The structure of the first (MSB) byte is identical to response type R1.
+        # The other four bytes contain the OCR register.
+        # TODO: decode the bits within the OCR register.
+        if len(self.read_buf) == 0:
+            self.read_buf.append(res)
+            self.handle_response_r1(res)
+            self.putx([Ann.R3, ['R1: 0x%02x' % res]])
+        elif len(self.read_buf) < 5:
+            self.es_cmd = self.es
+            self.read_buf.append(res)
+        else:
+            r1 = self.read_buf[0]
+            ocr = (self.read_buf[1] << 24) | (self.read_buf[2] << 16) | (self.read_buf[3] << 8) | self.read_buf[4]
+            self.putx([Ann.R3, ['R3: [R1: 0x%02x, OCR: 0x%08x]' % (r1, ocr)]])
+            self.state = 'IDLE'
 
     # Note: Response token formats R4 and R5 are reserved for SDIO.
 
@@ -500,6 +521,8 @@ class Decoder(srd.Decoder):
             # Leave ACMD mode again after the first command after CMD55.
             if self.is_acmd and cmdstr != '55':
                 self.is_acmd = False
+        elif self.state == 'GET RESPONSE R3':
+            self.handle_response_r3(miso)
         elif self.state.startswith('GET RESPONSE'):
             # Ignore stray 0xff bytes, some devices seem to send those!?
             if miso == 0xff: # TODO?
