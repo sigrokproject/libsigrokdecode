@@ -160,7 +160,7 @@ class Decoder(srd.Decoder):
             self.putb([Ann.BIT_WARNING, ['End bit: %d (Warning: Must be 1!)' % bit]])
 
         # Handle command.
-        if cmd in (0, 1, 9, 16, 17, 24, 41, 49, 55, 58, 59):
+        if cmd in (0, 1, 8, 9, 16, 17, 24, 41, 49, 55, 58, 59):
             self.state = 'HANDLE CMD%d' % cmd
             self.cmd_str = '%s%d (%s)' % (s, cmd, self.cmd_name(cmd))
         else:
@@ -181,6 +181,12 @@ class Decoder(srd.Decoder):
         self.es_bit = self.cmd_token_bits[5 - 4][6][2]
         self.putb([Ann.BIT, ['HCS: %d' % hcs]])
         self.state = 'GET RESPONSE R1'
+
+    def handle_cmd8(self):
+        # CMD8: SEND_IF_COND
+        self.putc(Ann.CMD8, 'Send interface condition')
+        self.read_buf = []
+        self.state = 'GET RESPONSE R7'
 
     def handle_cmd9(self):
         # CMD9: SEND_CSD (128 bits / 16 bytes)
@@ -377,8 +383,40 @@ class Decoder(srd.Decoder):
     # TODO: R6?
 
     def handle_response_r7(self, res):
-        # TODO
-        pass
+        # The R7 response token format (5 bytes).
+        # Sent by the card when a SEND_IF_COND command (CMD8) is received.
+        # The structure of the first (MSB) byte is identical to response type R1.
+        # The other four bytes contain the card operating voltage information and 
+        # echo back of check pattern in argument and are specified by the same definition
+        # as R7 response in SD mode.
+        # Bits 31..28 are listed as "command version" but not clearly defined.
+        # TODO: decode the bits.
+
+        # Decode bits 11..8 "voltage accepted" to a string.
+        def decode_voltage(value):
+            strings = {
+                0: "Not Defined",
+                1: "2.7-3.6V",
+                2: "Reserved for Low Voltage Range",
+                4: "Reserved",
+                8: "Reserved"
+            }
+            return strings.get(value, "Not Defined")
+
+        # Decode the R7 response.
+        if len(self.read_buf) == 0:
+            self.read_buf.append(res)
+            self.handle_response_r1(res)
+            self.putx([Ann.R7, ['R1: 0x%02x' % res]])
+        elif len(self.read_buf) < 5:
+            self.es_cmd = self.es
+            self.read_buf.append(res)
+        else:
+            r1 = self.read_buf[0]
+            voltage = decode_voltage(self.read_buf[3])
+            pattern = self.read_buf[4]
+            self.putx([Ann.R7, ['R7: [R1: 0x%02x, Voltage Accepted: %s, Check Pattern: 0x%02x]' % (r1, voltage, pattern)]])
+            self.state = 'IDLE'
 
     def handle_data_cmd17(self, miso):
         # CMD17 returns one byte R1, then some bytes 0xff, then a Start Block
@@ -523,6 +561,8 @@ class Decoder(srd.Decoder):
                 self.is_acmd = False
         elif self.state == 'GET RESPONSE R3':
             self.handle_response_r3(miso)
+        elif self.state == 'GET RESPONSE R7':
+            self.handle_response_r7(miso)
         elif self.state.startswith('GET RESPONSE'):
             # Ignore stray 0xff bytes, some devices seem to send those!?
             if miso == 0xff: # TODO?
