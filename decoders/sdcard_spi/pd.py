@@ -365,13 +365,13 @@ class Decoder(srd.Decoder):
         # The structure of the first (MSB) byte is identical to response type R1.
         # The other four bytes contain the OCR register.
         # TODO: decode the bits within the OCR register.
-        if len(self.read_buf) == 0:
-            self.read_buf.append(res)
+        self.es_cmd = self.es
+        self.read_buf.append(res)
+        if len(self.read_buf) == 1:
             self.handle_response_r1(res)
             self.putx([Ann.R3, ['R1: 0x%02x' % res]])
         elif len(self.read_buf) < 5:
-            self.es_cmd = self.es
-            self.read_buf.append(res)
+            pass
         else:
             r1 = self.read_buf[0]
             ocr = (self.read_buf[1] << 24) | (self.read_buf[2] << 16) | (self.read_buf[3] << 8) | self.read_buf[4]
