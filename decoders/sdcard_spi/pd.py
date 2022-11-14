@@ -418,6 +418,7 @@ class Decoder(srd.Decoder):
             pattern = self.read_buf[4]
             self.putx([Ann.R7, ['R7: [R1: 0x%02x, Voltage Accepted: %s, Check Pattern: 0x%02x]' % (r1, voltage, pattern)]])
             self.state = 'IDLE'
+            self.read_buf = []
 
     def handle_data_cmd17(self, miso):
         # CMD17 returns one byte R1, then some bytes 0xff, then a Start Block
