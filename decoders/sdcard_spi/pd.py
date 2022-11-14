@@ -377,6 +377,7 @@ class Decoder(srd.Decoder):
             ocr = (self.read_buf[1] << 24) | (self.read_buf[2] << 16) | (self.read_buf[3] << 8) | self.read_buf[4]
             self.putx([Ann.R3, ['R3: [R1: 0x%02x, OCR: 0x%08x]' % (r1, ocr)]])
             self.state = 'IDLE'
+            self.read_buf = []
 
     # Note: Response token formats R4 and R5 are reserved for SDIO.
 
