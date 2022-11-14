@@ -527,19 +527,43 @@ class Decoder(srd.Decoder):
                 self.es_busy = self.es
 
     def decode(self, ss, es, data):
-        ptype, mosi, miso = data
+        # Packet.
+        ptype, data1, data2 = data
+        if ptype == 'DATA':
+            # 'DATA': <data1> contains the MOSI data, <data2> contains the MISO data.
+            # The data is _usually_ 8 bits (but can also be fewer or more bits).
+            # Both data items are Python numbers (not strings), or None if the respective
+            mosi, miso = data1, data2
+            self.ss, self.es = ss, es
 
-        # For now, only use DATA and BITS packets.
-        if ptype not in ('DATA', 'BITS'):
+            # Decode via the state machine below.
+            pass
+        elif ptype == 'BITS':
+            # 'BITS': <data1>/<data2> contain a list of bit values in this MOSI/MISO data
+            # item, and for each of those also their respective start-/endsample numbers.
+
+            # Store the individual bit values and ss/es numbers. The next packet
+            # is guaranteed to be a 'DATA' packet belonging to this 'BITS' one.
+            self.mosi_bits, self.miso_bits = data1, data2
             return
+        elif ptype == 'CS-CHANGE':
+            # 'CS-CHANGE': <data1> is the old CS# pin value, <data2> is the new value.
+            # Both data items are Python numbers (0/1), not strings. At the beginning of
+            # the decoding a packet is generated with <data1> = None and <data2> being the
+            # initial state of the CS# pin or None if the chip select pin is not supplied.
 
-        # Store the individual bit values and ss/es numbers. The next packet
-        # is guaranteed to be a 'DATA' packet belonging to this 'BITS' one.
-        if ptype == 'BITS':
-            self.miso_bits, self.mosi_bits = miso, mosi
+            # Reset state when CS is asserted.
+            if data2 == 0:
+                self.state = 'IDLE'
+                self.read_buf = []
             return
+        else:
+            # 'TRANSFER': <data1>/<data2> contain a list of Data() namedtuples for each
+            # byte transferred during this block of CS# asserted time. Each Data() has
+            # fields ss, es, and val.
 
-        self.ss, self.es = ss, es
+            # Currently unused.
+            return
 
         # State machine.
         if self.state == 'IDLE':
