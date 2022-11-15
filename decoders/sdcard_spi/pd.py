@@ -405,13 +405,13 @@ class Decoder(srd.Decoder):
             return strings.get(value, "Not Defined")
 
         # Decode the R7 response.
-        if len(self.read_buf) == 0:
-            self.read_buf.append(res)
+        self.es_cmd = self.es
+        self.read_buf.append(res)
+        if len(self.read_buf) == 1:
             self.handle_response_r1(res)
             self.putx([Ann.R7, ['R1: 0x%02x' % res]])
         elif len(self.read_buf) < 5:
-            self.es_cmd = self.es
-            self.read_buf.append(res)
+            pass
         else:
             r1 = self.read_buf[0]
             voltage = decode_voltage(self.read_buf[3])
