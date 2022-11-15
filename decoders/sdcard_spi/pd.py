@@ -63,6 +63,7 @@ class Decoder(srd.Decoder):
         self.is_acmd = False # Indicates CMD vs. ACMD
         self.blocklen = 0
         self.read_buf = []
+        self.read_bits = []
         self.cmd_str = ''
         self.is_cmd24 = False
         self.cmd24_start_token_found = False
@@ -186,6 +187,7 @@ class Decoder(srd.Decoder):
         # CMD8: SEND_IF_COND
         self.putc(Ann.CMD8, 'Send interface condition')
         self.read_buf = []
+        self.read_bits = []
         self.state = 'GET RESPONSE R7'
 
     def handle_cmd9(self):
@@ -451,9 +453,16 @@ class Decoder(srd.Decoder):
         # echo back of check pattern in argument and are specified by the same definition
         # as R7 response in SD mode.
         # Bits 31..28 are listed as "command version" but not clearly defined.
-        # TODO: decode the bits.
 
-        # Decode bits 11..8 "voltage accepted" to a string.
+        # Get a MISO bit corresponding to a bit in the response.
+        # self.read_bits is a list of MISO bytes, where each byte is a list of 8 bits,
+        # Returns a MISO bit, which is a list containing [bit, ss, es].
+        def get_bit(b):
+            byte = (5 - (b // 8)) - 1 # 5 bytes in R7 response, -1 for zero indexing
+            bit  = b % 8
+            return self.read_bits[byte][bit]
+
+        # Decode the value for bits 11..8 "voltage accepted" to a string.
         def decode_voltage(value):
             strings = {
                 0: "Not Defined",
@@ -467,6 +476,7 @@ class Decoder(srd.Decoder):
         # Decode the R7 response.
         self.es_cmd = self.es
         self.read_buf.append(res)
+        self.read_bits.append(self.miso_bits)
         if len(self.read_buf) == 1:
             self.handle_response_r1(res)
             self.putx([Ann.R7, ['R1: 0x%02x' % res]])
@@ -474,11 +484,30 @@ class Decoder(srd.Decoder):
             pass
         else:
             r1 = self.read_buf[0]
+            version = self.read_buf[0] >> 4
             voltage = decode_voltage(self.read_buf[3])
             pattern = self.read_buf[4]
-            self.putx([Ann.R7, ['R7: [R1: 0x%02x, Voltage Accepted: %s, Check Pattern: 0x%02x]' % (r1, voltage, pattern)]])
+            self.putx([Ann.R7, ['R7: [R1: 0x%02x, Command Version: 0x%01x, Voltage Accepted: %s, Check Pattern: 0x%02x]' % (r1, version, voltage, pattern)]])
+
+            # Bits 31..28: 'command version'
+            self.ss_bit, self.es_bit = get_bit(31)[1], get_bit(28)[2]
+            self.putb([Ann.BIT, ['Command Version: 0x%01x' % version]])
+
+            # Bits 27..12: 'reserved bits'
+            self.ss_bit, self.es_bit = get_bit(27)[1], get_bit(12)[2]
+            self.putb([Ann.BIT, ['Reserved']])
+
+            # Bits 11..8: 'voltage accepted'
+            self.ss_bit, self.es_bit = get_bit(11)[1], get_bit(8)[2]
+            self.putb([Ann.BIT, ['Voltage Accepted: %s' % voltage]])
+
+            # Bits 7..0: 'check pattern'
+            self.ss_bit, self.es_bit = get_bit(7)[1], get_bit(0)[2]
+            self.putb([Ann.BIT, ['Check Pattern: 0x%02x' % pattern]])
+
             self.state = 'IDLE'
             self.read_buf = []
+            self.read_bits = []
 
     def handle_data_cmd17(self, miso):
         # CMD17 returns one byte R1, then some bytes 0xff, then a Start Block
@@ -616,6 +645,7 @@ class Decoder(srd.Decoder):
             if data2 == 0:
                 self.state = 'IDLE'
                 self.read_buf = []
+                self.read_bits = []
             return
         else:
             # 'TRANSFER': <data1>/<data2> contain a list of Data() namedtuples for each
