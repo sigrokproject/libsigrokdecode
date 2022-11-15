@@ -160,7 +160,7 @@ class Decoder(srd.Decoder):
             self.putb([Ann.BIT_WARNING, ['End bit: %d (Warning: Must be 1!)' % bit]])
 
         # Handle command.
-        if cmd in (0, 1, 8, 9, 16, 17, 24, 41, 49, 55, 58, 59):
+        if cmd in (0, 1, 8, 9, 13, 16, 17, 24, 41, 49, 55, 58, 59):
             self.state = 'HANDLE CMD%d' % cmd
             self.cmd_str = '%s%d (%s)' % (s, cmd, self.cmd_name(cmd))
         else:
@@ -216,6 +216,12 @@ class Decoder(srd.Decoder):
         # TODO: Decode all bits.
         self.read_buf = []
         self.state = 'GET RESPONSE R1'
+
+    def handle_cmd13(self):
+        # CMD13: SEND_STATUS
+        self.putc(Ann.CMD13, 'Ask card to send its status register')
+        self.read_buf = []
+        self.state = 'GET RESPONSE R2'
 
     def handle_cmd16(self):
         # CMD16: SET_BLOCKLEN
@@ -356,8 +362,62 @@ class Decoder(srd.Decoder):
         pass
 
     def handle_response_r2(self, res):
-        # TODO
-        pass
+        # The R2 response token format (2 bytes).
+        # Sent as a response to the SEND_STATUS command.
+        # The structure of the first (MSB) byte is identical to response type R1.
+        # The second byte contains the contents of the card status register.
+
+        def putbit(bit, data):
+            b = self.miso_bits[bit]
+            self.ss_bit, self.es_bit = b[1], b[2]
+            self.putb([Ann.BIT, data])
+
+        self.es_cmd = self.es
+        self.read_buf.append(res)
+        if len(self.read_buf) == 1:
+            self.handle_response_r1(res)
+            self.putx([Ann.R2, ['R2: 0x%02x' % res]])
+        else:
+            r1 = self.read_buf[0]
+            status = self.read_buf[1]
+            self.putx([Ann.R2, ['R2: [R1: 0x%02x, Status: 0x%02x]' % (r1, status)]])
+
+            # Bit 0: 'Card is locked' bit
+            s = '' if (status & (1 << 0)) else 'un'
+            putbit(0, ['Card is %slocked' % s])
+
+            # Bit 1: 'Write protect erase skip | lock/unlock command failed' bit
+            w = 'A' if (status & (1 << 1)) else 'No a'
+            l = 'E' if (status & (1 << 1)) else 'No e'
+            putbit(1, ['%sttempt to erase a write-protected sector | %srror in card lock/unlock operation' % (w, l)])
+
+            # Bit 2: 'Error:' bit
+            s = 'G' if (status & (1 << 2)) else 'No g'
+            putbit(2, ['%seneral or unknown error' % s])
+
+            # Bit 3: 'CC error' bit
+            s = 'I' if (status & (1 << 3)) else 'No i'
+            putbit(3, ['%snternal card controller error' % s])
+
+            # Bit 4: 'Card ECC failed' bit
+            s = '' if (status & (1 << 4)) else 'No '
+            putbit(4, ['%sECC failure to correct data' % s])
+
+            # Bit 5: 'Write protect violation' bit
+            s = 'W' if (res & (1 << 5)) else 'No w'
+            putbit(5, ['%srite protect violation' % s])
+
+            # Bit 6: 'Erase param' bit
+            s = 'I' if (res & (1 << 6)) else 'No i'
+            putbit(6, ['%snvalid selection for erase, sectors or groups' % s])
+
+            # Bit 7: 'Out of range | csd overwrite' bit
+            r = 'O' if (status & (1 << 7)) else 'No o'
+            c = 'C' if (status & (1 << 7)) else 'No C'
+            putbit(7, ['%sut of range | %sSD overwrite' % (r, c)])
+
+            self.state = 'IDLE'
+            self.read_buf = []
 
     def handle_response_r3(self, res):
         # The R3 response token format (5 bytes).
@@ -585,6 +645,8 @@ class Decoder(srd.Decoder):
             # Leave ACMD mode again after the first command after CMD55.
             if self.is_acmd and cmdstr != '55':
                 self.is_acmd = False
+        elif self.state == 'GET RESPONSE R2':
+            self.handle_response_r2(miso)
         elif self.state == 'GET RESPONSE R3':
             self.handle_response_r3(miso)
         elif self.state == 'GET RESPONSE R7':
