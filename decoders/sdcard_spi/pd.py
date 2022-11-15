@@ -342,11 +342,11 @@ class Decoder(srd.Decoder):
         putbit(4, ['%srror in the sequence of erase commands' % s])
 
         # Bit 5: 'Address error' bit
-        s = 'M' if (res & (1 << 4)) else 'No m'
+        s = 'M' if (res & (1 << 5)) else 'No m'
         putbit(5, ['%sisaligned address used in command' % s])
 
         # Bit 6: 'Parameter error' bit
-        s = '' if (res & (1 << 4)) else 'not '
+        s = '' if (res & (1 << 6)) else 'not '
         putbit(6, ['Command argument %soutside allowed range' % s])
 
         # Bit 7: Always set to 0
