@@ -257,6 +257,7 @@ class Decoder(srd.Decoder):
         # CMD58: READ_OCR
         self.putc(Ann.CMD58, 'Read the OCR register')
         self.read_buf = []
+        self.read_bits = []
         self.state = 'GET RESPONSE R3'
 
     def handle_cmd59(self):
@@ -426,9 +427,19 @@ class Decoder(srd.Decoder):
         # Sent by the card when a READ_OCR command is received.
         # The structure of the first (MSB) byte is identical to response type R1.
         # The other four bytes contain the OCR register.
-        # TODO: decode the bits within the OCR register.
+
+        # Get a MISO bit corresponding to a bit in the response.
+        # self.read_bits is a list of MISO bytes, where each byte is a list of 8 bits,
+        # Returns a MISO bit, which is a list containing [bit, ss, es].
+        def get_bit(b):
+            byte = (5 - (b // 8)) - 1 # 5 bytes in R3 response, -1 for zero indexing
+            bit  = b % 8
+            return self.read_bits[byte][bit]
+
+        # Decode the R3 response.
         self.es_cmd = self.es
         self.read_buf.append(res)
+        self.read_bits.append(self.miso_bits)
         if len(self.read_buf) == 1:
             self.handle_response_r1(res)
             self.putx([Ann.R3, ['R1: 0x%02x' % res]])
@@ -438,8 +449,84 @@ class Decoder(srd.Decoder):
             r1 = self.read_buf[0]
             ocr = (self.read_buf[1] << 24) | (self.read_buf[2] << 16) | (self.read_buf[3] << 8) | self.read_buf[4]
             self.putx([Ann.R3, ['R3: [R1: 0x%02x, OCR: 0x%08x]' % (r1, ocr)]])
+
+            # Bit 31: 'Card power up status bit (busy)'.
+            # This bit is set to LOW if the card has not finished the power up routine.
+            power_up_status, self.ss_bit, self.es_bit = get_bit(31)
+            s = '' if power_up_status else 'not '
+            self.putb([Ann.BIT, ['Card has %sfinished the power up routine' % s]])
+
+            # Bit 30: 'Card Capacity Status (CCS)'.
+            # This bit is valid only when the card power up status bit is set.
+            bit, self.ss_bit, self.es_bit = get_bit(30)
+            s = 'unknown'
+            if power_up_status:
+                s = 'SDHC or SDXC' if bit else 'SDSC'
+            self.putb([Ann.BIT, ['Card capacity is %s' % s]])
+
+            # Bit 29: 'UHS-II Card Status'.
+            uhs2, self.ss_bit, self.es_bit = get_bit(29)
+            s = '' if uhs2 else 'not '
+            self.putb([Ann.BIT, ['UHS-II interface %ssupported' % s]])
+
+            # Bit 28: 'reserved'.
+            _, self.ss_bit, self.es_bit = get_bit(28)
+            self.putb([Ann.BIT, ['Reserved']])
+
+            # Bit 27: 'Over 2TB support Status (CO2T)'.
+            # Only SDUC card supports this bit.
+            # TODO: unclear exactly how to determine if SDUC.
+            bit, self.ss_bit, self.es_bit = get_bit(27)
+            s = '' if bit else 'not '
+            self.putb([Ann.BIT, ['Over 2TB is %ssupported' % s]])
+
+            # Bits 26..25: 'reserved'.
+            self.ss_bit, self.es_bit = get_bit(26)[1], get_bit(25)[2]
+            self.putb([Ann.BIT, ['Reserved']])
+
+            # Bit 24: 'Switching to 1.8V Accepted (S18A)'.
+            bit, self.ss_bit, self.es_bit = get_bit(24)
+            s = '' if bit else 'not '
+            self.putb([Ann.BIT, ['Switching to 1.8V %saccepted' % s]])
+
+            # Bits 23..0 are interpreted differently depending upon whether a UHS-II card or not.
+            if uhs2:
+                # TODO
+                pass
+            else:
+                # Bits 23..15 represent the supported voltage ranges.
+                voltages = {
+                    15: '2.7-2.8',
+                    16: '2.8-2.9',
+                    17: '2.9-3.0',
+                    18: '3.0-3.1',
+                    19: '3.1-3.2',
+                    20: '3.2-3.3',
+                    21: '3.3-3.4',
+                    22: '3.4-3.5',
+                    23: '3.5-3.6',
+                }
+                for k, v in voltages.items():
+                    bit, self.ss_bit, self.es_bit = get_bit(k)
+                    s = '' if bit else 'not '
+                    self.putb([Ann.BIT, ['%sV %ssupported' % (v, s)]])
+
+                # Bits 14..8: 'reserved'.
+                self.ss_bit, self.es_bit = get_bit(14)[1], get_bit(8)[2]
+                self.putb([Ann.BIT, ['Reserved']])
+
+                # Bit 7: 'Reserved for Low Voltage Range'
+                # Physical Layer Simplified Specification Version 9.00 does not define how to interpret this.
+                _, self.ss_bit, self.es_bit = get_bit(7)
+                self.putb([Ann.BIT, ['Reserved']])
+
+                # Bits 6..0: 'reserved'.
+                self.ss_bit, self.es_bit = get_bit(6)[1], get_bit(0)[2]
+                self.putb([Ann.BIT, ['Reserved']])
+
             self.state = 'IDLE'
             self.read_buf = []
+            self.read_bits = []
 
     # Note: Response token formats R4 and R5 are reserved for SDIO.
 
