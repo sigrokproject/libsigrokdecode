@@ -645,8 +645,9 @@ class Decoder(srd.Decoder):
                 return
             self.es_data = self.es
             self.put(self.ss_data, self.es_data, self.out_ann, [Ann.CMD24, ['Block data: %s' % self.read_buf]])
-            self.read_buf = []
             self.state = 'DATA RESPONSE'
+            self.read_buf = []
+            self.cmd24_start_token_found = False
         elif mosi == 0xfe:
             self.put(self.ss, self.es, self.out_ann, [Ann.CMD24, ['Start Block']])
             self.cmd24_start_token_found = True
@@ -693,6 +694,7 @@ class Decoder(srd.Decoder):
             cls = Ann.CMD24 if self.is_cmd24 else None
             if cls is not None:
                 self.put(self.ss_busy, self.es_busy, self.out_ann, [cls, ['Card is busy']])
+                self.is_cmd24 = False
             self.state = 'IDLE'
             return
         else:
@@ -733,6 +735,11 @@ class Decoder(srd.Decoder):
                 self.state = 'IDLE'
                 self.read_buf = []
                 self.read_bits = []
+                self.is_cmd17 = False
+                self.cmd17_start_token_found = False
+                self.is_cmd24 = False
+                self.cmd24_start_token_found = False
+                self.busy_first_byte = False
             return
         else:
             # 'TRANSFER': <data1>/<data2> contain a list of Data() namedtuples for each
