@@ -117,9 +117,6 @@ class Decoder(srd.Decoder):
 
         t = self.cmd_token
 
-        # CMD or ACMD?
-        s = 'ACMD' if self.is_acmd else 'CMD'
-
         def tb(byte, bit):
             return self.cmd_token_bits[5 - byte][bit]
 
@@ -140,6 +137,13 @@ class Decoder(srd.Decoder):
         # Bits[45:40]: Command index (BCD; valid: 0-63)
         cmd = self.cmd_index = t[0] & 0x3f
         self.ss_bit, self.es_bit = tb(5, 5)[1], tb(5, 0)[2]
+        # Leave ACMD mode if no intervening ACMD since previous CMD55.
+        if cmd == 55:
+            self.is_acmd = False
+        elif cmd not in (13, 18, 22, 23, 25, 26, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 51):
+            self.is_acmd = False
+        # CMD or ACMD?
+        s = 'ACMD' if self.is_acmd else 'CMD'
         self.putb([Ann.BIT, ['Command: %s%d (%s)' % (s, cmd, self.cmd_name(cmd))]])
 
         # Bits[39:8]: Argument
