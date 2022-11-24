@@ -115,7 +115,7 @@ err:
 SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **outstrlist)
 {
 	PyObject *py_list;
-	Py_ssize_t i;
+	ssize_t idx;
 	int ret;
 	char *outstr;
 	PyGILState_STATE gstate;
@@ -139,10 +139,10 @@ SRD_PRIV int py_attr_as_strlist(PyObject *py_obj, const char *attr, GSList **out
 
 	*outstrlist = NULL;
 
-	for (i = 0; i < PyList_Size(py_list); i++) {
-		ret = py_listitem_as_str(py_list, i, &outstr);
+	for (idx = 0; idx < PyList_Size(py_list); idx++) {
+		ret = py_listitem_as_str(py_list, idx, &outstr);
 		if (ret < 0) {
-			srd_dbg("Couldn't get item %" PY_FORMAT_SIZE_T "d.", i);
+			srd_dbg("Couldn't get item %zd.", idx);
 			goto err;
 		}
 		*outstrlist = g_slist_append(*outstrlist, outstr);
@@ -217,8 +217,9 @@ err:
 SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx,
 				char **outstr)
 {
-	PyObject *py_value;
 	PyGILState_STATE gstate;
+	ssize_t item_idx;
+	PyObject *py_value;
 
 	gstate = PyGILState_Ensure();
 
@@ -227,8 +228,9 @@ SRD_PRIV int py_listitem_as_str(PyObject *py_obj, Py_ssize_t idx,
 		goto err;
 	}
 
-	if (!(py_value = PyList_GetItem(py_obj, idx))) {
-		srd_dbg("Couldn't get list item %" PY_FORMAT_SIZE_T "d.", idx);
+	item_idx = idx;
+	if (!(py_value = PyList_GetItem(py_obj, item_idx))) {
+		srd_dbg("Couldn't get list item %zd.", item_idx);
 		goto err;
 	}
 
