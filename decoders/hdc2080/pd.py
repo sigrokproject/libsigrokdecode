@@ -24,6 +24,52 @@
 
 import sigrokdecode as srd
 
+regToLong = {
+    0x00: "Temperature LSB",
+    0x01: "Temperature MSB",
+    0x02: "Humidity LSB",
+    0x03: "Humidity MSB",
+    0x04: "DataReady and interrupt configuration",
+    0x05: "Maximum measured temperature",
+    0x06: "Maximum measured humidity",
+    0x07: "Interrupt enable",
+    0x08: "Temperature offset adjustment",
+    0x09: "Humidity offset adjustment",
+    0x0A: "Temperature threshold LSB",
+    0x0B: "Temperature threshold MSB",
+    0x0C: "Humidity threshold low",
+    0x0D: "Humidity threshold high",
+    0x0E: "Soft reset and interrupt configuration",
+    0x0F: "Measurement configuration",
+    0xFC: "Manufacturer ID low",
+    0xFD: "Manufacturer ID high",
+    0xFE: "Device ID low",
+    0xFF: "Device ID high",
+}
+
+regToShort = {
+    0x00: "T LSB",
+    0x01: "T MSB",
+    0x02: "H LSB",
+    0x03: "H MSB",
+    0x04: "Interrupt/drdy",
+    0x05: "T max",
+    0x06: "H max",
+    0x07: "Interrupt enable",
+    0x08: "Temp offset adjust",
+    0x09: "Hum offset adjust",
+    0x0A: "Temp THR LSB",
+    0x0B: "Temp THR MSB",
+    0x0C: "RH THR LSB",
+    0x0D: "RH THR MSB",
+    0x0E: "Reset and DRDY/Int conf",
+    0x0F: "Measurement conf",
+    0xFC: "Man ID low",
+    0xFD: "Man ID high",
+    0xFE: "Dev ID low",
+    0xFF: "Dev ID high",
+}
+
 STATE_IDLE = 1
 STATE_GET_SLAVE_ADDR = 2
 STATE_WAIT_WRITE_ADDR = 3
@@ -32,36 +78,15 @@ STATE_WRITE_ADDR = 5
 
 ROW_TEMP = 0
 ROW_HUMID = 1
-ROW_WARN = 4
-ROW_READ_PTR = 5
-
-regToLong = {
-    0: "Temperature LSB",
-    1: "Temperature MSB",
-    2: "Humidity LSB",
-    3: "Humidity MSB",
-}
-
-regToShort = {
-    0: "T LSB",
-    1: "T MSB",
-    2: "H LSB",
-    3: "H MSB",
-}
-
-regToRow = {
-    0: 0,
-    1: 0,
-    2: 1,
-    3: 1,
-}
+ROW_WARN = 2
+ROW_READ_PTR = 3
 
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'hdc2080'
     name = 'HDC2080'
     longname = 'TI HDC2080'
-    desc = 'National LM75 (and compatibles) temperature sensor.'
+    desc = 'HDC2080 Low-Power Humidity and Temperature Digital Sensor'
     license = 'gplv2+'
     inputs = ['i2c']
     outputs = []
@@ -69,16 +94,14 @@ class Decoder(srd.Decoder):
     annotations = (
         ('temperature', 'Temperature / °C'),
         ('humidity', 'Humidity / RH%'),
-        ('text-verbose', 'Text (verbose)'),
-        ('text', 'Text'),
         ('warning', 'Warning'),
         ('rptr', 'Read Pointer'),
     )
     annotation_rows = (
         ('temp', 'Temperature', (0,)),
         ('humidity', 'Humitidy', (1,)),
-        ('readptrs', 'Read Pointers', (5,)),
-        ('warning', 'Warnings', (4,)),
+        ('warning', 'Warnings', (2,)),
+        ('readptrs', 'Read Pointers', (3,)),
     )
 
     def __init__(self):
@@ -114,6 +137,18 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def getRegisterNameLong(self, reg):
+        try:
+            return regToLong[reg]
+        except:
+            return "Unknown"
+
+    def getRegisterNameShort(self, reg):
+        try:
+            return regToShort[reg]
+        except:
+            return "Unk"
+
     def warn_upon_invalid_slave(self, addr):
         # HDC2080 devices have a 7-bit I2C slave address, where the 6 MSBs are
         # fixed to 100000, and the 1 LSBs can be configured.
@@ -146,12 +181,12 @@ class Decoder(srd.Decoder):
             if 'DATA WRITE' in cmd:
                 self.reg = databyte
                 self.state = STATE_WRITE_ADDR
-                self.handle_data_write_reg()
+                self.handle_data_write_reg_label()
         elif self.state in (STATE_READ_ADDR, STATE_WRITE_ADDR):
             if "ADDRESS READ" in cmd:
                 self.ss_addr = self.ss
             elif cmd == 'DATA READ':
-                self.handle_reading_label(databyte)
+                self.handle_read_reg_label(databyte)
                 self.handle_reading(databyte)
 
                 # increment the reg by one, as next time
@@ -160,65 +195,84 @@ class Decoder(srd.Decoder):
                 self.reg += 1
 
                 self.bytes_num += 1
+            # saved for potential future use
             elif cmd == 'DATA WRITE':
-                self.handle_writing(databyte)
+                # code here
+
+                # self.handle_writing(databyte)
                 # increment the reg by one, as next time
                 # (unless the reg has changed), we will
                 # be at another register
                 self.reg += 1
+
+                self.bytes_num += 1
+            elif cmd == 'BITS':
+                self.handle_bits(databyte)
             elif cmd == 'STOP':
                 self.bytes_num = 0
                 self.state = STATE_IDLE
 
-    def handle_writing(self, databyte):
+    def handle_bits(self, bits):
         if not self.reg == 0x0f:
             return
 
-        # configuration
-        conf = databyte
+        bits.reverse()
 
-        label = ""
+        tres_bits = bits[0][0] << 1 | bits[1][0]
+        hres_bits = bits[2][0] << 1 | bits[3][0]
+        # res      = bits[4][0] # unused
+        meas_conf_bits = bits[5][0] << 1 | bits[6][0]
+        meas_trig_bits = bits[7][0]
 
-        print("test", conf & 0b1)
+        ss_tres = bits[0][1]
+        se_tres = bits[1][2]
+        ss_hres = bits[2][1]
+        se_hres = bits[3][2]
+        ss_res = bits[4][1]
+        se_res = bits[4][2]
+        ss_meas_conf = bits[5][1]
+        se_meas_conf = bits[6][2]
+        ss_meas_trig = bits[7][1]
+        se_meas_trig = bits[7][2]
 
-        # meas trig
-        if conf & 0b0:
-            label += "no meas trig"
-        elif conf & 0b1:
-            label += "start meas"
-        label += ", "
-        conf = conf >> 1
+        # tres
+        tres_text = "Temperature resolution "
+        if tres_bits & 0b00 == 0:
+            tres_text += "14 bit (0b00)"
+        elif tres_bits & 0b01:
+            tres_text += "11 bit (0b01)"
+        elif tres_bits & 0b10:
+            tres_text += "9 bit (0b10)"
+        self.put(ss_tres, se_tres, self.out_ann, [ROW_READ_PTR, [tres_text]])
+
+        # hres
+        hres_text = "Humidity resolution "
+        if hres_bits & 0b00 == 0:
+            hres_text += "14 bit (0b00)"
+        elif hres_bits & 0b01:
+            hres_text += "11 bit (0b01)"
+        elif hres_bits & 0b10:
+            hres_text += "9 bit (0b10)"
+        self.put(ss_hres, se_hres, self.out_ann, [ROW_READ_PTR, [hres_text]])
+
+        # res
+        self.put(ss_res, se_res, self.out_ann, [ROW_READ_PTR, ["reserved"]])
 
         # measurement conf
-        if conf & 0b00 == 0:
-            label += "mes humid+temp"
-        elif conf & 0b01:
-            label += "mes temp"
-        label += ", "
-        conf = conf >> 2
+        meas_conf_text = "Measurement configuration "
+        if meas_conf_bits & 0b00 == 0:
+            meas_conf_text += "humidity + temperature (0b00)"
+        elif meas_conf_bits & 0b01:
+            meas_conf_text += "temperature only (0b01)"
+        self.put(ss_meas_conf, se_meas_conf, self.out_ann, [ROW_READ_PTR, [meas_conf_text]])
 
-        # humid resolution
-        if conf & 0b00 == 0:
-            label += "HRES 14 bit"
-        elif conf & 0b01:
-            label += "HRES 11 bit"
-        elif conf & 0b10:
-            label += "HRES 9 bit"
-        label += ", "
-        conf = conf >> 2
-
-        # temp resolution
-        if conf & 0b00 == 0:
-            label += "TRES 14 bit"
-        elif conf & 0b01:
-            label += "TRES 11 bit"
-        elif conf & 0b10:
-            label += "TRES 9 bit"
-        label += ", "
-            
-        print("final conf:", label)
-
-        print("handle_writing reg: 0x{:02x} data: 0b{:08b}".format(self.reg, databyte))
+        # meas trig
+        meas_trig_text = "Measurement trigger "
+        if meas_trig_bits & 0b0:
+            meas_trig_text += "no action (0b0)"
+        elif meas_trig_bits & 0b1:
+            meas_trig_text += "start measurement (0b1)"
+        self.put(ss_meas_trig, se_meas_trig, self.out_ann, [ROW_READ_PTR, [meas_trig_text]])
 
     def handle_reading(self, databyte):
         if self.reg not in range(0x00, 0x04):
@@ -263,20 +317,24 @@ class Decoder(srd.Decoder):
         self.put(self.ss_humid_lsb, self.ss_humid_msb, self.out_ann, [ROW_HUMID, [s]])
         self.resetHumid()
 
-    def handle_data_write_reg(self):
-        if self.reg not in range(0x00, 0x04):
+    def handle_data_write_reg_label(self):
+        if self.reg not in regToLong:
             return
 
-        slong = "Set read pointer: 0x{:02x} ({})".format(self.reg, regToLong[self.reg])
-        sshort = "RP 0x{:02x} ({})".format(self.reg, regToShort[self.reg])
-        self.put(self.ss_addr, self.es, self.out_ann, [ROW_READ_PTR, [slong, sshort]])
+        ss = self.ss_addr
+        if self.bytes_num > 0:
+            ss = self.ss
 
-    def handle_reading_label(self, databyte):
-        if self.reg not in range(0x00, 0x04):
+        slong = "Set read pointer: 0x{:02x} ({})".format(self.reg, self.getRegisterNameLong(self.reg))
+        sshort = "RP 0x{:02x} ({})".format(self.reg, self.getRegisterNameShort(self.reg))
+        self.put(ss, self.es, self.out_ann, [ROW_READ_PTR, [slong, sshort]])
+
+    def handle_read_reg_label(self, databyte):
+        if self.reg not in regToLong:
             return
 
-        slong = "0x{:02x} ({})".format(self.reg, regToLong[self.reg])
-        sshort = "0x{:02x} ({})".format(self.reg, regToShort[self.reg])
+        slong = "0x{:02x} ({})".format(self.reg, self.getRegisterNameLong(self.reg))
+        sshort = "0x{:02x} ({})".format(self.reg, self.getRegisterNameShort(self.reg))
 
         ss = self.ss_addr
         if self.bytes_num > 0:
