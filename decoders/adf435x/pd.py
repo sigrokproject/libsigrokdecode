@@ -113,7 +113,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.bits = []
-        self.packet_start = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -129,28 +128,22 @@ class Decoder(srd.Decoder):
         return val
 
     def decode(self, ss, es, data):
-
         ptype, _, _ = data
 
-        if ptype == 'CS-CHANGE':
-            _, cs_before, cs_after = data
-            if cs_before == 1:
-                if len(self.bits) == 32:
-                    reg_value, reg_pos = self.decode_bits(0, 3)
-                    self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
-                        ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
-                         '[%d]' % reg_value]])
-                    if reg_value < len(regs):
-                        field_descs = regs[reg_value]
-                        for field_desc in field_descs:
-                            field = self.decode_field(*field_desc)
-                else:
-                    error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
-                    self.put(self.packet_start, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
-                self.bits = []
+        if ptype == 'TRANSFER':
+            if len(self.bits) == 32:
+                reg_value, reg_pos = self.decode_bits(0, 3)
+                self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
+                    ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
+                     '[%d]' % reg_value]])
+                if reg_value < len(regs):
+                    field_descs = regs[reg_value]
+                    for field_desc in field_descs:
+                        field = self.decode_field(*field_desc)
             else:
-                # Start of a new register write packet
-                self.packet_start = ss
+                error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
+                self.put(ss, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
+            self.bits = []
 
         if ptype == 'BITS':
             _, mosi_bits, miso_bits = data
