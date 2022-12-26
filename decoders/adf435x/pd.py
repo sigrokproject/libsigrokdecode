@@ -86,6 +86,7 @@ regs = {
 }
 
 ANN_REG = 0
+ANN_WARN = 1
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -100,9 +101,11 @@ class Decoder(srd.Decoder):
     annotations = (
         # Sent from the host to the chip.
         ('write', 'Register write'),
+        ('warning', "Warnings"),
     )
     annotation_rows = (
         ('writes', 'Register writes', (ANN_REG,)),
+        ('warnings', 'Warnings', (ANN_WARN,)),
     )
 
     def __init__(self):
@@ -110,6 +113,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.bits = []
+        self.packet_start = 0
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -140,7 +144,14 @@ class Decoder(srd.Decoder):
                         field_descs = regs[reg_value]
                         for field_desc in field_descs:
                             field = self.decode_field(*field_desc)
+                else:
+                    error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
+                    self.put(self.packet_start, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
                 self.bits = []
+            else:
+                # Start of a new register write packet
+                self.packet_start = ss
+
         if ptype == 'BITS':
             _, mosi_bits, miso_bits = data
             self.bits = mosi_bits + self.bits
