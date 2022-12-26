@@ -126,10 +126,11 @@ class Decoder(srd.Decoder):
 
     def decode(self, ss, es, data):
 
-        ptype, data1, data2 = data
+        ptype, _, _ = data
 
         if ptype == 'CS-CHANGE':
-            if data1 == 1:
+            _, cs_before, cs_after = data
+            if cs_before == 1:
                 if len(self.bits) == 32:
                     reg_value, reg_pos = self.decode_bits(0, 3)
                     self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
@@ -141,4 +142,5 @@ class Decoder(srd.Decoder):
                             field = self.decode_field(*field_desc)
                 self.bits = []
         if ptype == 'BITS':
-            self.bits = data1 + self.bits
+            _, mosi_bits, miso_bits = data
+            self.bits = mosi_bits + self.bits
