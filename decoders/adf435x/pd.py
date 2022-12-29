@@ -86,6 +86,7 @@ regs = {
 }
 
 ANN_REG = 0
+ANN_WARN = 1
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -100,9 +101,11 @@ class Decoder(srd.Decoder):
     annotations = (
         # Sent from the host to the chip.
         ('write', 'Register write'),
+        ('warning', "Warnings"),
     )
     annotation_rows = (
         ('writes', 'Register writes', (ANN_REG,)),
+        ('warnings', 'Warnings', (ANN_WARN,)),
     )
 
     def __init__(self):
@@ -125,20 +128,23 @@ class Decoder(srd.Decoder):
         return val
 
     def decode(self, ss, es, data):
+        ptype, _, _ = data
 
-        ptype, data1, data2 = data
+        if ptype == 'TRANSFER':
+            if len(self.bits) == 32:
+                reg_value, reg_pos = self.decode_bits(0, 3)
+                self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
+                    ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
+                     '[%d]' % reg_value]])
+                if reg_value < len(regs):
+                    field_descs = regs[reg_value]
+                    for field_desc in field_descs:
+                        field = self.decode_field(*field_desc)
+            else:
+                error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
+                self.put(self.packet_start, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
+            self.bits = []
 
-        if ptype == 'CS-CHANGE':
-            if data1 == 1:
-                if len(self.bits) == 32:
-                    reg_value, reg_pos = self.decode_bits(0, 3)
-                    self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
-                        ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
-                         '[%d]' % reg_value]])
-                    if reg_value < len(regs):
-                        field_descs = regs[reg_value]
-                        for field_desc in field_descs:
-                            field = self.decode_field(*field_desc)
-                self.bits = []
         if ptype == 'BITS':
-            self.bits = data1 + self.bits
+            _, mosi_bits, miso_bits = data
+            self.bits = mosi_bits + self.bits
