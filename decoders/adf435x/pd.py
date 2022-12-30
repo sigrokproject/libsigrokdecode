@@ -18,6 +18,7 @@
 ##
 
 import sigrokdecode as srd
+from common.srdhelper import bitpack_lsb
 
 def disabled_enabled(v):
     return ['Disabled', 'Enabled'][v]
@@ -118,8 +119,10 @@ class Decoder(srd.Decoder):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
     def decode_bits(self, offset, width):
-        return (sum([(1 << i) if self.bits[offset + i][0] else 0 for i in range(width)]),
-            (self.bits[offset + width - 1][1], self.bits[offset][2]))
+        bits = self.bits[offset:][:width]
+        ss, es = bits[-1][1], bits[0][2]
+        value = bitpack_lsb(bits, 0)
+        return ( value, ( ss, es, ))
 
     def decode_field(self, name, offset, width, parser):
         val, pos = self.decode_bits(offset, width)
