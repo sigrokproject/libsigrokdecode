@@ -135,6 +135,7 @@ class Decoder(srd.Decoder):
 
         if ptype == 'TRANSFER':
             if len(self.bits) == 32:
+                self.bits.reverse()
                 reg_value, reg_pos = self.decode_bits(0, 3)
                 self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
                     ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
@@ -146,8 +147,14 @@ class Decoder(srd.Decoder):
             else:
                 error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
                 self.put(ss, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
-            self.bits = []
+            self.bits.clear()
 
         if ptype == 'BITS':
             _, mosi_bits, miso_bits = data
-            self.bits = mosi_bits + self.bits
+            # Cope with the lower layer SPI decoder's output convention:
+            # Regardless of wire transfer's frame format, .decode() input
+            # provides BITS in the LE order. Accumulate in MSB order here,
+            # and reverse before data processing when 'TRANSFER' is seen.
+            mosi_bits = mosi_bits.copy()
+            mosi_bits.reverse()
+            self.bits.extend(mosi_bits)
