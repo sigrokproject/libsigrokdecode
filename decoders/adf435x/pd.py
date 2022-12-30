@@ -122,50 +122,60 @@ class Decoder(srd.Decoder):
         self.put(ss, es, self.out_ann, [ cls, data, ])
 
     def decode_bits(self, offset, width):
+        '''Extract a bit field. Expects LSB input data.'''
         bits = self.bits[offset:][:width]
         ss, es = bits[-1][1], bits[0][2]
         value = bitpack_lsb(bits, 0)
         return ( value, ( ss, es, ))
 
     def decode_field(self, name, offset, width, parser):
+        '''Interpret a bit field. Emits an annotation.'''
         val, ( ss, es, ) = self.decode_bits(offset, width)
         val = parser(val) if parser else str(val)
         text = ['%s: %s' % (name, val)]
         self.putg(ss, es, ANN_REG, text)
-        return val
+
+    def decode_word(self, ss, es, bits):
+        '''Interpret a 32bit word after accumulation completes.'''
+        # SPI transfer content must be exactly one 32bit word.
+        if len(self.bits) != 32:
+            text = [
+                'Frame error: Bit count: want 32, got %d' % len(self.bits),
+                'Frame error: Bit count',
+                'Frame error',
+            ]
+            self.putg(ss, es, ANN_WARN, text)
+            return
+        # Holding bits in LSB order during interpretation simplifies
+        # bit field extraction. And annotation emitting routines expect
+        # this reverse order of bits' timestamps.
+        self.bits.reverse()
+        # Determine which register was accessed.
+        reg_addr, ( reg_ss, reg_es, ) = self.decode_bits(0, 3)
+        text = [
+            'Register: %d' % reg_addr,
+            'Reg: %d' % reg_addr,
+            '[%d]' % reg_addr,
+        ]
+        self.putg(reg_ss, reg_es, ANN_REG, text)
+        # Interpret the register's content (when parsers are available).
+        field_descs = regs.get(reg_addr, None)
+        if not field_descs:
+            return
+        for field_desc in field_descs:
+            self.decode_field(*field_desc)
 
     def decode(self, ss, es, data):
         ptype, _, _ = data
 
         if ptype == 'TRANSFER':
-            if len(self.bits) == 32:
-                self.bits.reverse()
-                reg_value, ( reg_ss, reg_es, ) = self.decode_bits(0, 3)
-                text = [
-                    'Register: %d' % reg_value,
-                    'Reg: %d' % reg_value,
-                    '[%d]' % reg_value,
-                ]
-                self.putg(reg_ss, reg_es, ANN_REG, text)
-                if reg_value < len(regs):
-                    field_descs = regs[reg_value]
-                    for field_desc in field_descs:
-                        field = self.decode_field(*field_desc)
-            else:
-                text = [
-                    'Frame error: Bit count: want 32, got %d' % len(self.bits),
-                    'Frame error: Bit count',
-                    'Frame error',
-                ]
-                self.putg(ss, es, ANN_WARN, text)
+            # Process accumulated bits after completion of a transfer.
+            self.decode_word(ss, es, self.bits)
             self.bits.clear()
 
         if ptype == 'BITS':
             _, mosi_bits, miso_bits = data
-            # Cope with the lower layer SPI decoder's output convention:
-            # Regardless of wire transfer's frame format, .decode() input
-            # provides BITS in the LE order. Accumulate in MSB order here,
-            # and reverse before data processing when 'TRANSFER' is seen.
-            mosi_bits = mosi_bits.copy()
-            mosi_bits.reverse()
-            self.bits.extend(mosi_bits)
+            # Accumulate bits in MSB order as they are seen in SPI frames.
+            msb_bits = mosi_bits.copy()
+            msb_bits.reverse()
+            self.bits.extend(msb_bits)
