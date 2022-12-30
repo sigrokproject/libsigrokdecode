@@ -26,6 +26,11 @@ def disabled_enabled(v):
 def output_power(v):
     return '{:+d}dBm'.format([-4, -1, 2, 5][v])
 
+# Notes on the implementation:
+# - Bit fields' width in registers determines the range of indices in
+#   table/tuple lookups. Keep the implementation as robust as possible
+#   during future maintenance. Avoid Python runtime errors when adjusting
+#   the decoder.
 regs = {
 # reg:   name                        offset width parser
     0: [
@@ -45,23 +50,33 @@ regs = {
         ('PD Polarity',                   6,  1, lambda v: ['Negative', 'Positive'][v]),
         ('LDP',                           7,  1, lambda v: ['10ns', '6ns'][v]),
         ('LDF',                           8,  1, lambda v: ['FRAC-N', 'INT-N'][v]),
-        ('Charge Pump Current Setting',   9,  4, lambda v: '{:0.2f}mA @ 5.1kΩ'.format(
-            [0.31, 0.63, 0.94, 1.25, 1.56, 1.88, 2.19, 2.50,
-            2.81, 3.13, 3.44, 3.75, 4.06, 4.38, 4.69, 5.00][v])),
+        ('Charge Pump Current Setting',   9,  4, lambda v: '{curr:0.2f}mA @ 5.1kΩ'.format(
+            curr = (
+                0.31, 0.63, 0.94, 1.25, 1.56, 1.88, 2.19, 2.50,
+                2.81, 3.13, 3.44, 3.75, 4.06, 4.38, 4.69, 5.00,
+            )[v])),
         ('Double Buffer',                13,  1, disabled_enabled),
         ('R Counter',                    14, 10, None),
         ('RDIV2',                        24,  1, disabled_enabled),
         ('Reference Doubler',            25,  1, disabled_enabled),
-        ('MUXOUT',                       26,  3, lambda v:
-            ['Three-State Output', 'DVdd', 'DGND', 'R Counter Output', 'N Divider Output',
-            'Analog Lock Detect', 'Digital Lock Detect', 'Reserved'][v]),
-        ('Low Noise and Low Spur Modes', 29,  2, lambda v:
-            ['Low Noise Mode', 'Reserved', 'Reserved', 'Low Spur Mode'][v])
+        ('MUXOUT',                       26,  3, lambda v: '{text}'.format(
+            text = (
+                'Three-State Output', 'DVdd', 'DGND',
+                'R Counter Output', 'N Divider Output',
+                'Analog Lock Detect', 'Digital Lock Detect',
+                'Reserved'
+            )[v])),
+        ('Low Noise and Low Spur Modes', 29,  2, lambda v: '{text}'.format(
+            text = (
+                'Low Noise Mode', 'Reserved', 'Reserved', 'Low Spur Mode'
+            )[v])),
     ],
     3: [
         ('Clock Divider',                 3, 12, None),
-        ('Clock Divider Mode',           15,  2, lambda v:
-            ['Clock Divider Off', 'Fast Lock Enable', 'Resync Enable', 'Reserved'][v]),
+        ('Clock Divider Mode',           15,  2, lambda v: '{text}'.format(
+            text = (
+                'Clock Divider Off', 'Fast Lock Enable', 'Resync Enable', 'Reserved'
+            )[v])),
         ('CSR Enable',                   18,  1, disabled_enabled),
         ('Charge Cancellation',          21,  1, disabled_enabled),
         ('ABP',                          22,  1, lambda v: ['6ns (FRAC-N)', '3ns (INT-N)'][v]),
@@ -81,8 +96,10 @@ regs = {
         ('Feedback Select',              23,  1, lambda v: ['Divided', 'Fundamental'][v]),
     ],
     5: [
-        ('LD Pin Mode',                  22,  2, lambda v:
-            ['Low', 'Digital Lock Detect', 'Low', 'High'][v])
+        ('LD Pin Mode',                  22,  2, lambda v: '{text}'.format(
+            text = (
+                'Low', 'Digital Lock Detect', 'Low', 'High',
+            )[v])),
     ]
 }
 
