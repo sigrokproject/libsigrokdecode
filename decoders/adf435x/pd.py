@@ -118,6 +118,9 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
 
+    def putg(self, ss, es, cls, data):
+        self.put(ss, es, self.out_ann, [ cls, data, ])
+
     def decode_bits(self, offset, width):
         bits = self.bits[offset:][:width]
         ss, es = bits[-1][1], bits[0][2]
@@ -125,9 +128,10 @@ class Decoder(srd.Decoder):
         return ( value, ( ss, es, ))
 
     def decode_field(self, name, offset, width, parser):
-        val, pos = self.decode_bits(offset, width)
-        self.put(pos[0], pos[1], self.out_ann, [ANN_REG,
-            ['%s: %s' % (name, parser(val) if parser else str(val))]])
+        val, ( ss, es, ) = self.decode_bits(offset, width)
+        val = parser(val) if parser else str(val)
+        text = ['%s: %s' % (name, val)]
+        self.putg(ss, es, ANN_REG, text)
         return val
 
     def decode(self, ss, es, data):
@@ -136,17 +140,24 @@ class Decoder(srd.Decoder):
         if ptype == 'TRANSFER':
             if len(self.bits) == 32:
                 self.bits.reverse()
-                reg_value, reg_pos = self.decode_bits(0, 3)
-                self.put(reg_pos[0], reg_pos[1], self.out_ann, [ANN_REG,
-                    ['Register: %d' % reg_value, 'Reg: %d' % reg_value,
-                     '[%d]' % reg_value]])
+                reg_value, ( reg_ss, reg_es, ) = self.decode_bits(0, 3)
+                text = [
+                    'Register: %d' % reg_value,
+                    'Reg: %d' % reg_value,
+                    '[%d]' % reg_value,
+                ]
+                self.putg(reg_ss, reg_es, ANN_REG, text)
                 if reg_value < len(regs):
                     field_descs = regs[reg_value]
                     for field_desc in field_descs:
                         field = self.decode_field(*field_desc)
             else:
-                error = "Frame error: Wrong number of bits: got %d expected 32" % len(self.bits)
-                self.put(ss, es, self.out_ann, [ANN_WARN, [error, 'Frame error']])
+                text = [
+                    'Frame error: Bit count: want 32, got %d' % len(self.bits),
+                    'Frame error: Bit count',
+                    'Frame error',
+                ]
+                self.putg(ss, es, ANN_WARN, text)
             self.bits.clear()
 
         if ptype == 'BITS':
