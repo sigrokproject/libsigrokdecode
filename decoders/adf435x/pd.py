@@ -27,80 +27,92 @@ def output_power(v):
     return '{:+d}dBm'.format([-4, -1, 2, 5][v])
 
 # Notes on the implementation:
+# - A register's description is an iterable of tuples which contain:
+#   The starting bit position, the bit count, the name of a field, and
+#   an optional parser which interprets the field's content. Parser are
+#   expected to yield a single text string when they exist. Other types
+#   of output are passed to Python's .format() routine as is.
+# - TODO Add support for the creation of formatted values, as well as
+#   optional warnings from register field parsers? The current approach
+#   lets invalid register content go unnoticed.
 # - Bit fields' width in registers determines the range of indices in
 #   table/tuple lookups. Keep the implementation as robust as possible
 #   during future maintenance. Avoid Python runtime errors when adjusting
 #   the decoder.
 regs = {
-# reg:   name                        offset width parser
-    0: [
-        ('FRAC',                          3, 12, None),
-        ('INT',                          15, 16, lambda v: 'Not Allowed' if v < 32 else v)
-    ],
-    1: [
-        ('MOD',                           3, 12, None),
-        ('Phase',                        15, 12, None),
-        ('Prescalar',                    27,  1, lambda v: ['4/5', '8/9'][v]),
-        ('Phase Adjust',                 28,  1, lambda v: ['Off', 'On'][v]),
-    ],
-    2: [
-        ('Counter Reset',                 3,  1, disabled_enabled),
-        ('Charge Pump Three-State',       4,  1, disabled_enabled),
-        ('Power-Down',                    5,  1, disabled_enabled),
-        ('PD Polarity',                   6,  1, lambda v: ['Negative', 'Positive'][v]),
-        ('LDP',                           7,  1, lambda v: ['10ns', '6ns'][v]),
-        ('LDF',                           8,  1, lambda v: ['FRAC-N', 'INT-N'][v]),
-        ('Charge Pump Current Setting',   9,  4, lambda v: '{curr:0.2f}mA @ 5.1kΩ'.format(
-            curr = (
+    # Register description fields:
+    # offset, width, name, parser.
+    0: (
+        ( 3, 12, 'FRAC'),
+        # Lower limit is 23 not 32?
+        (15, 16, 'INT', lambda v: 'Not Allowed' if v < 32 else v),
+    ),
+    1: (
+        ( 3, 12, 'MOD'),
+        (15, 12, 'Phase'),
+        (27,  1, 'Prescalar', lambda v: ('4/5', '8/9',)[v]),
+        (28,  1, 'Phase Adjust', lambda v: ('Off', 'On',)[v]),
+    ),
+    2: (
+        ( 3,  1, 'Counter Reset', disabled_enabled),
+        ( 4,  1, 'Charge Pump Three-State', disabled_enabled),
+        ( 5,  1, 'Power-Down', disabled_enabled),
+        ( 6,  1, 'PD Polarity', lambda v: ('Negative', 'Positive',)[v]),
+        ( 7,  1, 'LDP', lambda v: ('10ns', '6ns',)[v]),
+        ( 8,  1, 'LDF', lambda v: ('FRAC-N', 'INT-N',)[v]),
+        ( 9,  4, 'Charge Pump Current Setting',
+            lambda v: '{curr:0.2f}mA @ 5.1kΩ'.format(curr = (
                 0.31, 0.63, 0.94, 1.25, 1.56, 1.88, 2.19, 2.50,
                 2.81, 3.13, 3.44, 3.75, 4.06, 4.38, 4.69, 5.00,
             )[v])),
-        ('Double Buffer',                13,  1, disabled_enabled),
-        ('R Counter',                    14, 10, None),
-        ('RDIV2',                        24,  1, disabled_enabled),
-        ('Reference Doubler',            25,  1, disabled_enabled),
-        ('MUXOUT',                       26,  3, lambda v: '{text}'.format(
-            text = (
+        (13,  1, 'Double Buffer', disabled_enabled),
+        (14, 10, 'R Counter'),
+        (24,  1, 'RDIV2', disabled_enabled),
+        (25,  1, 'Reference Doubler', disabled_enabled),
+        (26,  3, 'MUXOUT',
+            lambda v: '{text}'.format(text = (
                 'Three-State Output', 'DVdd', 'DGND',
                 'R Counter Output', 'N Divider Output',
                 'Analog Lock Detect', 'Digital Lock Detect',
-                'Reserved'
+                'Reserved',
             )[v])),
-        ('Low Noise and Low Spur Modes', 29,  2, lambda v: '{text}'.format(
-            text = (
-                'Low Noise Mode', 'Reserved', 'Reserved', 'Low Spur Mode'
+        (29,  2, 'Low Noise and Low Spur Modes',
+            lambda v: '{text}'.format(text = (
+                'Low Noise Mode', 'Reserved', 'Reserved', 'Low Spur Mode',
             )[v])),
-    ],
-    3: [
-        ('Clock Divider',                 3, 12, None),
-        ('Clock Divider Mode',           15,  2, lambda v: '{text}'.format(
-            text = (
-                'Clock Divider Off', 'Fast Lock Enable', 'Resync Enable', 'Reserved'
+    ),
+    3: (
+        ( 3, 12, 'Clock Divider'),
+        (15,  2, 'Clock Divider Mode',
+            lambda v: '{text}'.format(text = (
+                'Clock Divider Off', 'Fast Lock Enable',
+                'Resync Enable', 'Reserved',
             )[v])),
-        ('CSR Enable',                   18,  1, disabled_enabled),
-        ('Charge Cancellation',          21,  1, disabled_enabled),
-        ('ABP',                          22,  1, lambda v: ['6ns (FRAC-N)', '3ns (INT-N)'][v]),
-        ('Band Select Clock Mode',       23,  1, lambda v: ['Low', 'High'][v])
-    ],
-    4: [
-        ('Output Power',                  3,  2, output_power),
-        ('Output Enable',                 5,  1, disabled_enabled),
-        ('AUX Output Power',              6,  2, output_power),
-        ('AUX Output Select',             8,  1, lambda v: ['Divided Output', 'Fundamental'][v]),
-        ('AUX Output Enable',             9,  1, disabled_enabled),
-        ('MTLD',                         10,  1, disabled_enabled),
-        ('VCO Power-Down',               11,  1, lambda v:
-            'VCO Powered {updown}'.format(updown = 'Down' if v else 'Up')),
-        ('Band Select Clock Divider',    12,  8, None),
-        ('RF Divider Select',            20,  3, lambda v: '÷{:d}'.format(2 ** v)),
-        ('Feedback Select',              23,  1, lambda v: ['Divided', 'Fundamental'][v]),
-    ],
-    5: [
-        ('LD Pin Mode',                  22,  2, lambda v: '{text}'.format(
-            text = (
+        (18,  1, 'CSR Enable', disabled_enabled),
+        (21,  1, 'Charge Cancellation', disabled_enabled),
+        (22,  1, 'ABP', lambda v: ('6ns (FRAC-N)', '3ns (INT-N)',)[v]),
+        (23,  1, 'Band Select Clock Mode', lambda v: ('Low', 'High',)[v]),
+    ),
+    4: (
+        ( 3,  2, 'Output Power', output_power),
+        ( 5,  1, 'Output Enable', disabled_enabled),
+        ( 6,  2, 'AUX Output Power', output_power),
+        ( 8,  1, 'AUX Output Select',
+            lambda v: ('Divided Output', 'Fundamental',)[v]),
+        ( 9,  1, 'AUX Output Enable', disabled_enabled),
+        (10,  1, 'MTLD', disabled_enabled),
+        (11,  1, 'VCO Power-Down',
+            lambda v: 'VCO Powered {ud}'.format(ud = 'Down' if v else 'Up')),
+        (12,  8, 'Band Select Clock Divider'),
+        (20,  3, 'RF Divider Select', lambda v: '÷{:d}'.format(2 ** v)),
+        (23,  1, 'Feedback Select', lambda v: ('Divided', 'Fundamental',)[v]),
+    ),
+    5: (
+        (22,  2, 'LD Pin Mode',
+            lambda v: '{text}'.format(text = (
                 'Low', 'Digital Lock Detect', 'Low', 'High',
             )[v])),
-    ]
+    ),
 }
 
 ANN_REG = 0
@@ -145,12 +157,18 @@ class Decoder(srd.Decoder):
         value = bitpack_lsb(bits, 0)
         return ( value, ( ss, es, ))
 
-    def decode_field(self, name, offset, width, parser):
+    def decode_field(self, name, offset, width, parser = None):
         '''Interpret a bit field. Emits an annotation.'''
+        # Get the register field's content and position.
         val, ( ss, es, ) = self.decode_bits(offset, width)
-        val = parser(val) if parser else '{}'.format(val)
-        text = ['{name}: {val}'.format(name = name, val = val)]
-        self.putg(ss, es, ANN_REG, text)
+        # Have the field's content formatted, emit an annotation.
+        formatted = parser(val) if parser else '{}'.format(val)
+        if formatted is not None:
+            text = ['{name}: {val}'.format(name = name, val = formatted)]
+        else:
+            text = ['{name}'.format(name = name)]
+        if text:
+            self.putg(ss, es, ANN_REG, text)
 
     def decode_word(self, ss, es, bits):
         '''Interpret a 32bit word after accumulation completes.'''
@@ -181,7 +199,15 @@ class Decoder(srd.Decoder):
         if not field_descs:
             return
         for field_desc in field_descs:
-            self.decode_field(*field_desc)
+            parser = None
+            if len(field_desc) == 3:
+                start, count, name, = field_desc
+            elif len(field_desc) == 4:
+                start, count, name, parser = field_desc
+            else:
+                # Unsupported regs{} syntax, programmer's error.
+                return
+            self.decode_field(name, start, count, parser)
 
     def decode(self, ss, es, data):
         ptype, _, _ = data
