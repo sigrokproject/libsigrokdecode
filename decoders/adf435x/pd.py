@@ -32,9 +32,6 @@ def output_power(v):
 #   an optional parser which interprets the field's content. Parser are
 #   expected to yield a single text string when they exist. Other types
 #   of output are passed to Python's .format() routine as is.
-# - TODO Add support for the creation of formatted values, as well as
-#   optional warnings from register field parsers? The current approach
-#   lets invalid register content go unnoticed.
 # - Bit fields' width in registers determines the range of indices in
 #   table/tuple lookups. Keep the implementation as robust as possible
 #   during future maintenance. Avoid Python runtime errors when adjusting
@@ -44,8 +41,9 @@ regs = {
     # offset, width, name, parser.
     0: (
         ( 3, 12, 'FRAC'),
-        # Lower limit is 23 not 32?
-        (15, 16, 'INT', lambda v: 'Not Allowed' if v < 32 else v),
+        (15, 16, 'INT',
+            None, lambda v: 'Not Allowed' if v < 23 else None,
+        ),
     ),
     1: (
         ( 3, 12, 'MOD'),
@@ -115,8 +113,7 @@ regs = {
     ),
 }
 
-ANN_REG = 0
-ANN_WARN = 1
+( ANN_REG, ANN_WARN, ) = range(2)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -157,7 +154,7 @@ class Decoder(srd.Decoder):
         value = bitpack_lsb(bits, 0)
         return ( value, ( ss, es, ))
 
-    def decode_field(self, name, offset, width, parser = None):
+    def decode_field(self, name, offset, width, parser = None, checker = None):
         '''Interpret a bit field. Emits an annotation.'''
         # Get the register field's content and position.
         val, ( ss, es, ) = self.decode_bits(offset, width)
@@ -169,6 +166,11 @@ class Decoder(srd.Decoder):
             text = ['{name}'.format(name = name)]
         if text:
             self.putg(ss, es, ANN_REG, text)
+        # Have the field's content checked, emit an optional warning.
+        warn = checker(val) if checker else None
+        if warn:
+            text = ['{}'.format(warn)]
+            self.putg(ss, es, ANN_WARN, text)
 
     def decode_word(self, ss, es, bits):
         '''Interpret a 32bit word after accumulation completes.'''
@@ -200,14 +202,17 @@ class Decoder(srd.Decoder):
             return
         for field_desc in field_descs:
             parser = None
+            checker = None
             if len(field_desc) == 3:
                 start, count, name, = field_desc
             elif len(field_desc) == 4:
                 start, count, name, parser = field_desc
+            elif len(field_desc) == 5:
+                start, count, name, parser, checker = field_desc
             else:
                 # Unsupported regs{} syntax, programmer's error.
                 return
-            self.decode_field(name, start, count, parser)
+            self.decode_field(name, start, count, parser, checker)
 
     def decode(self, ss, es, data):
         ptype, _, _ = data
