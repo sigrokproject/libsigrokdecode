@@ -24,7 +24,7 @@ def disabled_enabled(v):
     return ['Disabled', 'Enabled'][v]
 
 def output_power(v):
-    return '%+ddBm' % [-4, -1, 2, 5][v]
+    return '{:+d}dBm'.format([-4, -1, 2, 5][v])
 
 regs = {
 # reg:   name                        offset width parser
@@ -45,9 +45,9 @@ regs = {
         ('PD Polarity',                   6,  1, lambda v: ['Negative', 'Positive'][v]),
         ('LDP',                           7,  1, lambda v: ['10ns', '6ns'][v]),
         ('LDF',                           8,  1, lambda v: ['FRAC-N', 'INT-N'][v]),
-        ('Charge Pump Current Setting',   9,  4, lambda v: '%0.2fmA @ 5.1kΩ' %
+        ('Charge Pump Current Setting',   9,  4, lambda v: '{:0.2f}mA @ 5.1kΩ'.format(
             [0.31, 0.63, 0.94, 1.25, 1.56, 1.88, 2.19, 2.50,
-            2.81, 3.13, 3.44, 3.75, 4.06, 4.38, 4.69, 5.00][v]),
+            2.81, 3.13, 3.44, 3.75, 4.06, 4.38, 4.69, 5.00][v])),
         ('Double Buffer',                13,  1, disabled_enabled),
         ('R Counter',                    14, 10, None),
         ('RDIV2',                        24,  1, disabled_enabled),
@@ -75,9 +75,9 @@ regs = {
         ('AUX Output Enable',             9,  1, disabled_enabled),
         ('MTLD',                         10,  1, disabled_enabled),
         ('VCO Power-Down',               11,  1, lambda v:
-            'VCO Powered ' + ('Down' if v == 1 else 'Up')),
+            'VCO Powered {updown}'.format(updown = 'Down' if v else 'Up')),
         ('Band Select Clock Divider',    12,  8, None),
-        ('RF Divider Select',            20,  3, lambda v: '÷' + str(2**v)),
+        ('RF Divider Select',            20,  3, lambda v: '÷{:d}'.format(2 ** v)),
         ('Feedback Select',              23,  1, lambda v: ['Divided', 'Fundamental'][v]),
     ],
     5: [
@@ -131,16 +131,17 @@ class Decoder(srd.Decoder):
     def decode_field(self, name, offset, width, parser):
         '''Interpret a bit field. Emits an annotation.'''
         val, ( ss, es, ) = self.decode_bits(offset, width)
-        val = parser(val) if parser else str(val)
-        text = ['%s: %s' % (name, val)]
+        val = parser(val) if parser else '{}'.format(val)
+        text = ['{name}: {val}'.format(name = name, val = val)]
         self.putg(ss, es, ANN_REG, text)
 
     def decode_word(self, ss, es, bits):
         '''Interpret a 32bit word after accumulation completes.'''
         # SPI transfer content must be exactly one 32bit word.
-        if len(self.bits) != 32:
+        count = len(self.bits)
+        if count != 32:
             text = [
-                'Frame error: Bit count: want 32, got %d' % len(self.bits),
+                'Frame error: Bit count: want 32, got {}'.format(count),
                 'Frame error: Bit count',
                 'Frame error',
             ]
@@ -153,9 +154,9 @@ class Decoder(srd.Decoder):
         # Determine which register was accessed.
         reg_addr, ( reg_ss, reg_es, ) = self.decode_bits(0, 3)
         text = [
-            'Register: %d' % reg_addr,
-            'Reg: %d' % reg_addr,
-            '[%d]' % reg_addr,
+            'Register: {addr}'.format(addr = reg_addr),
+            'Reg: {addr}'.format(addr = reg_addr),
+            '[{addr}]'.format(addr = reg_addr),
         ]
         self.putg(reg_ss, reg_es, ANN_REG, text)
         # Interpret the register's content (when parsers are available).
