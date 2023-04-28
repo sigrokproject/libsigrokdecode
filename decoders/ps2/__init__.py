@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2016 Daniel Schulte <trilader@schroedingers-bit.net>
+## Copyright (C) 2023 Marshal Horn <kamocat@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,9 +19,11 @@
 ##
 
 '''
-This protocol decoder can decode PS/2 device -> host communication.
+This protocol decoder can decode PS/2 device -> host communication \
+and host -> device communication.
 
-Host -> device communication is currently not supported.
+To interpret the data, please stack the appropriate keyboard or mouse \
+decoder
 '''
 
 from .pd import Decoder
