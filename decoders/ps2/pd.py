@@ -21,7 +21,7 @@
 import sigrokdecode as srd
 
 class Ann:
-    BIT, START, WORD, PARITY_OK, PARITY_ERR, STOP, ACK, NACK = range(8)
+    BIT, START, WORD, PARITY_OK, PARITY_ERR, STOP, ACK, NACK, HREQ, HSTART, HWORD, HPARITY_OK, HPARITY_ERR, HSTOP = range(14)
 
 class Bit:
     def __init__(self, val, ss, es):
@@ -60,6 +60,7 @@ class Decoder(srd.Decoder):
         ('stop-bit', 'Stop bit'),
         ('ack', 'Acknowledge'),
         ('nack', 'Not Acknowledge'),
+        ('req', 'Host request to send'),
         ('start-bit', 'Start bit'),
         ('word', 'Word'),
         ('parity-ok', 'Parity OK bit'),
@@ -69,7 +70,7 @@ class Decoder(srd.Decoder):
     annotation_rows = (
         ('bits', 'Bits', (0,)),
         ('fields', 'Device', (1,2,3,4,5,6,7,)),
-        ('host', 'Host', (8,9,10,11,12)),
+        ('host', 'Host', (8,9,10,11,12,13)),
     )
 
     def __init__(self):
@@ -87,40 +88,43 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def get_bits(self, n, edge:'r', timeout=100e-6):
+    def get_bits(self, n, edge:'r', timeout=110e-6):
         max_period = int(timeout * self.samplerate) + 1
-        for i in range(n):
+        _, dat = self.wait([{0:edge},{1:'l'}]) #No timeout for start bit
+        if not self.matched[1]:
+            return #No start bit
+        elif not self.matched[0]:
+            _, dat = self.wait({0:edge}) #Wait for clock edge
+        self.bits.append(Bit(dat, self.samplenum, self.samplenum+max_period))
+        for i in range(1,n):
             _, dat = self.wait([{0:edge},{'skip':max_period}])
             if not self.matched[0]:
                 break #Timed out
             self.bits.append(Bit(dat, self.samplenum, self.samplenum+max_period))
-            if i>0: #Fix the ending period
-                self.bits[i-1].es = self.samplenum
+            #Fix the ending period
+            self.bits[i-1].es = self.samplenum
         if len(self.bits) == n:
             self.wait([{0:'r'},{'skip':max_period}])
             self.bits[-1].es = self.samplenum
         self.bitcount = len(self.bits)
 
-    def putx(self, bit, ann, host=False):
-        if host:
-            ann[0] += 7 #host annotation offset
+    def putx(self, bit, ann):
         self.put(self.bits[bit].ss, self.bits[bit].es, self.out_ann, ann)
 
     def handle_bits(self, host=False):
-        # Annotate individual bits
-        for b in self.bits:
-            self.put(b.ss, b.es, self.out_ann, [Ann.BIT, [str(b.val)]])
-
         packet = None
-        # Annotate start bit
         if self.bitcount > 8:
-            self.putx(0, [Ann.START, ['Start bit', 'Start', 'S']], host)
+            # Annotate individual bits
+            for b in self.bits:
+                self.put(b.ss, b.es, self.out_ann, [Ann.BIT, [str(b.val)]])
+            # Annotate start bit
+            self.putx(0, [Ann.HSTART if host else Ann.START, ['Start bit', 'Start', 'S']])
             # Annotate the data word
             word = 0 
             for i in range(8):
                 word |= (self.bits[i + 1].val << i)
             self.put(self.bits[1].ss, self.bits[8].es, self.out_ann, 
-                [Ann.WORD+7 if host else Ann.WORD, 
+                [Ann.HWORD if host else Ann.WORD, 
                 ['Data: %02x' % word, 'D: %02x' % word, '%02x' % word]])
             packet = Ps2Packet(val = word, host = host)
 
@@ -130,14 +134,14 @@ class Decoder(srd.Decoder):
             for bit in self.bits[1:10]:
                 parity_ok ^= bit.val
             if bool(parity_ok):
-                self.putx(9, [Ann.PARITY_OK, ['Parity OK', 'Par OK', 'P']], host)
+                self.putx(9, [Ann.HPARITY_OK if host else Ann.PARITY_OK, ['Parity OK', 'Par OK', 'P']])
                 packet.pok = True #Defaults to false in case packet was interrupted
             else:
-                self.putx(9, [Ann.PARITY_ERR, ['Parity error', 'Par err', 'PE']], host)
+                self.putx(9, [Ann.HPARITY_ERR if host else Ann.PARITY_ERR, ['Parity error', 'Par err', 'PE']])
 
         # Annotate stop bit
         if self.bitcount > 10:
-            self.putx(10, [Ann.STOP+7 if host  else Ann.STOP, ['Stop bit', 'Stop', 'St', 'T']])
+            self.putx(10, [Ann.HSTOP if host  else Ann.STOP, ['Stop bit', 'Stop', 'St', 'T']])
         # Annotate ACK
         if host and self.bitcount > 11:
             if self.bits[11].val == 0:
@@ -154,13 +158,22 @@ class Decoder(srd.Decoder):
     def decode(self):
         if not self.samplerate:
             raise SamplerateError("Cannot decode without samplerate")
+        max_period = int(100e-6 * self.samplerate)
         while True:
             # Falling edge of data indicates start condition
-            clk, dat = self.wait({1: 'l'})
-            host = not bool(clk)
+            # Clock held for 100us indicates host "request to send"
+            self.wait([{1: 'f'},{0:'l'}])
+            ss = self.samplenum
+            host = self.matched[1]
             if host:
+                # Make sure the clock is held low for at least 100 microseconds
+                self.wait([{0:'h'},{'skip': max_period}])
+                if self.matched[0]:
+                    continue #Probably the trailing edge of a transfer
                 # Host emits bits on rising clk edge
                 self.get_bits(12, 'r')
+                if self.bitcount > 0:
+                    self.put(ss,self.bits[0].ss,self.out_ann, [Ann.HREQ,['Host RTS', 'HRTS', 'H']])
             else:
                 # Client emits data on falling edge
                 self.get_bits(11, 'f')
