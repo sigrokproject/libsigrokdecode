@@ -28,12 +28,12 @@ class Ps2Packet:
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'mouse'
+    id = 'ps2_mouse'
     name = 'PS/2 Mouse'
     longname = 'PS/2 Mouse'
     desc = 'PS/2 mouse interface.'
     license = 'gplv2+'
-    inputs = ['ps2_packet']
+    inputs = ['ps2']
     outputs = []
     tags = ['PC']
     binary = (

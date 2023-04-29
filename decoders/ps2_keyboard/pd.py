@@ -32,12 +32,12 @@ class Ann:
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'keyboard'
+    id = 'ps2_keyboard'
     name = 'PS/2 Keyboard'
     longname = 'PS/2 Keyboard'
     desc = 'PS/2 keyboard interface.'
     license = 'gplv2+'
-    inputs = ['ps2_packet']
+    inputs = ['ps2']
     outputs = []
     tags = ['PC']
     binary = (
