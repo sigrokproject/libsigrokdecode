@@ -93,9 +93,9 @@ class Decoder(srd.Decoder):
         _, dat = self.wait([{0:edge},{1:'l'}]) #No timeout for start bit
         if not self.matched[1]:
             return #No start bit
-        elif not self.matched[0]:
-            _, dat = self.wait({0:edge}) #Wait for clock edge
         self.bits.append(Bit(dat, self.samplenum, self.samplenum+max_period))
+        if not self.matched[0]:
+            self.wait({0:'f'}) #Wait for clock edge from device
         for i in range(1,n):
             _, dat = self.wait([{0:edge},{'skip':max_period}])
             if not self.matched[0]:
@@ -166,10 +166,13 @@ class Decoder(srd.Decoder):
             ss = self.samplenum
             host = self.matched[1]
             if host:
-                # Make sure the clock is held low for at least 100 microseconds
-                self.wait([{0:'h'},{'skip': max_period}])
+                # Make sure the clock is held low for at least 100 microseconds before data is pulled down
+                self.wait([{0:'h'},{'skip': max_period},{1:'l'}])
                 if self.matched[0]:
                     continue #Probably the trailing edge of a transfer
+                elif self.matched[2]: #Probably a bus error
+                    self.wait({1:'h'}) #Wait for data to be released
+                    continue
                 # Host emits bits on rising clk edge
                 self.get_bits(12, 'r')
                 if self.bitcount > 0:
