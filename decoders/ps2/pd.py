@@ -75,6 +75,7 @@ class Decoder(srd.Decoder):
 
     def __init__(self):
         self.reset()
+        self.min_clk_hz = 9e3 #Minimum clock rate for PS/2 is 10kHz, but I want to be lenient
 
     def reset(self):
         self.bits = []
@@ -88,23 +89,22 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
-    def get_bits(self, n, edge:'r', timeout=110e-6):
-        max_period = int(timeout * self.samplerate) + 1
+    def get_bits(self, n, edge:'r'):
         _, dat = self.wait([{0:edge},{1:'l'}]) #No timeout for start bit
         if not self.matched[1]:
             return #No start bit
-        self.bits.append(Bit(dat, self.samplenum, self.samplenum+max_period))
+        self.bits.append(Bit(dat, self.samplenum, self.samplenum+self.max_period))
         if not self.matched[0]:
             self.wait({0:'f'}) #Wait for clock edge from device
         for i in range(1,n):
-            _, dat = self.wait([{0:edge},{'skip':max_period}])
+            _, dat = self.wait([{0:edge},{'skip':self.max_period}])
             if not self.matched[0]:
                 break #Timed out
-            self.bits.append(Bit(dat, self.samplenum, self.samplenum+max_period))
+            self.bits.append(Bit(dat, self.samplenum, self.samplenum+self.max_period))
             #Fix the ending period
             self.bits[i-1].es = self.samplenum
         if len(self.bits) == n:
-            self.wait([{0:'r'},{'skip':max_period}])
+            self.wait([{0:'r'},{'skip':self.max_period}])
             self.bits[-1].es = self.samplenum
         self.bitcount = len(self.bits)
 
@@ -156,9 +156,10 @@ class Decoder(srd.Decoder):
 
 
     def decode(self):
-        if not self.samplerate:
+        if self.samplerate:
+            self.max_period = int(self.samplerate / self.min_clk_hz)+1
+        else:
             raise SamplerateError("Cannot decode without samplerate")
-        max_period = int(100e-6 * self.samplerate)
         while True:
             # Falling edge of data indicates start condition
             # Clock held for 100us indicates host "request to send"
@@ -167,7 +168,7 @@ class Decoder(srd.Decoder):
             host = self.matched[1]
             if host:
                 # Make sure the clock is held low for at least 100 microseconds before data is pulled down
-                self.wait([{0:'h'},{'skip': max_period},{1:'l'}])
+                self.wait([{0:'h'},{'skip': self.max_period},{1:'l'}])
                 if self.matched[0]:
                     continue #Probably the trailing edge of a transfer
                 elif self.matched[2]: #Probably a bus error
