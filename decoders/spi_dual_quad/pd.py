@@ -70,6 +70,8 @@ spi_mode = {
 
 ann_spi_data, ann_spi_sio0, ann_spi_sio1, ann_spi_sio2, ann_spi_sio3, ann_spi_other, ann_spi_xfer = range(7)
 
+VAL, SS, ES = range(3)
+
 class ChannelError(Exception):
     pass
 
@@ -167,7 +169,7 @@ class Decoder(srd.Decoder):
         sio2_bits = self.sio2bits
         sio3_bits = self.sio3bits
 
-        ss, es = self.sio0bits[-1][1], self.sio0bits[0][2]
+        ss, es = self.sio0bits[-1][SS], self.sio0bits[0][ES]
         bdata = data.to_bytes(self.bw, byteorder='big')
         self.put(ss, es, self.out_binary, [0, bdata])
         if self.is_quad:
@@ -180,15 +182,15 @@ class Decoder(srd.Decoder):
 
         # Bit annotations.
         for bit in self.sio0bits:
-            self.put(bit[1], bit[2], self.out_ann, [ann_spi_sio0, ['%d' % bit[0]]])
+            self.put(bit[SS], bit[ES], self.out_ann, [ann_spi_sio0, ['%d' % bit[VAL]]])
         for bit in self.sio1bits:
-            self.put(bit[1], bit[2], self.out_ann, [ann_spi_sio1, ['%d' % bit[0]]])
+            self.put(bit[SS], bit[ES], self.out_ann, [ann_spi_sio1, ['%d' % bit[VAL]]])
 
         if self.is_quad:
             for bit in self.sio2bits:
-                self.put(bit[1], bit[2], self.out_ann, [ann_spi_sio2, ['%d' % bit[0]]])
+                self.put(bit[SS], bit[ES], self.out_ann, [ann_spi_sio2, ['%d' % bit[VAL]]])
             for bit in self.sio3bits:
-                self.put(bit[1], bit[2], self.out_ann, [ann_spi_sio3, ['%d' % bit[0]]])
+                self.put(bit[SS], bit[ES], self.out_ann, [ann_spi_sio3, ['%d' % bit[VAL]]])
 
         # Dataword annotations.
         self.put(ss, es, self.out_ann, [ann_spi_data, ['%02X' % self.spidata]])
@@ -243,8 +245,9 @@ class Decoder(srd.Decoder):
         # Guesstimate the endsample for this bit (can be overridden below).
         es = self.samplenum
         if self.bitcount > 0:
-            es += self.samplenum - self.sio0bits[0][1]
+            es += self.samplenum - self.sio0bits[0][SS]
 
+        # Data:                 [VAL,        SS,       ES]
         self.sio0bits.insert(0, [sio0, self.samplenum, es])
         self.sio1bits.insert(0, [sio1, self.samplenum, es])
         if self.is_quad:
@@ -252,11 +255,11 @@ class Decoder(srd.Decoder):
             self.sio3bits.insert(0, [sio3, self.samplenum, es])
 
         if self.bitcount > 0:
-            self.sio0bits[1][2] = self.samplenum
-            self.sio1bits[1][2] = self.samplenum
+            self.sio0bits[1][ES] = self.samplenum
+            self.sio1bits[1][ES] = self.samplenum
             if self.is_quad:
-                self.sio2bits[1][2] = self.samplenum
-                self.sio3bits[1][2] = self.samplenum
+                self.sio2bits[1][ES] = self.samplenum
+                self.sio3bits[1][ES] = self.samplenum
 
         if self.is_quad:
             self.bitcount += 4
