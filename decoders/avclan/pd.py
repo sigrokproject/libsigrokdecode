@@ -184,7 +184,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 if FunctionIDs.has_value(logic_id):
                     logic_id = FunctionIDs(logic_id)
                     self.putx('advertised-function',
-                              self.data_bytes[1].ss, self.data_bytes[1].ss,
+                              self.data_bytes[1].ss, self.data_bytes[1].es,
                               [f'Function: {logic_id.name}', logic_id.name]
                               )
 
@@ -216,7 +216,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         if CmdSwOpcodes.has_value(opcode):
             opcode = CmdSwOpcodes(opcode)
 
-            self.putx('cmd-opcode', self.data_bytes[0].ss, self.data_bytes[0].ss,
+            self.putx('cmd-opcode', self.data_bytes[0].ss, self.data_bytes[0].es,
                       [f'Opcode: {opcode.name}', opcode.name]
                       )
 
