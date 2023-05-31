@@ -419,6 +419,7 @@ class Decoder(srd.Decoder):
             # Control bits
             #
             (control, ss, es) = self.value(4)
+            parity_bit = self.parity_bit(control)
 
             if Commands.has_value(control):
                 control = Commands(control)
@@ -426,7 +427,6 @@ class Decoder(srd.Decoder):
             else:
                 self.putx('control', ss, es, [ f'Control: 0x{control:01x}' ])
 
-            parity_bit = self.parity_bit(control.value)
             ack_bit = self.ack_bit()
             self.put(ss, es, self.out_python, [ 'CONTROL', (control.name, parity_bit, ack_bit) ])
 
@@ -438,6 +438,7 @@ class Decoder(srd.Decoder):
             # Data length
             #
             (data_len, ss, es) = self.value(8)
+            parity_bit = self.parity_bit(data_len)
 
             if data_len == 0:  # 0x00 is 256 bytes
                 data_len = 256
@@ -449,7 +450,6 @@ class Decoder(srd.Decoder):
                           ['Message too long, mode 2 allows only for 128 bytes maximum',
                            'Message too long', 'Too long'])
 
-            parity_bit = self.parity_bit(data_len)
             ack_bit = self.ack_bit()
             self.put(ss, es, self.out_python, [ 'DATA LENGTH', (data_len, parity_bit, ack_bit) ])
 
