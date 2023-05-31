@@ -156,15 +156,26 @@ class CommCtrlOpcodes(Searchable, IntEnum):
     STATE_RESP           = 0x1c
     REPORT_REQ           = 0x20
     REPORT_RESP          = 0x30
+
+    # Used when HU is switching between Radio and CD
+    DISABLE_FUNCTION_REQ    = 0x43
+    DISABLE_FUNCTION_RESP   = 0x53
+    ENABLE_FUNCTION_REQ     = 0x42
+    ENABLE_FUNCTION_RESP    = 0x52
+
     ADVERTISE_FUNCTION   = 0x45  # xx=60,61,62,63... function
     GENERAL_QUERY        = 0x46  # any device is use
 
 
 class CDOpcodes(Searchable, IntEnum):
     '''Opcodes for the CD Player function.'''
+    # Events
+    INSERTED_CD         = 0x50
+    REMOVED_CD          = 0x51
+
+    # Reports
     REPORT_PLAYBACK     = 0xf1
     REPORT_TRACK_NAME   = 0xfd
-
 
 class CDStateCodes(Searchable, IntFlag):
     '''State codes for the CD Player function.'''
@@ -173,7 +184,7 @@ class CDStateCodes(Searchable, IntFlag):
     SEEKING             = 0x08
     PLAYBACK            = 0x10
     SEEKING_TRACK       = 0x20
-    LOAD                = 0x80
+    LOADING             = 0x80
 
 
 class CDFlags(Searchable, IntFlag):

@@ -25,21 +25,6 @@ from .lists import *  # pylint: disable=wildcard-import,unused-wildcard-import
 DataByte = namedtuple('DataByte', ['b', 'ss', 'es'])
 
 
-# Reference: https://docs.python.org/3/library/itertools.html
-def first_true(iterable, default=None, pred=None):
-    """Returns the first true value in the iterable.
-
-    If no true value is found, returns *default*
-
-    If *pred* is not None, returns the first item
-    for which pred(item) is true.
-
-    """
-    # first_true([a,b,c], x) --> a or b or c or x
-    # first_true([a,b], x, f) --> a if f(a) else b if f(b) else x
-    return next(filter(pred, iterable), default)
-
-
 class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
     '''AVC-LAN Decoder class used by libsigrokdecode.'''
 
@@ -157,6 +142,16 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         self.put(ss, es, self.out_ann, [idx, v])
 
 
+    def pkt_from_12(self):
+        '''Handle frames from function 12(COMMUNICATION)'''
+        self.pkt_comm_ctrl()
+
+
+    def pkt_to_12(self):
+        '''Handle frames to function 12(COMMUNICATION)'''
+        self.pkt_comm_ctrl()
+
+
     def pkt_to_01(self):
         '''Handle frames to function 01(COMM_CTRL).'''
         self.pkt_comm_ctrl()
@@ -208,6 +203,9 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                     self.putx('advertised-function',
                                 self.data_bytes[idx].ss, self.data_bytes[idx].es,
                                 [f'Function: {anno}', anno, 'Func'])
+            return True
+
+        return False
 
 
     def pkt_from_25(self):
@@ -219,6 +217,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
             self.putx('cmd-opcode', self.data_bytes[0].ss, self.data_bytes[0].es,
                       [f'Opcode: {opcode.name}', opcode.name]
                       )
+        return False
 
 
     def pkt_from_60(self):
@@ -290,6 +289,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 self.putx('radio-flags', self.data_bytes[8].ss, self.data_bytes[8].es,
                           [f'Flags: {str(flags2)}', 'Flags', 'F'])
 
+            return True
+
+        return False
+
 
     def bcd2dec(self, b: int):
         '''Convert a BCD encoded byte to a decimal integer.'''
@@ -310,6 +313,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         '''Handle frames from a CD player.'''
         opcode = self.data_bytes[0].b
         opcode_anno = f'{opcode:02x}'
+        ret = False
 
         if CDOpcodes.has_value(opcode):
             opcode = CDOpcodes(opcode)
@@ -320,7 +324,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 anno = f'{cd_state:02x}'
                 if CDStateCodes.has_value(cd_state):
                     cd_state = CDStateCodes(cd_state)
-                    anno = cd_state.name
+                    anno = str(cd_state)
 
                 self.putx('cd-state', self.data_bytes[2].ss, self.data_bytes[2].es,
                               [f'State: {anno}', anno, 'State'])
@@ -372,8 +376,11 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 self.putx('track-title', self.data_bytes[5].ss, self.data_bytes[-1].es,
                         [f'Title: {text}', 'Title'])
 
+            ret = True
+
         self.putx('cd-opcode', self.data_bytes[0].ss, self.data_bytes[0].es, 
                     [f'Opcode: {opcode_anno}', opcode_anno, 'Opcode'])
+        return ret
 
 
     def map_left_right(self, value: int, center: int,
@@ -428,6 +435,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 flags = AudioAmpFlags(self.data_bytes[12].b)
                 self.putx('audio-flags', self.data_bytes[12].ss, self.data_bytes[12].es,
                           [f'Flags: {str(flags)}', 'Flags'])
+
+            return True
+
+        return False
 
 
     def decode(self, ss, es, data):
@@ -541,11 +552,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 raise RuntimeError(
                     f'Unexpected broadcast bit value {self.broadcast_bit}')
 
-            if self.from_function is not None and
-                self.to_function is not None:
+            if (self.from_function is not None) and (self.to_function is not None):
                 # Dispatch to device and function ID handling
                 # This logic allows for prioritised matching
-                fn = first_true([
+                fn = filter(lambda x: x is not None, [
                     getattr(
                         self, f'pkt_from_{self.from_function:02x}_to_{self.to_function:02x}', None),
                     getattr(self, f'pkt_to_{self.to_function:02x}', None),
@@ -555,8 +565,11 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                     #    getattr(self, f'pkt_default', None)
                 ])
 
-                if fn:
-                    fn()
+                for f in fn:
+                    v = f()
+                    print(f'{f}: {v}')
+                    if v is True:
+                        break
 
             #
             # Prepare for next frame
