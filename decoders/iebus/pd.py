@@ -426,9 +426,9 @@ class Decoder(srd.Decoder):
                 control = Commands(control)
                 self.putx('control', ss, es, [ f'Control: {control.name}', f'{control.name}' ])
                 self.put(ss, es, self.out_python, [ 'CONTROL', (control.name, parity_bit, ack_bit) ])
-
-            self.putx('control', ss, es, [ f'Control: 0x{control:02x}', f'0x{control:02x}' ])
-            self.put(ss, es, self.out_python, [ 'CONTROL', (control, parity_bit, ack_bit) ])
+            else:
+                self.putx('control', ss, es, [ f'Control: 0x{control:02x}', f'0x{control:02x}' ])
+                self.put(ss, es, self.out_python, [ 'CONTROL', (control, parity_bit, ack_bit) ])
 
             if self.broadcast_bit == 1 and ack_bit == 1:
                 # NAK condition, restart search for start bit
