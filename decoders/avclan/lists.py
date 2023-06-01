@@ -181,20 +181,24 @@ class CDStateCodes(Searchable, IntFlag):
     '''State codes for the CD Player function.'''
     OPEN                = 0x01
     ERR1                = 0x02
+    BIT2                = 0x04
     SEEKING             = 0x08
     PLAYBACK            = 0x10
     SEEKING_TRACK       = 0x20
+    BIT6                = 0x40
     LOADING             = 0x80
 
 
 class CDFlags(Searchable, IntFlag):
     '''Bit flags for the CD Player function.'''
+    BIT0                = 0x01
     DISK_RANDOM         = 0x02
     RANDOM              = 0x04
     DISK_REPEAT         = 0x08
     REPEAT              = 0x10
     DISK_SCAN           = 0x20
     SCAN                = 0x40
+    BIT7                = 0x80
 
 
 class CmdSwOpcodes(Searchable, IntEnum):
@@ -222,6 +226,11 @@ class AudioAmpFlags(Searchable, IntFlag):
     BIT0            = 0x01
     BIT1            = 0x02
     MUTE            = 0x04
+    BIT3            = 0x08
+    BIT4            = 0x10
+    BIT5            = 0x20
+    BIT6            = 0x40
+    BIT7            = 0x80
 
 
 class TunerOpcodes(Searchable, IntEnum):
@@ -231,10 +240,14 @@ class TunerOpcodes(Searchable, IntEnum):
 
 class TunerFlags(Searchable, IntFlag):
     '''Bit flags for the TUNER function.'''
-    AF              = 0x40
-    REG             = 0x10
+    BIT0            = 0x01
+    BIT1            = 0x02
     TP              = 0x04
     TA              = 0x08
+    REG             = 0x10
+    BIT5            = 0x20
+    AF              = 0x40
+    BIT7            = 0x80
 
 
 class TunerState(Searchable, IntEnum):

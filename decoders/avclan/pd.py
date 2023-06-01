@@ -336,11 +336,8 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
 
             if opcode == CDOpcodes.REPORT_PLAYBACK:
                 cd_state = self.data_bytes[2].b
-                anno = f'{cd_state:02x}'
-                if CDStateCodes.has_value(cd_state):
-                    cd_state = CDStateCodes(cd_state)
-                    anno = str(cd_state)
 
+                anno = str(CDStateCodes(cd_state))
                 self.putx('cd-state', self.data_bytes[2].ss, self.data_bytes[2].es,
                               [f'State: {anno}', anno, 'State'])
 
@@ -371,11 +368,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 self.putx('playback-time', self.data_bytes[5].ss, self.data_bytes[6].es, anno)
 
                 cd_flags = self.data_bytes[7].b
-                anno = str(cd_flags)
-                if CDFlags.has_value(cd_flags):
-                    cd_flags = CDFlags(cd_flags)
-                    anno = cd_flags.name
-
+                anno = str(CDFlags(cd_flags))
                 self.putx('cd-flags', self.data_bytes[7].ss, self.data_bytes[7].es,
                           [f'Flags: {anno}', anno, 'Flags'])
 
