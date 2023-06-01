@@ -567,7 +567,8 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 raise RuntimeError(
                     f'Unexpected broadcast bit value {self.broadcast_bit}')
 
-            if (self.from_function is not None) and (self.to_function is not None):
+            if (self.from_function is not None) and (self.to_function is not None) and \
+                (len(self.data_bytes) > 0):
                 # Dispatch to device and function ID handling
                 # This logic allows for prioritised matching
                 fn = filter(lambda x: x is not None, [
