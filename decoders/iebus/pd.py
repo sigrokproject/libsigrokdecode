@@ -420,15 +420,15 @@ class Decoder(srd.Decoder):
             #
             (control, ss, es) = self.value(4)
             parity_bit = self.parity_bit(control)
+            ack_bit = self.ack_bit()
 
             if Commands.has_value(control):
                 control = Commands(control)
                 self.putx('control', ss, es, [ f'Control: {control.name}', f'{control.name}' ])
-            else:
-                self.putx('control', ss, es, [ f'Control: 0x{control:01x}' ])
+                self.put(ss, es, self.out_python, [ 'CONTROL', (control.name, parity_bit, ack_bit) ])
 
-            ack_bit = self.ack_bit()
-            self.put(ss, es, self.out_python, [ 'CONTROL', (control.name, parity_bit, ack_bit) ])
+            self.putx('control', ss, es, [ f'Control: 0x{control:02x}', f'0x{control:02x}' ])
+            self.put(ss, es, self.out_python, [ 'CONTROL', (control, parity_bit, ack_bit) ])
 
             if self.broadcast_bit == 1 and ack_bit == 1:
                 # NAK condition, restart search for start bit
