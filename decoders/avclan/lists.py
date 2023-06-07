@@ -175,7 +175,18 @@ class CDOpcodes(Searchable, IntEnum):
 
     # Reports
     REPORT_PLAYBACK     = 0xf1
+    REPORT_LOADER       = 0xf3
     REPORT_TRACK_NAME   = 0xfd
+
+
+class CDSlots(Searchable, IntFlag):
+    SLOT1               = 0x01
+    SLOT2               = 0x02
+    SLOT3               = 0x04
+    SLOT4               = 0x08
+    SLOT5               = 0x10
+    SLOT6               = 0x20
+
 
 class CDStateCodes(Searchable, IntFlag):
     '''State codes for the CD Player function.'''

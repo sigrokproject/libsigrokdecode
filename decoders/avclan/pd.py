@@ -75,24 +75,25 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         ('disc-title', 'Disc Name'),        # 11
         ('track-title', 'Track Name'),      # 12
         ('playback-time', 'Playback time'),  # 13
+        ('disc-slots', 'Disc Slots'),       # 14
 
         # Audio AMP
-        ('audio-opcode', 'Opcode'),         # 14
-        ('audio-flags', 'Audio Flags'),     # 15
-        ('volume', 'Volume'),               # 16
-        ('bass', 'Bass'),                   # 17
-        ('treble', 'Treble'),               # 18
-        ('fade', 'Fade'),                   # 19
-        ('balance', 'Balance'),             # 20
+        ('audio-opcode', 'Opcode'),         # 15
+        ('audio-flags', 'Audio Flags'),     # 16
+        ('volume', 'Volume'),               # 17
+        ('bass', 'Bass'),                   # 18
+        ('treble', 'Treble'),               # 19
+        ('fade', 'Fade'),                   # 20
+        ('balance', 'Balance'),             # 21
 
         # TUNER (radio)
-        ('radio-opcode', 'Opcode'),         # 21
-        ('radio-state', 'State'),           # 22
-        ('radio-mode', 'Mode'),             # 23
-        ('radio-flags', 'Flags'),           # 24
-        ('band', 'Band'),                   # 25
-        ('channel', 'Channel'),             # 26
-        ('freq', 'Frequency'),              # 27
+        ('radio-opcode', 'Opcode'),         # 22
+        ('radio-state', 'State'),           # 23
+        ('radio-mode', 'Mode'),             # 24
+        ('radio-flags', 'Flags'),           # 25
+        ('band', 'Band'),                   # 26
+        ('channel', 'Channel'),             # 27
+        ('freq', 'Frequency'),              # 28
 
         ('warning', 'Warning')
     )
@@ -101,10 +102,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         ('devices', 'Device Addresses and Functions', (0, 1)),
         ('control', 'Network Control', (2, 3, 4)),
         ('cmd', 'HU Commands', (5,)),
-        ('cd', 'CD Player', (6, 7, 8, 9, 10, 11, 12, 13)),
-        ('audio', 'Audio Amplifier', (14, 15, 16, 17, 18, 19, 20)),
-        ('radio', 'Radio Tuner', (21, 22, 23, 24, 25, 26, 27)),
-        ('warnings', 'Warnings', (28,))
+        ('cd', 'CD Player', (6, 7, 8, 9, 10, 11, 12, 13, 14)),
+        ('audio', 'Audio Amplifier', (15, 16, 17, 18, 19, 20, 21)),
+        ('radio', 'Radio Tuner', (22, 23, 24, 25, 26, 27, 28)),
+        ('warnings', 'Warnings', (29,))
     )
 
 
@@ -324,6 +325,11 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         self.pkt_from_cd_player()
 
 
+    def pkt_from_43(self):
+        '''Handle frames from function 43(CD_CHANGER2)'''
+        self.pkt_from_cd_player()
+
+
     def pkt_from_cd_player(self):
         '''Handle frames from a CD player.'''
         opcode = self.data_bytes[0].b
@@ -383,6 +389,24 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                           [f'Track #{track_number}', 'Track #'])
                 self.putx('track-title', self.data_bytes[5].ss, self.data_bytes[-1].es,
                         [f'Title: {text}', 'Title'])
+
+            elif opcode == CDOpcodes.REPORT_LOADER:
+
+                slots = self.data_bytes[2].b
+                anno = str(CDSlots(slots))
+                self.putx('disc-slots', self.data_bytes[2].ss, self.data_bytes[2].es,
+                          [f'Slots-1: {anno}', anno, 'Slots-1'])
+
+                slots = self.data_bytes[4].b
+                anno = str(CDSlots(slots))
+                self.putx('disc-slots', self.data_bytes[4].ss, self.data_bytes[4].es,
+                          [f'Slots-2: {anno}', anno, 'Slots-2'])
+
+                slots = self.data_bytes[6].b
+                anno = str(CDSlots(slots))
+                self.putx('disc-slots', self.data_bytes[6].ss, self.data_bytes[6].es,
+                          [f'Slots-3: {anno}', anno, 'Slots-3'])
+
 
             ret = True
 
