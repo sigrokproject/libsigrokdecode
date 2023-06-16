@@ -72,28 +72,29 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         ('cd-flags', 'Flags'),              # 8
         ('disc-number', 'Disc Number'),     # 9
         ('track-number', 'Track Number'),   # 10
-        ('disc-title', 'Disc Name'),        # 11
-        ('track-title', 'Track Name'),      # 12
-        ('playback-time', 'Playback time'),  # 13
-        ('disc-slots', 'Disc Slots'),       # 14
+        ('track-count', 'Track Count'),     # 11
+        ('disc-title', 'Disc Name'),        # 12
+        ('track-title', 'Track Name'),      # 13
+        ('playback-time', 'Playback time'),  # 14
+        ('disc-slots', 'Disc Slots'),       # 15
 
         # Audio AMP
-        ('audio-opcode', 'Opcode'),         # 15
-        ('audio-flags', 'Audio Flags'),     # 16
-        ('volume', 'Volume'),               # 17
-        ('bass', 'Bass'),                   # 18
-        ('treble', 'Treble'),               # 19
-        ('fade', 'Fade'),                   # 20
-        ('balance', 'Balance'),             # 21
+        ('audio-opcode', 'Opcode'),         # 16
+        ('audio-flags', 'Audio Flags'),     # 17
+        ('volume', 'Volume'),               # 18
+        ('bass', 'Bass'),                   # 19
+        ('treble', 'Treble'),               # 20
+        ('fade', 'Fade'),                   # 21
+        ('balance', 'Balance'),             # 22
 
         # TUNER (radio)
-        ('radio-opcode', 'Opcode'),         # 22
-        ('radio-state', 'State'),           # 23
-        ('radio-mode', 'Mode'),             # 24
-        ('radio-flags', 'Flags'),           # 25
-        ('band', 'Band'),                   # 26
-        ('channel', 'Channel'),             # 27
-        ('freq', 'Frequency'),              # 28
+        ('radio-opcode', 'Opcode'),         # 23
+        ('radio-state', 'State'),           # 24
+        ('radio-mode', 'Mode'),             # 25
+        ('radio-flags', 'Flags'),           # 26
+        ('band', 'Band'),                   # 27
+        ('channel', 'Channel'),             # 28
+        ('freq', 'Frequency'),              # 29
 
         ('warning', 'Warning')
     )
@@ -102,10 +103,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         ('devices', 'Device Addresses and Functions', (0, 1)),
         ('control', 'Network Control', (2, 3, 4)),
         ('cmd', 'HU Commands', (5,)),
-        ('cd', 'CD Player', (6, 7, 8, 9, 10, 11, 12, 13, 14)),
-        ('audio', 'Audio Amplifier', (15, 16, 17, 18, 19, 20, 21)),
-        ('radio', 'Radio Tuner', (22, 23, 24, 25, 26, 27, 28)),
-        ('warnings', 'Warnings', (29,))
+        ('cd', 'CD Player', (6, 7, 8, 9, 10, 11, 12, 13, 14, 15)),
+        ('audio', 'Audio Amplifier', (16, 17, 18, 19, 20, 21, 22)),
+        ('radio', 'Radio Tuner', (23, 24, 25, 26, 27, 29)),
+        ('warnings', 'Warnings', (30,))
     )
 
 
@@ -354,7 +355,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                     anno.insert(0, f'CD #{disc_number}')
 
                 self.putx('disc-number', self.data_bytes[3].ss, self.data_bytes[3].es, anno)
-                
+
                 track_number = self.data_bytes[4].b
                 anno = [ 'Track #', 'Tra', 'T' ]
                 if track_number != 0xff:
@@ -390,23 +391,55 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
                 self.putx('track-title', self.data_bytes[5].ss, self.data_bytes[-1].es,
                         [f'Title: {text}', 'Title'])
 
-            elif opcode == CDOpcodes.REPORT_LOADER:
+            elif opcode == CDOpcodes.REPORT_LOADER or opcode == CDOpcodes.REPORT_LOADER2:
 
                 slots = self.data_bytes[2].b
                 anno = str(CDSlots(slots))
                 self.putx('disc-slots', self.data_bytes[2].ss, self.data_bytes[2].es,
-                          [f'Slots-1: {anno}', anno, 'Slots-1'])
+                          [f'Available: {anno}', anno, 'Avail'])
 
                 slots = self.data_bytes[4].b
                 anno = str(CDSlots(slots))
                 self.putx('disc-slots', self.data_bytes[4].ss, self.data_bytes[4].es,
-                          [f'Slots-2: {anno}', anno, 'Slots-2'])
+                          [f'Disc Present: {anno}', anno, 'Pres'])
 
                 slots = self.data_bytes[6].b
                 anno = str(CDSlots(slots))
                 self.putx('disc-slots', self.data_bytes[6].ss, self.data_bytes[6].es,
-                          [f'Slots-3: {anno}', anno, 'Slots-3'])
+                          [f'Slot-3: {anno}', anno, 'Pres'])
 
+            elif opcode == CDOpcodes.REPORT_TOC:
+                disc_number = self.data_bytes[1].b
+                anno = [ 'CD #', 'CD', 'C' ]
+                if disc_number != 0xff:
+                    anno.insert(0, f'CD #{disc_number}')
+
+                self.putx('disc-number', self.data_bytes[1].ss, self.data_bytes[1].es, anno)
+
+                track_number = self.data_bytes[2].b
+                anno = [ 'Track #', 'Tra', 'T' ]
+                if track_number != 0xff:
+                    anno.insert(0, f'Track #{track_number}')
+
+                self.putx('track-number', self.data_bytes[2].ss, self.data_bytes[2].es, anno)
+
+                track_count = self.data_bytes[3].b
+                anno = [ 'Track Count', 'Count', 'Cnt' ]
+                if track_count != 0xff:
+                    anno.insert(0, f'Track Count: {track_count}')
+
+                self.putx('track-count', self.data_bytes[3].ss, self.data_bytes[3].es, anno)
+
+                minutes = self.data_bytes[4].b
+                seconds = self.data_bytes[5].b
+                anno = ['Total Time', 'T']
+                if minutes != 0xff and seconds != 0xff:
+                    minutes = self.bcd2dec(minutes)
+                    seconds = self.bcd2dec(seconds)
+                    anno.insert(0, f'{minutes:02d}:{seconds:02d}')
+                    anno.insert(0, f'Total Time: {minutes:02d}:{seconds:02d}')
+
+                self.putx('playback-time', self.data_bytes[4].ss, self.data_bytes[5].es, anno)
 
             ret = True
 

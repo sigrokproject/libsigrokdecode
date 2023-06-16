@@ -176,6 +176,8 @@ class CDOpcodes(Searchable, IntEnum):
     # Reports
     REPORT_PLAYBACK     = 0xf1
     REPORT_LOADER       = 0xf3
+    REPORT_LOADER2      = 0xf4
+    REPORT_TOC          = 0xf9
     REPORT_TRACK_NAME   = 0xfd
 
 
@@ -215,6 +217,8 @@ class CDFlags(Searchable, IntFlag):
 class CmdSwOpcodes(Searchable, IntEnum):
     '''Opcodes for the SW_CMD function.'''
     EJECT                           = 0x80
+    DISC_UP                         = 0x90
+    DISC_DOWN                       = 0x91
     PWRVOL_KNOB_RIGHTHAND_TURN      = 0x9c
     PWRVOL_KNOB_LEFTHAND_TURN       = 0x9d
     TRACK_SEEK_UP                   = 0x94
