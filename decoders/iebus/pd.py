@@ -157,6 +157,10 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'mode', 'desc': 'Mode', 'values': (
             'Mode 2', ), 'default': 'Mode 2'},
+        {'id': 'bus_polarity', 'desc': 'Bus polarity', 'default': 'idle-low',
+            'values': ('idle-low', 'idle-high')},
+        {'id': 'ignore_nak', 'desc': 'Ignore NAK condition', 'default': 'Disabled',
+            'values': ('Disabled', 'Enabled')}
     )
     annotations = (
         ('start-bit', 'Start bit'),         # 0
@@ -221,7 +225,13 @@ class Decoder(srd.Decoder):
 
         bits = []
         while n > 0:
-            self.wait({0: 'r'})
+            if self.options['bus_polarity'] == 'idle-low':
+                self.wait({0: 'r'})
+            elif self.options['bus_polarity'] == 'idle-high':
+                self.wait({0: 'f'})
+            else:
+                raise Exception(f'Unexpected bus_polarity value "{bus_polarity}"')
+
             if self.bits_begin is None:
                 self.bits_begin = self.samplenum
             bit_start = self.samplenum
@@ -232,6 +242,10 @@ class Decoder(srd.Decoder):
 
             pins = self.wait({'skip': int(27e-6 * self.samplerate)})
             bit = (pins[0] + 1) % 2
+
+            # Invert bit value when bus is idle high
+            if self.options['bus_polarity'] == 'idle-high':
+                bit = (bit + 1) % 2
 
             # Assume full 33µs bit length after sync edge
             bit_end = bit_start + int(33e-6 * self.samplerate)
@@ -279,10 +293,18 @@ class Decoder(srd.Decoder):
 
         # Start bit
         #
-        self.wait({0: 'r'})
-        ss = self.samplenum
-        self.wait({0: 'f'})
-        es = self.samplenum
+        if self.options['bus_polarity'] == 'idle-low':
+            self.wait({0: 'r'})
+            ss = self.samplenum
+            self.wait({0: 'f'})
+            es = self.samplenum
+        elif self.options['bus_polarity'] == 'idle-high':
+            self.wait({0: 'f'})
+            ss = self.samplenum
+            self.wait({0: 'r'})
+            es = self.samplenum
+        else:
+            raise Exception(f'Unexpected bus_polarity value "{bus_polarity}"')
 
         if (es - ss) / self.samplerate < 100e-6:
             self.putx('warning', ss, es,
@@ -323,6 +345,11 @@ class Decoder(srd.Decoder):
         ack_bit = self.bit()
         if self.broadcast_bit == 1:
             # Non-broadcast traffic
+
+            # Force ack bit to be 0 if NAK condition is to be ignored
+            if self.options['ignore_nak'] == 'Enabled':
+                ack_bit = 0
+
             if ack_bit == 0:
                 # ACK needs to dominate on the bus
                 self.putx('ack', self.bits_begin, self.bits_end, ['ACK', 'A'])
