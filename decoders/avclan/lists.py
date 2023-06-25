@@ -173,6 +173,9 @@ class CDOpcodes(Searchable, IntEnum):
     INSERTED_CD         = 0x50
     REMOVED_CD          = 0x51
 
+    # Requests
+    REQUEST_TRACK_NAME  = 0xed
+
     # Reports
     REPORT_PLAYBACK     = 0xf1
     REPORT_LOADER       = 0xf3

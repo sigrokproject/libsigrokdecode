@@ -105,7 +105,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         ('cmd', 'HU Commands', (5,)),
         ('cd', 'CD Player', (6, 7, 8, 9, 10, 11, 12, 13, 14, 15)),
         ('audio', 'Audio Amplifier', (16, 17, 18, 19, 20, 21, 22)),
-        ('radio', 'Radio Tuner', (23, 24, 25, 26, 27, 29)),
+        ('radio', 'Radio Tuner', (23, 24, 25, 26, 27, 28, 29)),
         ('warnings', 'Warnings', (30,))
     )
 
@@ -321,6 +321,10 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
         self.pkt_from_cd_player()
 
 
+    def pkt_to_62(self):
+        self.pkt_to_cd_player()
+
+
     def pkt_from_63(self):
         '''Handle frames from function 63(CD_CHANGER).'''
         self.pkt_from_cd_player()
@@ -329,6 +333,40 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
     def pkt_from_43(self):
         '''Handle frames from function 43(CD_CHANGER2)'''
         self.pkt_from_cd_player()
+
+
+    def pkt_to_cd_player(self):
+        '''Handle frames to a CD player.'''
+        opcode = self.data_bytes[0].b
+        opcode_anno = f'{opcode:02x}'
+        ret = False
+
+        if CDOpcodes.has_value(opcode):
+            opcode = CDOpcodes(opcode)
+            opcode_anno = opcode.name
+
+            if opcode == CDOpcodes.REQUEST_TRACK_NAME:
+
+                # This is always 0x01 for builtin CD player
+                disc_number = self.data_bytes[1].b
+                anno = [ 'CD #', 'CD', 'C' ]
+                if disc_number != 0xff:
+                    anno.insert(0, f'CD #{disc_number}')
+
+                self.putx('disc-number', self.data_bytes[1].ss, self.data_bytes[1].es, anno)
+
+                track_number = self.data_bytes[2].b
+                anno = [ 'Track #', 'Tra', 'T' ]
+                if track_number != 0xff:
+                    anno.insert(0, f'Track #{track_number}')
+
+                self.putx('track-number', self.data_bytes[2].ss, self.data_bytes[2].es, anno)
+
+                ret = True
+
+        self.putx('cd-opcode', self.data_bytes[0].ss, self.data_bytes[0].es,
+                    [f'Opcode: {opcode_anno}', opcode_anno, 'Opcode'])
+        return ret
 
 
     def pkt_from_cd_player(self):
