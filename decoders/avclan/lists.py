@@ -148,14 +148,15 @@ class CommCtrlOpcodes(Searchable, IntEnum):
     '''
     LIST_FUNCTIONS_REQ   = 0x00
     LIST_FUNCTIONS_RESP  = 0x10
-    ENDSCAN_REQ          = 0x08
-    ENDSCAN_RESP         = 0x18
-    PING_REQ             = 0x0a
-    PING_RESP            = 0x1a
-    STATE_REQ            = 0x0c
-    STATE_RESP           = 0x1c
-    REPORT_REQ           = 0x20
-    REPORT_RESP          = 0x30
+    RESTART_LAN          = 0x01
+    LANCHECK_END_REQ     = 0x08
+    LANCHECK_END_RESP    = 0x18
+    LANCHECK_SCAN_REQ    = 0x0a
+    LANCHECK_SCAN_RESP   = 0x1a
+    LANCHECK_REQ         = 0x0c
+    LANCHECK_RESP        = 0x1c
+    PING_REQ             = 0x20
+    PING_RESP            = 0x30
 
     # Used when HU is switching between Radio and CD
     DISABLE_FUNCTION_REQ    = 0x43
@@ -168,18 +169,24 @@ class CommCtrlOpcodes(Searchable, IntEnum):
 
 
 class CDOpcodes(Searchable, IntEnum):
-    '''Opcodes for the CD Player function.'''
+    '''
+    Opcodes for the CD Player function.
+    These seem to be also common for the CD Changer function.
+    '''
     # Events
     INSERTED_CD         = 0x50
     REMOVED_CD          = 0x51
 
     # Requests
+    REQUEST_PLAYBACK2   = 0xe2
+    REQUEST_LOADER2     = 0xe4
     REQUEST_TRACK_NAME  = 0xed
 
     # Reports
     REPORT_PLAYBACK     = 0xf1
+    REPORT_PLAYBACK2    = 0xf2
     REPORT_LOADER       = 0xf3
-    REPORT_LOADER2      = 0xf4
+    REPORT_LOADER2      = 0xf4   # Requested with REQUEST_LOADER
     REPORT_TOC          = 0xf9
     REPORT_TRACK_NAME   = 0xfd
 

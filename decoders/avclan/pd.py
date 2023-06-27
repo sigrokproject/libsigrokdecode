@@ -379,7 +379,7 @@ class Decoder(srd.Decoder):  # pylint: disable=too-many-instance-attributes
             opcode = CDOpcodes(opcode)
             opcode_anno = opcode.name
 
-            if opcode == CDOpcodes.REPORT_PLAYBACK:
+            if opcode == CDOpcodes.REPORT_PLAYBACK or opcode == CDOpcodes.REPORT_PLAYBACK2:
                 cd_state = self.data_bytes[2].b
 
                 anno = str(CDStateCodes(cd_state))
