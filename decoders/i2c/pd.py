@@ -112,12 +112,12 @@ class Decoder(srd.Decoder):
         self.ss = self.es = self.ss_byte = -1
         self.bitcount = 0
         self.databyte = 0
-        self.wr = -1
-        self.is_repeat_start = 0
+        self.is_write = None
+        self.is_repeat_start = False
         self.state = 'FIND START'
         self.pdu_start = None
         self.pdu_bits = 0
-        self.bits = []
+        self.data_bits = []
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -143,14 +143,14 @@ class Decoder(srd.Decoder):
         self.ss, self.es = self.samplenum, self.samplenum
         self.pdu_start = self.samplenum
         self.pdu_bits = 0
-        cmd = 'START REPEAT' if (self.is_repeat_start == 1) else 'START'
+        cmd = 'START REPEAT' if self.is_repeat_start else 'START'
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND ADDRESS'
         self.bitcount = self.databyte = 0
-        self.is_repeat_start = 1
-        self.wr = -1
-        self.bits = []
+        self.is_repeat_start = True
+        self.is_write = None
+        self.data_bits = []
 
     # Gather 8 bits of data plus the ACK/NACK bit.
     def handle_address_or_data(self, pins):
@@ -167,12 +167,12 @@ class Decoder(srd.Decoder):
 
         # Store individual bits and their start/end samplenumbers.
         # In the list, index 0 represents the LSB (I²C transmits MSB-first).
-        self.bits.insert(0, [sda, self.samplenum, self.samplenum])
+        self.data_bits.insert(0, [sda, self.samplenum, self.samplenum])
         if self.bitcount > 0:
-            self.bits[1][2] = self.samplenum
+            self.data_bits[1][2] = self.samplenum
         if self.bitcount == 7:
-            self.bitwidth = self.bits[1][2] - self.bits[2][2]
-            self.bits[0][2] += self.bitwidth
+            self.bitwidth = self.data_bits[1][2] - self.data_bits[2][2]
+            self.data_bits[0][2] += self.bitwidth
 
         # Return if we haven't collected all 8 + 1 bits, yet.
         if self.bitcount < 7:
@@ -182,37 +182,37 @@ class Decoder(srd.Decoder):
         d = self.databyte
         if self.state == 'FIND ADDRESS':
             # The READ/WRITE bit is only in address bytes, not data bytes.
-            self.wr = 0 if (self.databyte & 1) else 1
+            self.is_write = False if (self.databyte & 1) else True
             if self.options['address_format'] == 'shifted':
                 d = d >> 1
 
         bin_class = -1
-        if self.state == 'FIND ADDRESS' and self.wr == 1:
+        if self.state == 'FIND ADDRESS' and self.is_write:
             cmd = 'ADDRESS WRITE'
             bin_class = 1
-        elif self.state == 'FIND ADDRESS' and self.wr == 0:
+        elif self.state == 'FIND ADDRESS' and not self.is_write:
             cmd = 'ADDRESS READ'
             bin_class = 0
-        elif self.state == 'FIND DATA' and self.wr == 1:
+        elif self.state == 'FIND DATA' and self.is_write:
             cmd = 'DATA WRITE'
             bin_class = 3
-        elif self.state == 'FIND DATA' and self.wr == 0:
+        elif self.state == 'FIND DATA' and not self.is_write:
             cmd = 'DATA READ'
             bin_class = 2
 
         self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
 
-        self.putp(['BITS', self.bits])
+        self.putp(['BITS', self.data_bits])
         self.putp([cmd, d])
 
         self.putb([bin_class, bytes([d])])
 
-        for bit in self.bits:
+        for bit in self.data_bits:
             self.put(bit[1], bit[2], self.out_ann, [5, ['%d' % bit[0]]])
 
         if cmd.startswith('ADDRESS'):
             self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
-            w = ['Write', 'Wr', 'W'] if self.wr else ['Read', 'Rd', 'R']
+            w = ['Write', 'Wr', 'W'] if self.is_write else ['Read', 'Rd', 'R']
             self.putx([proto[cmd][0], w])
             self.ss, self.es = self.ss_byte, self.samplenum
 
@@ -221,7 +221,7 @@ class Decoder(srd.Decoder):
 
         # Done with this packet.
         self.bitcount = self.databyte = 0
-        self.bits = []
+        self.data_bits = []
         self.state = 'FIND ACK'
 
     def get_ack(self, pins):
@@ -246,9 +246,9 @@ class Decoder(srd.Decoder):
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND START'
-        self.is_repeat_start = 0
-        self.wr = -1
-        self.bits = []
+        self.is_repeat_start = False
+        self.is_write = None
+        self.data_bits = []
 
     def decode(self):
         while True:
