@@ -113,6 +113,7 @@ class Decoder(srd.Decoder):
         self.bitcount = 0
         self.databyte = 0
         self.is_write = None
+        self.rem_addr_bytes = None
         self.is_repeat_start = False
         self.state = 'FIND START'
         self.pdu_start = None
@@ -150,6 +151,7 @@ class Decoder(srd.Decoder):
         self.bitcount = self.databyte = 0
         self.is_repeat_start = True
         self.is_write = None
+        self.rem_addr_bytes = None
         self.data_bits = []
 
     # Gather 8 bits of data plus the ACK/NACK bit.
@@ -181,10 +183,31 @@ class Decoder(srd.Decoder):
 
         d = self.databyte
         if self.state == 'FIND ADDRESS':
-            # The READ/WRITE bit is only in address bytes, not data bytes.
-            self.is_write = False if (self.databyte & 1) else True
-            if self.options['address_format'] == 'shifted':
-                d = d >> 1
+            # The READ/WRITE bit is only in the first address byte, not
+            # in data bytes. Address bit pattern 0b1111_0xxx means that
+            # this is a 10bit slave address, another byte follows. Get
+            # the R/W direction and the address bytes count from the
+            # first byte in the I2C transfer.
+            addr_byte = d
+            if self.rem_addr_bytes is None:
+                if (addr_byte & 0xf8) == 0xf0:
+                    self.rem_addr_bytes = 2
+                    self.slave_addr_7 = None
+                    self.slave_addr_10 = addr_byte & 0x06
+                    self.slave_addr_10 <<= 7
+                else:
+                    self.rem_addr_bytes = 1
+                    self.slave_addr_7 = addr_byte >> 1
+                    self.slave_addr_10 = None
+            is_seven = self.slave_addr_7 is not None
+            if self.is_write is None:
+                read_bit = bool(addr_byte & 1)
+                shift_seven = self.options['address_format'] == 'shifted'
+                if is_seven and shift_seven:
+                    d = d >> 1
+                self.is_write = False if read_bit else True
+            else:
+                self.slave_addr_10 |= addr_byte
 
         bin_class = -1
         if self.state == 'FIND ADDRESS' and self.is_write:
@@ -210,7 +233,7 @@ class Decoder(srd.Decoder):
         for bit in self.data_bits:
             self.put(bit[1], bit[2], self.out_ann, [5, ['%d' % bit[0]]])
 
-        if cmd.startswith('ADDRESS'):
+        if cmd.startswith('ADDRESS') and is_seven:
             self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
             w = ['Write', 'Wr', 'W'] if self.is_write else ['Read', 'Rd', 'R']
             self.putx([proto[cmd][0], w])
@@ -230,9 +253,16 @@ class Decoder(srd.Decoder):
         cmd = 'NACK' if (sda == 1) else 'ACK'
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
-        # There could be multiple data bytes in a row, so either find
-        # another data byte or a STOP condition next.
-        self.state = 'FIND DATA'
+        # Slave addresses can span one or two bytes, before data bytes
+        # follow. There can be an arbitrary number of data bytes. Stick
+        # with getting more address bytes if applicable, or enter or
+        # remain in the data phase of the transfer otherwise.
+        if self.rem_addr_bytes:
+            self.rem_addr_bytes -= 1
+        if self.rem_addr_bytes:
+            self.state = 'FIND ADDRESS'
+        else:
+            self.state = 'FIND DATA'
 
     def handle_stop(self, pins):
         # Meta bitrate
