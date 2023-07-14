@@ -21,6 +21,7 @@
 # TODO: Implement support for inverting SDA/SCL levels (0->1 and 1->0).
 # TODO: Implement support for detecting various bus errors.
 
+from common.srdhelper import bitpack_msb
 import sigrokdecode as srd
 
 '''
@@ -110,8 +111,6 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.samplerate = None
         self.ss = self.es = self.ss_byte = -1
-        self.bitcount = 0
-        self.databyte = 0
         self.is_write = None
         self.rem_addr_bytes = None
         self.is_repeat_start = False
@@ -148,40 +147,36 @@ class Decoder(srd.Decoder):
         self.putp([cmd, None])
         self.putx([proto[cmd][0], proto[cmd][1:]])
         self.state = 'FIND ADDRESS'
-        self.bitcount = self.databyte = 0
         self.is_repeat_start = True
         self.is_write = None
         self.rem_addr_bytes = None
-        self.data_bits = []
+        self.data_bits.clear()
 
     # Gather 8 bits of data plus the ACK/NACK bit.
     def handle_address_or_data(self, pins):
         scl, sda = pins
         self.pdu_bits += 1
 
-        # Address and data are transmitted MSB-first.
-        self.databyte <<= 1
-        self.databyte |= sda
-
-        # Remember the start of the first data/address bit.
-        if self.bitcount == 0:
+        # Accumulate a byte's bits, including its start position.
+        # Accumulate individual bits and their start/end sample numbers
+        # as we see them. Get the start sample number at the time when
+        # the bit value gets sampled. Assume the start of the next bit
+        # as the end sample number of the previous bit. Guess the last
+        # bit's end sample number from the second last bit's width.
+        # (gsi: Shouldn't falling SCL be the end of the bit value?)
+        # Keep the bits in receive order (MSB first) during accumulation.
+        if not self.data_bits:
             self.ss_byte = self.samplenum
-
-        # Store individual bits and their start/end samplenumbers.
-        # In the list, index 0 represents the LSB (I²C transmits MSB-first).
-        self.data_bits.insert(0, [sda, self.samplenum, self.samplenum])
-        if self.bitcount > 0:
-            self.data_bits[1][2] = self.samplenum
-        if self.bitcount == 7:
-            self.bitwidth = self.data_bits[1][2] - self.data_bits[2][2]
-            self.data_bits[0][2] += self.bitwidth
-
-        # Return if we haven't collected all 8 + 1 bits, yet.
-        if self.bitcount < 7:
-            self.bitcount += 1
+        if self.data_bits:
+            self.data_bits[-1][2] = self.samplenum
+        self.data_bits.append([sda, self.samplenum, self.samplenum])
+        if len(self.data_bits) < 8:
             return
+        self.bitwidth = self.data_bits[-2][2] - self.data_bits[-3][2]
+        self.data_bits[-1][2] += self.bitwidth
 
-        d = self.databyte
+        # Get the byte value. Address and data are transmitted MSB-first.
+        d = bitpack_msb(self.data_bits, 0)
         if self.state == 'FIND ADDRESS':
             # The READ/WRITE bit is only in the first address byte, not
             # in data bytes. Address bit pattern 0b1111_0xxx means that
@@ -225,6 +220,11 @@ class Decoder(srd.Decoder):
 
         self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
 
+        # Reverse the list of bits to LSB first order before emitting
+        # annotations and passing bits to upper layers. This may be
+        # unexpected because the protocol is MSB first, but it keeps
+        # backwards compatibility.
+        self.data_bits.reverse()
         self.putp(['BITS', self.data_bits])
         self.putp([cmd, d])
 
@@ -243,8 +243,7 @@ class Decoder(srd.Decoder):
                    '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
 
         # Done with this packet.
-        self.bitcount = self.databyte = 0
-        self.data_bits = []
+        self.data_bits.clear()
         self.state = 'FIND ACK'
 
     def get_ack(self, pins):
@@ -278,7 +277,7 @@ class Decoder(srd.Decoder):
         self.state = 'FIND START'
         self.is_repeat_start = False
         self.is_write = None
-        self.data_bits = []
+        self.data_bits.clear()
 
     def decode(self):
         while True:
