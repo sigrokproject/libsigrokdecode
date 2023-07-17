@@ -48,18 +48,19 @@ For example, a slave address field could be 0x51 (instead of 0xa2).
 For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <pdata> is None.
 '''
 
-# CMD: [annotation-type-index, long annotation, short annotation]
+# Meaning of table items:
+# command -> [annotation class, annotation text in order of decreasing length]
 proto = {
-    'START':           [0, 'Start',         'S'],
-    'START REPEAT':    [1, 'Start repeat',  'Sr'],
-    'STOP':            [2, 'Stop',          'P'],
-    'ACK':             [3, 'ACK',           'A'],
-    'NACK':            [4, 'NACK',          'N'],
-    'BIT':             [5, 'Bit',           'B'],
-    'ADDRESS READ':    [6, 'Address read',  'AR'],
-    'ADDRESS WRITE':   [7, 'Address write', 'AW'],
-    'DATA READ':       [8, 'Data read',     'DR'],
-    'DATA WRITE':      [9, 'Data write',    'DW'],
+    'START':         [0, 'Start', 'S'],
+    'START REPEAT':  [1, 'Start repeat', 'Sr'],
+    'STOP':          [2, 'Stop', 'P'],
+    'ACK':           [3, 'ACK', 'A'],
+    'NACK':          [4, 'NACK', 'N'],
+    'BIT':           [5, '{b:1d}'],
+    'ADDRESS READ':  [6, 'Address read: {b:02X}', 'AR: {b:02X}', '{b:02X}'],
+    'ADDRESS WRITE': [7, 'Address write: {b:02X}', 'AW: {b:02X}', '{b:02X}'],
+    'DATA READ':     [8, 'Data read: {b:02X}', 'DR: {b:02X}', '{b:02X}'],
+    'DATA WRITE':    [9, 'Data write: {b:02X}', 'DW: {b:02X}', '{b:02X}'],
 }
 
 class Decoder(srd.Decoder):
@@ -145,7 +146,8 @@ class Decoder(srd.Decoder):
         self.pdu_bits = 0
         cmd = 'START REPEAT' if self.is_repeat_start else 'START'
         self.putp([cmd, None])
-        self.putx([proto[cmd][0], proto[cmd][1:]])
+        cls, texts = proto[cmd][0], proto[cmd][1:]
+        self.putx([cls, texts])
         self.state = 'FIND ADDRESS'
         self.is_repeat_start = True
         self.is_write = None
@@ -230,17 +232,21 @@ class Decoder(srd.Decoder):
 
         self.putb([bin_class, bytes([d])])
 
-        for bit in self.data_bits:
-            self.put(bit[1], bit[2], self.out_ann, [5, ['%d' % bit[0]]])
+        for b, ss, es in self.data_bits:
+            cls, texts = proto['BIT'][0], proto['BIT'][1:]
+            texts = [t.format(b = b) for t in texts]
+            self.put(ss, es, self.out_ann, [cls, texts])
 
         if cmd.startswith('ADDRESS') and is_seven:
             self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
+            cls = proto[cmd][0]
             w = ['Write', 'Wr', 'W'] if self.is_write else ['Read', 'Rd', 'R']
-            self.putx([proto[cmd][0], w])
+            self.putx([cls, w])
             self.ss, self.es = self.ss_byte, self.samplenum
 
-        self.putx([proto[cmd][0], ['%s: %02X' % (proto[cmd][1], d),
-                   '%s: %02X' % (proto[cmd][2], d), '%02X' % d]])
+        cls, texts = proto[cmd][0], proto[cmd][1:]
+        texts = [t.format(b = d) for t in texts]
+        self.putx([cls, texts])
 
         # Done with this packet.
         self.data_bits.clear()
@@ -251,7 +257,8 @@ class Decoder(srd.Decoder):
         self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
         cmd = 'NACK' if (sda == 1) else 'ACK'
         self.putp([cmd, None])
-        self.putx([proto[cmd][0], proto[cmd][1:]])
+        cls, texts = proto[cmd][0], proto[cmd][1:]
+        self.putx([cls, texts])
         # Slave addresses can span one or two bytes, before data bytes
         # follow. There can be an arbitrary number of data bytes. Stick
         # with getting more address bytes if applicable, or enter or
@@ -273,7 +280,8 @@ class Decoder(srd.Decoder):
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum
         self.putp([cmd, None])
-        self.putx([proto[cmd][0], proto[cmd][1:]])
+        cls, texts = proto[cmd][0], proto[cmd][1:]
+        self.putx([cls, texts])
         self.state = 'FIND START'
         self.is_repeat_start = False
         self.is_write = None
