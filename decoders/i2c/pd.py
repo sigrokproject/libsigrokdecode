@@ -142,9 +142,12 @@ class Decoder(srd.Decoder):
 
     def handle_start(self, pins):
         self.ss, self.es = self.samplenum, self.samplenum
-        self.pdu_start = self.samplenum
-        self.pdu_bits = 0
-        cmd = 'START REPEAT' if self.is_repeat_start else 'START'
+        if self.is_repeat_start:
+            cmd = 'START REPEAT'
+        else:
+            cmd = 'START'
+            self.pdu_start = self.samplenum
+            self.pdu_bits = 0
         self.putp([cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
         self.putx([cls, texts])
@@ -254,6 +257,9 @@ class Decoder(srd.Decoder):
 
     def get_ack(self, pins):
         scl, sda = pins
+        # NOTE! Re-uses the last data bit's width for ACK/NAK as well.
+        # Which might be acceptable because this decoder implementation
+        # only gets to handle ACK/NAK after all DATA BITS were seen.
         self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
         cmd = 'NACK' if (sda == 1) else 'ACK'
         self.putp([cmd, None])
@@ -272,10 +278,14 @@ class Decoder(srd.Decoder):
 
     def handle_stop(self, pins):
         # Meta bitrate
-        if self.samplerate:
-            elapsed = 1 / float(self.samplerate) * (self.samplenum - self.pdu_start + 1)
+        if self.samplerate and self.pdu_start:
+            elapsed = self.samplenum - self.pdu_start + 1
+            elapsed /= self.samplerate
             bitrate = int(1 / elapsed * self.pdu_bits)
-            self.put(self.ss_byte, self.samplenum, self.out_bitrate, bitrate)
+            ss, es = self.pdu_start, self.samplenum
+            self.put(ss, es, self.out_bitrate, bitrate)
+            self.pdu_start = None
+            self.pdu_bits = 0
 
         cmd = 'STOP'
         self.ss, self.es = self.samplenum, self.samplenum
