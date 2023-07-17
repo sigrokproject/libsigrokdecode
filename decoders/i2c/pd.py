@@ -46,6 +46,8 @@ Packet:
 command. Slave addresses do not include bit 0 (the READ/WRITE indication bit).
 For example, a slave address field could be 0x51 (instead of 0xa2).
 For 'START', 'START REPEAT', 'STOP', 'ACK', and 'NACK' <pdata> is None.
+For 'BITS' <pdata> is a sequence of tuples of bit values and their start and
+stop positions, in LSB first order (although the I2C protocol is MSB first).
 '''
 
 # Meaning of table items:
@@ -111,7 +113,6 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.ss = self.es = self.ss_byte = -1
         self.is_write = None
         self.rem_addr_bytes = None
         self.is_repeat_start = False
@@ -131,26 +132,26 @@ class Decoder(srd.Decoder):
         self.out_bitrate = self.register(srd.OUTPUT_META,
                 meta=(int, 'Bitrate', 'Bitrate from Start bit to Stop bit'))
 
-    def putx(self, data):
-        self.put(self.ss, self.es, self.out_ann, data)
+    def putg(self, ss, es, cls, text):
+        self.put(ss, es, self.out_ann, [cls, text])
 
-    def putp(self, data):
-        self.put(self.ss, self.es, self.out_python, data)
+    def putp(self, ss, es, data):
+        self.put(ss, es, self.out_python, data)
 
-    def putb(self, data):
-        self.put(self.ss, self.es, self.out_binary, data)
+    def putb(self, ss, es, data):
+        self.put(ss, es, self.out_binary, data)
 
     def handle_start(self, pins):
-        self.ss, self.es = self.samplenum, self.samplenum
+        ss, es = self.samplenum, self.samplenum
         if self.is_repeat_start:
             cmd = 'START REPEAT'
         else:
             cmd = 'START'
             self.pdu_start = self.samplenum
             self.pdu_bits = 0
-        self.putp([cmd, None])
+        self.putp(ss, es, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
-        self.putx([cls, texts])
+        self.putg(ss, es, cls, texts)
         self.state = 'FIND ADDRESS'
         self.is_repeat_start = True
         self.is_write = None
@@ -170,8 +171,6 @@ class Decoder(srd.Decoder):
         # bit's end sample number from the second last bit's width.
         # (gsi: Shouldn't falling SCL be the end of the bit value?)
         # Keep the bits in receive order (MSB first) during accumulation.
-        if not self.data_bits:
-            self.ss_byte = self.samplenum
         if self.data_bits:
             self.data_bits[-1][2] = self.samplenum
         self.data_bits.append([sda, self.samplenum, self.samplenum])
@@ -223,33 +222,36 @@ class Decoder(srd.Decoder):
             cmd = 'DATA READ'
             bin_class = 2
 
-        self.ss, self.es = self.ss_byte, self.samplenum + self.bitwidth
+        ss_byte, es_byte = self.data_bits[0][1], self.data_bits[-1][2]
 
         # Reverse the list of bits to LSB first order before emitting
         # annotations and passing bits to upper layers. This may be
         # unexpected because the protocol is MSB first, but it keeps
         # backwards compatibility.
-        self.data_bits.reverse()
-        self.putp(['BITS', self.data_bits])
-        self.putp([cmd, d])
+        lsb_bits = self.data_bits[:]
+        lsb_bits.reverse()
+        self.putp(ss_byte, es_byte, ['BITS', lsb_bits])
+        self.putp(ss_byte, es_byte, [cmd, d])
 
-        self.putb([bin_class, bytes([d])])
+        self.putb(ss_byte, es_byte, [bin_class, bytes([d])])
 
-        for b, ss, es in self.data_bits:
+        for bit_value, ss_bit, es_bit in lsb_bits:
             cls, texts = proto['BIT'][0], proto['BIT'][1:]
-            texts = [t.format(b = b) for t in texts]
-            self.put(ss, es, self.out_ann, [cls, texts])
+            texts = [t.format(b = bit_value) for t in texts]
+            self.putg(ss_bit, es_bit, cls, texts)
 
         if cmd.startswith('ADDRESS') and is_seven:
-            self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
+            # Assign the last bit's location to the R/W annotation.
+            # Adjust the address value's location to the left.
+            ss_bit, es_bit = self.data_bits[-1][1], self.data_bits[-1][2]
+            es_byte = self.data_bits[-2][2]
             cls = proto[cmd][0]
             w = ['Write', 'Wr', 'W'] if self.is_write else ['Read', 'Rd', 'R']
-            self.putx([cls, w])
-            self.ss, self.es = self.ss_byte, self.samplenum
+            self.putg(ss_bit, es_bit, cls, w)
 
         cls, texts = proto[cmd][0], proto[cmd][1:]
         texts = [t.format(b = d) for t in texts]
-        self.putx([cls, texts])
+        self.putg(ss_byte, es_byte, cls, texts)
 
         # Done with this packet.
         self.data_bits.clear()
@@ -260,11 +262,11 @@ class Decoder(srd.Decoder):
         # NOTE! Re-uses the last data bit's width for ACK/NAK as well.
         # Which might be acceptable because this decoder implementation
         # only gets to handle ACK/NAK after all DATA BITS were seen.
-        self.ss, self.es = self.samplenum, self.samplenum + self.bitwidth
+        ss_bit, es_bit = self.samplenum, self.samplenum + self.bitwidth
         cmd = 'NACK' if (sda == 1) else 'ACK'
-        self.putp([cmd, None])
+        self.putp(ss_bit, es_bit, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
-        self.putx([cls, texts])
+        self.putg(ss_bit, es_bit, cls, texts)
         # Slave addresses can span one or two bytes, before data bytes
         # follow. There can be an arbitrary number of data bytes. Stick
         # with getting more address bytes if applicable, or enter or
@@ -282,16 +284,16 @@ class Decoder(srd.Decoder):
             elapsed = self.samplenum - self.pdu_start + 1
             elapsed /= self.samplerate
             bitrate = int(1 / elapsed * self.pdu_bits)
-            ss, es = self.pdu_start, self.samplenum
-            self.put(ss, es, self.out_bitrate, bitrate)
+            ss_meta, es_meta = self.pdu_start, self.samplenum
+            self.put(ss_meta, es_meta, self.out_bitrate, bitrate)
             self.pdu_start = None
             self.pdu_bits = 0
 
         cmd = 'STOP'
-        self.ss, self.es = self.samplenum, self.samplenum
-        self.putp([cmd, None])
+        ss, es = self.samplenum, self.samplenum
+        self.putp(ss, es, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
-        self.putx([cls, texts])
+        self.putg(ss, es, cls, texts)
         self.state = 'FIND START'
         self.is_repeat_start = False
         self.is_write = None
