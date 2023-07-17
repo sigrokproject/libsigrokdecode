@@ -120,6 +120,7 @@ class Decoder(srd.Decoder):
         self.pdu_start = None
         self.pdu_bits = 0
         self.data_bits = []
+        self.bitwidth = 0
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -141,13 +142,12 @@ class Decoder(srd.Decoder):
     def putb(self, ss, es, data):
         self.put(ss, es, self.out_binary, data)
 
-    def handle_start(self, pins):
-        ss, es = self.samplenum, self.samplenum
+    def handle_start(self, ss, es):
         if self.is_repeat_start:
             cmd = 'START REPEAT'
         else:
             cmd = 'START'
-            self.pdu_start = self.samplenum
+            self.pdu_start = ss
             self.pdu_bits = 0
         self.putp(ss, es, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
@@ -157,10 +157,10 @@ class Decoder(srd.Decoder):
         self.is_write = None
         self.rem_addr_bytes = None
         self.data_bits.clear()
+        self.bitwidth = 0
 
     # Gather 8 bits of data plus the ACK/NACK bit.
-    def handle_address_or_data(self, pins):
-        scl, sda = pins
+    def handle_address_or_data(self, ss, es, value):
         self.pdu_bits += 1
 
         # Accumulate a byte's bits, including its start position.
@@ -172,12 +172,12 @@ class Decoder(srd.Decoder):
         # (gsi: Shouldn't falling SCL be the end of the bit value?)
         # Keep the bits in receive order (MSB first) during accumulation.
         if self.data_bits:
-            self.data_bits[-1][2] = self.samplenum
-        self.data_bits.append([sda, self.samplenum, self.samplenum])
+            self.data_bits[-1][2] = ss
+        self.data_bits.append([value, ss, es])
         if len(self.data_bits) < 8:
             return
         self.bitwidth = self.data_bits[-2][2] - self.data_bits[-3][2]
-        self.data_bits[-1][2] += self.bitwidth
+        self.data_bits[-1][2] = self.data_bits[-1][1] + self.bitwidth
 
         # Get the byte value. Address and data are transmitted MSB-first.
         d = bitpack_msb(self.data_bits, 0)
@@ -256,13 +256,9 @@ class Decoder(srd.Decoder):
         self.data_bits.clear()
         self.state = 'FIND ACK'
 
-    def get_ack(self, pins):
-        scl, sda = pins
-        # NOTE! Re-uses the last data bit's width for ACK/NAK as well.
-        # Which might be acceptable because this decoder implementation
-        # only gets to handle ACK/NAK after all DATA BITS were seen.
-        ss_bit, es_bit = self.samplenum, self.samplenum + self.bitwidth
-        cmd = 'NACK' if (sda == 1) else 'ACK'
+    def get_ack(self, ss, es, value):
+        ss_bit, es_bit = ss, es
+        cmd = 'NACK' if value == 1 else 'ACK'
         self.putp(ss_bit, es_bit, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
         self.putg(ss_bit, es_bit, cls, texts)
@@ -277,19 +273,18 @@ class Decoder(srd.Decoder):
         else:
             self.state = 'FIND DATA'
 
-    def handle_stop(self, pins):
+    def handle_stop(self, ss, es):
         # Meta bitrate
         if self.samplerate and self.pdu_start:
-            elapsed = self.samplenum - self.pdu_start + 1
+            elapsed = es - self.pdu_start + 1
             elapsed /= self.samplerate
             bitrate = int(1 / elapsed * self.pdu_bits)
-            ss_meta, es_meta = self.pdu_start, self.samplenum
+            ss_meta, es_meta = self.pdu_start, es
             self.put(ss_meta, es_meta, self.out_bitrate, bitrate)
             self.pdu_start = None
             self.pdu_bits = 0
 
         cmd = 'STOP'
-        ss, es = self.samplenum, self.samplenum
         self.putp(ss, es, [cmd, None])
         cls, texts = proto[cmd][0], proto[cmd][1:]
         self.putg(ss, es, cls, texts)
@@ -299,14 +294,21 @@ class Decoder(srd.Decoder):
         self.data_bits.clear()
 
     def decode(self):
+        # Check for several bus conditions. Determine sample numbers
+        # here and pass ss, es, and bit values to handling routines.
         while True:
             # State machine.
             if self.state == 'FIND START':
                 # Wait for a START condition (S): SCL = high, SDA = falling.
-                self.handle_start(self.wait({0: 'h', 1: 'f'}))
+                pins = self.wait({0: 'h', 1: 'f'})
+                ss, es = self.samplenum, self.samplenum
+                self.handle_start(ss, es)
             elif self.state == 'FIND ADDRESS':
                 # Wait for a data bit: SCL = rising.
-                self.handle_address_or_data(self.wait({0: 'r'}))
+                pins = self.wait({0: 'r'})
+                _, sda = pins
+                ss, es = self.samplenum, self.samplenum # TODO plus bitwidth
+                self.handle_address_or_data(ss, es, sda)
             elif self.state == 'FIND DATA':
                 # Wait for any of the following conditions (or combinations):
                 #  a) Data sampling of receiver: SCL = rising, and/or
@@ -316,11 +318,18 @@ class Decoder(srd.Decoder):
 
                 # Check which of the condition(s) matched and handle them.
                 if self.matched[0]:
-                    self.handle_address_or_data(pins)
+                    _, sda = pins
+                    ss, es = self.samplenum, self.samplenum # TODO plus bitwidth
+                    self.handle_address_or_data(ss, es, sda)
                 elif self.matched[1]:
-                    self.handle_start(pins)
+                    ss, es = self.samplenum, self.samplenum
+                    self.handle_start(ss, es)
                 elif self.matched[2]:
-                    self.handle_stop(pins)
+                    ss, es = self.samplenum, self.samplenum
+                    self.handle_stop(ss, es)
             elif self.state == 'FIND ACK':
                 # Wait for a data/ack bit: SCL = rising.
-                self.get_ack(self.wait({0: 'r'}))
+                pins = self.wait({0: 'r'})
+                _, sda = pins
+                ss, es = self.samplenum, self.samplenum + self.bitwidth
+                self.get_ack(ss, es, sda)
