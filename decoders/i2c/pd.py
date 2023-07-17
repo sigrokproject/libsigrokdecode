@@ -198,11 +198,10 @@ class Decoder(srd.Decoder):
                     self.rem_addr_bytes = 1
                     self.slave_addr_7 = addr_byte >> 1
                     self.slave_addr_10 = None
-            is_seven = self.slave_addr_7 is not None
+            has_rw_bit = self.is_write is None
             if self.is_write is None:
                 read_bit = bool(addr_byte & 1)
-                shift_seven = self.options['address_format'] == 'shifted'
-                if is_seven and shift_seven:
+                if self.options['address_format'] == 'shifted':
                     d = d >> 1
                 self.is_write = False if read_bit else True
             else:
@@ -240,7 +239,7 @@ class Decoder(srd.Decoder):
             texts = [t.format(b = bit_value) for t in texts]
             self.putg(ss_bit, es_bit, cls, texts)
 
-        if cmd.startswith('ADDRESS') and is_seven:
+        if cmd.startswith('ADDRESS') and has_rw_bit:
             # Assign the last bit's location to the R/W annotation.
             # Adjust the address value's location to the left.
             ss_bit, es_bit = self.data_bits[-1][1], self.data_bits[-1][2]
