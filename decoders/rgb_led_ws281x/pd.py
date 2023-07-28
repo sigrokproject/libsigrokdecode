@@ -23,6 +23,8 @@ from functools import reduce
 class SamplerateError(Exception):
     pass
 
+( ANN_BIT, ANN_RESET, ANN_RGB, ) = range(3)
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'rgb_led_ws281x'
@@ -42,8 +44,8 @@ class Decoder(srd.Decoder):
         ('rgb', 'RGB'),
     )
     annotation_rows = (
-        ('bits', 'Bits', (0, 1)),
-        ('rgb-vals', 'RGB values', (2,)),
+        ('bits', 'Bits', (ANN_BIT, ANN_RESET,)),
+        ('rgb-vals', 'RGB values', (ANN_RGB,)),
     )
     options = (
         {'id': 'type', 'desc': 'RGB or RGBW', 'default': 'RGB',
@@ -75,7 +77,7 @@ class Decoder(srd.Decoder):
                 grb = reduce(lambda a, b: (a << 1) | b, self.bits)
                 rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
                 self.put(self.ss_packet, samplenum, self.out_ann,
-                         [2, ['#%06x' % rgb]])
+                         [ANN_RGB, ['#%06x' % rgb]])
                 self.bits = []
                 self.ss_packet = None
         else:
@@ -83,7 +85,7 @@ class Decoder(srd.Decoder):
                 grb = reduce(lambda a, b: (a << 1) | b, self.bits)
                 rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
                 self.put(self.ss_packet, samplenum, self.out_ann,
-                         [2, ['#%08x' % rgb]])
+                         [ANN_RGB, ['#%08x' % rgb]])
                 self.bits = []
                 self.ss_packet = None
 
@@ -112,9 +114,9 @@ class Decoder(srd.Decoder):
                 self.bits.append(bit_)
                 self.handle_bits(self.es)
 
-                self.put(self.ss, self.es, self.out_ann, [0, ['%d' % bit_]])
+                self.put(self.ss, self.es, self.out_ann, [ANN_BIT, ['%d' % bit_]])
                 self.put(self.es, self.samplenum, self.out_ann,
-                         [1, ['RESET', 'RST', 'R']])
+                         [ANN_RESET, ['RESET', 'RST', 'R']])
 
                 self.inreset = True
                 self.bits = []
@@ -130,7 +132,7 @@ class Decoder(srd.Decoder):
                     bit_ = (duty / period) > 0.5
 
                     self.put(self.ss, self.samplenum, self.out_ann,
-                             [0, ['%d' % bit_]])
+                             [ANN_BIT, ['%d' % bit_]])
 
                     self.bits.append(bit_)
                     self.handle_bits(self.samplenum)
