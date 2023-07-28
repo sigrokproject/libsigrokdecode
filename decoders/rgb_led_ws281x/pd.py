@@ -18,7 +18,7 @@
 ##
 
 import sigrokdecode as srd
-from functools import reduce
+from common.srdhelper import bitpack_msb
 
 class SamplerateError(Exception):
     pass
@@ -58,7 +58,6 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.samplerate = None
         self.oldpin = None
-        self.ss_packet = None
         self.ss = None
         self.es = None
         self.bits = []
@@ -74,27 +73,35 @@ class Decoder(srd.Decoder):
     def putg(self, ss, es, cls, text):
         self.put(ss, es, self.out_ann, [cls, text])
 
-    def handle_bits(self, samplenum):
+    def handle_bits(self):
+        if len(self.bits) < self.need_bits:
+            return
+        grb = bitpack_msb(self.bits, 0)
         if self.options['type'] == 'RGB':
-            if len(self.bits) == 24:
-                grb = reduce(lambda a, b: (a << 1) | b, self.bits)
-                rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
-                text = ['#{:06x}'.format(rgb)]
-                self.putg(self.ss_packet, samplenum, ANN_RGB, text)
-                self.bits = []
-                self.ss_packet = None
+            rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
+            text = '#{:06x}'.format(rgb)
         else:
-            if len(self.bits) == 32:
-                grb = reduce(lambda a, b: (a << 1) | b, self.bits)
-                rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
-                text = ['#{:08x}'.format(rgb)]
-                self.putg(self.ss_packet, samplenum, ANN_RGB, text)
-                self.bits = []
-                self.ss_packet = None
+            rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
+            text = '#{:08x}'.format(rgb)
+        ss_packet, es_packet = self.bits[0][1], self.bits[-1][2]
+        self.putg(ss_packet, es_packet, ANN_RGB, [text])
+        self.bits.clear()
+
+    def handle_bit(self, ss, es, value, ann_late = False):
+        if not ann_late:
+            text = ['{:d}'.format(value)]
+            self.putg(ss, es, ANN_BIT, text)
+        item = (value, ss, es)
+        self.bits.append(item)
+        self.handle_bits()
+        if ann_late:
+            text = ['{:d}'.format(value)]
+            self.putg(ss, es, ANN_BIT, text)
 
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+        self.need_bits = len(self.options['type']) * 8
 
         while True:
             # TODO: Come up with more appropriate self.wait() conditions.
@@ -114,17 +121,13 @@ class Decoder(srd.Decoder):
                 tH = (self.es - self.ss) / self.samplerate
                 bit_ = True if tH >= 625e-9 else False
 
-                self.bits.append(bit_)
-                self.handle_bits(self.es)
+                self.handle_bit(self.ss, self.es, bit_, True)
 
-                text = ['{:d}'.format(bit_)]
-                self.putg(self.ss, self.es, ANN_BIT, text)
                 text = ['RESET', 'RST', 'R']
                 self.putg(self.es, self.samplenum, ANN_RESET, text)
 
                 self.inreset = True
-                self.bits = []
-                self.ss_packet = None
+                self.bits.clear()
                 self.ss = None
 
             if not self.oldpin and pin:
@@ -134,16 +137,7 @@ class Decoder(srd.Decoder):
                     duty = self.es - self.ss
                     # Ideal duty for T0H: 33%, T1H: 66%.
                     bit_ = (duty / period) > 0.5
-
-                    text = ['{:d}'.format(bit_)]
-                    self.putg(self.ss, self.samplenum, ANN_BIT, text)
-
-                    self.bits.append(bit_)
-                    self.handle_bits(self.samplenum)
-
-                if self.ss_packet is None:
-                    self.ss_packet = self.samplenum
-
+                    self.handle_bit(self.ss, self.samplenum, bit_)
                 self.ss = self.samplenum
 
             elif self.oldpin and not pin:
