@@ -71,21 +71,24 @@ class Decoder(srd.Decoder):
         if key == srd.SRD_CONF_SAMPLERATE:
             self.samplerate = value
 
+    def putg(self, ss, es, cls, text):
+        self.put(ss, es, self.out_ann, [cls, text])
+
     def handle_bits(self, samplenum):
         if self.options['type'] == 'RGB':
             if len(self.bits) == 24:
                 grb = reduce(lambda a, b: (a << 1) | b, self.bits)
                 rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
-                self.put(self.ss_packet, samplenum, self.out_ann,
-                         [ANN_RGB, ['#%06x' % rgb]])
+                text = ['#{:06x}'.format(rgb)]
+                self.putg(self.ss_packet, samplenum, ANN_RGB, text)
                 self.bits = []
                 self.ss_packet = None
         else:
             if len(self.bits) == 32:
                 grb = reduce(lambda a, b: (a << 1) | b, self.bits)
                 rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
-                self.put(self.ss_packet, samplenum, self.out_ann,
-                         [ANN_RGB, ['#%08x' % rgb]])
+                text = ['#{:08x}'.format(rgb)]
+                self.putg(self.ss_packet, samplenum, ANN_RGB, text)
                 self.bits = []
                 self.ss_packet = None
 
@@ -114,9 +117,10 @@ class Decoder(srd.Decoder):
                 self.bits.append(bit_)
                 self.handle_bits(self.es)
 
-                self.put(self.ss, self.es, self.out_ann, [ANN_BIT, ['%d' % bit_]])
-                self.put(self.es, self.samplenum, self.out_ann,
-                         [ANN_RESET, ['RESET', 'RST', 'R']])
+                text = ['{:d}'.format(bit_)]
+                self.putg(self.ss, self.es, ANN_BIT, text)
+                text = ['RESET', 'RST', 'R']
+                self.putg(self.es, self.samplenum, ANN_RESET, text)
 
                 self.inreset = True
                 self.bits = []
@@ -131,8 +135,8 @@ class Decoder(srd.Decoder):
                     # Ideal duty for T0H: 33%, T1H: 66%.
                     bit_ = (duty / period) > 0.5
 
-                    self.put(self.ss, self.samplenum, self.out_ann,
-                             [ANN_BIT, ['%d' % bit_]])
+                    text = ['{:d}'.format(bit_)]
+                    self.putg(self.ss, self.samplenum, ANN_BIT, text)
 
                     self.bits.append(bit_)
                     self.handle_bits(self.samplenum)
