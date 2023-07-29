@@ -91,7 +91,7 @@ class Decoder(srd.Decoder):
          'default': 'GRB',
          'values': ('BGR', 'BRG', 'GBR', 'GRB', 'RBG', 'RGB', 'RWBG', 'RGBW')},
         {'id': 'textorder', 'desc': 'components output order (text)',
-         'default': 'RGB', 'values': ('wire', 'RGB[W]', 'RGB', 'RGBW', 'RGWB')},
+         'default': 'RGB[W]', 'values': ('wire', 'RGB[W]', 'RGB', 'RGBW', 'RGWB')},
     )
 
     def __init__(self):
