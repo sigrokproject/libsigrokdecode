@@ -23,6 +23,9 @@ from common.srdhelper import bitpack_msb
 class SamplerateError(Exception):
     pass
 
+class DecoderError(Exception):
+    pass
+
 ( ANN_BIT, ANN_RESET, ANN_RGB, ) = range(3)
 
 class Decoder(srd.Decoder):
@@ -48,8 +51,11 @@ class Decoder(srd.Decoder):
         ('rgb-vals', 'RGB values', (ANN_RGB,)),
     )
     options = (
-        {'id': 'type', 'desc': 'RGB or RGBW', 'default': 'RGB',
-         'values': ('RGB', 'RGBW')},
+        {'id': 'wireorder', 'desc': 'colour components order (wire)',
+         'default': 'GRB',
+         'values': ('BGR', 'BRG', 'GBR', 'GRB', 'RBG', 'RGB', 'RWBG', 'RGBW')},
+        {'id': 'textorder', 'desc': 'components output order (text)',
+         'default': 'RGB', 'values': ('wire', 'RGB[W]', 'RGB', 'RGBW', 'RGWB')},
     )
 
     def __init__(self):
@@ -72,15 +78,32 @@ class Decoder(srd.Decoder):
     def handle_bits(self):
         if len(self.bits) < self.need_bits:
             return
-        grb = bitpack_msb(self.bits, 0)
-        if self.options['type'] == 'RGB':
-            rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0x0000ff)
-            text = '#{:06x}'.format(rgb)
-        else:
-            rgb = (grb & 0xff0000) >> 8 | (grb & 0x00ff00) << 8 | (grb & 0xff0000ff)
-            text = '#{:08x}'.format(rgb)
         ss_packet, es_packet = self.bits[0][1], self.bits[-1][2]
-        self.putg(ss_packet, es_packet, ANN_RGB, [text])
+        r, g, b, w = 0, 0, 0, None
+        comps = []
+        for i, c in enumerate(self.wireformat):
+            first_idx, after_idx = 8 * i, 8 * i + 8
+            comp_bits = self.bits[first_idx:after_idx]
+            comp_ss, comp_es = comp_bits[0][1], comp_bits[-1][2]
+            comp_value = bitpack_msb(comp_bits, 0)
+            comp_item = (comp_ss, comp_es, comp_value)
+            comps.append(comp_item)
+            if c.lower() == 'r':
+                r = comp_value
+            elif c.lower() == 'g':
+                g = comp_value
+            elif c.lower() == 'b':
+                b = comp_value
+            elif c.lower() == 'w':
+                w = comp_value
+        wt = '' if w is None else '{:02x}'.format(w)
+        if self.textformat == 'wire':
+            rgb_text = ['{:02x}'.format(c[-1]) for c in comps]
+            rgb_text = '#' + ''.join(rgb_text)
+        else:
+            rgb_text = self.textformat.format(r = r, g = g, b = b, w = w, wt = wt)
+        if rgb_text:
+            self.putg(ss_packet, es_packet, ANN_RGB, [rgb_text])
         self.bits.clear()
 
     def handle_bit(self, ss, es, value, ann_late = False):
@@ -97,7 +120,34 @@ class Decoder(srd.Decoder):
     def decode(self):
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        self.need_bits = len(self.options['type']) * 8
+
+        # Preprocess options here, to simplify logic which executes
+        # much later in loops while settings have the same values.
+        wireorder = self.options['wireorder'].lower()
+        self.wireformat = [c for c in wireorder if c in 'rgbw']
+        self.need_bits = len(self.wireformat) * 8
+        textorder = self.options['textorder'].lower()
+        if textorder == 'wire':
+            self.textformat = 'wire'
+        elif textorder == 'rgb[w]':
+            self.textformat = '#{r:02x}{g:02x}{b:02x}{wt:s}'
+        else:
+            self.textformat = {
+                # "Obvious" permutations of R/G/B.
+                'bgr': '#{b:02x}{g:02x}{r:02x}',
+                'brg': '#{b:02x}{r:02x}{g:02x}',
+                'gbr': '#{g:02x}{b:02x}{r:02x}',
+                'grb': '#{g:02x}{r:02x}{b:02x}',
+                'rbg': '#{r:02x}{b:02x}{g:02x}',
+                'rgb': '#{r:02x}{g:02x}{b:02x}',
+                # RGB plus White. Only one of them useful?
+                'rgbw': '#{r:02x}{g:02x}{b:02x}{w:02x}',
+                # Weird RGBW permutation for compatibility to test case.
+                # Neither used RGBW nor the 'wire' order. Obsolete now?
+                'rgwb': '#{r:02x}{g:02x}{w:02x}{b:02x}',
+            }.get(textorder, None)
+            if self.textformat is None:
+                raise DecoderError('Unsupported text output format.')
 
         # Either check for edges which communicate bit values, or for
         # long periods of idle level which represent a reset pulse.
