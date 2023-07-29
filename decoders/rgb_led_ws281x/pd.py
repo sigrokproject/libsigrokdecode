@@ -17,6 +17,34 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+# Implementor's notes on the wire format:
+# - World Semi vendor, (Adafruit copy of the) datasheet
+#   https://cdn-shop.adafruit.com/datasheets/WS2812.pdf
+# - reset pulse is 50us (or more) of low pin level
+# - 24bits per WS281x item, 3x 8bits, MSB first, GRB sequence,
+#   cascaded WS281x items, all "excess bits" are passed through
+# - bit time starts with high period, continues with low period,
+#   high to low periods' ratio determines bit value, datasheet
+#   mentions 0.35us/0.8us for value 0, 0.7us/0.6us for value 1
+#   (huge 150ns tolerances, un-even 0/1 value length, hmm)
+# - experience suggests the timing "is variable", rough estimation
+#   often is good enough, microcontroller firmware got away with
+#   four quanta per bit time, or even with three quanta (30%/60%),
+#   Adafruit learn article suggests 1.2us total and 0.4/0.8 or
+#   0.8/0.4 high/low parts, four quanta are easier to handle when
+#   the bit stream is sent via SPI to avoid MCU bit banging and its
+#   inaccurate timing (when interrupts are used in the firmware)
+# - RGBW datasheet (Adafruit copy) for SK6812
+#   https://cdn-shop.adafruit.com/product-files/2757/p2757_SK6812RGBW_REV01.pdf
+#   also 1.2us total, shared across 0.3/0.9 for 0, 0.6/0.6 for 1,
+#   80us reset pulse, R8/G8/B8/W8 format per 32bits
+# - WS2815, RGB LED, uses GRB wire format, 280us RESET pulse width
+# - more vendors and models available and in popular use,
+#   suggests "one third" or "two thirds" ratio would be most robust,
+#   sample "a little before" the bit half? reset pulse width may need
+#   to become an option? matrices and/or fast refresh environments
+#   may want to experiment with back to back pixel streams
+
 import sigrokdecode as srd
 from common.srdhelper import bitpack_msb
 
