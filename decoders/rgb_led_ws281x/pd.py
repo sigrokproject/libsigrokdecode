@@ -57,11 +57,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.oldpin = None
-        self.ss = None
-        self.es = None
         self.bits = []
-        self.inreset = False
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -103,46 +99,77 @@ class Decoder(srd.Decoder):
             raise SamplerateError('Cannot decode without samplerate.')
         self.need_bits = len(self.options['type']) * 8
 
+        # Either check for edges which communicate bit values, or for
+        # long periods of idle level which represent a reset pulse.
+        # Track the left-most, right-most, and inner edge positions of
+        # a bit. The positive period's width determines the bit's value.
+        # Initially synchronize to the input stream by searching for a
+        # low period, which preceeds a data bit or starts a reset pulse.
+        # Don't annotate the very first reset pulse, but process it. We
+        # may not see the right-most edge of a data bit when reset is
+        # adjacent to that bit time.
+        cond_bit_starts = {0: 'r'}
+        cond_inbit_edge = {0: 'f'}
+        samples_625ns = int(self.samplerate * 625e-9)
+        samples_50us = round(self.samplerate * 50e-6)
+        cond_reset_pulse = {'skip': samples_50us + 1}
+        conds = [cond_bit_starts, cond_inbit_edge, cond_reset_pulse]
+        ss_bit, inv_bit, es_bit = None, None, None
+        pin, = self.wait({0: 'l'})
+        inv_bit = self.samplenum
+        check_reset = False
         while True:
-            # TODO: Come up with more appropriate self.wait() conditions.
-            (pin,) = self.wait()
+            pin, = self.wait(conds)
 
-            if self.oldpin is None:
-                self.oldpin = pin
-                continue
+            # Check RESET condition. Manufacturers may disagree on the
+            # minimal pulse width. 50us are recommended in datasheets,
+            # experiments suggest the limit is around 10us.
+            # When the RESET pulse is adjacent to the low phase of the
+            # last bit time, we have no appropriate condition for the
+            # bit time's end location. That's why this BIT's annotation
+            # is shorter (only spans the high phase), and the RESET
+            # annotation immediately follows (spans from the falling edge
+            # to the end of the minimum RESET pulse width).
+            if check_reset and self.matched[2]:
+                es_bit = inv_bit
+                ss_rst, es_rst = inv_bit, self.samplenum
 
-            # Check RESET condition (manufacturer recommends 50 usec minimal,
-            # but real minimum is ~10 usec).
-            if not self.inreset and not pin and self.es is not None and \
-                    self.ss is not None and \
-                    (self.samplenum - self.es) / self.samplerate > 50e-6:
+                if ss_bit and inv_bit and es_bit:
+                    # Decode last bit value. Use the last processed bit's
+                    # width for comparison when available. Fallback to an
+                    # arbitrary threshold otherwise (which can result in
+                    # false detection of value 1 for those captures where
+                    # high and low pulses are of similar width).
+                    duty = inv_bit - ss_bit
+                    thres = samples_625ns
+                    if self.bits:
+                        period = self.bits[-1][2] - self.bits[-1][1]
+                        thres = period * 0.5
+                    bit_value = 1 if duty >= thres else 0
+                    self.handle_bit(ss_bit, inv_bit, bit_value, True)
 
-                # Decode last bit value.
-                tH = (self.es - self.ss) / self.samplerate
-                bit_ = True if tH >= 625e-9 else False
+                if ss_rst and es_rst:
+                    text = ['RESET', 'RST', 'R']
+                    self.putg(ss_rst, es_rst, ANN_RESET, text)
+                check_reset = False
 
-                self.handle_bit(self.ss, self.es, bit_, True)
-
-                text = ['RESET', 'RST', 'R']
-                self.putg(self.es, self.samplenum, ANN_RESET, text)
-
-                self.inreset = True
                 self.bits.clear()
-                self.ss = None
+                ss_bit, inv_bit, es_bit = None, None, None
 
-            if not self.oldpin and pin:
-                # Rising edge.
-                if self.ss and self.es:
-                    period = self.samplenum - self.ss
-                    duty = self.es - self.ss
+            # Rising edge starts a bit time. Falling edge ends its high
+            # period. Get the previous bit's duty cycle and thus its
+            # bit value when the next bit starts.
+            if self.matched[0]: # and pin:
+                check_reset = False
+                if ss_bit and inv_bit:
+                    # Got a previous bit? Handle it.
+                    es_bit = self.samplenum
+                    period = es_bit - ss_bit
+                    duty = inv_bit - ss_bit
                     # Ideal duty for T0H: 33%, T1H: 66%.
-                    bit_ = (duty / period) > 0.5
-                    self.handle_bit(self.ss, self.samplenum, bit_)
-                self.ss = self.samplenum
-
-            elif self.oldpin and not pin:
-                # Falling edge.
-                self.inreset = False
-                self.es = self.samplenum
-
-            self.oldpin = pin
+                    bit_value = 1 if (duty / period) > 0.5 else 0
+                    self.handle_bit(ss_bit, es_bit, bit_value)
+                ss_bit, inv_bit, es_bit = self.samplenum, None, None
+            if self.matched[1]: # and not pin:
+                check_reset = True
+                inv_bit = self.samplenum
