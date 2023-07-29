@@ -54,7 +54,10 @@ class SamplerateError(Exception):
 class DecoderError(Exception):
     pass
 
-( ANN_BIT, ANN_RESET, ANN_RGB, ) = range(3)
+(
+    ANN_BIT, ANN_RESET, ANN_RGB,
+    ANN_COMP_R, ANN_COMP_G, ANN_COMP_B, ANN_COMP_W,
+) = range(7)
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -73,9 +76,14 @@ class Decoder(srd.Decoder):
         ('bit', 'Bit'),
         ('reset', 'RESET'),
         ('rgb', 'RGB'),
+        ('r', 'R'),
+        ('g', 'G'),
+        ('b', 'B'),
+        ('w', 'W'),
     )
     annotation_rows = (
         ('bits', 'Bits', (ANN_BIT, ANN_RESET,)),
+        ('rgb-comps', 'RGB components', (ANN_COMP_R, ANN_COMP_G, ANN_COMP_B, ANN_COMP_W,)),
         ('rgb-vals', 'RGB values', (ANN_RGB,)),
     )
     options = (
@@ -114,7 +122,12 @@ class Decoder(srd.Decoder):
             comp_bits = self.bits[first_idx:after_idx]
             comp_ss, comp_es = comp_bits[0][1], comp_bits[-1][2]
             comp_value = bitpack_msb(comp_bits, 0)
-            comp_item = (comp_ss, comp_es, comp_value)
+            comp_text = '{:02x}'.format(comp_value)
+            comp_ann = {
+                    'r': ANN_COMP_R, 'g': ANN_COMP_G,
+                    'b': ANN_COMP_B, 'w': ANN_COMP_W,
+            }.get(c.lower(), None)
+            comp_item = (comp_ss, comp_es, comp_ann, comp_value, comp_text)
             comps.append(comp_item)
             if c.lower() == 'r':
                 r = comp_value
@@ -126,10 +139,11 @@ class Decoder(srd.Decoder):
                 w = comp_value
         wt = '' if w is None else '{:02x}'.format(w)
         if self.textformat == 'wire':
-            rgb_text = ['{:02x}'.format(c[-1]) for c in comps]
-            rgb_text = '#' + ''.join(rgb_text)
+            rgb_text = '#' + ''.join([c[-1] for c in comps])
         else:
             rgb_text = self.textformat.format(r = r, g = g, b = b, w = w, wt = wt)
+        for ss_comp, es_comp, cls_comp, value_comp, text_comp in comps:
+            self.putg(ss_comp, es_comp, cls_comp, [text_comp])
         if rgb_text:
             self.putg(ss_packet, es_packet, ANN_RGB, [rgb_text])
         self.bits.clear()
