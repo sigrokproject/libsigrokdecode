@@ -37,19 +37,15 @@ Packet:
   - tuple of address, ack state, data for the given sequence
 '''
 
-swd_states = [
-    'IDLE', # Idle/unknown
-    'REQUEST', # Request phase (first 8 bits)
-    'ACK', # Ack phase (next 3 bits)
-    'READ', # Reading phase (next 32 bits for reads)
-    'WRITE', # Writing phase (next 32 bits for write)
-    'DPARITY', # Data parity phase
-]
-
 # Regexes for matching SWD data out of bitstring ('1' / '0' characters) format
 RE_SWDSWITCH = re.compile(bin(0xE79E)[:1:-1] + '$')
 RE_SWDREQ = re.compile(r'1(?P<apdp>.)(?P<rw>.)(?P<addr>..)(?P<parity>.)01$')
 RE_IDLE = re.compile('0' * 50 + '$')
+
+# is this RP2040 special?
+RE_FROM_DORMANT = re.compile('1' + '01001001' + '11001111' + '10010000' + '01000110' + '10101001' + '10110100' + '10100001' +
+                                   '01100001' + '10010111' + '11110101' + '10111011' + '11000111' + '01000101' + '01110000' + 
+                                   '00111101' + '10011000' + '0000'     + '01011000' + '$')
 
 # Sample edges
 RISING = 1
@@ -59,9 +55,10 @@ ADDR_DP_SELECT = 0x8
 ADDR_DP_CTRLSTAT = 0x4
 
 BIT_SELECT_CTRLSEL = 1
+BIT_SELECT_APBANKSEL = 0xf0
 BIT_CTRLSTAT_ORUNDETECT = 1
 
-ANNOTATIONS = ['reset', 'enable', 'read', 'write', 'ack', 'data', 'parity']
+ANNOTATIONS = ['bitr', 'bitw', 'turnaround', 'parity', 'reset', 'enable', 'read', 'write', 'ack', 'datar', 'dataw']
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -83,35 +80,49 @@ class Decoder(srd.Decoder):
          'default': 'no', 'values': ('yes', 'no')},
     )
     annotations = (
+        ('bitr', 'BIT RCV'),
+        ('bitw', 'BIT XMT'),
+        ('turnaround', 'TURN AROUND'),
+        ('parity', 'PARITY'),
         ('reset', 'RESET'),
         ('enable', 'ENABLE'),
         ('read', 'READ'),
         ('write', 'WRITE'),
         ('ack', 'ACK'),
-        ('data', 'DATA'),
-        ('parity', 'PARITY'),
+        ('datar', 'DATA READ'),
+        ('dataw', 'DATA WRITE'),
     )
+    annotation_rows = (
+        ('bits', 'Samples', (0,1,2)),
+        ('fields', 'Fields', (3,4,5,6,7,8,9,10))
+    )
+
 
     def __init__(self):
         self.reset()
+
 
     def reset(self):
         # SWD data/clock state
         self.state = 'UNKNOWN'
         self.sample_edge = RISING
-        self.ack = None # Ack state of the current phase
-        self.ss_req = 0 # Start sample of current req
-        self.turnaround = 0 # Number of turnaround edges to ignore before continuing
-        self.bits = '' # Bits from SWDIO are accumulated here, matched against expected sequences
-        self.samplenums = [] # Sample numbers that correspond to the samples in self.bits
+        self.ack = None           # Ack state of the current phase
+        self.ss_req = 0           # Start sample of current req
+        self.turnaround = 0       # Number of turnaround edges to ignore before continuing
+        self.turnround = 1        # this is the configured turnaround value (named form the doc)
+        self.bits = ''            # Bits from SWDIO are accumulated here, matched against expected sequences
+        self.samplenums = []      # Sample numbers that correspond to the samples in self.bits
         self.linereset_count = 0
 
         # SWD debug port state
         self.data = None
         self.addr = None
-        self.rw = None # Are we inside an SWD read or a write?
-        self.ctrlsel = 0 # 'ctrlsel' is bit 0 in the SELECT register.
-        self.orundetect = 0 # 'orundetect' is bit 0 in the CTRLSTAT register.
+        self.rw = None            # Are we inside an SWD read or a write?
+        self.apdp = None
+        self.ctrlsel = 0          # 'ctrlsel' is bit 0 in the SELECT register.
+        self.apbanksel = 0        # 'apbanksel' are bits [7:4] in the SELECT register
+        self.orundetect = 0       # 'orundetect' is bit 0 in the CTRLSTAT register.
+        
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
@@ -119,11 +130,16 @@ class Decoder(srd.Decoder):
         if self.options['strict_start'] == 'no':
             self.state = 'REQ' # No need to wait for a LINE RESET.
 
+
     def putx(self, ann, length, data):
         '''Output annotated data.'''
         ann = ANNOTATIONS.index(ann)
         try:
-            ss = self.samplenums[-length]
+            ss = self.samplenums[-(2 * length)]
+            ss_next_edge = self.samplenums[-(2 * length - 1)]
+            ss -= (ss_next_edge - ss)
+            if ss < self.samplenums[0]:
+                ss = self.samplenums[0]
         except IndexError:
             ss = self.samplenums[0]
         if self.state == 'REQ':
@@ -131,18 +147,24 @@ class Decoder(srd.Decoder):
         es = self.samplenum
         self.put(ss, es, self.out_ann, [ann, [data]])
 
+
     def putp(self, ptype, pdata):
         self.put(self.ss_req, self.samplenum, self.out_python, [ptype, pdata])
 
+
     def put_python_data(self):
         '''Emit Python data item based on current SWD packet contents.'''
-        ptype = {
-            ('AP', 'R'): 'AP_READ',
-            ('AP', 'W'): 'AP_WRITE',
-            ('DP', 'R'): 'DP_READ',
-            ('DP', 'W'): 'DP_WRITE',
-        }[(self.apdp, self.rw)]
+        try:
+            ptype = {
+                ('AP', 'R'): 'AP_READ',
+                ('AP', 'W'): 'AP_WRITE',
+                ('DP', 'R'): 'DP_READ',
+                ('DP', 'W'): 'DP_WRITE',
+            }[(self.apdp, self.rw)]
+        except Exception:
+            ptype = 'LINE_RESET'
         self.putp(ptype, (self.addr, self.data, self.ack))
+
 
     def decode(self):
         while True:
@@ -161,30 +183,39 @@ class Decoder(srd.Decoder):
                         self.reset_state()
                     self.linereset_count = 0
 
-            # Otherwise, we only care about either rising or falling edges
-            # (depending on sample_edge, set according to current state).
-            if clk != self.sample_edge:
-                continue
+            if True:
+                # Debugging
+                if self.turnaround > 0:
+                    if clk == RISING:
+                        self.put(self.samplenum, self.samplenum, self.out_ann, [ANNOTATIONS.index('turnaround'), ['X']])
+                elif clk == self.sample_edge:
+                    if clk == RISING:
+                        self.put(self.samplenum, self.samplenum, self.out_ann, [ANNOTATIONS.index('bitw'), [str(dio)]])
+                    else:
+                        self.put(self.samplenum, self.samplenum, self.out_ann, [ANNOTATIONS.index('bitr'), [str(dio)]])
 
-            # Turnaround bits get skipped.
-            if self.turnaround > 0:
-                self.turnaround -= 1
-                continue
-
-            self.bits += str(dio)
             self.samplenums.append(self.samplenum)
-            {
-                'UNKNOWN': self.handle_unknown_edge,
-                'REQ': self.handle_req_edge,
-                'ACK': self.handle_ack_edge,
-                'DATA': self.handle_data_edge,
-                'DPARITY': self.handle_dparity_edge,
-            }[self.state]()
+            if self.turnaround > 0:
+                if clk == RISING:
+                    self.turnaround -= 1
+                    self.samplenums = [self.samplenum]
+            elif clk == self.sample_edge:
+                self.bits += str(dio)
+            else:
+                {
+                    'UNKNOWN': self.handle_unknown_edge,
+                    'REQ': self.handle_req_edge,
+                    'ACK': self.handle_ack_edge,
+                    'DATAR': self.handle_data_edge,
+                    'DATAW': self.handle_data_edge,
+                    'DPARITY': self.handle_dparity_edge,
+                }[self.state]()
+
 
     def next_state(self):
         '''Step to the next SWD state, reset internal counters accordingly.'''
         self.bits = ''
-        self.samplenums = []
+        self.samplenums = [self.samplenum]
         self.linereset_count = 0
         if self.state == 'UNKNOWN':
             self.state = 'REQ'
@@ -193,18 +224,29 @@ class Decoder(srd.Decoder):
         elif self.state == 'REQ':
             self.state = 'ACK'
             self.sample_edge = FALLING
-            self.turnaround = 1
+            self.turnaround = self.turnround
         elif self.state == 'ACK':
-            self.state = 'DATA'
-            self.sample_edge = RISING if self.rw == 'W' else FALLING
-            self.turnaround = 0 if self.rw == 'R' else 2
-        elif self.state == 'DATA':
+            if self.rw == 'R':
+                self.state = 'DATAR'
+                self.sample_edge = FALLING
+                self.turnaround = 0
+            else:
+                self.state = 'DATAW'
+                self.sample_edge = RISING
+                self.turnaround = self.turnround
+        elif self.state == 'DATAR':
+            self.state = 'DPARITY'
+        elif self.state == 'DATAW':
             self.state = 'DPARITY'
         elif self.state == 'DPARITY':
             self.put_python_data()
             self.state = 'REQ'
             self.sample_edge = RISING
-            self.turnaround = 1 if self.rw == 'R' else 0
+            if self.rw == 'R':
+                self.turnaround = self.turnround
+            else:
+                self.turnaround = 0
+
 
     def reset_state(self):
         '''Line reset (or equivalent), wait for a new pending SWD request.'''
@@ -220,13 +262,20 @@ class Decoder(srd.Decoder):
         self.ack = None
         self.state = 'REQ'
 
+
     def handle_unknown_edge(self):
         '''
         Clock edge in the UNKNOWN state.
         In the unknown state, clock edges get ignored until we see a line
         reset (which is detected in the decode method, not here.)
         '''
+        m = re.search(RE_FROM_DORMANT, self.bits)
+        if m is not None:
+            self.putx('reset', 148, 'FROM DORMANT')
+            self.reset_state()
+            return
         pass
+
 
     def handle_req_edge(self):
         '''Clock edge in the REQ state (waiting for SWD r/w request).'''
@@ -249,6 +298,7 @@ class Decoder(srd.Decoder):
             self.next_state()
             return
 
+
     def handle_ack_edge(self):
         '''Clock edge in the ACK state (waiting for complete ACK sequence).'''
         if len(self.bits) < 3:
@@ -264,7 +314,7 @@ class Decoder(srd.Decoder):
                 self.next_state()
             else:
                 self.reset_state()
-            self.turnaround = 1
+            self.turnaround = self.turnround
         elif self.bits == '010':
             self.putx('ack', 3, 'WAIT')
             self.ack = 'WAIT'
@@ -272,7 +322,7 @@ class Decoder(srd.Decoder):
                 self.next_state()
             else:
                 self.reset_state()
-            self.turnaround = 1
+            self.turnaround = self.turnround
         elif self.bits == '111':
             self.putx('ack', 3, 'NOREPLY')
             self.ack = 'NOREPLY'
@@ -281,6 +331,7 @@ class Decoder(srd.Decoder):
             self.putx('ack', 3, 'ERROR')
             self.ack = 'ERROR'
             self.reset_state()
+
 
     def handle_data_edge(self):
         '''Clock edge in the DATA state (waiting for 32 bits to clock past).'''
@@ -294,16 +345,20 @@ class Decoder(srd.Decoder):
                 self.dparity += 1
         self.dparity = self.dparity % 2
 
-        self.putx('data', 32, '0x%08x' % self.data)
+        self.putx('datar' if self.rw == 'R' else 'dataw', 32, '0x%08x' % self.data)
         self.next_state()
+
 
     def handle_dparity_edge(self):
         '''Clock edge in the DPARITY state (clocking in parity bit).'''
         if str(self.dparity) != self.bits:
             self.putx('parity', 1, str(self.dparity) + self.bits) # PARITY ERROR
-        elif self.rw == 'W':
-            self.handle_completed_write()
+        else:
+            self.putx('parity', 1, 'P')                           # PARITY OK
+            if self.rw == 'W':
+                self.handle_completed_write()
         self.next_state()
+
 
     def handle_completed_write(self):
         '''
@@ -314,8 +369,13 @@ class Decoder(srd.Decoder):
             return
         elif self.addr == ADDR_DP_SELECT:
             self.ctrlsel = self.data & BIT_SELECT_CTRLSEL
-        elif self.addr == ADDR_DP_CTRLSTAT and self.ctrlsel == 0:
-            self.orundetect = self.data & BIT_CTRLSTAT_ORUNDETECT
+            self.apbanksel = self.data & BIT_SELECT_APBANKSEL
+        elif self.addr == ADDR_DP_CTRLSTAT:
+            if self.ctrlsel == 0:
+                self.orundetect = self.data & BIT_CTRLSTAT_ORUNDETECT
+            else:
+                self.turnround = ((self.data >> 8) & 0x03) + 1
+
 
     def get_address_description(self):
         '''
@@ -326,24 +386,44 @@ class Decoder(srd.Decoder):
             if self.rw == 'R':
                 # Tables 2-4 & 2-5 in ADIv5.2 spec ARM document IHI 0031C
                 return {
-                    0: 'IDCODE',
-                    0x4: 'R CTRL/STAT' if self.ctrlsel == 0 else 'R DLCR',
-                    0x8: 'RESEND',
-                    0xC: 'RDBUFF'
+                    0x0: 'DP IDCODE',
+                    0x4: 'DP CTRL/STAT' if self.ctrlsel == 0 else 'DP R WCR',
+                    0x8: 'DP RESEND',
+                    0xC: 'DP RDBUFF'
                 }[self.addr]
             elif self.rw == 'W':
                 # Tables 2-4 & 2-5 in ADIv5.2 spec ARM document IHI 0031C
                 return {
-                    0: 'W ABORT',
-                    0x4: 'W CTRL/STAT' if self.ctrlsel == 0 else 'W DLCR',
-                    0x8: 'W SELECT',
-                    0xC: 'W RESERVED'
+                    0x0: 'DP ABORT',
+                    0x4: 'DP CTRL/STAT' if self.ctrlsel == 0 else 'DP W WCR',
+                    0x8: 'DP SELECT',
+                    0xC: 'DP RESERVED'
                 }[self.addr]
         elif self.apdp == 'AP':
-            if self.rw == 'R':
-                return 'R AP%x' % self.addr
-            elif self.rw == 'W':
-                return 'W AP%x' % self.addr
+            addr = self.apbanksel + self.addr
+            if addr == 0x00:
+                s = "CSW"
+            elif addr == 0x04:
+                s = "TAR"
+            elif addr == 0x0c:
+                s = "DRW"
+            elif addr == 0x10:
+                s = "BD0"
+            elif addr == 0x14:
+                s = "BD1"
+            elif addr == 0x18:
+                s = "BD2"
+            elif addr == 0x1c:
+                s = "BD3"
+            elif addr == 0xf4:
+                s = "CFG"
+            elif addr == 0xf8:
+                s = "BASE"
+            elif addr == 0xfc:
+                s = "IDR"
+            else:
+                s = "%02x" % addr
+            return 'AP %s' % s
 
         # Any legitimate operations shouldn't fall through to here, probably
         # a decoder bug.
