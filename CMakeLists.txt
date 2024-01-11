@@ -88,7 +88,7 @@ endif()
 # Build the library
 add_library(sigrokdecode SHARED ${LIBSIGROKDECODE_SOURCES} ${LIBSIGROKDECODE_HEADERS})
 target_link_libraries(sigrokdecode ${GLIB_LIBRARIES} ${LIBIRMP_LIBRARIES} ${Python3_LIBRARIES})
-target_include_directories(sigrokdecode PRIVATE ${PROJECT_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # config.h / version.h
+target_include_directories(sigrokdecode INTERFACE ${PROJECT_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # config.h / version.h # must be interface, because version.h is included in libsigrokdecode.h which is public
 target_include_directories(sigrokdecode PUBLIC ${Python3_INCLUDE_DIRS}) # TODO: why this must be PUBLIC?
 target_include_directories(sigrokdecode PUBLIC ${PROJECT_SOURCE_DIR})
 
