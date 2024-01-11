@@ -9,9 +9,9 @@ add_executable(MainTest main.c
 target_link_libraries(MainTest sigrokdecode check)
 target_link_libraries(MainTest ${GLIB_LIBRARIES})
 target_include_directories(MainTest PRIVATE ${GLIB_INCLUDE_DIRS})
-target_include_directories(MainTest PRIVATE ${CMAKE_BINARY_DIR}) # config.h / version.h
+target_include_directories(MainTest PRIVATE ${PROJECT_BINARY_DIR}) # config.h / version.h
 
-target_compile_definitions(MainTest PRIVATE "-DDECODERS_TESTDIR=\"${CMAKE_SOURCE_DIR}/decoders\"")
+target_compile_definitions(MainTest PRIVATE "-DDECODERS_TESTDIR=\"${PROJECT_SOURCE_DIR}/decoders\"")
 
 add_test(NAME MainTest COMMAND MainTest)
 

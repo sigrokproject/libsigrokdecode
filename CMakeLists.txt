@@ -88,9 +88,9 @@ endif()
 # Build the library
 add_library(sigrokdecode SHARED ${LIBSIGROKDECODE_SOURCES} ${LIBSIGROKDECODE_HEADERS})
 target_link_libraries(sigrokdecode ${GLIB_LIBRARIES} ${LIBIRMP_LIBRARIES} ${Python3_LIBRARIES})
-target_include_directories(sigrokdecode PRIVATE ${CMAKE_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # config.h / version.h
+target_include_directories(sigrokdecode PRIVATE ${PROJECT_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # config.h / version.h
 target_include_directories(sigrokdecode PUBLIC ${Python3_INCLUDE_DIRS}) # TODO: why this must be PUBLIC?
-target_include_directories(sigrokdecode PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(sigrokdecode PUBLIC ${PROJECT_SOURCE_DIR})
 
 # Install rules
 install(TARGETS sigrokdecode DESTINATION lib)
