@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.23) # file_set needs at least 3.23
 project(libsigrokdecode LANGUAGES C
     VERSION 0.6.0
     HOMEPAGE_URL "http://www.sigrok.org"
@@ -88,9 +88,14 @@ endif()
 # Build the library
 add_library(sigrokdecode SHARED ${LIBSIGROKDECODE_SOURCES} ${LIBSIGROKDECODE_HEADERS})
 target_link_libraries(sigrokdecode ${GLIB_LIBRARIES} ${LIBIRMP_LIBRARIES} ${Python3_LIBRARIES})
-target_include_directories(sigrokdecode INTERFACE ${PROJECT_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # config.h / version.h # must be interface, because version.h is included in libsigrokdecode.h which is public
+target_include_directories(sigrokdecode PRIVATE ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS})
 target_include_directories(sigrokdecode PUBLIC ${Python3_INCLUDE_DIRS}) # TODO: why this must be PUBLIC?
 target_include_directories(sigrokdecode PUBLIC ${PROJECT_SOURCE_DIR})
+target_sources(sigrokdecode PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS ${PROJECT_BINARY_DIR}
+    TYPE HEADERS
+    FILES ${PROJECT_BINARY_DIR}/version.h ${PROJECT_BINARY_DIR}/config.h)
 
 # Install rules
 install(TARGETS sigrokdecode DESTINATION lib)
