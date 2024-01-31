@@ -54,8 +54,6 @@ set(LIBSIGROKDECODE_SOURCES
 
 # Additional headers
 set(LIBSIGROKDECODE_HEADERS
-    libsigrokdecode.h
-    version.h
     libsigrokdecode-internal.h
 )
 
@@ -88,18 +86,18 @@ endif()
 # Build the library
 add_library(sigrokdecode SHARED ${LIBSIGROKDECODE_SOURCES} ${LIBSIGROKDECODE_HEADERS})
 target_link_libraries(sigrokdecode ${GLIB_LIBRARIES} ${LIBIRMP_LIBRARIES} ${Python3_LIBRARIES})
-target_include_directories(sigrokdecode PRIVATE ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS})
+target_include_directories(sigrokdecode PRIVATE ${PROJECT_BINARY_DIR} ${GLIB_INCLUDE_DIRS} ${LIBIRMP_INCLUDE_DIRS}) # for config.h
 target_include_directories(sigrokdecode PUBLIC ${Python3_INCLUDE_DIRS}) # TODO: why this must be PUBLIC?
 target_include_directories(sigrokdecode PUBLIC ${PROJECT_SOURCE_DIR})
 target_sources(sigrokdecode PUBLIC
     FILE_SET HEADERS
-    BASE_DIRS ${PROJECT_BINARY_DIR}
+    BASE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}
     TYPE HEADERS
-    FILES ${PROJECT_BINARY_DIR}/version.h ${PROJECT_BINARY_DIR}/config.h)
+    FILES ${PROJECT_BINARY_DIR}/version.h libsigrokdecode.h)
 
 # Install rules
 install(TARGETS sigrokdecode DESTINATION lib)
-install(FILES ${LIBSIGROKDECODE_HEADERS} DESTINATION include)
+install(TARGETS sigrokdecode FILE_SET HEADERS)
 
 # Autotools-like configuration summary
 message(STATUS "libsigrokdecode configuration summary:")
