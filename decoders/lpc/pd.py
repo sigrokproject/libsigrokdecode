@@ -331,6 +331,7 @@ class Decoder(srd.Decoder):
             if not (self.oldlclk == 0 and lclk == 1):
                 self.oldlclk = lclk
                 continue
+            self.oldlclk = lclk
 
             # Store LAD[3:0] bit values (one nibble) in local variables.
             # Most (but not all) states need this.
