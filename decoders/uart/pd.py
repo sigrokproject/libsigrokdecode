@@ -124,6 +124,7 @@ class Decoder(srd.Decoder):
         {'id': 'invert_tx', 'desc': 'Invert TX', 'default': 'no',
             'values': ('yes', 'no')},
         {'id': 'sample_point', 'desc': 'Sample point (%)', 'default': 50},
+        {'id': 'packet_idle_us', 'desc': 'Packet break by idle time, us', 'default': -1},
         {'id': 'rx_packet_delim', 'desc': 'RX packet delimiter (decimal)',
             'default': -1},
         {'id': 'tx_packet_delim', 'desc': 'TX packet delimiter (decimal)',
@@ -175,8 +176,7 @@ class Decoder(srd.Decoder):
         self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
 
     def putx_packet(self, rxtx, data):
-        s, halfbit = self.ss_packet[rxtx], self.bit_width / 2.0
-        self.put(s - floor(halfbit), self.samplenum + ceil(halfbit), self.out_ann, data)
+        self.put(self.ss_packet[rxtx], self.es_packet[rxtx], self.out_ann, data)
 
     def putpx(self, rxtx, data):
         s, halfbit = self.startsample[rxtx], self.bit_width / 2.0
@@ -220,12 +220,19 @@ class Decoder(srd.Decoder):
         self.packet_cache = [[], []]
         self.ss_packet, self.es_packet = [None, None], [None, None]
         self.idle_start = [None, None]
+        self.packet_idle_samples = None
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON)
         self.out_binary = self.register(srd.OUTPUT_BINARY)
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.bw = (self.options['data_bits'] + 7) // 8
+        packet_idle_us = self.options['packet_idle_us']
+        if packet_idle_us > 0:
+            self.packet_idle_samples = int(round(packet_idle_us * 1e-6 * self.samplerate))
+            self.packet_idle_samples = max(1, self.packet_idle_samples)
+        else:
+            self.packet_idle_samples = None
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -285,29 +292,38 @@ class Decoder(srd.Decoder):
 
         self.advance_state(rxtx, signal)
 
+    def handle_packet_idle(self, rxtx, idle_start):
+        if not self.packet_cache[rxtx] or self.packet_idle_samples is None:
+            return
+        if idle_start >= self.es_packet[rxtx] + self.packet_idle_samples:
+            self.put_packet(rxtx)
+
+    def put_packet(self, rxtx):
+        s = ''
+        for b in self.packet_cache[rxtx]:
+            s += self.format_value(b)
+            if self.options['format'] != 'ascii':
+                s += ' '
+        if self.options['format'] != 'ascii' and s[-1] == ' ':
+            s = s[:-1]  # Drop trailing space.
+        self.putx_packet(rxtx, [Ann.RX_PACKET + rxtx, [s]])
+        self.packet_cache[rxtx] = []
+
     def handle_packet(self, rxtx):
         d = 'rx' if (rxtx == RX) else 'tx'
         delim = self.options[d + '_packet_delim']
         plen = self.options[d + '_packet_len']
-        if delim == -1 and plen == -1:
+        if delim == -1 and plen == -1 and self.packet_idle_samples is None:
             return
-
+        self.handle_packet_idle(rxtx, self.frame_start[rxtx])
         # Cache data values until we see the delimiter and/or the specified
         # packet length has been reached (whichever happens first).
         if len(self.packet_cache[rxtx]) == 0:
-            self.ss_packet[rxtx] = self.startsample[rxtx]
+            self.ss_packet[rxtx] = self.startsample[rxtx] - floor(self.bit_width / 2.0)
         self.packet_cache[rxtx].append(self.datavalue[rxtx])
+        self.es_packet[rxtx] = self.samplenum + ceil(self.bit_width / 2.0)
         if self.datavalue[rxtx] == delim or len(self.packet_cache[rxtx]) == plen:
-            self.es_packet[rxtx] = self.samplenum
-            s = ''
-            for b in self.packet_cache[rxtx]:
-                s += self.format_value(b)
-                if self.options['format'] != 'ascii':
-                    s += ' '
-            if self.options['format'] != 'ascii' and s[-1] == ' ':
-                s = s[:-1] # Drop trailing space.
-            self.putx_packet(rxtx, [Ann.RX_PACKET + rxtx, [s]])
-            self.packet_cache[rxtx] = []
+            self.put_packet(rxtx)
 
     def get_data_bits(self, rxtx, signal):
         # Save the sample number of the middle of the first data bit.
@@ -570,6 +586,7 @@ class Decoder(srd.Decoder):
             return
         ss, es = self.idle_start[rxtx], self.samplenum
         self.handle_idle(rxtx, ss, es)
+        self.handle_packet_idle(rxtx, ss)
         self.idle_start[rxtx] = es
 
     def decode(self):
