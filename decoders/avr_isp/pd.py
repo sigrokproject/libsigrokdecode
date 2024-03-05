@@ -236,14 +236,14 @@ class Decoder(srd.Decoder):
             self.handle_cmd_programming_enable(cmd, ret)
         elif cmd[0] == 0xac and (cmd[1] & (1 << 7)) == (1 << 7):
             self.handle_cmd_chip_erase(cmd, ret)
-        elif cmd[:3] == [0x50, 0x00, 0x00]:
-            self.handle_cmd_read_fuse_bits(cmd, ret)
-        elif cmd[:3] == [0x58, 0x08, 0x00]:
-            self.handle_cmd_read_fuse_high_bits(cmd, ret)
-        elif cmd[:3] == [0x50, 0x08, 0x00]:
-            self.handle_cmd_read_extended_fuse_bits(cmd, ret)
         elif cmd[:3] == [0x38, 0x00, 0x00]:
             self.handle_cmd_read_calibration_byte(cmd, ret)
+        elif cmd[:3] == [0x50, 0x00, 0x00]:
+            self.handle_cmd_read_fuse_bits(cmd, ret)
+        elif cmd[:3] == [0x50, 0x08, 0x00]:
+            self.handle_cmd_read_extended_fuse_bits(cmd, ret)
+        elif cmd[:3] == [0x58, 0x08, 0x00]:
+            self.handle_cmd_read_fuse_high_bits(cmd, ret)
         elif cmd[:3] == [0xF0, 0x00, 0x00]:
             self.handle_cmd_poll_ready_nbusy(cmd, ret)
         elif cmd[0] == 0x30 and cmd[2] == 0x00:
