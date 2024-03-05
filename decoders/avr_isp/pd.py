@@ -21,8 +21,8 @@ import sigrokdecode as srd
 from .parts import *
 
 class Ann:
-    PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, \
-    RLB, REEM, RP, LPMP, WP, WARN, DEV, = range(15)
+    PE, RSB0, RSB1, RSB2, CE, RFB, RHFB, REFB, RCB, PRNB, \
+    RLB, REEM, RP, LPMP, WP, WARN, DEV, = range(17)
 
 VENDOR_CODE_ATMEL = 0x1e
 
@@ -45,6 +45,8 @@ class Decoder(srd.Decoder):
         ('rfb', 'Read fuse bits'),
         ('rhfb', 'Read high fuse bits'),
         ('refb', 'Read extended fuse bits'),
+        ('rcb', 'Read calibration byte'),
+        ('prnb', 'Poll RDY/nBSY'),
         ('rlb', 'Read lock bits'),
         ('reem', 'Read EEPROM memory'),
         ('rp', 'Read program memory'),
@@ -55,7 +57,7 @@ class Decoder(srd.Decoder):
     )
     annotation_rows = (
         ('commands', 'Commands', (Ann.PE, Ann.RSB0, Ann.RSB1, Ann.RSB2,
-            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB,
+            Ann.CE, Ann.RFB, Ann.RHFB, Ann.REFB, Ann.RCB, Ann.PRNB,
             Ann.RLB, Ann.REEM, Ann.RP, Ann.LPMP, Ann.WP,)),
         ('warnings', 'Warnings', (Ann.WARN,)),
         ('devs', 'Devices', (Ann.DEV,)),
@@ -170,6 +172,23 @@ class Decoder(srd.Decoder):
         # TODO: Decode fuse bits.
         # TODO: Sanity check on reply.
 
+    def handle_cmd_read_calibration_byte(self, cmd, ret):
+        # Read calibration byte.
+        self.putx([Ann.RCB, ['Read calibration byte: 0x%02x' % ret[3]]])
+
+    def handle_cmd_poll_ready_nbusy(self, cmd, ret):
+        # Poll RDY/nBSY.
+        _RL = 'Ready'
+        _R = 'R'
+        if ret[3] & 0x01:
+            _RL = 'Busy'
+            _R = 'B'
+        self.putx([Ann.PRNB, [
+            'Poll RDY/nBSY: %s' % _RL,
+            '%s' % _RL,
+            '%s' % _R
+        ]])
+
     def handle_cmd_read_lock_bits(self, cmd, ret):
         # Read lock bits
         self.putx([Ann.RLB, ['Read lock bits: 0x%02x' % ret[3]]])
@@ -217,12 +236,16 @@ class Decoder(srd.Decoder):
             self.handle_cmd_programming_enable(cmd, ret)
         elif cmd[0] == 0xac and (cmd[1] & (1 << 7)) == (1 << 7):
             self.handle_cmd_chip_erase(cmd, ret)
+        elif cmd[:3] == [0x38, 0x00, 0x00]:
+            self.handle_cmd_read_calibration_byte(cmd, ret)
         elif cmd[:3] == [0x50, 0x00, 0x00]:
             self.handle_cmd_read_fuse_bits(cmd, ret)
-        elif cmd[:3] == [0x58, 0x08, 0x00]:
-            self.handle_cmd_read_fuse_high_bits(cmd, ret)
         elif cmd[:3] == [0x50, 0x08, 0x00]:
             self.handle_cmd_read_extended_fuse_bits(cmd, ret)
+        elif cmd[:3] == [0x58, 0x08, 0x00]:
+            self.handle_cmd_read_fuse_high_bits(cmd, ret)
+        elif cmd[:3] == [0xF0, 0x00, 0x00]:
+            self.handle_cmd_poll_ready_nbusy(cmd, ret)
         elif cmd[0] == 0x30 and cmd[2] == 0x00:
             self.handle_cmd_read_signature_byte_0x00(cmd, ret)
         elif cmd[0] == 0x30 and cmd[2] == 0x01:
