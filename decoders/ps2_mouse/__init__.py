@@ -1,7 +1,6 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2016 Daniel Schulte <trilader@schroedingers-bit.net>
 ## Copyright (C) 2023 Marshal Horn <kamocat@gmail.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -19,11 +18,8 @@
 ##
 
 '''
-This protocol decoder can decode PS/2 device -> host communication \
-and host -> device communication.
-
-To interpret the data, please stack the appropriate keyboard or mouse \
-decoder
+This protocol decoder can decode PS/2 mouse commands.
+It should be stacked on the PS/2 packet decoder.
 '''
 
 from .pd import Decoder
