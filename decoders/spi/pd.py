@@ -100,6 +100,8 @@ class Decoder(srd.Decoder):
             'values': (0, 1)},
         {'id': 'bitorder', 'desc': 'Bit order',
             'default': 'msb-first', 'values': ('msb-first', 'lsb-first')},
+        {'id': 'skipbits', 'desc': 'Skip bits from start',
+            'default': 0},
         {'id': 'wordsize', 'desc': 'Word size', 'default': 8},
     )
     annotations = (
@@ -131,6 +133,7 @@ class Decoder(srd.Decoder):
     def reset(self):
         self.samplerate = None
         self.bitcount = 0
+        self.bitsskipped = 0
         self.misodata = self.mosidata = 0
         self.misobits = []
         self.mosibits = []
@@ -308,6 +311,10 @@ class Decoder(srd.Decoder):
         elif mode == 2 and clk == 1: # Sample on falling clock edge
             return
         elif mode == 3 and clk == 0: # Sample on rising clock edge
+            return
+
+        if self.bitsskipped < self.options["skipbits"]:
+            self.bitsskipped += 1
             return
 
         # Found the correct clock edge, now get the SPI bit(s).
