@@ -65,10 +65,11 @@ class Decoder(srd.Decoder):
         self.oldws = 1
         self.bitcount = 0
         self.data = 0
+        self.saved_left_sample = 0
         self.samplesreceived = 0
         self.first_sample = None
         self.ss_block = None
-        self.wordlength = -1
+        self.last_bitcount = -1
         self.wrote_wav_header = False
 
     def start(self):
@@ -101,7 +102,7 @@ class Decoder(srd.Decoder):
                 self.first_sample))
 
         return 'I²S: %d %d-bit samples received at %sHz' % \
-            (self.samplesreceived, self.wordlength, samplerate)
+            (self.samplesreceived, self.last_bitcount, samplerate)
 
     def wav_header(self):
         # Chunk descriptor
@@ -123,7 +124,10 @@ class Decoder(srd.Decoder):
         return h
 
     def wav_sample(self, sample):
-        return struct.pack('<I', self.data)
+        # Left shift the data, so that the MSB is correct for less than 32-bit
+        # samples.
+        d = self.data << (32 - self.bitcount)
+        return struct.pack('<I', d)
 
     def decode(self):
         while True:
@@ -148,22 +152,37 @@ class Decoder(srd.Decoder):
 
                 sck = self.wait({0: 'f'})
 
-                idx = 0 if not self.oldws else 1
-                c1 = 'Left channel' if not self.oldws else 'Right channel'
-                c2 = 'Left' if not self.oldws else 'Right'
-                c3 = 'L' if not self.oldws else 'R'
+                is_left = not self.oldws
+                if is_left:
+                    idx = 0
+                    c1 = 'Left channel'
+                    c2 = 'Left'
+                    c3 = 'L'
+                else:
+                    idx = 1
+                    c1 = 'Right channel'
+                    c2 = 'Right'
+                    c3 = 'R'
                 v = '%08x' % self.data
                 self.putpb(['DATA', [c3, self.data]])
                 self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
                                  '%s: %s' % (c3, v), c3]])
-                self.putbin([0, self.wav_sample(self.data)])
+
+                # Save the left sample, and output both channels together when
+                # the right channel is sampled. This avoids an issue when the
+                # number of samples on the two channels are not equal.
+                if is_left:
+                    self.saved_left_sample = self.wav_sample(self.data)
+                else:
+                    self.putbin([0, self.saved_left_sample])
+                    self.putbin([0, self.wav_sample(self.data)])
 
                 # Check that the data word was the correct length.
-                if self.wordlength != -1 and self.wordlength != self.bitcount:
+                if self.last_bitcount != -1 and self.last_bitcount != self.bitcount:
                     self.putb([2, ['Received %d-bit word, expected %d-bit '
-                                   'word' % (self.bitcount, self.wordlength)]])
+                                   'word' % (self.bitcount, self.last_bitcount)]])
 
-                self.wordlength = self.bitcount
+                self.last_bitcount = self.bitcount
             else:
                 sck = self.wait({0: 'f'})
 
