@@ -19,6 +19,7 @@
 
 import sigrokdecode as srd
 import struct
+from common.srdhelper import SrdIntEnum
 
 '''
 OUTPUT_PYTHON format:
@@ -32,6 +33,8 @@ Packet:
 <channel>: 'L' or 'R'
 <value>: integer
 '''
+
+Pin = SrdIntEnum.from_str('Pin', 'SCK WS SD')
 
 class Decoder(srd.Decoder):
     api_version = 3
@@ -62,7 +65,7 @@ class Decoder(srd.Decoder):
 
     def reset(self):
         self.samplerate = None
-        self.oldws = 1
+        self.oldws = None
         self.bitcount = 0
         self.data = 0
         self.samplesreceived = 0
@@ -81,12 +84,15 @@ class Decoder(srd.Decoder):
             self.samplerate = value
 
     def putpb(self, data):
+        """Output Python data"""
         self.put(self.ss_block, self.samplenum, self.out_python, data)
 
     def putbin(self, data):
+        """Output binary data"""
         self.put(self.ss_block, self.samplenum, self.out_binary, data)
 
     def putb(self, data):
+        """Output annotations"""
         self.put(self.ss_block, self.samplenum, self.out_ann, data)
 
     def report(self):
@@ -126,10 +132,18 @@ class Decoder(srd.Decoder):
         return struct.pack('<I', self.data)
 
     def decode(self):
+        # Skip any incomplete frames by waiting for WS transition
+        ws = self.wait({Pin.WS: 'e'})[1]
+
+        # Current sample contains the new value after the transition, so old
+        # value is inverted.
+        self.oldws = 0 if ws else 1
+
         while True:
             # Wait for a rising edge on the SCK pin.
-            sck, ws, sd = self.wait({0: 'r'})
+            sck, ws, sd = self.wait({Pin.SCK: 'r'})
 
+            # Shift the data in, one SCK at a time
             self.data = (self.data << 1) | sd
             self.bitcount += 1
 
@@ -146,16 +160,19 @@ class Decoder(srd.Decoder):
 
                 self.samplesreceived += 1
 
-                sck = self.wait({0: 'f'})
+                self.wait({Pin.SCK: 'f'})
 
-                idx = 0 if not self.oldws else 1
                 c1 = 'Left channel' if not self.oldws else 'Right channel'
                 c2 = 'Left' if not self.oldws else 'Right'
                 c3 = 'L' if not self.oldws else 'R'
                 v = '%08x' % self.data
                 self.putpb(['DATA', [c3, self.data]])
-                self.putb([idx, ['%s: %s' % (c1, v), '%s: %s' % (c2, v),
-                                 '%s: %s' % (c3, v), c3]])
+
+                idx = 0 if not self.oldws else 1
+                self.putb([idx, ['%s: %s' % (c1, v),
+                                 '%s: %s' % (c2, v),
+                                 '%s: %s' % (c3, v),
+                                 c3]])
                 self.putbin([0, self.wav_sample(self.data)])
 
                 # Check that the data word was the correct length.
@@ -165,7 +182,7 @@ class Decoder(srd.Decoder):
 
                 self.wordlength = self.bitcount
             else:
-                sck = self.wait({0: 'f'})
+                self.wait({Pin.SCK: 'f'})
 
             # Reset decoder state.
             self.data = 0
