@@ -114,8 +114,8 @@ class Decoder(srd.Decoder):
         h += b'\x01\x00'         # Audio format (0x0001 == PCM)
         h += b'\x02\x00'         # Number of channels (2)
         h += b'\x80\x3e\x00\x00' # Samplerate (16000)
-        h += b'\x00\xfa\x00\x00' # Byterate (64000)
-        h += b'\x04\x00'         # Blockalign (4)
+        h += b'\x00\xf4\x01\x00' # Byterate (16000*4*2 = 128000)
+        h += b'\x08\x00'         # Blockalign (4*2 = 8)
         h += b'\x20\x00'         # Bits per sample (32)
         # Data subchunk
         h += b'data'
