@@ -40,19 +40,22 @@ CTRL_TYPES = {
     6: 'PS RDY',
     7: 'GET SOURCE CAP',
     8: 'GET SINK CAP',
-    9: 'DR SWAP',
-    10: 'PR SWAP',
-    11: 'VCONN SWAP',
-    12: 'WAIT',
-    13: 'SOFT RESET',
-    14: 'reserved',
-    15: 'reserved',
-    16: 'Not Supported',
+    9: 'DR_Swap',
+    10: 'PR_Swap',
+    11: 'VCONN_Swap',
+    12: 'Wait',
+    13: 'Soft_Reset',
+    14: 'Data_Reset',
+    15: 'Data_Reset_Complete',
+    16: 'Not_Supported',
     17: 'Get_Source_Cap_Extended',
     18: 'Get_Status',
     19: 'FR_Swap',
     20: 'Get_PPS_Status',
     21: 'Get_Country_Codes',
+    22: 'Get_Sink_Cap_Extended',
+    23: 'Get_Source_Info',
+    24: 'Get_Revision'
 }
 
 # Data message type
@@ -64,7 +67,35 @@ DATA_TYPES = {
     5: 'Battery_Status',
     6: 'Alert',
     7: 'Get_Country_Info',
+    8: 'Enter_USB',
+    9: 'EPR_Request',
+    10: 'EPR_Mode',
+    11: 'Source_Info',
+    12: 'Revision',
     15: 'VDM'
+}
+
+# Extended message type
+EXT_TYPES = {
+    1: 'Source_Capabilities_Extended',
+    2: 'Status',
+    3: 'Get_Battery_Cap',
+    4: 'Get_Battery_Status',
+    5: 'Battery_Capabilities',
+    6: 'Get_Manufacturer_Info',
+    7: 'Manufacturer_Info',
+    8: 'Security_Request',
+    9: 'Security_Response',
+    10: 'Firmware_Update_Request',
+    11: 'Firmware_Update_Response',
+    12: 'PPS_Status',
+    13: 'Country_Info',
+    14: 'Country_Codes',
+    15: 'Sink_Capabilities_Extended',
+    16: 'Extended_Control',
+    17: 'EPR_Source_Capabilities',
+    18: 'EPR_Sink_Capabilities',
+    30: 'Vendor_Defined_Extended'
 }
 
 # 4b5b encoding of the symbols
@@ -377,6 +408,10 @@ class Decoder(srd.Decoder):
         return 'mode %s' % (mode_name) if idx == 0 else 'invalid BRO'
 
     def putpayload(self, s0, s1, idx):
+        if self.head_ext() == 1:
+            # TODO: to decode Extended Message Types
+            return
+
         t = self.head_type()
         txt = '['+str(idx+1)+'] '
         if t == 2:
@@ -396,14 +431,21 @@ class Decoder(srd.Decoder):
         if self.head_data_role() != self.head_power_role():
             role += '/DFP' if self.head_data_role() else '/UFP'
         t = self.head_type()
-        if self.head_count() == 0:
-            shortm = CTRL_TYPES[t]
+        if self.head_ext() == 1:
+            shortm = EXT_TYPES[t] if t in EXT_TYPES else 'EXT???'
+        elif self.head_count() == 0:
+            shortm = CTRL_TYPES[t] if t in CTRL_TYPES else 'CTR???'
         else:
             shortm = DATA_TYPES[t] if t in DATA_TYPES else 'DAT???'
 
         longm = '(r{:d}) {:s}[{:d}]: {:s}'.format(self.head_rev(), role, self.head_id(), shortm)
         self.putx(0, -1, [ann_type, [longm, shortm]])
         self.text += longm
+    
+    def head_ext(self):
+        if self.head_rev() == 3:
+            return (self.head >> 15) & 1
+        return 0
 
     def head_id(self):
         return (self.head >> 9) & 7
@@ -418,10 +460,15 @@ class Decoder(srd.Decoder):
         return ((self.head >> 6) & 3) + 1
 
     def head_type(self):
+        if self.head_rev() == 3:
+            return self.head & 0x1F
         return self.head & 0xF
 
     def head_count(self):
         return (self.head >> 12) & 7
+
+    def exthead_size(self):
+        return (self.exthead) & 511
 
     def putx(self, s0, s1, data):
         self.put(self.edges[s0], self.edges[s1], self.out_ann, data)
@@ -430,8 +477,12 @@ class Decoder(srd.Decoder):
         self.putx(0, -1, [8, [longm, shortm]])
 
     def compute_crc32(self):
-        bdata = struct.pack('<H'+'I'*len(self.data), self.head & 0xffff,
-                            *tuple([d & 0xffffffff for d in self.data]))
+        if self.head_ext() == 1:
+            bdata = struct.pack('<HH'+'B'*len(self.extdata), self.head & 0xffff, self.exthead & 0xffff,
+                                *tuple([d & 0xff for d in self.extdata]))
+        else:
+            bdata = struct.pack('<H'+'I'*len(self.data), self.head & 0xffff,
+                                *tuple([d & 0xffffffff for d in self.data]))
         return zlib.crc32(bdata)
 
     def rec_sym(self, i, sym):
@@ -444,6 +495,18 @@ class Decoder(srd.Decoder):
         if rec:
             self.rec_sym(i, sym)
         return sym
+
+    def get_byte(self):
+        i = self.idx
+        # Check it's not a truncated packet.
+        if len(self.bits) - i <= 10:
+            self.putwarn('Truncated', '!')
+            return 0x0BAD
+        k = [self.get_sym(i), self.get_sym(i+5)]
+        # TODO: Check bad symbols.
+        val = k[0] | (k[1] << 4)
+        self.idx += 10
+        return val
 
     def get_short(self):
         i = self.idx
@@ -539,6 +602,7 @@ class Decoder(srd.Decoder):
 
     def decode_packet(self):
         self.data = []
+        self.extdata = []
         self.idx = 0
         self.text = ''
 
@@ -561,11 +625,20 @@ class Decoder(srd.Decoder):
         self.puthead()
 
         # Decode data payload
-        for i in range(self.head_count()):
-            self.data.append(self.get_word())
-            self.putx(self.idx-40, self.idx,
-                      [4, ['[%d]%08x' % (i, self.data[i]), 'D%d' % (i)]])
-            self.putpayload(self.idx-40, self.idx, i)
+        if self.head_ext() == 1:
+            self.exthead = self.get_short()
+            self.putx(self.idx-20, self.idx, [3, ['EH:%04x' % (self.exthead), 'EHD']])
+            for i in range(self.exthead_size()):
+                self.extdata.append(self.get_byte())
+                self.putx(self.idx-10, self.idx,
+                        [4, ['[%d]%02x' % (i, self.extdata[i]), 'D%d' % (i)]])
+                #self.putpayload(self.idx-40, self.idx, i)
+        else:
+            for i in range(self.head_count()):
+                self.data.append(self.get_word())
+                self.putx(self.idx-40, self.idx,
+                        [4, ['[%d]%08x' % (i, self.data[i]), 'D%d' % (i)]])
+                self.putpayload(self.idx-40, self.idx, i)
 
         # CRC check
         self.crc = self.get_word()
