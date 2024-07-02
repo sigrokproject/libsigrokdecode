@@ -61,10 +61,10 @@ class DecoderError(Exception):
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'rgb_led_ws281x'
+    id = 'rgb_led_clockless'
     name = 'RGB LED (clockless)'
     longname = 'RGB LED string decoder (clockless)'
-    desc = 'RGB LED string protocol (clockless).'
+    desc = 'Decoder for RGB LED string clockless one-wire protocol (WS2812, WS2812B, APA104, SM16703, SK6812 ).'
     license = 'gplv3+'
     inputs = ['logic']
     outputs = []
@@ -87,11 +87,16 @@ class Decoder(srd.Decoder):
         ('rgb-vals', 'RGB values', (ANN_RGB,)),
     )
     options = (
-        {'id': 'wireorder', 'desc': 'colour components order (wire)',
+        {'id': 'led_type', 'desc': 'LED Type',
+         'default': 'WS281x',
+        'values': ('WS281x', 'SK6812')},
+        {'id': 'wireorder', 'desc': 'Color order (wire)',
          'default': 'GRB',
-         'values': ('BGR', 'BRG', 'GBR', 'GRB', 'RBG', 'RGB', 'RWBG', 'RGBW')},
-        {'id': 'textorder', 'desc': 'components output order (text)',
-         'default': 'RGB[W]', 'values': ('wire', 'RGB[W]', 'RGB', 'RGBW', 'RGWB')},
+        'values': ('BGR', 'BRG', 'GBR', 'GRB', 'RBG', 'RGB')},
+        {'id': 'is_rgbw', 'desc': 'Is this RGBW?',
+         'default': 'False', 'values': ('True', 'False')},
+        {'id': 'textorder', 'desc': 'Components output order (text)',
+         'default': 'RGB[W]', 'values': ('wire', 'RGB[W]', 'RGB')},
     )
 
     def __init__(self):
@@ -101,8 +106,37 @@ class Decoder(srd.Decoder):
         self.samplerate = None
         self.bits = []
 
+    def preprocess_options(self):
+        if not self.samplerate:
+            raise SamplerateError('Cannot decode without samplerate.')
+
+        # Preprocess wire order
+        wireorder = self.options['wireorder'].lower()
+
+        # Determine if RGBW is selected
+        is_rgbw = self.options['is_rgbw'].lower() == 'true'
+
+        # Prepare wire format based on RGBW option
+        self.wireformat = [c for c in wireorder if c in 'rgb']
+        if is_rgbw:
+            self.wireformat.append('w')
+
+        # Calculate the number of bits needed based on the wire format
+        self.need_bits = len(self.wireformat) * 8
+
+        # Handle the output text format
+        textorder = self.options['textorder'].lower()
+        if textorder == 'wire':
+            self.textformat = 'wire'
+        elif textorder == 'rgb[w]':
+            self.textformat = '#{r:02x}{g:02x}{b:02x}{wt:s}'
+        else:
+            # Default RGB format string
+            self.textformat = '#{r:02x}{g:02x}{b:02x}'
+
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        self.preprocess_options()  # Preprocess options when the decoding starts
 
     def metadata(self, key, value):
         if key == srd.SRD_CONF_SAMPLERATE:
@@ -114,9 +148,15 @@ class Decoder(srd.Decoder):
     def handle_bits(self):
         if len(self.bits) < self.need_bits:
             return
+
+        # Determine the start and end sample numbers for the packet
         ss_packet, es_packet = self.bits[0][1], self.bits[-1][2]
+
+        # Initialize RGB and W component values
         r, g, b, w = 0, 0, 0, None
         comps = []
+
+        # Extract and annotate each component based on wire format
         for i, c in enumerate(self.wireformat):
             first_idx, after_idx = 8 * i, 8 * i + 8
             comp_bits = self.bits[first_idx:after_idx]
@@ -124,11 +164,11 @@ class Decoder(srd.Decoder):
             comp_value = bitpack_msb(comp_bits, 0)
             comp_text = '{:02x}'.format(comp_value)
             comp_ann = {
-                    'r': ANN_COMP_R, 'g': ANN_COMP_G,
-                    'b': ANN_COMP_B, 'w': ANN_COMP_W,
+                'r': ANN_COMP_R, 'g': ANN_COMP_G,
+                'b': ANN_COMP_B, 'w': ANN_COMP_W,
             }.get(c.lower(), None)
-            comp_item = (comp_ss, comp_es, comp_ann, comp_value, comp_text)
-            comps.append(comp_item)
+            comps.append((comp_ss, comp_es, comp_ann, comp_value, comp_text))
+
             if c.lower() == 'r':
                 r = comp_value
             elif c.lower() == 'g':
@@ -137,131 +177,107 @@ class Decoder(srd.Decoder):
                 b = comp_value
             elif c.lower() == 'w':
                 w = comp_value
+
+        # Determine the wt (white component text) for formatting
         wt = '' if w is None else '{:02x}'.format(w)
+
+        # Format the RGB text for annotation
         if self.textformat == 'wire':
             rgb_text = '#' + ''.join([c[-1] for c in comps])
         else:
-            rgb_text = self.textformat.format(r = r, g = g, b = b, w = w, wt = wt)
-        for ss_comp, es_comp, cls_comp, value_comp, text_comp in comps:
+            rgb_text = self.textformat.format(r=r, g=g, b=b, w=w, wt=wt)
+
+        # Annotate each component and the RGB value
+        for ss_comp, es_comp, cls_comp, _, text_comp in comps:
             self.putg(ss_comp, es_comp, cls_comp, [text_comp])
+
         if rgb_text:
             self.putg(ss_packet, es_packet, ANN_RGB, [rgb_text])
+
+        # Clear the bits list after processing the packet
         self.bits.clear()
 
-    def handle_bit(self, ss, es, value, ann_late = False):
+    def handle_bit(self, ss, es, value, ann_late=False):
         if not ann_late:
             text = ['{:d}'.format(value)]
             self.putg(ss, es, ANN_BIT, text)
-        item = (value, ss, es)
-        self.bits.append(item)
+
+        self.bits.append((value, ss, es))
         self.handle_bits()
+
         if ann_late:
             text = ['{:d}'.format(value)]
             self.putg(ss, es, ANN_BIT, text)
 
     def decode(self):
-        if not self.samplerate:
-            raise SamplerateError('Cannot decode without samplerate.')
-
-        # Preprocess options here, to simplify logic which executes
-        # much later in loops while settings have the same values.
-        wireorder = self.options['wireorder'].lower()
-        self.wireformat = [c for c in wireorder if c in 'rgbw']
-        self.need_bits = len(self.wireformat) * 8
-        textorder = self.options['textorder'].lower()
-        if textorder == 'wire':
-            self.textformat = 'wire'
-        elif textorder == 'rgb[w]':
-            self.textformat = '#{r:02x}{g:02x}{b:02x}{wt:s}'
+        led_type = self.options['led_type'].lower()
+        # Constants for bit timing and reset detection
+        if led_type == 'ws281x':
+            DUTY_CYCLE_THRESHOLD = 0.5  # 50% threshold for distinguishing bit values
+            RESET_CODE_TIMING = round(self.samplerate * 50e-6)
+        elif led_type == 'sk6812':
+            DUTY_CYCLE_THRESHOLD = 0.375  # 37.5% threshold for distinguishing bit values
+            RESET_CODE_TIMING = round(self.samplerate * 80e-6)
         else:
-            self.textformat = {
-                # "Obvious" permutations of R/G/B.
-                'bgr': '#{b:02x}{g:02x}{r:02x}',
-                'brg': '#{b:02x}{r:02x}{g:02x}',
-                'gbr': '#{g:02x}{b:02x}{r:02x}',
-                'grb': '#{g:02x}{r:02x}{b:02x}',
-                'rbg': '#{r:02x}{b:02x}{g:02x}',
-                'rgb': '#{r:02x}{g:02x}{b:02x}',
-                # RGB plus White. Only one of them useful?
-                'rgbw': '#{r:02x}{g:02x}{b:02x}{w:02x}',
-                # Weird RGBW permutation for compatibility to test case.
-                # Neither used RGBW nor the 'wire' order. Obsolete now?
-                'rgwb': '#{r:02x}{g:02x}{w:02x}{b:02x}',
-            }.get(textorder, None)
-            if self.textformat is None:
-                raise DecoderError('Unsupported text output format.')
+            raise DecoderError('Unsupported LED Type')
+        BIT_PERIOD = 1.25e-6  # 1.25 microseconds for WS281x and SK6812
+        HALF_BIT_PERIOD = int(self.samplerate * (BIT_PERIOD / 2))
 
-        # Either check for edges which communicate bit values, or for
-        # long periods of idle level which represent a reset pulse.
-        # Track the left-most, right-most, and inner edge positions of
-        # a bit. The positive period's width determines the bit's value.
-        # Initially synchronize to the input stream by searching for a
-        # low period, which preceeds a data bit or starts a reset pulse.
-        # Don't annotate the very first reset pulse, but process it. We
-        # may not see the right-most edge of a data bit when reset is
-        # adjacent to that bit time.
+        # Conditions for bit and reset detection
         cond_bit_starts = {0: 'r'}
         cond_inbit_edge = {0: 'f'}
-        samples_625ns = int(self.samplerate * 625e-9)
-        samples_50us = round(self.samplerate * 50e-6)
-        cond_reset_pulse = {'skip': samples_50us + 1}
+        cond_reset_pulse = {'skip': RESET_CODE_TIMING + 1}
         conds = [cond_bit_starts, cond_inbit_edge, cond_reset_pulse]
+
         ss_bit, inv_bit, es_bit = None, None, None
         pin, = self.wait({0: 'l'})
         inv_bit = self.samplenum
         check_reset = False
+
         while True:
             pin, = self.wait(conds)
 
-            # Check RESET condition. Manufacturers may disagree on the
-            # minimal pulse width. 50us are recommended in datasheets,
-            # experiments suggest the limit is around 10us.
-            # When the RESET pulse is adjacent to the low phase of the
-            # last bit time, we have no appropriate condition for the
-            # bit time's end location. That's why this BIT's annotation
-            # is shorter (only spans the high phase), and the RESET
-            # annotation immediately follows (spans from the falling edge
-            # to the end of the minimum RESET pulse width).
+            # Check for RESET condition
             if check_reset and self.matched[2]:
                 es_bit = inv_bit
                 ss_rst, es_rst = inv_bit, self.samplenum
 
-                if ss_bit and inv_bit and es_bit:
-                    # Decode last bit value. Use the last processed bit's
-                    # width for comparison when available. Fallback to an
-                    # arbitrary threshold otherwise (which can result in
-                    # false detection of value 1 for those captures where
-                    # high and low pulses are of similar width).
+                if ss_bit and inv_bit:
+                    # Decode the last bit value
                     duty = inv_bit - ss_bit
-                    thres = samples_625ns
-                    if self.bits:
-                        period = self.bits[-1][2] - self.bits[-1][1]
-                        thres = period * 0.5
+                    period = self.samplerate * BIT_PERIOD
+                    thres = period * DUTY_CYCLE_THRESHOLD
                     bit_value = 1 if duty >= thres else 0
-                    self.handle_bit(ss_bit, inv_bit, bit_value, True)
 
+                    # Extend the last bit's annotation to the expected end of the bit period
+                    expected_es_bit = ss_bit + int(self.samplerate * BIT_PERIOD)
+                    self.handle_bit(ss_bit, expected_es_bit, bit_value, True)
+
+                    # Update the start and end of the reset to be after the bit period
+                    ss_rst = expected_es_bit
+                    es_rst = expected_es_bit + RESET_CODE_TIMING
+
+                # Annotate RESET after the extended bit period
                 if ss_rst and es_rst:
                     text = ['RESET', 'RST', 'R']
                     self.putg(ss_rst, es_rst, ANN_RESET, text)
-                check_reset = False
 
+                check_reset = False
                 self.bits.clear()
                 ss_bit, inv_bit, es_bit = None, None, None
 
-            # Rising edge starts a bit time. Falling edge ends its high
-            # period. Get the previous bit's duty cycle and thus its
-            # bit value when the next bit starts.
-            if self.matched[0]: # and pin:
+            # Bit value detection logic
+            if self.matched[0]:  # Rising edge starts a bit time
                 check_reset = False
                 if ss_bit and inv_bit:
-                    # Got a previous bit? Handle it.
                     es_bit = self.samplenum
                     period = es_bit - ss_bit
                     duty = inv_bit - ss_bit
-                    # Ideal duty for T0H: 33%, T1H: 66%.
-                    bit_value = 1 if (duty / period) > 0.5 else 0
+                    bit_value = 1 if (duty / period) > DUTY_CYCLE_THRESHOLD else 0
                     self.handle_bit(ss_bit, es_bit, bit_value)
                 ss_bit, inv_bit, es_bit = self.samplenum, None, None
-            if self.matched[1]: # and not pin:
+
+            if self.matched[1]:  # Falling edge ends its high period
                 check_reset = True
                 inv_bit = self.samplenum
+

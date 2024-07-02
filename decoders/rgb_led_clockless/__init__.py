@@ -19,6 +19,7 @@
 
 '''
 clockless RGB LED protocol decoder.
+Decoder for RGB LED string clockless one-wire protocol (WS2812, WS2812B, APA104, SM16703, SK6812 ).'
 
 Details:
 https://cpldcpu.wordpress.com/2014/01/14/light_ws2812-library-v2-0-part-i-understanding-the-ws2812/
