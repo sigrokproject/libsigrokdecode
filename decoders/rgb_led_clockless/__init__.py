@@ -18,7 +18,7 @@
 ##
 
 '''
-WS281x RGB LED protocol decoder.
+clockless RGB LED protocol decoder.
 
 Details:
 https://cpldcpu.wordpress.com/2014/01/14/light_ws2812-library-v2-0-part-i-understanding-the-ws2812/

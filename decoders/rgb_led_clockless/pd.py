@@ -62,13 +62,13 @@ class DecoderError(Exception):
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'rgb_led_ws281x'
-    name = 'RGB LED (WS281x)'
-    longname = 'RGB LED string decoder (WS281x)'
-    desc = 'RGB LED string protocol (WS281x).'
+    name = 'RGB LED (clockless)'
+    longname = 'RGB LED string decoder (clockless)'
+    desc = 'RGB LED string protocol (clockless).'
     license = 'gplv3+'
     inputs = ['logic']
     outputs = []
-    tags = ['Display', 'IC']
+    tags = ['Display', 'Lighting']
     channels = (
         {'id': 'din', 'name': 'DIN', 'desc': 'DIN data line'},
     )
