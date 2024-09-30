@@ -34,12 +34,15 @@ Each transmission is organized in a logical structure named _'Code Word'_ descri
     +-------------------+---------------*----+----+----+----+-------+-----+
                                         | S3 | S0 | S1 | S2 | V-Low | RPT |
                                         *----+----+----+----+-------+-----+
+    LSB                                                                 MSB
+Please note that **LSB** is transmitted **first** . This means that Encrypted Portion is sent out <u>before any other parts</u>.
 
 + **Encrypted Portion** : This data changes everytime a button is pressed according to the encryption algorithm.
 + **Serial Number** : Unique value present in each encoder.
 + **Button Code** : Button pressed.
 + **V-Low** : Indicates encoder battery voltage : High/Low.
 + **RPT** : Reports if the button is kept pressed. 
+
 
 ***
 
@@ -73,8 +76,9 @@ Depending of your Operating System create a new directory named <u>keeloq</u>
 Please note that it is present also a sample file named **hcs300_sample.sr** for your convenience.
 
 ## Tested Integrated circuits
-At the writing time the only IC tested with this software is 
+At the writing time here the ICs succesfully tested with this decorder
 - **HCS300** [Datasheet](https://ww1.microchip.com/downloads/aemDocuments/documents/MCU08/ProductDocuments/DataSheets/21137G.pdf)
+- **HCS301** [Datasheet](https://ww1.microchip.com/downloads/en/devicedoc/21143b.pdf)
 
 Looking forward to seeing this list longer.
 
@@ -86,5 +90,12 @@ If you want to contribute to this, please send an email to : <andrea.orazi@gmail
 - <u>Att'achment</u> : A PulseView sample containing a good number of _Code Words_ in **.sr** format.
 ***
 # Change Log:
-- Version  0.1 : 
+- Version 0.2 - [29th September 2024]
+    * TEs timing review 
+    * Bug-Fix regarding LSB-MSB interpretation for the Encrypted Portion and Fixed Part
+    * Minor code changes
+    * IC: HCS301 Succesfully tested (Contribution Tobias Rothfelder)
+
+- Version 0.1 - [09th May 2024]: 
     * Recognise a sequence of _Code Words_ genederated by an econder and shows their content in human readble format.
+    * IC: HCS300 Succesfully tested  

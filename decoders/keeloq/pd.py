@@ -17,6 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+
 import sigrokdecode as srd
 
 class Ann:
@@ -61,7 +62,7 @@ class Decoder(srd.Decoder):
         self.Block_Init = 0 #Flag for each block of info
         #TE Timing - According to documentation a TE is typically 400 usecs
         #[0][1] - TE/Logical Bit 1 | [2][3] - Logical Bit 0 | [4][5] - Header Lenght 
-        self.TE_Timing = [ 300e-6, 500e-6, 700e-6, 1000e-6, 3e-3, 6e-3 ]
+        self.TE_Timing = [ 280e-6, 580e-6, 700e-6, 1000e-6, 3e-3, 6e-3 ]
         self.ssBlock = 0 #Sample number of a block of intormation
         self.Header_Completed = 0 #[ 0 = Not Complete 1 = Complete]
         self.n = 0 # Current Sample number
@@ -160,15 +161,21 @@ class Decoder(srd.Decoder):
     #Convert a Binary string into the equivalent value in Hex 0x in string format
     def Bin2Hex (self):
         decimal_value = int(self.BitString, 2)
-        # Convert integer to hexadecimal
-        hex_value = hex(decimal_value)
-        return ( hex_value.upper() )
+        # Convert integer to hexadecimal with leading zeroes
+        hex_value = "0x{0:0{1}X}".format(decimal_value,7) 
+        return ( hex_value )
 
     #Decode all Logical PWM Bit from 0 to 65 completing the CodeWord
     def Decode_DataPortion(self, t):  
         # Bits 0-31 : Encrypted Portion. It comes from the algorithm. 
         if (self.Bitcnt <= 31 ): 
-            self.BitString = self.BitString + self.Decode_LogicalBit(t)
+            # According to the documentation LSB is transmitted first.
+            #   However, decoding a bit string to Hex, requires that LSB must be the last bit in the string sequence
+            #   to preserve bit significance.
+            #   That's why --self.BitString-- is appended always as LSB, whereas the last transmitted bit
+            #   is considered as MSB. This ensures the right interpretation and conversion to Hex 
+            #   for both Encrypted and Fixed portion
+            self.BitString = self.Decode_LogicalBit(t) + self.BitString
 
             if (self.Bitcnt == 31):
                 self.put(self.ssBlock, self.n, self.out_ann, [Ann.CODE_WORD, ['Encrypted Portion']])
@@ -179,7 +186,7 @@ class Decoder(srd.Decoder):
         # Here begins the cleartext portion known as Fixed Portion
         #   it is made by Serial Number + Button Code + Status (V-Low + Repeat\)
         elif (self.Bitcnt >= 32 and self.Bitcnt <= 59 ): # Bits 32-59 : Serial Number
-            self.BitString = self.BitString + self.Decode_LogicalBit(t)
+            self.BitString = self.Decode_LogicalBit(t) + self.BitString
 
             if (self.Bitcnt == 59):
                 self.put(self.ssBlock, self.n, self.out_ann, [Ann.CODE_WORD, ['Serial Number']])
