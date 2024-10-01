@@ -42,10 +42,10 @@ ann_chip, ann_reg, ann_digit, ann_warning = range(4)
 
 class Decoder(srd.Decoder):
     api_version = 3
-    id = 'max7219'
-    name = 'MAX7219'
+    id = 'max72xx'
+    name = 'MAX72xx'
     longname = 'Maxim MAX7219/MAX7221'
-    desc = 'Maxim MAX72xx series 8-digit LED display driver.'
+    desc = 'Maxim MAX72xx series 8-digit LED display driver'
     license = 'gplv2+'
     inputs = ['spi']
     outputs = []
@@ -54,13 +54,13 @@ class Decoder(srd.Decoder):
         {'id': 'numofdrivers', 'desc': 'Number of daisy-chained chips', 'default': 1},
     )
     annotations = (
-        ('chip', 'Index of chip in daisy-chain'),
+        ('chip', 'Index of chip in daisy chain'),
         ('register', 'Registers written to the device'),
         ('digit', 'Digits displayed on the device'),
         ('warning', 'Human-readable warnings'),
     )
     annotation_rows = (
-        ('chip_nr', 'Chip Nr.', (ann_chip,)),
+        ('chip_nr', 'Chip number', (ann_chip,)),
         ('commands', 'Commands', (ann_reg, ann_digit)),
         ('warnings', 'Warnings', (ann_warning,)),
     )
@@ -78,10 +78,13 @@ class Decoder(srd.Decoder):
         self.num_of_drivers = self.options['numofdrivers']
 
     def putchip(self, ss, es, chip):
-        self.put(ss, es, self.out_ann, [ann_chip, ['Chip %d:' % (chip)]])
+        self.put(ss, es, self.out_ann, [ann_chip, ['Chip %d' % (chip)]])
 
     def putreg(self, ss, es, reg, value):
-        self.put(ss, es, self.out_ann, [ann_reg, ['%s: %s' % (reg, value)]])
+        if value:
+            self.put(ss, es, self.out_ann, [ann_reg, ['%s: %s' % (reg, value)]])
+        else:
+            self.put(ss, es, self.out_ann, [ann_reg, [reg]])
 
     def putdigit(self, ss, es, digit, value):
         self.put(ss, es, self.out_ann, [ann_digit, ['Digit %d: %02X' % (digit, value)]])
@@ -122,6 +125,6 @@ class Decoder(srd.Decoder):
                 if self.pos > 0 and self.pos < 2 * self.num_of_drivers:
                     # Don't warn if pos=0 so that CS# glitches don't appear
                     # as spurious warnings.
-                    self.putwarn(self.cs_start, es, 'Short write')
+                    self.putwarn(self.cs_start, es, 'Not enough bits sent for current number of chips')
                 elif self.pos > 2 * self.num_of_drivers:
-                    self.putwarn(self.cs_start, es, 'Overlong write')
+                    self.putwarn(self.cs_start, es, 'Too many bits sent for current number of chips')

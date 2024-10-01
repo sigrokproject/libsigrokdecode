@@ -18,8 +18,8 @@
 ##
 
 '''
-This decoder stacks on top of the 'spi' PD and decodes the Maxim MAX7219 and
-MAX7221 LED matrix driver protocol.
+This decoder stacks on top of the 'spi' PD and decodes the Maxim MAX7219
+and MAX7221 LED matrix driver protocol.
 '''
 
 from .pd import Decoder
