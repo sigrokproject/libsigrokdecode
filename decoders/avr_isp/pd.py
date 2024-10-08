@@ -123,9 +123,12 @@ class Decoder(srd.Decoder):
         self.part_number = ret[3]
         self.putx([Ann.RSB2, ['Part number: 0x%02x' % ret[3]]])
 
-        p = part[(self.part_fam_flash_size, self.part_number)]
-        data = [Ann.DEV, ['Device: Atmel %s' % p]]
-        self.put(self.ss_device, self.es_cmd, self.out_ann, data)
+        # Part name if known
+        key = (self.part_fam_flash_size, self.part_number)
+        if key in part:
+            p = part[key]
+            data = [Ann.DEV, ['Device: Atmel %s' % p]]
+            self.put(self.ss_device, self.es_cmd, self.out_ann, data)
 
         # Sanity check on reply.
         if ret[1] != 0x30 or ret[2] != self.xx or ret[0] != self.mm:

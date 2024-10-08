@@ -17,6 +17,7 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
+import copy
 import sigrokdecode as srd
 from .lists import *
 
@@ -416,16 +417,25 @@ class Decoder(srd.Decoder):
             self.reset_variables()
 
     def decode(self, ss, es, data):
-        self.cmd, self.databyte = data
+        cmd, _ = data
 
         # Collect the 'BITS' packet, then return. The next packet is
         # guaranteed to belong to these bits we just stored.
-        if self.cmd == 'BITS':
-            self.bits = self.databyte
+        if cmd == 'BITS':
+            _, databits = data
+            self.bits = copy.deepcopy(databits)
             return
 
-        # Store the start/end samples of this I²C packet.
+        # Store the start/end samples of this I²C packet. Deep copy
+        # caller's data, assuming that implementation details of the
+        # above complex methods can access the data after returning
+        # from the .decode() invocation, with the data having become
+        # invalid by that time of access. This conservative approach
+        # can get weakened after close inspection of those methods.
         self.ss, self.es = ss, es
+        _, databyte = data
+        databyte = copy.deepcopy(databyte)
+        self.cmd, self.databyte = cmd, databyte
 
         # State machine.
         s = 'handle_%s' % self.state.lower().replace(' ', '_')

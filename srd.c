@@ -302,8 +302,14 @@ SRD_API int srd_init(const char *path)
 		g_strfreev(dir_list);
 	}
 
-	/* Initialize the Python GIL (this also happens to acquire it). */
+#if PY_VERSION_HEX < 0x03090000
+	/*
+	 * Initialize and acquire the Python GIL. In Python 3.7+ this
+	 * will be done implicitly as part of the Py_InitializeEx()
+	 * call above. PyEval_InitThreads() was deprecated in 3.9.
+	 */
 	PyEval_InitThreads();
+#endif
 
 	/* Release the GIL (ignore return value, we don't need it here). */
 	(void)PyEval_SaveThread();

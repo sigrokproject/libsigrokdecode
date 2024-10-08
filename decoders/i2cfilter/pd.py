@@ -18,8 +18,12 @@
 ## along with this program; if not, see <http://www.gnu.org/licenses/>.
 ##
 
-# TODO: Support for filtering out multiple slave/direction pairs?
+# TODO
+# - Accept other slave address forms than decimal numbers?
+# - Support for filtering out multiple slave/direction pairs?
+# - Support 10bit slave addresses?
 
+import copy
 import sigrokdecode as srd
 
 class Decoder(srd.Decoder):
@@ -43,51 +47,60 @@ class Decoder(srd.Decoder):
         self.reset()
 
     def reset(self):
-        self.curslave = -1
-        self.curdirection = None
-        self.packets = [] # Local cache of I²C packets
+        self.seen_packets = []
+        self.do_forward = None
 
     def start(self):
         self.out_python = self.register(srd.OUTPUT_PYTHON, proto_id='i2c')
         if self.options['address'] not in range(0, 127 + 1):
             raise Exception('Invalid slave (must be 0..127).')
+        self.want_addrs = []
+        if self.options['address']:
+            self.want_addrs.append(self.options['address'])
+        self.want_dir = {
+            'read': 'READ', 'write': 'WRITE',
+        }.get(self.options['direction'], None)
 
-    # Grab I²C packets into a local cache, until an I²C STOP condition
-    # packet comes along. At some point before that STOP condition, there
-    # will have been an ADDRESS READ or ADDRESS WRITE which contains the
-    # I²C address of the slave that the master wants to talk to.
-    # If that slave shall be filtered, output the cache (all packets from
-    # START to STOP) as proto 'i2c', otherwise drop it.
+    def _need_to_forward(self, slave_addr, direction):
+        if self.want_addrs and slave_addr not in self.want_addrs:
+            return False
+        if self.want_dir and direction != self.want_dir:
+            return False
+        return True
+
+    # Accumulate observed I2C packets until a STOP or REPEATED START
+    # condition is seen. These are conditions where transfers end or
+    # where direction potentially changes. Forward all previously
+    # accumulated traffic if it passes the slave address and direction
+    # filter. This assumes that the slave address as well as the read
+    # or write direction was part of the observed traffic. There should
+    # be no surprise when incomplete traffic does not match the filter
+    # condition.
     def decode(self, ss, es, data):
 
-        cmd, databyte = data
+        # Unconditionally accumulate every lower layer packet we see.
+        # Keep deep copies for later, only reference caller's values
+        # as long as this .decode() invocation executes.
+        self.seen_packets.append([ss, es, copy.deepcopy(data)])
+        cmd, _ = data
 
-        # Add the I²C packet to our local cache.
-        self.packets.append([ss, es, data])
-
+        # Check the slave address and transfer direction early when
+        # we see them. Keep accumulating packets while it's already
+        # known here whether to forward them. This simplifies other
+        # code paths. Including future handling of 10bit addresses.
         if cmd in ('ADDRESS READ', 'ADDRESS WRITE'):
-            self.curslave = databyte
-            self.curdirection = cmd[8:].lower()
-        elif cmd in ('STOP', 'START REPEAT'):
-            # If this chunk was not for the correct slave, drop it.
-            if self.options['address'] == 0:
-                pass
-            elif self.curslave != self.options['address']:
-                self.packets = []
-                return
+            direction = cmd[len('ADDRESS '):]
+            _, slave_addr = data
+            self.do_forward = self._need_to_forward(slave_addr, direction)
+            return
 
-            # If this chunk was not in the right direction, drop it.
-            if self.options['direction'] == 'both':
-                pass
-            elif self.options['direction'] != self.curdirection:
-                self.packets = []
-                return
-
-            # TODO: START->STOP chunks with both read and write (Repeat START)
-            # Otherwise, send out the whole chunk of I²C packets.
-            for p in self.packets:
-                self.put(p[0], p[1], self.out_python, p[2])
-
-            self.packets = []
-        else:
-            pass # Do nothing, only add the I²C packet to our cache.
+        # Forward previously accumulated packets as we see their
+        # completion, and when they pass the filter condition. Prepare
+        # to handle the next transfer (the next read/write part of it).
+        if cmd in ('STOP', 'START REPEAT'):
+            if self.do_forward:
+                for ss, es, data in self.seen_packets:
+                    self.put(ss, es, self.out_python, data)
+            self.seen_packets.clear()
+            self.do_forward = None
+            return
