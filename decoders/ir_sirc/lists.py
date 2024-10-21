@@ -134,25 +134,60 @@ ADDRESSES = {
     (0x1A, 0x49): (['DVD: ', 'DVD:'], {
         0x0B: 'Enter',
         0x0E: 'Return',
-        0x17: 'Options',
+        0x0F: 'Clear',
 
+        0x17: 'Options',
         0x1A: 'Top Menu',
         0x1B: 'Menu',
+        0x1F: 'Program',
+
+        0x28: 'Time',
+        0x2A: 'A-B',
+        0x2C: 'Repeat',
 
         0x30: 'Previous',
         0x31: 'Next',
         0x32: 'Play',
         0x33: 'Rewind',
         0x34: 'Fast Forward',
+        0x35: 'Shuffle',
         0x38: 'Stop',
         0x39: 'Pause',
 
         0x54: 'Display',
 
-        0x7B: 'Left',
-        0x7C: 'Right',
+        0x60: 'Slow Reverse',
+        0x61: 'Slow Forward',
+        0x63: 'Subtitle',
+        0x64: 'Audio',
+        0x65: 'Angle',
+
         0x79: 'Up',
         0x7A: 'Down',
+        0x7B: 'Left',
+        0x7C: 'Right',
+    }),
+
+    # PS2
+    (0x1A, 0xDA): (['PS2: ', 'PS2:'], {
+        0x15: 'Reset',
+        0x16: 'Eject',
+        0x50: 'Select',
+        0x51: 'L3',
+        0x52: 'R3',
+        0x53: 'Start',
+        0x54: 'Up',
+        0x55: 'Right',
+        0x56: 'Down',
+        0x57: 'Left',
+        0x58: 'L2',
+        0x59: 'R2',
+        0x5A: 'L1',
+        0x5B: 'R1',
+        0x5C: 'Triangle',
+        0x5D: 'Circle',
+        0x5E: 'Cross',
+        0x5F: 'Square',
     }),
 
     # Amp, Game, Sat, Tuner, USB modes
