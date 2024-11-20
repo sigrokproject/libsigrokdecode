@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2018 Jorge Solla Rubiales <jorgesolla@gmail.com>
+## Copyright (c) 2022 Marcin Mikula <mmikula@libertyglobal.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -99,6 +100,13 @@ opcodes = {
     0x70: 'SYSTEM_AUDIO_MODE_REQUEST',
     0x7E: 'SYSTEM_AUDIO_MODE_STATUS',
     0x9A: 'SET_AUDIO_RATE',
+    0xC0: 'INITIATE_ARC',
+    0xC1: 'REPORT_ARC_INITIATED',
+    0xC2: 'REPORT_ARC_TERMINATED',
+    0xC3: 'REQUEST_ARC_INITIATION',
+    0xC4: 'REQUEST_ARC_TERMINATION',
+    0xC5: 'TERMINATE_ARC',
+    0xF8: 'CDC_MESSAGE',
 }
 
 def resolve_logical_address(id_, is_initiator):
