@@ -127,7 +127,7 @@ class Decoder(srd.Decoder):
         {'id': 'mapping', 'desc': 'Enum to text map file',
             'default': 'enumtext.json'},
         {'id': 'format', 'desc': 'Number format', 'default': '-',
-            'values': ('-', 'bin', 'oct', 'dec', 'hex')},
+            'values': ('-', 'bin', 'oct', 'dec', 'hex', 'char')},
     )
     annotations = (
         ('raw', 'Raw pattern'),
@@ -322,6 +322,9 @@ class Decoder(srd.Decoder):
         if not self.format_string:
             self.format_string = '{{:0{}x}}'.format((self.bitcount + 4 - 1) // 4)
         return [self.format_string.format(value)]
+    
+    def format_char(self, ss, es, value):
+        return [chr(value)]
 
     def decode(self):
         channels = [ch for ch in range(_max_channels) if self.has_channel(ch)]
@@ -360,6 +363,7 @@ class Decoder(srd.Decoder):
             'oct': self.format_oct,
             'dec': self.format_dec,
             'hex': self.format_hex,
+            'char': self.format_char,
         }.get(self.options['format'])
         self.format_string = None
 
@@ -370,7 +374,7 @@ class Decoder(srd.Decoder):
             pins = self.wait(wait_cond)
             es = self.samplenum
             pattern = self.grab_pattern(pins[Pin.BIT_0:])
-            if pattern == prev_pattern:
+            if not have_clk and pattern == prev_pattern:
                 continue
             self.handle_pattern(ss, es, prev_pattern)
             ss = es
