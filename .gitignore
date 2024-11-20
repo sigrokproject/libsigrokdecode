@@ -37,3 +37,4 @@ stamp-h?
 /tests/*.log
 /tests/*.trs
 /tests/main
+CMakeLists.txt.user
