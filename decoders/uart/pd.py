@@ -44,6 +44,7 @@ This is the list of <ptype>s and their respective <pdata> values:
    value of the UART data, and a boolean which reflects the validity of the
    UART frame.
  - 'IDLE': The data is always 0.
+ - 'PACKET': data is entire packet, as array of integer values
 
 The <rxtx> field is 0 for RX packets, 1 for TX packets.
 '''
@@ -307,6 +308,7 @@ class Decoder(srd.Decoder):
             if self.options['format'] != 'ascii' and s[-1] == ' ':
                 s = s[:-1] # Drop trailing space.
             self.putx_packet(rxtx, [Ann.RX_PACKET + rxtx, [s]])
+            self.put(self.ss_packet[rxtx], self.es_packet[rxtx], self.out_python, ('PACKET', rxtx, self.packet_cache[rxtx]))
             self.packet_cache[rxtx] = []
 
     def get_data_bits(self, rxtx, signal):
