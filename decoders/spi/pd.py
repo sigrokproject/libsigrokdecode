@@ -340,7 +340,7 @@ class Decoder(srd.Decoder):
         # process the very first sample before checking for edges. The
         # previous implementation did this by seeding old values with
         # None, which led to an immediate "change" in comparison.
-        (clk, miso, mosi, cs) = self.wait({})
+        (clk, miso, mosi, cs) = self.wait()
         self.find_clk_edge(miso, mosi, clk, cs, True)
 
         while True:
