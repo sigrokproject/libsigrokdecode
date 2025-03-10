@@ -316,13 +316,13 @@ class Decoder(srd.Decoder):
     def decode(self):
         # The CLK input is mandatory.
         if not self.has_channel(0):
-            raise ChannelError('Either MISO or MOSI (or both) pins required.')
+            raise ChannelError('CLK pin is required.')
         # Other signals are (individually) optional.
         # Yet either MISO or MOSI (or both) must be provided.
         self.have_miso = self.has_channel(1)
         self.have_mosi = self.has_channel(2)
         if not self.have_miso and not self.have_mosi:
-            raise ChannelError('Either MISO or MOSI (or both) pins required.')
+            raise ChannelError('Either MISO or MOSI (or both) pins are required.')
         # Tell stacked decoders when we don't have a CS# signal.
         self.have_cs = self.has_channel(3)
         if not self.have_cs:
