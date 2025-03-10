@@ -314,15 +314,16 @@ class Decoder(srd.Decoder):
         self.handle_bit(miso, mosi, clk, cs)
 
     def decode(self):
-        # The CLK input is mandatory. Other signals are (individually)
-        # optional. Yet either MISO or MOSI (or both) must be provided.
-        # Tell stacked decoders when we don't have a CS# signal.
+        # The CLK input is mandatory.
         if not self.has_channel(0):
-            raise ChannelError('Either MISO or MOSI (or both) pins required.')
+            raise ChannelError('CLK pin is required.')
+        # Other signals are (individually) optional.
+        # Yet either MISO or MOSI (or both) must be provided.
         self.have_miso = self.has_channel(1)
         self.have_mosi = self.has_channel(2)
         if not self.have_miso and not self.have_mosi:
-            raise ChannelError('Either MISO or MOSI (or both) pins required.')
+            raise ChannelError('Either MISO or MOSI (or both) pins are required.')
+        # Tell stacked decoders when we don't have a CS# signal.
         self.have_cs = self.has_channel(3)
         if not self.have_cs:
             self.put(0, 0, self.out_python, ['CS-CHANGE', None, None])
@@ -339,7 +340,7 @@ class Decoder(srd.Decoder):
         # process the very first sample before checking for edges. The
         # previous implementation did this by seeding old values with
         # None, which led to an immediate "change" in comparison.
-        (clk, miso, mosi, cs) = self.wait({})
+        (clk, miso, mosi, cs) = self.wait()
         self.find_clk_edge(miso, mosi, clk, cs, True)
 
         while True:
