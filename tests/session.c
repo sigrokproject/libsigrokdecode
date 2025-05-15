@@ -36,7 +36,7 @@ START_TEST(test_session_new)
 
 	srd_init(NULL);
 	ret = srd_session_new(&sess);
-	fail_unless(ret == SRD_OK, "srd_session_new() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_new() failed: %d.", ret);
 	srd_exit();
 }
 END_TEST
@@ -51,7 +51,7 @@ START_TEST(test_session_new_bogus)
 
 	srd_init(NULL);
 	ret = srd_session_new(NULL);
-	fail_unless(ret != SRD_OK, "srd_session_new(NULL) worked.");
+	ck_assert_msg(ret != SRD_OK, "srd_session_new(NULL) worked.");
 	srd_exit();
 }
 END_TEST
@@ -71,34 +71,37 @@ START_TEST(test_session_new_multiple)
 
 	/* Multiple srd_session_new() calls must work. */
 	ret = srd_session_new(&sess1);
-	fail_unless(ret == SRD_OK, "srd_session_new() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_new() 1 failed: %d.", ret);
 	ret = srd_session_new(&sess2);
-	fail_unless(ret == SRD_OK, "srd_session_new() 2 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_new() 2 failed: %d.", ret);
 	ret = srd_session_new(&sess3);
-	fail_unless(ret == SRD_OK, "srd_session_new() 3 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_new() 3 failed: %d.", ret);
 
 	/* The returned session pointers must all be non-NULL. */
-	fail_unless(sess1 != NULL);
-	fail_unless(sess2 != NULL);
-	fail_unless(sess3 != NULL);
+	ck_assert(sess1 != NULL);
+	ck_assert(sess2 != NULL);
+	ck_assert(sess3 != NULL);
 
 	/* The returned session pointers must not be the same. */
-	fail_unless(sess1 != sess2);
-	fail_unless(sess1 != sess3);
-	fail_unless(sess2 != sess3);
+	ck_assert(sess1 != sess2);
+	ck_assert(sess1 != sess3);
+	ck_assert(sess2 != sess3);
 
 	/* Each session must have another ID than any other session. */
-	fail_unless(sess1->session_id != sess2->session_id);
-	fail_unless(sess1->session_id != sess3->session_id);
-	fail_unless(sess2->session_id != sess3->session_id);
+	ck_assert(sess1->session_id != sess2->session_id);
+	ck_assert(sess1->session_id != sess3->session_id);
+	ck_assert(sess2->session_id != sess3->session_id);
 
 	/* Destroying any of the sessions must work. */
 	ret = srd_session_destroy(sess1);
-	fail_unless(ret == SRD_OK, "srd_session_destroy() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_destroy() 1 failed: %d.",
+		      ret);
 	ret = srd_session_destroy(sess2);
-	fail_unless(ret == SRD_OK, "srd_session_destroy() 2 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_destroy() 2 failed: %d.",
+		      ret);
 	ret = srd_session_destroy(sess3);
-	fail_unless(ret == SRD_OK, "srd_session_destroy() 3 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_destroy() 3 failed: %d.",
+		      ret);
 
 	srd_exit();
 }
@@ -116,7 +119,7 @@ START_TEST(test_session_destroy)
 	srd_init(NULL);
 	srd_session_new(&sess);
 	ret = srd_session_destroy(sess);
-	fail_unless(ret == SRD_OK, "srd_session_destroy() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_destroy() failed: %d.", ret);
 	srd_exit();
 }
 END_TEST
@@ -131,7 +134,7 @@ START_TEST(test_session_destroy_bogus)
 
 	srd_init(NULL);
 	ret = srd_session_destroy(NULL);
-	fail_unless(ret != SRD_OK, "srd_session_destroy() failed: %d.", ret);
+	ck_assert_msg(ret != SRD_OK, "srd_session_destroy() failed: %d.", ret);
 	srd_exit();
 }
 END_TEST
@@ -141,8 +144,9 @@ static void conf_check_ok(struct srd_session *sess, int key, uint64_t x)
 	int ret;
 
 	ret = srd_session_metadata_set(sess, key, g_variant_new_uint64(x));
-	fail_unless(ret == SRD_OK, "srd_session_metadata_set(%p, %d, %"
-		PRIu64 ") failed: %d.", sess, key, x, ret);
+	ck_assert_msg(ret == SRD_OK,
+		      "srd_session_metadata_set(%p, %d, %" PRIu64 ") failed: %d.",
+		      sess, key, x, ret);
 }
 
 static void conf_check_fail(struct srd_session *sess, int key, uint64_t x)
@@ -151,8 +155,9 @@ static void conf_check_fail(struct srd_session *sess, int key, uint64_t x)
 	GVariant *value = g_variant_new_uint64(x);
 
 	ret = srd_session_metadata_set(sess, key, value);
-	fail_unless(ret != SRD_OK, "srd_session_metadata_set(%p, %d, %"
-		PRIu64 ") worked.", sess, key, x);
+	ck_assert_msg(ret != SRD_OK,
+		      "srd_session_metadata_set(%p, %d, %" PRIu64 ") worked.",
+		      sess, key, x);
 	if (ret != SRD_OK)
 		g_variant_unref(value);
 }
@@ -162,8 +167,9 @@ static void conf_check_fail_null(struct srd_session *sess, int key)
 	int ret;
 
 	ret = srd_session_metadata_set(sess, key, NULL);
-	fail_unless(ret != SRD_OK,
-		"srd_session_metadata_set(NULL) for key %d worked.", key);
+	ck_assert_msg(ret != SRD_OK,
+		      "srd_session_metadata_set(NULL) for key %d worked.",
+		      key);
 }
 
 static void conf_check_fail_str(struct srd_session *sess, int key, const char *s)
@@ -172,8 +178,8 @@ static void conf_check_fail_str(struct srd_session *sess, int key, const char *s
 	GVariant *value = g_variant_new_string(s);
 
 	ret = srd_session_metadata_set(sess, key, value);
-	fail_unless(ret != SRD_OK, "srd_session_metadata_set() for key %d "
-		"failed: %d.", key, ret);
+	ck_assert_msg(ret != SRD_OK, "srd_session_metadata_set() for key %d "
+		      "failed: %d.", key, ret);
 	if (ret != SRD_OK)
 		g_variant_unref(value);
 }
@@ -244,18 +250,22 @@ START_TEST(test_session_reset_nodata)
 	srd_init(NULL);
 	srd_session_new(&sess);
 	ret = srd_session_terminate_reset(sess);
-	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK,
+		      "srd_session_terminate_reset() failed: %d.", ret);
 	ret = srd_session_start(sess);
-	fail_unless(ret == SRD_OK, "srd_session_start() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_start() failed: %d.", ret);
 	ret = srd_session_terminate_reset(sess);
-	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK,
+		      "srd_session_terminate_reset() failed: %d.", ret);
 	data = g_variant_new_uint64(1000000);
 	ret = srd_session_metadata_set(sess, SRD_CONF_SAMPLERATE, data);
-	fail_unless(ret == SRD_OK, "srd_session_metadata_set() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_metadata_set() failed: %d.",
+		      ret);
 	ret = srd_session_terminate_reset(sess);
-	fail_unless(ret == SRD_OK, "srd_session_terminate_reset() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK,
+		      "srd_session_terminate_reset() failed: %d.", ret);
 	ret = srd_session_destroy(sess);
-	fail_unless(ret == SRD_OK, "srd_session_destroy() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_session_destroy() failed: %d.", ret);
 	srd_exit();
 }
 END_TEST
