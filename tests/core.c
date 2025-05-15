@@ -37,9 +37,9 @@ START_TEST(test_init_exit)
 	int ret;
 
 	ret = srd_init(NULL);
-	fail_unless(ret == SRD_OK, "srd_init() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_init() failed: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() failed: %d.", ret);
 }
 END_TEST
 
@@ -54,13 +54,13 @@ START_TEST(test_init_exit_2)
 	int ret;
 
 	ret = srd_init(NULL);
-	fail_unless(ret == SRD_OK, "srd_init() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_init() 1 failed: %d.", ret);
 	ret = srd_init(NULL);
-	fail_unless(ret != SRD_OK, "srd_init() 2 didn't fail: %d.", ret);
+	ck_assert_msg(ret != SRD_OK, "srd_init() 2 didn't fail: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() 2 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() 2 failed: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() 1 failed: %d.", ret);
 }
 END_TEST
 
@@ -72,17 +72,17 @@ START_TEST(test_init_exit_3)
 	int ret;
 
 	ret = srd_init(NULL);
-	fail_unless(ret == SRD_OK, "srd_init() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_init() 1 failed: %d.", ret);
 	ret = srd_init(NULL);
-	fail_unless(ret != SRD_OK, "srd_init() 2 didn't fail: %d.", ret);
+	ck_assert_msg(ret != SRD_OK, "srd_init() 2 didn't fail: %d.", ret);
 	ret = srd_init(NULL);
-	fail_unless(ret != SRD_OK, "srd_init() 3 didn't fail: %d.", ret);
+	ck_assert_msg(ret != SRD_OK, "srd_init() 3 didn't fail: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() 3 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() 3 failed: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() 2 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() 2 failed: %d.", ret);
 	ret = srd_exit();
-	fail_unless(ret == SRD_OK, "srd_exit() 1 failed: %d.", ret);
+	ck_assert_msg(ret == SRD_OK, "srd_exit() 1 failed: %d.", ret);
 }
 END_TEST
 
