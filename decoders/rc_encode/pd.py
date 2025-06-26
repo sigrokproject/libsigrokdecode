@@ -101,7 +101,7 @@ def decode_model(model, bits):
                 addr_valid = 0
 
         if addr_valid == 1:
-            address = 'Address 0x%X %X %X' % (addr & 0xFF, (addr >> 8) & 0xFF, addr >> 16)
+            address = 'Address 0x%X %X %X' % (addr >> 16, (addr >> 8) & 0xFF, addr & 0xFF)
         else:
             address = 'Invalid address as not all bits are 0 or 1'
 
