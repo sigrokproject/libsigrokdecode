@@ -68,6 +68,44 @@ def decode_status_reg(data):
 
     return ret
 
+
+class VendorDecoder:
+    def __init__(self, srd: srd.Decoder, vcmds):
+        """
+        A vendor decoder doesn't _inherit_ the top level decoder, it just has access to it...
+        vcmds are a map of vendor commands...
+        """
+        self.srd = srd
+        self.vcmds = vcmds
+
+        def get_handler(cmd):
+            s = 'vhandle_%s' % vcmds[cmd][0].lower().replace('/', '_')
+            v_default = getattr(self, "default_vhandle", None)
+            if v_default is not None:
+                return getattr(self, s, v_default)
+            else:
+                return getattr(self, s)
+        self.cmd_handlers = dict((cmd, get_handler(cmd)) for cmd in vcmds.keys())
+
+class VendorDecoderMicron(VendorDecoder):
+    def vhandle_rfsr(self, mosi, miso):
+        if self.srd.cmdstate == 1:
+            # Byte 1: Master sends command ID.
+            self.srd.putx([0x70, [self.vcmds[mosi][1], self.vcmds[mosi][0]]])
+        elif self.srd.cmdstate >= 2:
+            # Bytes 2-x: Slave sends status register as long as master clocks.
+            self.srd.putx([Ann.BIT, ["undecoded FIXME"]])
+            self.srd.putx([Ann.FIELD, ['Flag Status register']])
+            self.srd.putx([0x70, ['Flag status value: 0x%02x' % miso, '0x%02x' % miso]])
+        self.srd.cmdstate += 1
+
+    def default_vhandle(self, mosi, miso):
+        """
+        We can use this for simple one commands were the info in the command table is sufficient
+        """
+        self.srd.putx([mosi, [self.vcmds[mosi][1], self.vcmds[mosi][0]]])
+
+
 class Decoder(srd.Decoder):
     api_version = 3
     id = 'spiflash'
@@ -90,10 +128,13 @@ class Decoder(srd.Decoder):
         ('warnings', 'Warnings', (L + 2,)),
     )
     options = (
-        {'id': 'chip', 'desc': 'Chip', 'default': tuple(chips.keys())[0],
-            'values': tuple(chips.keys())},
+        {'id': 'chip', 'desc': 'Chip', 'default': tuple(sorted(chips.keys()))[0],
+            'values': tuple(sorted(chips.keys()))},
         {'id': 'format', 'desc': 'Data format', 'default': 'hex',
             'values': ('hex', 'ascii')},
+        # Some/many flash parts can switch to different addressing modes
+        {'id': 'addr_size', 'desc': 'Count of address bytes (-1 for auto/detect)', 'default': -1,
+            'values': (-1, 2, 3, 4)},
     )
 
     def __init__(self):
@@ -104,13 +145,15 @@ class Decoder(srd.Decoder):
         self.on_end_transaction = None
         self.end_current_transaction()
         self.writestate = 0
+        self.vhandler = None
+        self.state_rdid = None
 
         # Build dict mapping command keys to handler functions. Each
         # command in 'cmds' (defined in lists.py) has a matching
         # handler self.handle_<shortname>.
         def get_handler(cmd):
             s = 'handle_%s' % cmds[cmd][0].lower().replace('/', '_')
-            return getattr(self, s)
+            return getattr(self, s, self.default_handle)
         self.cmd_handlers = dict((cmd, get_handler(cmd)) for cmd in cmds.keys())
 
     def end_current_transaction(self):
@@ -125,7 +168,24 @@ class Decoder(srd.Decoder):
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
         self.chip = chips[self.options['chip']]
-        self.vendor = self.options['chip'].split('_')[0]
+        self.vendor = self.chip.vendor
+        extra_cmds = self.chip.opts.get('extra_cmds')
+        if extra_cmds:
+            # FIXME - no sure yet how best to have "lists" refer to classes without falling back to strings :|
+            self.vhandler = VendorDecoderMicron(self, extra_cmds)
+
+        # Does the chip have a forced, fixed size?
+        chip_addr_size = self.chip.opts.get('addr_size')
+        opt_addr_size = self.options['addr_size']
+        if opt_addr_size == -1 and chip_addr_size is None:
+            self.addr_size = 3
+        elif chip_addr_size is not None:
+            self.addr_size = chip_addr_size
+        else:
+            self.addr_size = opt_addr_size
+
+        self.addr_chunks = tuple((n for n in range(2, 2 + self.addr_size)))
+        self.data_offs = self.addr_chunks[-1] + 1
 
     def putx(self, data):
         # Simplification, most annotations span exactly one SPI byte/packet.
@@ -137,11 +197,8 @@ class Decoder(srd.Decoder):
     def putc(self, data):
         self.put(self.ss_cmd, self.es_cmd, self.out_ann, data)
 
-    def device(self):
-        return device_name[self.vendor].get(self.device_id, 'Unknown')
-
     def vendor_device(self):
-        return '%s %s' % (self.chip['vendor'], self.device())
+        return '%s %s' % (self.chip.vendor, self.chip.model)
 
     def cmd_ann_list(self):
         x, s = cmds[self.state][0], cmds[self.state][1]
@@ -159,15 +216,16 @@ class Decoder(srd.Decoder):
         self.addr = 0
 
     def emit_addr_bytes(self, mosi):
-        self.addr |= (mosi << ((4 - self.cmdstate) * 8))
-        b = ((3 - (self.cmdstate - 2)) * 8) - 1
+        last_addr = self.addr_chunks[-1]
+        self.addr |= (mosi << ((last_addr - self.cmdstate) * 8))
+        b = (((last_addr-1) - (self.cmdstate - 2)) * 8) - 1
         self.putx([Ann.BIT,
             ['Address bits %d..%d: 0x%02x' % (b, b - 7, mosi),
              'Addr bits %d..%d: 0x%02x' % (b, b - 7, mosi),
              'Addr bits %d..%d' % (b, b - 7), 'A%d..A%d' % (b, b - 7)]])
         if self.cmdstate == 2:
             self.ss_field = self.ss
-        if self.cmdstate == 4:
+        if self.cmdstate == last_addr:
             self.es_field = self.es
             self.putf([Ann.FIELD, ['Address: 0x%06x' % self.addr,
                 'Addr: 0x%06x' % self.addr, '0x%06x' % self.addr]])
@@ -184,23 +242,55 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
+            self.state_rdid = {'exbytes': 0, 'manu': None, 'dtype': None, 'did': None}
+        # Skip forward for continuation characters
+        elif self.cmdstate == 2 and miso == 0x7f:
+            self.putx([Ann.FIELD, ['Extension Byte: 0x7f']])
+            self.state_rdid['exbytes'] += 1
+            return
         elif self.cmdstate == 2:
             # Byte 2: Slave sends the JEDEC manufacturer ID.
             self.putx([Ann.FIELD, ['Manufacturer ID: 0x%02x' % miso]])
+            self.state_rdid['manu'] = miso
         elif self.cmdstate == 3:
             # Byte 3: Slave sends the memory type.
             self.putx([Ann.FIELD, ['Memory type: 0x%02x' % miso]])
+            self.state_rdid['dtype'] = miso
         elif self.cmdstate == 4:
             # Byte 4: Slave sends the device ID.
-            self.device_id = miso
             self.putx([Ann.FIELD, ['Device ID: 0x%02x' % miso]])
-
-        if self.cmdstate == 4:
+            self.state_rdid['did'] = miso
             self.es_cmd = self.es
-            self.putc([Ann.RDID, self.cmd_vendor_dev_list()])
-            self.state = None
-        else:
-            self.cmdstate += 1
+            seen_manu = self.state_rdid['exbytes'] << 8 | self.state_rdid['manu']
+            seen_devid = self.state_rdid['dtype'] << 8 | self.state_rdid['did']
+            # four cases
+            # * specified chip has an ID, and it matches, (show, no warn)
+            # * specified chip has an ID and it _doesn't_ match -> warn
+            # * specified chip does not have an ID, but we got one anyway (show what was seen, warn about bad data)
+            # * specified chip does not have an ID -> we shouldn't get here...
+            seen_id = "%04x:%04x" % (seen_manu, seen_devid)
+            if self.chip.has_ids():
+                if self.chip.matches(seen_manu, seen_devid):
+                    # TODO can make more positive "match" statement here.
+                    self.putc([Ann.RDID, self.cmd_vendor_dev_list()])
+                else:
+                    self.putc([Ann.WARN, [
+                        "Selected chip %s (%s) doesn't match seen: %s, other decoding may be incorrect" %
+                        (self.chip.key(), self.chip.idstr(), seen_id),
+                        "RDID Mismatch %s != %s" % (self.chip.idstr(), seen_id)
+                        ]])
+            else:
+                # Either missing data for the chip selected, or wrong chip selected
+                self.putc([Ann.WARN, [
+                    "Chip %s has no IDs listed. Either wrong selection, or bad data" % (self.chip.key())
+                    ]])
+        elif self.cmdstate == 5:
+            # Optionally, you can keep clocking, and receive N bytes of EDI.
+            # First byte says how much more to expect...
+            self.putx([Ann.FIELD, ['EDI Length: %0d' % miso]])
+        elif self.cmdstate > 5:
+            self.putx([Ann.FIELD, ['Unhandled EDI: 0x%02x' % miso]])
+        self.cmdstate += 1
 
     def handle_rdsr(self, mosi, miso):
         # Read status register: Master asserts CS#, sends RDSR command,
@@ -262,17 +352,16 @@ class Decoder(srd.Decoder):
 
     def handle_read(self, mosi, miso):
         # Read data bytes: Master asserts CS#, sends READ command, sends
-        # 3-byte address, reads >= 1 data bytes, de-asserts CS#.
+        # address, reads >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+        elif self.cmdstate in self.addr_chunks:
             self.emit_addr_bytes(mosi)
-        elif self.cmdstate >= 5:
-            # Bytes 5-x: Master reads data bytes (until CS# de-asserted).
+        elif self.cmdstate >= self.data_offs:
+            # Bytes ..-x: Master reads data bytes (until CS# de-asserted).
             self.es_field = self.es # Will be overwritten for each byte.
-            if self.cmdstate == 5:
+            if self.cmdstate == self.data_offs:
                 self.ss_field = self.ss
                 self.on_end_transaction = lambda: self.output_data_block('Data', Ann.READ)
             self.data.append(miso)
@@ -280,21 +369,21 @@ class Decoder(srd.Decoder):
 
     def handle_write_common(self, mosi, miso, ann):
         # Write data bytes: Master asserts CS#, sends WRITE command, sends
-        # 3-byte address, writes >= 1 data bytes, de-asserts CS#.
+        # address, writes >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
-            if self.writestate == 0:
-                self.putc([Ann.WARN, ['Warning: WREN might be missing']])
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends write address (24bits, MSB-first).
+        elif self.cmdstate in self.addr_chunks:
             self.emit_addr_bytes(mosi)
-        elif self.cmdstate >= 5:
-            # Bytes 5-x: Master writes data bytes (until CS# de-asserted).
+        elif self.cmdstate >= self.data_offs:
+            # Bytes ..-x: Master writes data bytes (until CS# de-asserted).
             self.es_field = self.es # Will be overwritten for each byte.
-            if self.cmdstate == 5:
+            if self.cmdstate == self.data_offs:
+                self.es_cmd = self.ss
                 self.ss_field = self.ss
                 self.on_end_transaction = lambda: self.output_data_block('Data', ann)
+                if self.writestate == 0:
+                    self.putc([Ann.WARN, ['Warning: WREN might be missing']])
             self.data.append(mosi)
         self.cmdstate += 1
 
@@ -304,21 +393,23 @@ class Decoder(srd.Decoder):
     def handle_write2(self, mosi, miso):
         self.handle_write_common(mosi, miso, Ann.WRITE2)
 
+    def handle_pp(self, mosi, miso):
+        self.handle_write_common(mosi, miso, Ann.PP)
+
     def handle_fast_read(self, mosi, miso):
         # Fast read: Master asserts CS#, sends FAST READ command, sends
-        # 3-byte address + 1 dummy byte, reads >= 1 data bytes, de-asserts CS#.
+        # address + 1 dummy byte, reads >= 1 data bytes, de-asserts CS#.
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends read address (24bits, MSB-first).
+        elif self.cmdstate in self.addr_chunks:
             self.emit_addr_bytes(mosi)
-        elif self.cmdstate == 5:
+        elif self.cmdstate == self.data_offs:
             self.putx([Ann.BIT, ['Dummy byte: 0x%02x' % mosi]])
-        elif self.cmdstate >= 6:
-            # Bytes 6-x: Master reads data bytes (until CS# de-asserted).
+        elif self.cmdstate >= self.data_offs+1:
+            # Bytes ..-x: Master reads data bytes (until CS# de-asserted).
             self.es_field = self.es # Will be overwritten for each byte.
-            if self.cmdstate == 6:
+            if self.cmdstate == self.data_offs+1:
                 self.ss_field = self.ss
                 self.on_end_transaction = lambda: self.output_data_block('Data', Ann.FAST_READ)
             self.data.append(miso)
@@ -329,6 +420,7 @@ class Decoder(srd.Decoder):
         # command, sends 3-byte address + 1 dummy byte, reads >= 1 data bytes,
         # de-asserts CS#. All data after the command is sent via two I/O pins.
         # MOSI = SIO0 = even bits, MISO = SIO1 = odd bits.
+        # TODO - no 2/3 byte address handling here :(
         if self.cmdstate != 1:
             b1, b2 = decode_dual_bytes(mosi, miso)
         if self.cmdstate == 1:
@@ -376,11 +468,10 @@ class Decoder(srd.Decoder):
             self.emit_cmd_byte()
             if self.writestate == 0:
                 self.putx([Ann.WARN, ['Warning: WREN might be missing']])
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends sector address (24bits, MSB-first).
+        elif self.cmdstate in self.addr_chunks:
             self.emit_addr_bytes(mosi)
 
-        if self.cmdstate == 4:
+        if self.cmdstate == self.addr_chunks[-1]:
             self.es_cmd = self.es
             d = 'Erase sector %d (0x%06x)' % (self.addr, self.addr)
             self.putc([Ann.SE, [d]])
@@ -405,24 +496,6 @@ class Decoder(srd.Decoder):
         if self.writestate == 0:
             self.putx([Ann.WARN, ['Warning: WREN might be missing']])
 
-    def handle_pp(self, mosi, miso):
-        # Page program: Master asserts CS#, sends PP command, sends 3-byte
-        # page address, sends >= 1 data bytes, de-asserts CS#.
-        if self.cmdstate == 1:
-            # Byte 1: Master sends command ID.
-            self.emit_cmd_byte()
-        elif self.cmdstate in (2, 3, 4):
-            # Bytes 2/3/4: Master sends page address (24bits, MSB-first).
-            self.emit_addr_bytes(mosi)
-        elif self.cmdstate >= 5:
-            # Bytes 5-x: Master sends data bytes (until CS# de-asserted).
-            self.es_field = self.es # Will be overwritten for each byte.
-            if self.cmdstate == 5:
-                self.ss_field = self.ss
-                self.on_end_transaction = lambda: self.output_data_block('Data', Ann.PP)
-            self.data.append(mosi)
-        self.cmdstate += 1
-
     def handle_cp(self, mosi, miso):
         pass # TODO
 
@@ -439,10 +512,22 @@ class Decoder(srd.Decoder):
         elif self.cmdstate == 5:
             # Byte 5: Slave sends device ID.
             self.es_cmd = self.es
-            self.device_id = miso
-            self.putx([Ann.FIELD, ['Device ID: %s' % self.device()]])
-            d = 'Device = %s' % self.vendor_device()
-            self.putc([Ann.RDP_RES, self.cmd_vendor_dev_list()])
+            self.putx([Ann.FIELD, ['Device ID: %02x' % miso]])
+            c_rid = self.chip.opts.get('rems_id')
+            if c_rid:
+                if c_rid == miso:
+                    # TODO can make more positive "match" statement here.
+                    self.putc([Ann.RDP_RES, self.cmd_vendor_dev_list()])
+                else:
+                    self.putc([Ann.WARN, [
+                        "Selected chip %s (%02x) doesn't match seen: %02x, other decoding may be incorrect" %
+                        (self.chip.key(), c_rid, miso),
+                        "REMS Mismatch %s != %s" % (c_rid, miso)
+                        ]])
+            else:
+                self.putc([Ann.WARN, [
+                    "Chip %s has no 'rems_id' listed. Either wrong selection, or bad data" % (self.chip.key())
+                ]])
             self.state = None
         self.cmdstate += 1
 
@@ -450,6 +535,7 @@ class Decoder(srd.Decoder):
         if self.cmdstate == 1:
             # Byte 1: Master sends command ID.
             self.emit_cmd_byte()
+            self.state_rdid = {'manu': None, 'did': None}
         elif self.cmdstate in (2, 3):
             # Bytes 2/3: Master sends two dummy bytes.
             self.putx([Ann.FIELD, ['Dummy byte: 0x%02x' % mosi]])
@@ -462,20 +548,47 @@ class Decoder(srd.Decoder):
             self.putx([Ann.FIELD, ['Master wants %s ID first' % d]])
         elif self.cmdstate == 5:
             # Byte 5: Slave sends manufacturer ID (or device ID).
-            self.ids = [miso]
-            d = 'Manufacturer' if self.manufacturer_id_first else 'Device'
-            self.putx([Ann.FIELD, ['%s ID: 0x%02x' % (d, miso)]])
+            #self.ids = [miso]
+            if self.manufacturer_id_first:
+                self.state_rdid['manu'] = miso
+                fn = 'Manufacturer'
+            else:
+                self.state_rdid['did'] = miso
+                fn = 'Device'
+            self.putx([Ann.FIELD, ['%s ID: 0x%02x' % (fn, miso)]])
         elif self.cmdstate == 6:
             # Byte 6: Slave sends device ID (or manufacturer ID).
-            self.ids.append(miso)
-            d = 'Device' if self.manufacturer_id_first else 'Manufacturer'
-            self.putx([Ann.FIELD, ['%s ID: 0x%02x' % (d, miso)]])
+            #self.ids.append(miso)
+            if self.manufacturer_id_first:
+                self.state_rdid['did'] = miso
+                fn = 'Device'
+            else:
+                self.state_rdid['manu'] = miso
+                fn = 'Manufacturer'
+            self.putx([Ann.FIELD, ['%s ID: 0x%02x' % (fn, miso)]])
 
         if self.cmdstate == 6:
-            id_ = self.ids[1] if self.manufacturer_id_first else self.ids[0]
-            self.device_id = id_
+            #id_ = self.ids[1] if self.manufacturer_id_first else self.ids[0]
+            #self.device_id = id_
             self.es_cmd = self.es
-            self.putc([Ann.REMS, self.cmd_vendor_dev_list()])
+            # rems gives both manufacturer and remsid, so you need both the jedec manuf, + the "remsid"
+            c_rid = self.chip.opts.get('rems_id')
+            if self.chip.has_ids() and c_rid:
+                c_manu = self.chip.jedec_manu & 0xff
+                seen_manu = self.state_rdid['manu']
+                seen_did = self.state_rdid['did']
+                if c_manu == seen_manu and c_rid == seen_did:
+                    self.putc([Ann.REMS, self.cmd_vendor_dev_list()])
+                else:
+                    self.putc([Ann.WARN, [
+                        "Selected chip %s (%02x:%02x) doesn't match seen: %02x:%02x, other decoding may be incorrect" %
+                        (self.chip.key(), c_manu, c_rid, seen_manu, seen_did),
+                        "REMS Mismatch %02x:%02x != %02x:%02x" % (c_manu, c_rid, seen_manu, seen_did)
+                        ]])
+            else:
+                self.putc([Ann.WARN, [
+                    "Chip %s has no 'rems_id' listed. Either wrong selection, or bad data" % (self.chip.key())
+                ]])
             self.state = None
         else:
             self.cmdstate += 1
@@ -500,6 +613,10 @@ class Decoder(srd.Decoder):
 
     def handle_dsry(self, mosi, miso):
         pass # TODO
+
+    def default_handle(self, mosi, miso):
+        self.putx([Ann.BIT, ['Unhandled CMD: 0x%02x' % mosi, 'CMD%02xh' % mosi]])
+        self.state = None
 
     def output_data_block(self, label, idx):
         # Print accumulated block of data
@@ -530,8 +647,8 @@ class Decoder(srd.Decoder):
             self.cmdstate = 1
 
         # Handle commands.
-        try:
+        # Look for chip specific first...
+        if self.vhandler and self.vhandler.cmd_handlers.get(self.state):
+            self.vhandler.cmd_handlers[self.state](mosi, miso)
+        else:
             self.cmd_handlers[self.state](mosi, miso)
-        except KeyError:
-            self.putx([Ann.BIT, ['Unknown command: 0x%02x' % mosi]])
-            self.state = None
