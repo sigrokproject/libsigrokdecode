@@ -142,6 +142,11 @@ class Decoder(srd.Decoder):
         self.token.append(Bit(self.samplenum, self.samplenum, cmd_pin))
         if len(self.token) > 0:
             self.token[len(self.token) - 2].es = self.samplenum
+            # check the transmission bit if this is a command
+            if len(self.token) == 2:
+                transmission = self.token[1].bit
+                if transmission:
+                    self.state = St.GET_COMMAND_TOKEN
         if len(self.token) < n:
             return False
         self.token[n - 1].es += self.token[n - 1].ss - self.token[n - 2].ss
