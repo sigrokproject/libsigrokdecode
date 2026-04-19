@@ -2,6 +2,7 @@
 ## This file is part of the libsigrokdecode project.
 ##
 ## Copyright (C) 2012 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2019-2026 Stephan Thiele <stephan.thiele@mailbox.org>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,7 +26,7 @@ This decoder assumes that a single CAN_RX line is sampled (e.g. on
 the digital output side of a CAN transceiver IC such as the Microchip
 MCP-2515DM-BM).
 
-It also has support for CAN-FD.
+It also has support for CAN-FD and CAN-XL.
 '''
 
 from .pd import Decoder
