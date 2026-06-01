@@ -85,7 +85,7 @@ class Decoder(srd.Decoder):
         if n == 0:
             return [0, 0, 0]
         nums = []
-        while n:
+        while n > 0:
             n, r = divmod(n, 3)
             nums.append(r)
         while len(nums) < 3:
@@ -97,7 +97,6 @@ class Decoder(srd.Decoder):
             ann = ['Global address', 'Global addr', 'Glob addr', 'GA']
             self.put(self.ss, self.es, self.out_ann, [0, ann])
             return
-        ann = ['CA2=%s CA1=%s CA0=%s', '2=%s 1=%s 0=%s', '%s %s %s', '%s %s %s']
         addr = 0
         for i in range(7):
             if i in [2, 3]:
@@ -111,7 +110,12 @@ class Decoder(srd.Decoder):
                 addr |= mask
 
         addr -= 0x04
+        if data & (1 << 2 | 1 << 3) or addr not in range(27):
+            ann = ['Invalid address', 'Invalid addr', 'Inv addr', 'INV']
+            self.put(self.ss, self.es, self.out_ann, [0, ann])
+            return
         ternary_values = self.convert_ternary_str(addr)
+        ann = ['CA2=%s CA1=%s CA0=%s', '2=%s 1=%s 0=%s', '%s %s %s', '%s %s %s']
         for i in range(len(ann)):
             ann[i] = ann[i] % (slave_address[ternary_values[0]][i],
                                slave_address[ternary_values[1]][i],
