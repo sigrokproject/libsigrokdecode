@@ -257,15 +257,15 @@ class Decoder(srd.Decoder):
 
             ch_val = ((b0 | (b1 << 8) | (b2 << 16)) >> bit_shift) & 0x7ff
 
-            # Bit-precise sample boundary calculation (UART 8E2 = 11 bit periods per byte)
+            # Bit-precise sample boundary calculation (UART 8E2 = 12 bit periods per byte: 1 start + 8 data + 1 parity + 2 stop)
             b_start_idx = 1 + (bit_start >> 3)
             b_start_ss, b_start_es = frame_bytes[b_start_idx][1], frame_bytes[b_start_idx][2]
-            dur_start = (b_start_es - b_start_ss) / 11.0
+            dur_start = (b_start_es - b_start_ss) / 12.0
             ch_ss = b_start_ss + int((1 + (bit_start & 7)) * dur_start)
 
             b_end_idx = 1 + ((bit_end - 1) >> 3)
             b_end_ss, b_end_es = frame_bytes[b_end_idx][1], frame_bytes[b_end_idx][2]
-            dur_end = (b_end_es - b_end_ss) / 11.0
+            dur_end = (b_end_es - b_end_ss) / 12.0
             ch_es = b_end_ss + int((2 + ((bit_end - 1) & 7)) * dur_end)
 
             ch_nr = 1 + i
@@ -279,7 +279,7 @@ class Decoder(srd.Decoder):
 
         # 3. Digital channels & Flags (Byte 23)
         flags_val, flags_ss, flags_es = frame_bytes[23]
-        dur_flags = (flags_es - flags_ss) / 11.0
+        dur_flags = (flags_es - flags_ss) / 12.0
 
         d17 = (flags_val >> 0) & 1
         d18 = (flags_val >> 1) & 1
