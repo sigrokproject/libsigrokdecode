@@ -451,8 +451,8 @@ class Decoder(srd.Decoder):
 
         self.putg([Ann.RX_DATA_BIT + rxtx, ['%d' % signal]])
 
-        s, halfbit = self.samplenum, int(self.bit_width / 2)
-        self.databits[rxtx].append([signal, s - halfbit, s + halfbit])
+        s, halfbit = self.samplenum, self.bit_width / 2.0
+        self.databits[rxtx].append([signal, s - floor(halfbit), s + ceil(halfbit)])
 
         if self.options['bit_order'] == 'msb-first':
             self.datavalue[rxtx] = (self.datavalue[rxtx] << 1) | signal
@@ -774,6 +774,9 @@ class Decoder(srd.Decoder):
         """
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
+
+        # Recompute bit_width dynamically to ensure GUI baudrate changes take immediate effect
+        self.bit_width = float(self.samplerate) / float(self.options['baudrate'])
 
         active_channels = [ch for ch in (RX, TX) if self.has_channel(ch)]
         if not active_channels:
