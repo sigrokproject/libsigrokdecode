@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Launch PulseView",
+      "type": "shell",
+      "isBackground": true,
+      "command": "SIGROKDECODE_DIR=./decoders/ ~/AppImages/pulseview*.appimage",
+    },
+    {
+      "label": "Launch PulseView --loglevel=5",
+      "type": "shell",
+      "isBackground": true,
+      "command": "SIGROKDECODE_DIR=./decoders/ ~/AppImages/pulseview*.appimage --loglevel=5",
+    },
+  ]
+}
