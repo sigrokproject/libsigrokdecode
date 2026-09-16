@@ -92,6 +92,7 @@ class Decoder(srd.Decoder):
         # self.state = St.TEST_LOGIC_RESET
         self.state = St.RUN_TEST_IDLE
         self.oldstate = None
+        self.oldoldstate = None
         self.bits_tdi = []
         self.bits_tdo = []
         self.bits_samplenums_tdi = []
@@ -119,6 +120,8 @@ class Decoder(srd.Decoder):
         self.put(self.ss_bitstring, self.es_bitstring, self.out_python, data)
 
     def advance_state_machine(self, tms):
+        if self.oldoldstate != self.oldstate:
+            self.oldoldstate = self.oldstate
         self.oldstate = self.state
 
         # Intro "tree"
@@ -178,7 +181,7 @@ class Decoder(srd.Decoder):
 
         # Upon SHIFT-*/EXIT1-* collect the current TDI/TDO values.
         if self.oldstate.value.startswith('SHIFT-') or \
-           self.oldstate.value.startswith('EXIT1-'):
+           self.oldstate.value.startswith('EXIT1-') and self.oldoldstate.value.startswith("SHIFT-"):
             if self.first_bit:
                 self.ss_bitstring = self.samplenum
                 self.first_bit = False
