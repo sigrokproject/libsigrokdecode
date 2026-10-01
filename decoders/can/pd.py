@@ -298,7 +298,10 @@ class Decoder(srd.Decoder):
             self.dlc = bitpack_msb(self.bits[self.dlc_start:self.dlc_start + 4])
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
-            self.last_databit = self.dlc_start + 3 + (dlc2len(self.dlc) * 8)
+            # Classic CAN remote frames have no data field (ISO 11898-1).
+            remote = self.rtr_type == 'remote' and not self.fd
+            nbytes = 0 if remote else dlc2len(self.dlc)
+            self.last_databit = self.dlc_start + 3 + (nbytes * 8)
             if self.dlc > 8 and not self.fd:
                 self.putb([16, ['Data length code (DLC) > 8 is not allowed']])
 
@@ -400,7 +403,10 @@ class Decoder(srd.Decoder):
             self.dlc = bitpack_msb(self.bits[self.dlc_start:self.dlc_start + 4])
             self.putb([10, ['Data length code: %d' % self.dlc,
                             'DLC: %d' % self.dlc, 'DLC']])
-            self.last_databit = self.dlc_start + 3 + (dlc2len(self.dlc) * 8)
+            # Classic CAN remote frames have no data field (ISO 11898-1).
+            remote = self.rtr_type == 'remote' and not self.fd
+            nbytes = 0 if remote else dlc2len(self.dlc)
+            self.last_databit = self.dlc_start + 3 + (nbytes * 8)
 
         # Remember all databyte bits, except the very last one.
         elif bitnum in range(self.dlc_start + 4, self.last_databit):
