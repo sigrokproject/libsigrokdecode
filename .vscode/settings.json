@@ -1,0 +1,12 @@
+{
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "eeyore.yapf",
+  },
+  "yapf.args": [
+    "--style",
+    "{based_on_style: pep8, column_limit: 79, indent_width: 4, continuation_indent_width: 4, blank_line_before_nested_class_or_def: false}"
+  ]
+}
