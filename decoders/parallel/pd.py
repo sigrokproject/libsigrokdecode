@@ -184,7 +184,7 @@ class Decoder(srd.Decoder):
             txts = [self.fmt_item.format(data)]
             self.putg(ss, es, Ann.ITEM, txts)
             self.putpy(ss, es, 'ITEM', (data, bus_width))
-            self.putbin(ss, es, 0, data.to_bytes(1, byteorder='big'))
+            self.putbin(ss, es, 0, data.to_bytes((bus_width + 7) // 8, byteorder='big'))
 
         # Optionally queue the currently seen item.
         if item is not None:
