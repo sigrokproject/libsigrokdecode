@@ -22,6 +22,7 @@
 #include <libsigrokdecode.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <check.h>
 #include "lib.h"
 
@@ -260,6 +261,78 @@ START_TEST(test_session_reset_nodata)
 }
 END_TEST
 
+struct eof_result {
+	GMutex mutex;
+	GByteArray *bytes;
+};
+
+static void eof_output(struct srd_proto_data *pdata, void *cb_data)
+{
+	struct eof_result *result = cb_data;
+	const struct srd_proto_data_binary *binary = pdata->data;
+
+	g_mutex_lock(&result->mutex);
+	g_byte_array_append(result->bytes, binary->data, binary->size);
+	g_mutex_unlock(&result->mutex);
+}
+
+START_TEST(test_session_eof)
+{
+	static const char *modes[] = { "tail", "error", "flush-error" };
+	static const uint8_t input[] = { 0, 1, 0, 1 };
+	static const uint8_t expected[] = { 0, 10, 13, 26, 255, 'E', 'N', 'D' };
+	struct srd_session *sess;
+	struct srd_decoder_inst *di;
+	struct eof_result result;
+	GHashTable *options, *channels;
+	int ret, repeated, destroyed, exited;
+	gboolean output_ready, output_unchanged;
+
+	g_mutex_init(&result.mutex);
+	result.bytes = g_byte_array_new();
+	fail_unless(srd_init(FIXTURES_TESTDIR) == SRD_OK);
+	fail_unless(srd_session_new(&sess) == SRD_OK);
+	fail_unless(srd_decoder_load("eof_test") == SRD_OK);
+	options = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		(GDestroyNotify)g_variant_unref);
+	g_hash_table_insert(options, g_strdup("mode"),
+		g_variant_ref_sink(g_variant_new_string(modes[_i])));
+	di = srd_inst_new(sess, "eof_test", options);
+	g_hash_table_destroy(options);
+	fail_unless(di != NULL);
+	channels = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		(GDestroyNotify)g_variant_unref);
+	g_hash_table_insert(channels, g_strdup("d0"),
+		g_variant_ref_sink(g_variant_new_int32(0)));
+	fail_unless(srd_inst_channel_set_all(di, channels) == SRD_OK);
+	g_hash_table_destroy(channels);
+	fail_unless(srd_pd_output_callback_add(sess, SRD_OUTPUT_BINARY,
+		eof_output, &result) == SRD_OK);
+	fail_unless(srd_session_start(sess) == SRD_OK);
+	fail_unless(srd_session_send(sess, 0, sizeof(input), input,
+		sizeof(input), 1) == SRD_OK);
+	ret = srd_session_send_eof(sess);
+	g_mutex_lock(&result.mutex);
+	output_ready = result.bytes->len == (_i == 0 ? sizeof(expected) : 0);
+	if (_i == 0 && output_ready)
+		output_ready = memcmp(result.bytes->data, expected, sizeof(expected)) == 0;
+	g_mutex_unlock(&result.mutex);
+	repeated = srd_session_send_eof(sess);
+	destroyed = srd_session_destroy(sess);
+	exited = srd_exit();
+	output_unchanged = result.bytes->len == (_i == 0 ? sizeof(expected) : 0);
+	g_byte_array_unref(result.bytes);
+	g_mutex_clear(&result.mutex);
+	/* Clean up before assertions, including with Check's non-forking runner. */
+	fail_unless(ret == (_i == 0 ? SRD_OK : SRD_ERR));
+	fail_unless(output_ready);
+	fail_unless(output_unchanged);
+	fail_unless(repeated == ret);
+	fail_unless(destroyed == SRD_OK);
+	fail_unless(exited == SRD_OK);
+}
+END_TEST
+
 Suite *suite_session(void)
 {
 	Suite *s;
@@ -284,6 +357,11 @@ Suite *suite_session(void)
 
 	tc = tcase_create("reset");
 	tcase_add_test(tc, test_session_reset_nodata);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("eof");
+	tcase_add_checked_fixture(tc, srdtest_setup, srdtest_teardown);
+	tcase_add_loop_test(tc, test_session_eof, 0, 3);
 	suite_add_tcase(s, tc);
 
 	return s;

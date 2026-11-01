@@ -66,6 +66,7 @@ SRD_API int srd_session_new(struct srd_session **sess)
 	*sess = g_malloc(sizeof(struct srd_session));
 	(*sess)->session_id = ++max_session_id;
 	(*sess)->di_list = (*sess)->callbacks = NULL;
+	g_mutex_init(&(*sess)->eof_mutex);
 
 	/* Keep a list of all sessions, so we can clean up as needed. */
 	sessions = g_slist_append(sessions, *sess);
@@ -281,6 +282,9 @@ SRD_API int srd_session_send(struct srd_session *sess,
 /**
  * Communicate the end of the stream of sample data to the session.
  *
+ * Waits for final decoder output. Must not be called from a decoder's
+ * output callback, since that callback may run in the decoder worker thread.
+ *
  * @param[in] sess The session. Must not be NULL.
  *
  * @return SRD_OK upon success. A (negative) error code otherwise.
@@ -290,18 +294,29 @@ SRD_API int srd_session_send(struct srd_session *sess,
 SRD_API int srd_session_send_eof(struct srd_session *sess)
 {
 	GSList *d;
-	int ret;
+	struct srd_decoder_inst *di;
+	int ret, result;
 
 	if (!sess)
 		return SRD_ERR_ARG;
 
+	/* Reject a self-join before changing any decoder in the session. */
 	for (d = sess->di_list; d; d = d->next) {
-		ret = srd_inst_send_eof(d->data);
-		if (ret != SRD_OK)
-			return ret;
+		di = d->data;
+		if (di->thread_handle == g_thread_self())
+			return SRD_ERR_ARG;
 	}
 
-	return SRD_OK;
+	g_mutex_lock(&sess->eof_mutex);
+	result = SRD_OK;
+	for (d = sess->di_list; d; d = d->next) {
+		ret = srd_inst_send_eof(d->data);
+		if (result == SRD_OK)
+			result = ret;
+	}
+	g_mutex_unlock(&sess->eof_mutex);
+
+	return result;
 }
 
 /**
@@ -334,13 +349,16 @@ SRD_API int srd_session_terminate_reset(struct srd_session *sess)
 	if (!sess)
 		return SRD_ERR_ARG;
 
+	g_mutex_lock(&sess->eof_mutex);
+	ret = SRD_OK;
 	for (d = sess->di_list; d; d = d->next) {
 		ret = srd_inst_terminate_reset(d->data);
 		if (ret != SRD_OK)
-			return ret;
+			break;
 	}
+	g_mutex_unlock(&sess->eof_mutex);
 
-	return SRD_OK;
+	return ret;
 }
 
 /**
@@ -361,12 +379,15 @@ SRD_API int srd_session_destroy(struct srd_session *sess)
 	if (!sess)
 		return SRD_ERR_ARG;
 
+	g_mutex_lock(&sess->eof_mutex);
 	session_id = sess->session_id;
 	if (sess->di_list)
 		srd_inst_free_all(sess);
 	if (sess->callbacks)
 		g_slist_free_full(sess->callbacks, g_free);
 	sessions = g_slist_remove(sessions, sess);
+	g_mutex_unlock(&sess->eof_mutex);
+	g_mutex_clear(&sess->eof_mutex);
 	g_free(sess);
 
 	srd_dbg("Destroyed session %d.", session_id);
