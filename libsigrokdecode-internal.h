@@ -76,6 +76,9 @@ struct srd_session {
 
 	/* List of frontend callbacks to receive decoder output. */
 	GSList *callbacks;
+
+	/* EOF must finish before reset or destruction can join/free its workers. */
+	GMutex eof_mutex;
 };
 
 /* srd.c */

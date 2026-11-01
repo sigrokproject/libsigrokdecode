@@ -72,7 +72,9 @@ endif
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libsigrokdecode.pc
 
-EXTRA_DIST = Doxyfile HACKING contrib/sigrok-logo-notext.png
+EXTRA_DIST = Doxyfile HACKING contrib/sigrok-logo-notext.png \
+	tests/decoders/eof_test/__init__.py \
+	tests/decoders/eof_test/pd.py
 
 if HAVE_CHECK
 TESTS = tests/main
@@ -88,7 +90,8 @@ tests_main_SOURCES = \
 	tests/inst.c \
 	tests/session.c
 
-tests_main_CPPFLAGS = -DDECODERS_TESTDIR='"$(abs_top_srcdir)/decoders"'
+tests_main_CPPFLAGS = -DDECODERS_TESTDIR='"$(abs_top_srcdir)/decoders"' \
+	-DFIXTURES_TESTDIR='"$(abs_top_srcdir)/tests/decoders"'
 tests_main_LDADD = libsigrokdecode.la $(SRD_EXTRA_LIBS) $(TESTS_LIBS)
 
 MAINTAINERCLEANFILES = ChangeLog

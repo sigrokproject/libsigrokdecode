@@ -1039,7 +1039,7 @@ static gpointer di_thread(gpointer data)
 {
 	PyObject *py_res;
 	struct srd_decoder_inst *di;
-	int wanted_term;
+	int wanted_term, wanted_eof;
 	PyGILState_STATE gstate;
 
 	if (!data)
@@ -1083,6 +1083,7 @@ static gpointer di_thread(gpointer data)
 	 */
 	g_mutex_lock(&di->data_mutex);
 	wanted_term = di->want_wait_terminate;
+	wanted_eof = di->communicate_eof;
 	di->want_wait_terminate = TRUE;
 	di->handled_all_samples = TRUE;
 	g_cond_signal(&di->handled_all_samples_cond);
@@ -1092,7 +1093,7 @@ static gpointer di_thread(gpointer data)
 	 * Check for the termination cause of the decode() method.
 	 * Though this is mostly for information.
 	 */
-	if (!py_res && wanted_term) {
+	if (!py_res && wanted_term && !wanted_eof) {
 		/*
 		 * Silently ignore errors upon return from decode() calls
 		 * when termination was requested. Terminate the thread
@@ -1186,6 +1187,8 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 		uint64_t abs_start_samplenum, uint64_t abs_end_samplenum,
 		const uint8_t *inbuf, uint64_t inbuflen, uint64_t unitsize)
 {
+	int ret;
+
 	/* Return an error upon unusable input. */
 	if (!di) {
 		srd_dbg("empty decoder instance");
@@ -1248,7 +1251,9 @@ SRD_PRIV int srd_inst_decode(struct srd_decoder_inst *di,
 	g_mutex_unlock(&di->data_mutex);
 
 	/* Flush all PDs in the stack that can be flushed */
-	srd_inst_flush(di);
+	ret = srd_inst_flush(di);
+	if (ret != SRD_OK)
+		return ret;
 
 	if (di->want_wait_terminate)
 		return SRD_ERR_TERM_REQ;
@@ -1271,7 +1276,7 @@ SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di)
 	PyGILState_STATE gstate;
 	PyObject *py_ret;
 	GSList *l;
-	int ret;
+	int ret, result;
 
 	if (!di)
 		return SRD_ERR_ARG;
@@ -1280,18 +1285,23 @@ SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di)
 	if (PyObject_HasAttrString(di->py_inst, "flush")) {
 		srd_dbg("Calling flush() of instance %s", di->inst_id);
 		py_ret = PyObject_CallMethod(di->py_inst, "flush", NULL);
+		if (!py_ret) {
+			di->decoder_state = SRD_ERR;
+			srd_exception_catch("Protocol decoder instance %s: ", di->inst_id);
+		}
 		Py_XDECREF(py_ret);
 	}
 	PyGILState_Release(gstate);
 
 	/* Pass the "flush" request to all stacked decoders. */
+	result = di->decoder_state;
 	for (l = di->next_di; l; l = l->next) {
 		ret = srd_inst_flush(l->data);
-		if (ret != SRD_OK)
-			return ret;
+		if (result == SRD_OK)
+			result = ret;
 	}
 
-	return di->decoder_state;
+	return result;
 }
 
 /**
@@ -1306,7 +1316,7 @@ SRD_PRIV int srd_inst_flush(struct srd_decoder_inst *di)
 SRD_PRIV int srd_inst_send_eof(struct srd_decoder_inst *di)
 {
 	GSList *l;
-	int ret;
+	int ret, result;
 
 	if (!di)
 		return SRD_ERR_ARG;
@@ -1317,9 +1327,10 @@ SRD_PRIV int srd_inst_send_eof(struct srd_decoder_inst *di)
 	 * started or previously finished is perfectly acceptable.
 	 */
 	srd_dbg("End of sample data: instance %s.", di->inst_id);
+	result = di->decoder_state;
 	if (!di->thread_handle) {
 		srd_dbg("No worker thread, nothing to do.");
-		return SRD_OK;
+		goto children;
 	}
 
 	/* Signal the thread about the EOF condition. */
@@ -1333,23 +1344,21 @@ SRD_PRIV int srd_inst_send_eof(struct srd_decoder_inst *di)
 	g_cond_signal(&di->got_new_samples_cond);
 	g_mutex_unlock(&di->data_mutex);
 
-	/* Only return from here when the condition was handled. */
-	g_mutex_lock(&di->data_mutex);
-	while (!di->handled_all_samples && !di->want_wait_terminate)
-		g_cond_wait(&di->handled_all_samples_cond, &di->data_mutex);
-	g_mutex_unlock(&di->data_mutex);
+	/* wait() can acknowledge the buffer before decode() has handled EOF. */
+	srd_inst_join_decode_thread(di);
 
 	/* Flush the decoder instance which handled EOF. */
-	srd_inst_flush(di);
+	result = srd_inst_flush(di);
 
 	/* Pass EOF to all stacked decoders. */
+children:
 	for (l = di->next_di; l; l = l->next) {
 		ret = srd_inst_send_eof(l->data);
-		if (ret != SRD_OK)
-			return ret;
+		if (result == SRD_OK)
+			result = ret;
 	}
 
-	return SRD_OK;
+	return result;
 }
 
 /**
