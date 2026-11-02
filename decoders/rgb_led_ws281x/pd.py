@@ -233,11 +233,8 @@ class Decoder(srd.Decoder):
                     # false detection of value 1 for those captures where
                     # high and low pulses are of similar width).
                     duty = inv_bit - ss_bit
-                    thres = samples_625ns
-                    if self.bits:
-                        period = self.bits[-1][2] - self.bits[-1][1]
-                        thres = period * 0.5
-                    bit_value = 1 if duty >= thres else 0
+                    tH = duty / self.samplerate
+                    bit_value = 1 if tH >= 580e-9 else 0
                     self.handle_bit(ss_bit, inv_bit, bit_value, True)
 
                 if ss_rst and es_rst:
@@ -259,7 +256,8 @@ class Decoder(srd.Decoder):
                     period = es_bit - ss_bit
                     duty = inv_bit - ss_bit
                     # Ideal duty for T0H: 33%, T1H: 66%.
-                    bit_value = 1 if (duty / period) > 0.5 else 0
+                    tH = duty / self.samplerate
+                    bit_value = 1 if tH >= 580e-9 else 0
                     self.handle_bit(ss_bit, es_bit, bit_value)
                 ss_bit, inv_bit, es_bit = self.samplenum, None, None
             if self.matched[1]: # and not pin:
